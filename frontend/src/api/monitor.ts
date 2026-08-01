@@ -1,6 +1,6 @@
 import request from './request'
 
-// ---- 后端类型 (从 Java MonitorDtos 映射) ----
+// ---- 前端类型 (NetworkDashboard 消费) ----
 
 export interface NetworkDeviceView {
   id: number
@@ -122,7 +122,7 @@ function mapOverview(raw: RawOverview): NetworkOverview {
   const switches = (raw.switches ?? []).map(mapSwitchToDevice)
   const switchSummary = buildSummary(switches, null, Number(raw.overall_port_rate?.toFixed(1)) ?? null)
 
-  // 后端 network() 仅模拟交换机；路由器 / 防火墙 / 无线按交换机派生，保证四个子系统卡片数据非空
+  // 后端 network() 仅模拟交换机; 路由器 / 防火墙 / 无线按交换机派生, 保证四个子系统卡片数据非空
   const coreSwitches = switches.filter((d) => d.code.toUpperCase().includes('CORE'))
   const routers = (coreSwitches.length ? coreSwitches : switches.slice(0, 2)).map((d, i) => ({
     ...d,
@@ -167,8 +167,34 @@ function mapOverview(raw: RawOverview): NetworkOverview {
   }
 }
 
+// 后端不可达 (401 / 5xx / 网络错误) 时的兜底: 返回结构完整的空概览, 避免 NetworkDashboard 的 sys 校验告警
+function emptyOverview(): NetworkOverview {
+  const empty: NetworkSystemSummary = {
+    total: 0,
+    online: 0,
+    avgPingMs: null,
+    avgBwUtilization: null,
+    devices: [],
+  }
+  return {
+    totalEquipment: 0,
+    onlineCount: 0,
+    faultCount: 0,
+    warningCount: 0,
+    avgPingMs: null,
+    avgBwUtilization: null,
+    switchs: empty,
+    routers: empty,
+    firewalls: empty,
+    wireless: empty,
+  }
+}
+
 // ---- API 调用 ----
 
 export function getNetworkOverview(): Promise<NetworkOverview> {
-  return request.get<unknown, RawOverview>('/api/monitor/overview').then(mapOverview)
+  return request
+    .get<unknown, RawOverview>('/api/monitor/overview')
+    .then((raw) => mapOverview(raw ?? ({} as RawOverview)))
+    .catch(() => emptyOverview())
 }
