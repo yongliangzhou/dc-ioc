@@ -8,12 +8,23 @@
       <nav class="side">
         <div v-for="g in nav" :key="g.title" class="nav-group">
           <div class="gtitle">{{ g.title }}</div>
-          <router-link
-            v-for="it in g.items" :key="it.path" :to="it.path"
-            class="nav-item" :class="{ active: isActive(it.path) }">
-            <span class="ico">{{ it.ico }}</span>{{ it.title }}
-            <span v-if="it.badge" class="badge" :class="{ alert: it.alert }">{{ it.badge }}</span>
-          </router-link>
+          <template v-for="it in g.items" :key="it.path">
+            <router-link
+              :to="it.path"
+              class="nav-item"
+              :class="{ active: isActive(it.path) }">
+              <span class="ico">{{ it.ico }}</span>{{ it.title }}
+              <span v-if="it.badge" class="badge" :class="{ alert: it.alert }">{{ it.badge }}</span>
+            </router-link>
+            <router-link
+              v-for="c in (it.children ?? [])"
+              :key="c.path"
+              :to="c.path"
+              class="nav-item sub"
+              :class="{ active: isActive(c.path) }">
+              <span class="ico">{{ c.ico }}</span>{{ c.title }}
+            </router-link>
+          </template>
         </div>
       </nav>
 
@@ -36,10 +47,10 @@ import ErrorBoundary from "@/components/common/ErrorBoundary.vue";
 import { realtimeLinkage } from "@/engine/realtimeLinkage";
 
 const route = useRoute();
-const isActive = (p: string) => route.path === p;
+const isActive = (p: string) => route.path === p || route.path.startsWith(p + "/");
 const { t } = useI18n();
 
-interface NavItem { path: string; title: string; ico: string; badge?: string; alert?: boolean }
+interface NavItem { path: string; title: string; ico: string; badge?: string; alert?: boolean; children?: NavItem[] }
 interface NavGroup { title: string; items: NavItem[] }
 
 const nav = computed<NavGroup[]>(() => [
@@ -59,10 +70,30 @@ const nav = computed<NavGroup[]>(() => [
   },
   {
     title: t("nav.facilityMonitoring"), items: [
-      { path: "/monitor/hvac", title: t("nav.hvacMonitor"), ico: "❄" },
-      { path: "/monitor/power", title: t("nav.powerMonitor"), ico: "⚡" },
-      { path: "/monitor/security", title: t("nav.securityAndFire"), ico: "🛡" },
-      { path: "/monitor/network", title: t("nav.networkMonitor"), ico: "🌐" },
+      { path: "/monitor/hvac", title: t("nav.hvacMonitor"), ico: "❄", children: [
+        { path: "/monitor/hvac/chiller", title: t("nav.chiller"), ico: "❄" },
+        { path: "/monitor/hvac/crac", title: t("nav.crac"), ico: "❄" },
+        { path: "/monitor/hvac/liquid", title: t("nav.liquidCooling"), ico: "❄" },
+      ] },
+      { path: "/monitor/power", title: t("nav.powerMonitor"), ico: "⚡", children: [
+        { path: "/monitor/power/hv", title: t("nav.hv"), ico: "⚡" },
+        { path: "/monitor/power/lv", title: t("nav.lv"), ico: "⚡" },
+        { path: "/monitor/power/genset", title: t("nav.genset"), ico: "⚡" },
+        { path: "/monitor/power/fuel", title: t("nav.fuel"), ico: "⚡" },
+        { path: "/monitor/power/battery", title: t("nav.battery"), ico: "⚡" },
+      ] },
+      { path: "/monitor/security", title: t("nav.securityAndFire"), ico: "🛡", children: [
+        { path: "/monitor/security/cctv", title: t("nav.securityCctv"), ico: "🛡" },
+        { path: "/monitor/security/acs", title: t("nav.securityAcs"), ico: "🛡" },
+        { path: "/monitor/security/ids", title: t("nav.securityIds"), ico: "🛡" },
+        { path: "/monitor/security/fire", title: t("nav.securityFire"), ico: "🛡" },
+      ] },
+      { path: "/monitor/net", title: t("nav.networkMonitor"), ico: "🌐", children: [
+        { path: "/monitor/net/switches", title: t("nav.networkSwitch"), ico: "🌐" },
+        { path: "/monitor/net/routers", title: t("nav.networkRouter"), ico: "🌐" },
+        { path: "/monitor/net/firewalls", title: t("nav.networkFirewall"), ico: "🌐" },
+        { path: "/monitor/net/wireless", title: t("nav.networkWireless"), ico: "🌐" },
+      ] },
       { path: "/monitor/health", title: t("nav.health"), ico: "💚" },
     ],
   },
@@ -97,3 +128,15 @@ onMounted(() => {
 });
 onBeforeUnmount(() => { realtimeLinkage.stop(); });
 </script>
+
+<style scoped>
+.nav-item.sub {
+  padding-left: 36px;
+  font-size: 12px;
+  opacity: 0.82;
+}
+.nav-item.sub .ico {
+  font-size: 11px;
+  opacity: 0.7;
+}
+</style>

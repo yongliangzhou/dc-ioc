@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="view-head">
-      <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('暖通空调') }}</h1>
-      <span class="sub">{{ tl('冷源系统') }} / {{ tl('空调末端') }} / {{ tl('液冷系统') }} {{ tl('·') }} {{ tl('实时运行状态与关键能效指标') }}</span>
+      <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('nav.hvacMonitor') }}</h1>
+      <span class="sub">{{ tl('冷源系统') }} / {{ tl('空调末端') }} / {{ tl('液冷系统') }} {{ tl('·') }} {{ tl('总览 · 点击进入子系统') }}</span>
     </div>
 
     <!-- 总览 KPI -->
@@ -13,45 +13,24 @@
       <MetricCard metric-name="hvac-warning" :label="tl('告警')" :value="overview.warningCount" unit="台" :quality="overview.warningCount ? 'uncertain' : 'good'" :online="true" :severity="overview.warningCount ? 'warn' : 'normal'" />
     </div>
 
-    <!-- 三列子系统卡片 -->
+    <!-- 三子系统入口卡片 -->
     <div class="grid cols-3" v-if="overview">
-      <!-- 冷源系统 -->
-      <div class="card">
+      <router-link to="/monitor/hvac/chiller" class="entry-card">
         <div class="card-head">
-          <span class="ct">{{ tl('冷源系统') }}</span>
-          <span class="pill" :class="overview.chiller.online === overview.chiller.total ? 'g' : 'a'">
-            {{ overview.chiller.online }}/{{ overview.chiller.total }} {{ tl('在线') }}
-          </span>
+          <span class="ct">{{ tl('nav.chiller') }}</span>
+          <span class="pill" :class="overview.chiller.online === overview.chiller.total ? 'g' : 'a'">{{ overview.chiller.online }}/{{ overview.chiller.total }} {{ tl('在线') }}</span>
         </div>
         <div class="kvs">
           <span class="k">{{ tl('平均负载率') }}</span><span class="v">{{ overview.chiller.avgLoadPercent?.toFixed(1) ?? '-' }}%</span>
           <span class="k">{{ tl('进水温度均值') }}</span><span class="v">{{ overview.chiller.avgTemperatureIn?.toFixed(1) ?? '-' }}°C</span>
           <span class="k">{{ tl('出水温度均值') }}</span><span class="v">{{ overview.chiller.avgTemperatureOut?.toFixed(1) ?? '-' }}°C</span>
         </div>
-        <div class="device-list" v-if="overview.chiller.devices.length">
-          <div class="device-row" v-for="d in overview.chiller.devices" :key="d.id">
-            <div class="d-info">
-              <span class="d-status" :class="statusCls(d.status)">●</span>
-              <span class="d-name">{{ d.name }}</span>
-              <span class="d-code">{{ d.code }}</span>
-            </div>
-            <div class="d-metrics">
-              <span>{{ tl('负载') }} {{ d.loadPercent?.toFixed(0) ?? '-' }}%</span>
-              <span class="sep">|</span>
-              <span>{{ d.temperatureIn?.toFixed(1) ?? '-' }}/{{ d.temperatureOut?.toFixed(1) ?? '-' }}°C</span>
-            </div>
-          </div>
-        </div>
-        <div class="empty-tip" v-else>{{ tl('暂无冷源设备') }}</div>
-      </div>
+      </router-link>
 
-      <!-- 空调末端 -->
-      <div class="card">
+      <router-link to="/monitor/hvac/crac" class="entry-card">
         <div class="card-head">
-          <span class="ct">{{ tl('空调末端') }} (CRAC)</span>
-          <span class="pill" :class="overview.crac.online === overview.crac.total ? 'g' : 'a'">
-            {{ overview.crac.online }}/{{ overview.crac.total }} {{ tl('在线') }}
-          </span>
+          <span class="ct">{{ tl('nav.crac') }} (CRAC)</span>
+          <span class="pill" :class="overview.crac.online === overview.crac.total ? 'g' : 'a'">{{ overview.crac.online }}/{{ overview.crac.total }} {{ tl('在线') }}</span>
         </div>
         <div class="kvs">
           <span class="k">{{ tl('送风温度均值') }}</span><span class="v">{{ overview.crac.avgTemperatureOut?.toFixed(1) ?? '-' }}°C</span>
@@ -59,52 +38,19 @@
           <span class="k">{{ tl('回风湿度均值') }}</span><span class="v">{{ overview.crac.avgHumidityIn?.toFixed(1) ?? '-' }}%</span>
           <span class="k">{{ tl('风机转速均值') }}</span><span class="v">{{ overview.crac.avgFanSpeed?.toFixed(0) ?? '-' }}%</span>
         </div>
-        <div class="device-list" v-if="overview.crac.devices.length">
-          <div class="device-row" v-for="d in overview.crac.devices" :key="d.id">
-            <div class="d-info">
-              <span class="d-status" :class="statusCls(d.status)">●</span>
-              <span class="d-name">{{ d.name }}</span>
-              <span class="d-code">{{ d.code }}</span>
-            </div>
-            <div class="d-metrics">
-              <span>{{ d.fanSpeed?.toFixed(0) ?? '-' }}%</span>
-              <span class="sep">|</span>
-              <span>{{ d.temperatureIn?.toFixed(1) ?? '-' }}°C / {{ d.humidityIn?.toFixed(0) ?? '-' }}%</span>
-            </div>
-          </div>
-        </div>
-        <div class="empty-tip" v-else>{{ tl('暂无空调末端设备') }}</div>
-      </div>
+      </router-link>
 
-      <!-- 液冷系统 -->
-      <div class="card">
+      <router-link to="/monitor/hvac/liquid" class="entry-card">
         <div class="card-head">
-          <span class="ct">{{ tl('液冷系统') }}</span>
-          <span class="pill" :class="overview.liquidCooling.online === overview.liquidCooling.total ? 'g' : 'a'">
-            {{ overview.liquidCooling.online }}/{{ overview.liquidCooling.total }} {{ tl('在线') }}
-          </span>
+          <span class="ct">{{ tl('nav.liquidCooling') }}</span>
+          <span class="pill" :class="overview.liquidCooling.online === overview.liquidCooling.total ? 'g' : 'a'">{{ overview.liquidCooling.online }}/{{ overview.liquidCooling.total }} {{ tl('在线') }}</span>
         </div>
         <div class="kvs">
           <span class="k">{{ tl('平均流量') }}</span><span class="v">{{ overview.liquidCooling.avgFlowRate?.toFixed(1) ?? '-' }} L/min</span>
           <span class="k">{{ tl('CDU进水温度均值') }}</span><span class="v">{{ overview.liquidCooling.avgCdiTemperature?.toFixed(1) ?? '-' }}°C</span>
           <span class="k">{{ tl('CDU出水温度均值') }}</span><span class="v">{{ overview.liquidCooling.avgCdoTemperature?.toFixed(1) ?? '-' }}°C</span>
         </div>
-        <div class="device-list" v-if="overview.liquidCooling.devices.length">
-          <div class="device-row" v-for="d in overview.liquidCooling.devices" :key="d.id">
-            <div class="d-info">
-              <span class="d-status" :class="statusCls(d.status)">●</span>
-              <span class="d-name">{{ d.name }}</span>
-              <span class="d-code">{{ d.code }}</span>
-            </div>
-            <div class="d-metrics">
-              <span>{{ d.flowRate?.toFixed(0) ?? '-' }} L/min</span>
-              <span class="sep">|</span>
-              <span>{{ d.cdiTemperature?.toFixed(1) ?? '-' }}/{{ d.cdoTemperature?.toFixed(1) ?? '-' }}°C</span>
-            </div>
-          </div>
-        </div>
-        <div class="empty-tip" v-else>{{ tl('暂无液冷设备') }}</div>
-      </div>
+      </router-link>
     </div>
 
     <!-- 加载 / 错误态 -->
@@ -131,13 +77,6 @@ const onlinePercent = computed(() => {
   if (!overview.value || !overview.value.totalEquipment) return 0
   return Number(((overview.value.onlineCount / overview.value.totalEquipment) * 100).toFixed(1))
 })
-
-function statusCls(s: string) {
-  if (s === 'running') return 'g'
-  if (s === 'fault') return 'r'
-  if (s === 'warning') return 'a'
-  return 'm'
-}
 
 async function load() {
   error.value = ''
@@ -176,35 +115,24 @@ onMounted(load)
   grid-template-columns: auto 1fr;
   gap: 6px 16px;
   font-size: 12.5px;
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 .k { color: var(--muted); }
 .v { text-align: right; font-weight: 500; }
 
-.device-list {
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-  max-height: 280px;
-  overflow-y: auto;
+.entry-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
 }
-.device-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
-  font-size: 12px;
-  border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.04));
+.entry-card:hover {
+  border-color: rgba(34, 227, 255, 0.45);
+  box-shadow: var(--glow);
+  transform: translateY(-2px);
 }
-.device-row:last-child { border-bottom: none; }
-.d-info { display: flex; align-items: center; gap: 6px; }
-.d-status { font-size: 8px; }
-.d-status.g { color: var(--green); }
-.d-status.r { color: var(--red); }
-.d-status.a { color: var(--amber); }
-.d-status.m { color: var(--muted); }
-.d-name { font-weight: 500; }
-.d-code { color: var(--muted); font-size: 11px; }
-.d-metrics { color: var(--muted); font-size: 11px; display: flex; gap: 4px; }
-.d-metrics .sep { opacity: 0.3; }
-.empty-tip { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
 </style>

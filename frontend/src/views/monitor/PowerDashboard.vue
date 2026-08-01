@@ -2,7 +2,7 @@
   <div>
     <div class="view-head">
       <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('nav.powerMonitor') }}</h1>
-      <span class="sub">{{ tl('nav.hv') }} / {{ tl('nav.lv') }} / {{ tl('nav.genset') }} / {{ tl('nav.fuel') }} / {{ tl('nav.battery') }} {{ tl('·') }} {{ tl('实时电力参数与运行状态') }}</span>
+      <span class="sub">{{ tl('nav.hv') }} / {{ tl('nav.lv') }} / {{ tl('nav.genset') }} / {{ tl('nav.fuel') }} / {{ tl('nav.battery') }} {{ tl('·') }} {{ tl('总览 · 点击进入子系统') }}</span>
     </div>
 
     <!-- 总览 KPI -->
@@ -13,15 +13,30 @@
       <MetricCard metric-name="power-warning" :label="tl('告警')" :value="overview.warningCount" unit="台" :quality="overview.warningCount ? 'uncertain' : 'good'" :online="true" :severity="overview.warningCount ? 'warn' : 'normal'" />
     </div>
 
-    <!-- 五子系统卡片 -->
+    <!-- 五子系统入口卡片 -->
     <div class="grid cols-2" v-if="overview">
-      <SystemCard icon="🔌" :title="tl('nav.hv')" :label="tl('10KV 中压配电')" :sys="overview.hv" />
-      <SystemCard icon="⚡" :title="tl('nav.lv')" :label="tl('0.4KV 低压配电')" :sys="overview.lv" />
+      <router-link to="/monitor/power/hv" class="entry-card">
+        <div class="card-head"><span class="ct">{{ tl('nav.hv') }}</span><span class="pill" :class="pillCls(overview.hv)">{{ overview.hv.online }}/{{ overview.hv.total }} {{ tl('在线') }}</span></div>
+        <div class="kvs"><span class="k">{{ tl('平均负载率') }}</span><span class="v">{{ pct(overview.hv.avgLoadPercent) }}</span><span class="k">{{ tl('平均电压') }}</span><span class="v">{{ volt(overview.hv.avgVoltage) }}</span></div>
+      </router-link>
+      <router-link to="/monitor/power/lv" class="entry-card">
+        <div class="card-head"><span class="ct">{{ tl('nav.lv') }}</span><span class="pill" :class="pillCls(overview.lv)">{{ overview.lv.online }}/{{ overview.lv.total }} {{ tl('在线') }}</span></div>
+        <div class="kvs"><span class="k">{{ tl('平均负载率') }}</span><span class="v">{{ pct(overview.lv.avgLoadPercent) }}</span><span class="k">{{ tl('平均电压') }}</span><span class="v">{{ volt(overview.lv.avgVoltage) }}</span></div>
+      </router-link>
     </div>
     <div class="grid cols-3" v-if="overview" style="margin-top:12px">
-      <SystemCard icon="🔧" :title="tl('nav.genset')" :label="tl('柴发并机系统')" :sys="overview.genset" />
-      <SystemCard icon="⛽" :title="tl('nav.fuel')" :label="tl('燃油监控')" :sys="overview.fuel" />
-      <SystemCard icon="🔋" :title="tl('nav.battery')" :label="tl('电池监控')" :sys="overview.battery" />
+      <router-link to="/monitor/power/genset" class="entry-card">
+        <div class="card-head"><span class="ct">{{ tl('nav.genset') }}</span><span class="pill" :class="pillCls(overview.genset)">{{ overview.genset.online }}/{{ overview.genset.total }} {{ tl('在线') }}</span></div>
+        <div class="kvs"><span class="k">{{ tl('平均负载率') }}</span><span class="v">{{ pct(overview.genset.avgLoadPercent) }}</span><span class="k">{{ tl('平均电压') }}</span><span class="v">{{ volt(overview.genset.avgVoltage) }}</span></div>
+      </router-link>
+      <router-link to="/monitor/power/fuel" class="entry-card">
+        <div class="card-head"><span class="ct">{{ tl('nav.fuel') }}</span><span class="pill" :class="pillCls(overview.fuel)">{{ overview.fuel.online }}/{{ overview.fuel.total }} {{ tl('在线') }}</span></div>
+        <div class="kvs"><span class="k">{{ tl('平均负载率') }}</span><span class="v">{{ pct(overview.fuel.avgLoadPercent) }}</span><span class="k">{{ tl('平均电压') }}</span><span class="v">{{ volt(overview.fuel.avgVoltage) }}</span></div>
+      </router-link>
+      <router-link to="/monitor/power/battery" class="entry-card">
+        <div class="card-head"><span class="ct">{{ tl('nav.battery') }}</span><span class="pill" :class="pillCls(overview.battery)">{{ overview.battery.online }}/{{ overview.battery.total }} {{ tl('在线') }}</span></div>
+        <div class="kvs"><span class="k">{{ tl('平均负载率') }}</span><span class="v">{{ pct(overview.battery.avgLoadPercent) }}</span><span class="k">{{ tl('平均电压') }}</span><span class="v">{{ volt(overview.battery.avgVoltage) }}</span></div>
+      </router-link>
     </div>
 
     <!-- 加载 / 错误态 -->
@@ -49,11 +64,14 @@ const onlinePercent = computed(() => {
   return Number(((overview.value.onlineCount / overview.value.totalEquipment) * 100).toFixed(1))
 })
 
-function statusCls(s: string) {
-  if (s === 'running') return 'g'
-  if (s === 'fault') return 'r'
-  if (s === 'warning') return 'a'
-  return 'm'
+function pillCls(s: PowerSystemSummary) {
+  return s.online === s.total ? 'g' : 'a'
+}
+function pct(v: number | null) {
+  return v != null ? v.toFixed(1) + '%' : '-'
+}
+function volt(v: number | null) {
+  return v != null ? v.toFixed(0) + 'V' : '-'
 }
 
 async function load() {
@@ -68,80 +86,15 @@ async function load() {
 onMounted(load)
 </script>
 
-<script lang="ts">
-import { defineComponent, h, type PropType } from 'vue'
-import type { PowerDeviceView } from '@/api/power'
-
-const SystemCard = defineComponent({
-  props: {
-    icon: String,
-    title: String,
-    label: String,
-    sys: { type: Object as PropType<PowerSystemSummary>, required: true },
-  },
-  setup(props) {
-    return () => {
-      const s = props.sys
-      const d = s?.devices ?? []
-      return h('div', { class: 'card' }, [
-        h('div', { class: 'card-head' }, [
-          h('span', { class: 'ct' }, [(props.icon ?? '') + ' ' + (props.title ?? '')]),
-          h('span', { class: 'pill ' + (s?.online === s?.total ? 'g' : 'a') },
-            `${s?.online ?? 0}/${s?.total ?? 0} 在线`),
-        ]),
-        props.label ? h('div', { class: 'sub-label' }, props.label) : null,
-        h('div', { class: 'kvs' }, [
-          ['平均负载率', s?.avgLoadPercent != null ? s.avgLoadPercent.toFixed(1) + '%' : '-'],
-          ['平均电压', s?.avgVoltage != null ? s.avgVoltage.toFixed(1) + 'V' : '-'],
-          ['平均电流', s?.avgCurrent != null ? s.avgCurrent.toFixed(1) + 'A' : '-'],
-        ].map(([k, v]) => [h('span', { class: 'k' }, k), h('span', { class: 'v' }, v)]).flat()),
-        d.length > 0
-          ? h('div', { class: 'device-list' },
-              d.map((dev: PowerDeviceView) =>
-                h('div', { class: 'device-row', key: dev.id }, [
-                  h('div', { class: 'd-info' }, [
-                    h('span', { class: 'd-status ' + (dev.status === 'running' ? 'g' : dev.status === 'fault' ? 'r' : dev.status === 'warning' ? 'a' : 'm') }, '●'),
-                    h('span', { class: 'd-name' }, dev.name),
-                    h('span', { class: 'd-code' }, dev.code),
-                  ]),
-                  h('div', { class: 'd-metrics' }, [
-                    dev.loadPercent != null ? `负载 ${dev.loadPercent.toFixed(0)}%` : null,
-                    dev.powerKw != null ? ` | ${dev.powerKw.toFixed(1)}kW` : null,
-                    dev.voltage != null ? ` | ${dev.voltage.toFixed(0)}V` : null,
-                    dev.fuelLevel != null ? ` | 油位 ${dev.fuelLevel.toFixed(0)}%` : null,
-                  ].filter(Boolean).join('')),
-                ])
-              )
-            )
-          : h('div', { class: 'empty-tip' }, '暂无设备'),
-      ])
-    }
-  },
-})
-</script>
-
 <style scoped>
 .card-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
-}
-.ct {
-  font-weight: 600;
-  font-size: 14px;
-}
-.sub-label {
-  font-size: 11px;
-  color: var(--muted);
   margin-bottom: 8px;
 }
-.pill {
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  background: var(--bg2);
-}
+.ct { font-weight: 600; font-size: 14px; }
+.pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg2); }
 .pill.g { background: rgba(82,196,26,0.12); color: var(--green); }
 .pill.a { background: rgba(250,173,20,0.12); color: var(--amber); }
 
@@ -150,34 +103,23 @@ const SystemCard = defineComponent({
   grid-template-columns: auto 1fr;
   gap: 6px 16px;
   font-size: 12.5px;
-  margin-bottom: 12px;
 }
 .k { color: var(--muted); }
 .v { text-align: right; font-weight: 500; }
 
-.device-list {
-  border-top: 1px solid var(--border);
-  padding-top: 8px;
-  max-height: 220px;
-  overflow-y: auto;
+.entry-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  transition: border-color 0.2s, transform 0.15s, box-shadow 0.2s;
 }
-.device-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 0;
-  font-size: 12px;
-  border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.04));
+.entry-card:hover {
+  border-color: rgba(34, 227, 255, 0.45);
+  box-shadow: var(--glow);
+  transform: translateY(-2px);
 }
-.device-row:last-child { border-bottom: none; }
-.d-info { display: flex; align-items: center; gap: 6px; }
-.d-status { font-size: 8px; }
-.d-status.g { color: var(--green); }
-.d-status.r { color: var(--red); }
-.d-status.a { color: var(--amber); }
-.d-status.m { color: var(--muted); }
-.d-name { font-weight: 500; }
-.d-code { color: var(--muted); font-size: 11px; }
-.d-metrics { color: var(--muted); font-size: 11px; }
-.empty-tip { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
 </style>
