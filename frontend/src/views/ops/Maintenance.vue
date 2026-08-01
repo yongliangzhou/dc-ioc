@@ -74,7 +74,7 @@ const plans = ref<PlanView[]>([])
 const records = ref<RecordView[]>([])
 const stats = ref<MaintenanceStats | null>(null)
 const error = ref('')
-const selectedPlanId = ref<number | null>(null)
+const selectedPlanId = ref<number | string | null>(null)
 const selectedPlanName = ref('')
 
 function freqLabel(f: string) { const m: Record<string, string> = { daily: '天', weekly: '周', monthly: '月', quarterly: '季', yearly: '年' }; return m[f] || f }
@@ -82,7 +82,7 @@ function freqCls(f: string) { return f === 'daily' ? 'a' : f === 'weekly' ? 'b' 
 function fmtDate(d: string | null) { if (!d) return '-'; return d }
 function isOverdue(d: string | null) { if (!d) return false; return new Date(d) < new Date() }
 
-async function selectPlan(id: number) {
+async function selectPlan(id: number | string) {
   if (selectedPlanId.value === id) { selectedPlanId.value = null; selectedPlanName.value = ''; }
   else { selectedPlanId.value = id; const p = plans.value.find(x => x.id === id); selectedPlanName.value = p?.name ?? ''; }
   records.value = await getMaintenanceRecords(selectedPlanId.value ?? undefined)

@@ -50,7 +50,7 @@ export async function getMaintenancePlans(): Promise<PlanView[]> {
   }))
 }
 
-export async function getMaintenanceRecords(planId?: number): Promise<RecordView[]> {
+export async function getMaintenanceRecords(planId?: number | string): Promise<RecordView[]> {
   const resp: any = await request.get('/api/ops/maintain/records', {
     params: planId != null ? { planId } : {},
   })
