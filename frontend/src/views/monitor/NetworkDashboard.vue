@@ -53,7 +53,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
-import { getNetworkOverview, type NetworkOverview, type NetworkSystemSummary } from '@/api/network'
+import { getNetworkOverview, type NetworkOverview, type NetworkSystemSummary } from '@/api/monitor'
 const { t: tl } = useI18n()
 
 const overview = ref<NetworkOverview | null>(null)

@@ -194,7 +194,7 @@ function emptyOverview(): NetworkOverview {
 
 export function getNetworkOverview(): Promise<NetworkOverview> {
   return request
-    .get<unknown, RawOverview>('/api/monitor/overview')
+    .get<unknown, RawOverview>('/api/network/overview')
     .then((raw) => mapOverview(raw ?? ({} as RawOverview)))
     .catch(() => emptyOverview())
 }
