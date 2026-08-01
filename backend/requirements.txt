@@ -1,0 +1,52 @@
+# ===== Web 框架 =====
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.5
+pydantic-settings==2.7.1
+python-multipart==0.0.20
+
+# ===== 数据库 PostgreSQL =====
+sqlalchemy==2.0.37
+psycopg[binary]==3.2.4
+alembic==1.14.1
+
+# ===== 缓存 Redis =====
+redis==5.2.1
+
+# ===== 认证与安全 =====
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+
+# ===== 实时通信 =====
+websockets==14.2
+
+# ===== 外部设备接入 Kafka 消费端 (复用数据契约反序列化) =====
+aiokafka==0.12.0
+
+# ===== 异步任务/定时 =====
+celery==5.4.0
+apscheduler==3.11.0
+
+# ===== 工具 =====
+httpx==0.28.1
+python-dotenv==1.1.0
+loguru==0.7.3
+orjson==3.10.15
+
+# ===== 运维指导书一键导入 (PDF/Word 解析) =====
+pymupdf==1.28.0
+pdfplumber==0.11.4
+python-docx==1.1.2
+
+# ===== 监控 =====
+prometheus-fastapi-instrumentator==7.0.0
+prometheus-client==0.21.1
+
+# ===== 测试/质量 (开发) =====
+pytest==8.3.4
+pytest-asyncio==0.25.2
+pytest-timeout==2.3.1
+pytest-cov==6.0.0
+httpx-sse==0.4.0
+ruff==0.9.3

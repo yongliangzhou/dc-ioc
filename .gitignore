@@ -1,0 +1,69 @@
+# ============================================================
+# DC-IOC Platform .gitignore
+# ============================================================
+
+# ---- 环境变量 (包含敏感信息, 仅保留 .example) ----
+.env
+.env.*
+!.env.example
+!.env.dev.example
+!.env.staging.example
+!.env.prod.example
+
+# ---- 备份文件 ----
+backups/
+*.sql.gz
+*.dump
+
+# ---- 日志 ----
+logs/
+*.log
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+dist/
+build/
+*.whl
+.venv/
+venv/
+
+# ---- 测试 ----
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+junit.xml
+bandit-report.json
+*.prof
+
+# ---- 前端 ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- Docker / Compose ----
+docker-compose.override.yml
+
+# ---- 操作系统 ----
+.DS_Store
+Thumbs.db
+
+# ---- Prometheus / Loki ----
+prometheus_data/
+loki_data/
+grafana_data/
+
+# ---- 临时 ----
+tmp/
+temp/

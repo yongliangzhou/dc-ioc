@@ -1,0 +1,17 @@
+# 依赖与构建产物 (由镜像内重新安装/构建)
+node_modules/
+dist/
+
+# 类型检查缓存
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# 日志与本地配置
+*.log
+dev.log
+.env
+.env.*
+
+# 版本控制
+.git/
+.gitignore

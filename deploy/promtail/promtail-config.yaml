@@ -1,0 +1,51 @@
+# Promtail 日志采集配置
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # DC-IOC 应用日志
+  - job_name: dc-ioc-app
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: dc-ioc-app
+          env: ${APP_ENV:-prod}
+          __path__: /var/log/dc-ioc/app_*.log
+
+  # DC-IOC 错误日志
+  - job_name: dc-ioc-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: dc-ioc-error
+          env: ${APP_ENV:-prod}
+          level: error
+          __path__: /var/log/dc-ioc/error_*.log
+
+  # DC-IOC 外部采集日志
+  - job_name: dc-ioc-external
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: dc-ioc-external
+          env: ${APP_ENV:-prod}
+          __path__: /var/log/dc-ioc/external_*.log
+
+  # 系统日志
+  - job_name: syslog
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: syslog
+          __path__: /var/log/syslog

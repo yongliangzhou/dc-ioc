@@ -1,0 +1,98 @@
+# Prometheus 告警规则 — DC-IOC 平台
+groups:
+  - name: dc-ioc-app
+    rules:
+      # ---- 应用可用性 ----
+      - alert: BackendDown
+        expr: up{service="dc-ioc-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "DC-IOC 后端不可用"
+          description: "后端实例 {{ $labels.instance }} 已宕机超过 1 分钟。"
+
+      - alert: HighErrorRate
+        expr: rate(dc_ioc_api_requests_total{status=~"5.."}[5m]) / rate(dc_ioc_api_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API 错误率超过 5%"
+          description: "端点 {{ $labels.endpoint }} 5xx 错误率 {{ $value | humanizePercentage }}"
+
+      # ---- 延迟 ----
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(dc_ioc_api_latency_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "P95 API 延迟超过 2 秒"
+          description: "端点 {{ $labels.endpoint }} P95 延迟 {{ $value }}s"
+
+      # ---- WebSocket 连接 ----
+      - alert: WSDropout
+        expr: dc_ioc_ws_connections_active < 1
+        for: 2m
+        labels:
+          severity: info
+        annotations:
+          summary: "无活跃 WebSocket 连接"
+          description: "没有任何客户端连接到实时推送。"
+
+      # ---- 活跃告警数 ----
+      - alert: TooManyAlarms
+        expr: sum(dc_ioc_alarms_active) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "活跃告警数超过 50 条"
+          description: "当前活跃告警 {{ $value }}, 可能存在系统性问题。"
+
+      # ---- PUE 异常 ----
+      - alert: HighPUE
+        expr: dc_ioc_kpi_pue > 1.8
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PUE 过高"
+          description: "PUE 值为 {{ $value }}, 超过 1.8 阈值超过 30 分钟。"
+
+      # ---- 设备离线 ----
+      - alert: DeviceOfflineRate
+        expr: (dc_ioc_devices_total{status="online"} / dc_ioc_devices_total{status="total"}) < 0.95
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "设备在线率低于 95%"
+          description: "当前在线率 {{ $value | humanizePercentage }}"
+
+  - name: dc-ioc-infra
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "节点 CPU 使用率超过 80%"
+
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "节点内存使用率超过 85%"
+
+      - alert: DiskFull
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "磁盘空间不足 15%"

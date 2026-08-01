@@ -1,0 +1,139 @@
+# Docker Compose 生产环境覆盖
+# 用法: docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up
+version: "3.9"
+
+services:
+  postgres:
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
+          memory: 8G
+        reservations:
+          cpus: "2"
+          memory: 4G
+    # 生产不应暴露端口到宿主机
+    # ports: (空 — 仅容器内网可访问)
+
+  redis:
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+
+  backend:
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "false"
+      LOG_LEVEL: WARNING
+      EXTERNAL_MOCK_COLLECTOR_ENABLED: "false"
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "1"
+          memory: 1G
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  frontend:
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
+
+  # Node Exporter
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+    network_mode: host
+    restart: always
+
+  # Prometheus
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=90d"
+      - "--storage.tsdb.retention.size=50GB"
+      - "--web.enable-lifecycle"
+      - "--web.enable-admin-api"
+    restart: always
+
+  # Grafana
+  grafana:
+    image: grafana/grafana:11.2.0
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./deploy/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      GF_SECURITY_ADMIN_USER:   # 外部注入
+      GF_SECURITY_ADMIN_PASSWORD:  # 外部注入
+      GF_SERVER_ROOT_URL: https://monitor.dc-ioc.yourcompany.com
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    depends_on:
+      - prometheus
+    restart: always
+
+  # Loki (日志聚合)
+  loki:
+    image: grafana/loki:3.1.0
+    ports:
+      - "3100:3100"
+    volumes:
+      - loki_data:/loki
+      - ./deploy/loki/loki-config.yaml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: always
+
+  # Promtail (日志采集)
+  promtail:
+    image: grafana/promtail:3.1.0
+    volumes:
+      - /var/log:/var/log:ro
+      - ./backend/logs:/var/log/dc-ioc:ro
+      - ./deploy/promtail/promtail-config.yaml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    restart: always
+
+volumes:
+  prometheus_data:
+  grafana_data:
+  loki_data:
