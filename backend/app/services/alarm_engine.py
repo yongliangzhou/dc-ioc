@@ -171,6 +171,9 @@ def evaluate(device_id, category, metric_name, value, unit="", quality="good"):
     """
     if device_id in _suppressed_devices:
         return None
+    # 质量差 (bad/unknown 等) 的数据点跳过告警判定
+    if quality and quality != "good":
+        return None
     key = f"{category}:{metric_name}"
     if key in _disabled_rules:
         return None
@@ -368,10 +371,13 @@ def suppress_device(device_id: str, suppressed: bool, reason: str = "") -> bool:
     return True
 
 
-def check_escalations() -> int:
-    """扫描活跃 warn 告警, 持续超阈值则升级为 crit。返回升级条数。"""
+def check_escalations(now_ts: float | None = None) -> int:
+    """扫描活跃 warn 告警, 持续超阈值则升级为 crit。返回升级条数。
+
+    now_ts 可注入用于测试; 缺省使用当前时间。
+    """
     escalated = 0
-    now_ts = time()
+    now_ts = now_ts or time()
     for conv_key, alarm in list(_active_alarm_cache.items()):
         if alarm.get("level") != "warn":
             continue
