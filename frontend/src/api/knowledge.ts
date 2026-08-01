@@ -24,6 +24,7 @@ export function getKnowledgeItems(params?: {
   return request.get('/api/ops/knowledge', { params }).then((r: any) => r)
 }
 
+// 后端已补 GET /api/ops/knowledge/categories 端点, 返回 { categories: [{name, count}], total }
 export function getKnowledgeCategories(): Promise<KnowledgeCategoriesResp> {
   return request.get('/api/ops/knowledge/categories').then((r: any) => r)
 }

@@ -19,5 +19,5 @@ export interface CapacityOverview {
 }
 
 export function getCapacityOverview(): Promise<CapacityOverview> {
-  return request.get('/api/capacity/overview').then((r: any) => r.data)
+  return request.get('/api/ops/capacity').then((r: any) => r.data)
 }

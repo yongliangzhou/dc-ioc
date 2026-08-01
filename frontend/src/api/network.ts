@@ -1,4 +1,4 @@
-import request from './request'
+﻿import request from './request'
 
 // ---- 后端类型 (从 Java MonitorDtos 映射) ----
 
@@ -41,21 +41,21 @@ export interface NetworkOverview {
 // ---- API 调用 ----
 
 export function getNetworkOverview(): Promise<NetworkOverview> {
-  return request.get('/api/monitor/network/overview')
+  return request.get('/api/network/overview')
 }
 
 export function getNetworkSwitch(): Promise<NetworkSystemSummary> {
-  return request.get('/api/monitor/network/switch')
+  return request.get('/api/network/switch')
 }
 
 export function getNetworkRouter(): Promise<NetworkSystemSummary> {
-  return request.get('/api/monitor/network/router')
+  return request.get('/api/network/router')
 }
 
 export function getNetworkFirewall(): Promise<NetworkSystemSummary> {
-  return request.get('/api/monitor/network/firewall')
+  return request.get('/api/network/firewall')
 }
 
 export function getNetworkWireless(): Promise<NetworkSystemSummary> {
-  return request.get('/api/monitor/network/wireless')
+  return request.get('/api/network/wireless')
 }

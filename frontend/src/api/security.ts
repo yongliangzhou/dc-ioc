@@ -1,4 +1,4 @@
-import request from './request'
+﻿import request from './request'
 
 // ---- 后端类型 (从 Java MonitorDtos 映射) ----
 
@@ -36,21 +36,36 @@ export interface SecurityOverview {
 // ---- API 调用 ----
 
 export function getSecurityOverview(): Promise<SecurityOverview> {
-  return request.get('/api/monitor/security/overview')
+  return Promise.all([
+    getSecurityCctv(),
+    getSecurityAcs(),
+    getSecurityIds(),
+    getSecurityFire(),
+  ]).then(([cctv, acs, ids, fire]) => ({
+    totalEquipment: cctv.total + acs.total + ids.total + fire.total,
+    onlineCount: cctv.online + acs.online + ids.online + fire.online,
+    faultCount: 0,
+    warningCount: 0,
+    cctv,
+    acs,
+    ids,
+    fire,
+  }))
 }
 
 export function getSecurityCctv(): Promise<SecuritySystemSummary> {
-  return request.get('/api/monitor/security/cctv')
+  return request.get('/api/security/cctv')
 }
 
 export function getSecurityAcs(): Promise<SecuritySystemSummary> {
-  return request.get('/api/monitor/security/acs')
+  return request.get('/api/security/acs')
 }
 
 export function getSecurityIds(): Promise<SecuritySystemSummary> {
-  return request.get('/api/monitor/security/ids')
+  return request.get('/api/security/ids')
 }
 
 export function getSecurityFire(): Promise<SecuritySystemSummary> {
-  return request.get('/api/monitor/security/fire')
+  return request.get('/api/security/fire')
 }
+

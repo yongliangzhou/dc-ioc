@@ -53,6 +53,14 @@ def list_findings(db: Session = Depends(get_db)):
     return crud.list_findings(db)
 
 
+@router.get("/findings/{fid}", response_model=dict)
+def get_finding(fid: int, db: Session = Depends(get_db)):
+    obj = crud.get_finding(db, fid)
+    if not obj:
+        raise HTTPException(status_code=404, detail="巡检发现不存在")
+    return crud._finding_dict(obj)
+
+
 @router.post("/findings", response_model=dict, dependencies=[Depends(require_role("admin", "operator"))])
 def create_finding(payload: FindingCreate, db: Session = Depends(get_db)):
     return crud.create_finding(db, payload.model_dump(exclude_none=True))

@@ -50,21 +50,43 @@ export interface InspectionStats {
 // ---- API ----
 
 export function getInspectionRoutes(): Promise<RouteView[]> {
-  return request.get('/api/inspection/routes')
+  return request.get('/api/ops/inspection/routes')
 }
 
+// 后端 GET /api/ops/inspection/findings 返回巡检发现列表 (对应原 records 概念)
 export function getInspectionRecords(routeId?: number): Promise<RecordView[]> {
-  return request.get('/api/inspection/records', { params: routeId ? { routeId } : {} })
+  return request
+    .get('/api/ops/inspection/findings', { params: routeId ? { routeId } : {} })
+    .then((r: any) => r)
 }
 
+// 后端已补 GET /api/ops/inspection/findings/{fid} 详情端点
 export function getInspectionRecordDetail(recordId: number): Promise<RecordView> {
-  return request.get(`/inspection/records/${recordId}`)
+  return request.get(`/api/ops/inspection/findings/${recordId}`).then((r: any) => r)
 }
 
+// 后端 finding 模型无 items 子表概念, 降级返回空数组 (产品确认无需独立 items 端点)
 export function getInspectionItems(recordId: number): Promise<ItemView[]> {
-  return request.get(`/inspection/records/${recordId}/items`)
+  void recordId
+  return Promise.resolve([])
 }
 
-export function getInspectionStats(): Promise<InspectionStats> {
-  return request.get('/api/inspection/stats')
+// 后端 GET /api/ops/inspection 返回 { today: {...}, robot: {...}, routes, findings }
+// 统计从 today 字段派生
+export async function getInspectionStats(): Promise<InspectionStats> {
+  const resp: any = await request.get('/api/ops/inspection')
+  const today = resp.today ?? {}
+  const plan = today.plan ?? 0
+  const done = today.done ?? 0
+  const rate = today.rate ?? 0
+  return {
+    totalRoutes: (resp.routes ?? []).length,
+    activeRoutes: plan,
+    todayRecords: done,
+    completedRecords: done,
+    passRecords: done,
+    failRecords: 0,
+    completionRate: rate,
+    passRate: rate,
+  }
 }

@@ -22,5 +22,5 @@ export interface HealthOverview {
 }
 
 export function getHealthOverview(): Promise<HealthOverview> {
-  return request.get('/api/health/overview').then((r: any) => r.data)
+  return request.get('/api/ops/equipment-health').then((r: any) => r.data)
 }

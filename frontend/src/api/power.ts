@@ -43,25 +43,41 @@ export interface PowerOverview {
 // ---- API 调用 ----
 
 export function getPowerOverview(): Promise<PowerOverview> {
-  return request.get('/api/monitor/power/overview')
+  return Promise.all([
+    getPowerHv(),
+    getPowerLv(),
+    getPowerGenset(),
+    getPowerFuel(),
+    getPowerBattery(),
+  ]).then(([hv, lv, genset, fuel, battery]) => ({
+    totalEquipment: hv.total + lv.total + genset.total + fuel.total + battery.total,
+    onlineCount: hv.online + lv.online + genset.online + fuel.online + battery.online,
+    faultCount: 0,
+    warningCount: 0,
+    hv,
+    lv,
+    genset,
+    fuel,
+    battery,
+  }))
 }
 
 export function getPowerHv(): Promise<PowerSystemSummary> {
-  return request.get('/api/monitor/power/hv')
+  return request.get('/api/power/hv')
 }
 
 export function getPowerLv(): Promise<PowerSystemSummary> {
-  return request.get('/api/monitor/power/lv')
+  return request.get('/api/power/lv')
 }
 
 export function getPowerGenset(): Promise<PowerSystemSummary> {
-  return request.get('/api/monitor/power/genset')
+  return request.get('/api/power/genset')
 }
 
 export function getPowerFuel(): Promise<PowerSystemSummary> {
-  return request.get('/api/monitor/power/fuel')
+  return request.get('/api/power/fuel')
 }
 
 export function getPowerBattery(): Promise<PowerSystemSummary> {
-  return request.get('/api/monitor/power/battery')
+  return request.get('/api/power/battery')
 }

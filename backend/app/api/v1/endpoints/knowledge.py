@@ -32,6 +32,14 @@ def list_knowledge(
     return {"total": total, "items": items, "stats": kb_crud.stats(db)}
 
 
+@router.get("/categories", summary="知识库分类统计")
+def knowledge_categories(db: Session = Depends(get_db), _u: User = Depends(get_current_user)):
+    s = kb_crud.stats(db)
+    by_type = s.get("byType", {})
+    categories = [{"name": k, "count": v} for k, v in by_type.items()]
+    return {"categories": categories, "total": s.get("total", 0)}
+
+
 @router.get("/related", response_model=list[KnowledgeOut], summary="按告警匹配处置预案")
 def related_knowledge(
     system: str | None = Query(default=None, description="告警 system, 如 暖通-冷源"),

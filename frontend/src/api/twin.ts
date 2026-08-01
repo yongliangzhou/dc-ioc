@@ -48,9 +48,9 @@ export interface TwinTopology {
 }
 
 export function getTwinOverview(): Promise<TwinOverview> {
-  return request.get('/api/twin').then((r: any) => r.data)
+  return request.get('/api/ops/twin').then((r: any) => r.data)
 }
 
 export function getTwinTopology(modelId: number): Promise<TwinTopology> {
-  return request.get(`/twin/topology/${modelId}`).then((r: any) => r.data)
+  return request.get(`/api/ops/twin/topology`).then((r: any) => r.data)
 }

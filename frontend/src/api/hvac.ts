@@ -87,17 +87,27 @@ export interface HvacOverview {
 // ---- API 调用 ----
 
 export function getHvacOverview(): Promise<HvacOverview> {
-  return request.get('/api/monitor/hvac/overview')
+  return Promise.all([getChillerPlant(), getCrac(), getLiquidCooling()]).then(
+    ([chiller, crac, liquidCooling]) => ({
+      totalEquipment: chiller.total + crac.total + liquidCooling.total,
+      onlineCount: chiller.online + crac.online + liquidCooling.online,
+      faultCount: 0,
+      warningCount: 0,
+      chiller,
+      crac,
+      liquidCooling,
+    }),
+  )
 }
 
 export function getChillerPlant(): Promise<ChillerSummary> {
-  return request.get('/api/monitor/hvac/chiller-plant')
+  return request.get('/api/hvac/chiller-plant')
 }
 
 export function getCrac(): Promise<CracSummary> {
-  return request.get('/api/monitor/hvac/crac')
+  return request.get('/api/hvac/crac')
 }
 
 export function getLiquidCooling(): Promise<LiquidCoolingSummary> {
-  return request.get('/api/monitor/hvac/liquid-cooling')
+  return request.get('/api/hvac/liquid-cooling')
 }

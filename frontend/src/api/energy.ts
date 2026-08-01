@@ -19,5 +19,5 @@ export interface EnergyOverview {
 }
 
 export function getEnergyOverview(): Promise<EnergyOverview> {
-  return request.get('/api/energy/overview').then((r: any) => r.data)
+  return request.get('/api/ops/energy').then((r: any) => r.data)
 }

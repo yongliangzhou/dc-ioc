@@ -113,7 +113,7 @@ export const getAuditLogs = (params: Record<string, any> = {}) =>
 /* ================= 告警持久化 API ================= */
 
 export const getAlarmHistory = (query: AlarmHistoryQuery = {}) =>
-  request.get<unknown, AlarmHistoryResponse>("/api/alarms/events", { params: query });
+  request.get<unknown, AlarmHistoryResponse>("/api/alarm-history", { params: query });
 
 export const acknowledgeAlarm = (eventId: string, operator: string) =>
   request.post<unknown, AlarmEvent>(`/api/alarms/${encodeURIComponent(eventId)}/ack`, { note: operator });
@@ -149,10 +149,10 @@ export const deleteDevice = (deviceId: string) =>
     `/api/external/devices/${encodeURIComponent(deviceId)}`
   );
 
-/** 物模型列表: POST /api/external/thing-models (Java 仅暴露 POST) */
+/** 物模型列表: GET /api/external/thing-models */
 
 export const getThingModels = () =>
-  request.post<unknown, ThingModelDef[]>("/api/external/thing-models");
+  request.get<unknown, ThingModelDef[]>("/api/external/thing-models");
 
 /** 某设备最近测点: GET /api/external/devices/{device_id}/metrics */
 
@@ -181,7 +181,7 @@ export const getDashboardOverview = () =>
   request.get<unknown, DashboardOverview>("/api/dashboard/overview");
 
 export const getAlarms = () =>
-  request.get<unknown, AlarmCenter>("/api/alarms");
+  request.get<unknown, AlarmCenter>("/api/ops/alarms");
 
 export const getRelatedRunbooks = (params: { system?: string; domain?: string; metric?: string } = {}) =>
   request.get<unknown, KnowledgeItem[]>("/api/runbooks/related", { params });
