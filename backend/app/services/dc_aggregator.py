@@ -907,7 +907,7 @@ def inspection_plan(db):
                     "id": -rid,
                     "code": r.device_id,
                     "freq": "每周",
-                    "items": len(r.metrics) if isinstance(r.metrics, (list, dict)) else 6,
+                    "items": 6,
                     "last": r.last_seen.strftime("%Y-%m-%d") if r.last_seen else "—",
                     "next": "—",
                     "state": "告警触发" if triggered else ("待执行" if online else "离线待巡检"),

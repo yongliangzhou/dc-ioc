@@ -202,7 +202,7 @@ export const getDeviceHistory = (
 ) => request.get<unknown, MetricHistoryResponse>(`/api/external/devices/${deviceId}/metrics/history`, { params });
 
 export const getTickets = (params: Record<string, any> = {}) =>
-  request.get<unknown, TicketCenter>("/api/tickets", { params });
+  request.get<unknown, TicketCenter>("/api/ops/tickets", { params });
 
 export const createTicketFromAlarm = (alarmId: string, data: TicketCreateRequest) =>
   request.post<unknown, Ticket>(`/api/tickets/from-alarm/${encodeURIComponent(alarmId)}`, data);
