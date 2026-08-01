@@ -1,5 +1,5 @@
 """驾驶舱 / 机柜 / 指标 DTO。"""
-from typing import List, Generic, Optional, TypeVar
+from typing import List, Generic, TypeVar
 
 from pydantic import BaseModel
 

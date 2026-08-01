@@ -252,7 +252,7 @@ def split_sections(text: str, min_body: int = 30) -> list[dict]:
 
     sections: list[dict] = []
     for sec in raw:
-        body = "\n".join(l for l in sec["body"] if l.strip())
+        body = "\n".join(ln for ln in sec["body"] if ln.strip())
         body = re.sub(r"[ \t]{2,}", " ", body).strip()
         sections.append({"heading": sec["heading"], "body": body})
 

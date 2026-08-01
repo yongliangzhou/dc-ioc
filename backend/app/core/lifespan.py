@@ -10,6 +10,8 @@
 import asyncio
 import json
 import logging
+
+from app.db.session import SessionLocal
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -571,7 +573,8 @@ def _seed_drill_risk_inspection():
 
 def _seed_external_devices():
     """首次启动时填充采集器接入(外部设备)演示数据 (幂等)。"""
-    import logging, random
+    import logging
+    import random
     logger = logging.getLogger("seed")
     from datetime import datetime, timedelta
 

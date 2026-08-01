@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import datetime
-from typing import Optional
 
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.types import JSON

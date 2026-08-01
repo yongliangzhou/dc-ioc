@@ -58,7 +58,6 @@ def get(db: Session, rid: int) -> Optional[DrillPlan]:
 
 def create(db: Session, data: dict) -> dict:
     data = {k: v for k, v in _to_snake(data).items() if v is not None}
-    name = data.get("name") or "未命名演练"
     cnt = db.query(func.count(DrillPlan.id)).scalar() or 0
     if not data.get("code"):
         data["code"] = f"DR-{cnt + 1:03d}"

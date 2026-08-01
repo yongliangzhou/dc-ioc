@@ -1,11 +1,15 @@
 """机柜 (Cabinet) 模型。"""
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import String, Integer, Numeric, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.idc import IDC
+    from app.models.server import Server
 
 
 class Cabinet(Base, TimestampMixin):

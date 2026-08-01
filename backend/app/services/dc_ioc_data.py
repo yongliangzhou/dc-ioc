@@ -1050,8 +1050,13 @@ def genset():
         elif st == "维保":
             ua = ub = uc = u = 0
             ia = ib = ic = i_avg = 0
-            p = q = 0; pf = 0; freq = 0; energy = rnd(16000, 30000, 0)
-            rpm = 0; waterT = rnd(38, 46, 0); oilP = 0
+            p = q = 0
+            pf = 0
+            freq = 0
+            energy = rnd(16000, 30000, 0)
+            rpm = 0
+            waterT = rnd(38, 46, 0)
+            oilP = 0
             faults = [
                 {"name": "维保中", "value": "待检", "level": "a"},
                 {"name": "启动电池", "value": "电压偏低", "level": "a"},
@@ -1067,8 +1072,13 @@ def genset():
         else:  # 备用
             ua = ub = uc = u = 0
             ia = ib = ic = i_avg = 0
-            p = q = 0; pf = 0; freq = 0; energy = rnd(20000, 40000, 0)
-            rpm = 0; waterT = rnd(38, 46, 0); oilP = 0
+            p = q = 0
+            pf = 0
+            freq = 0
+            energy = rnd(20000, 40000, 0)
+            rpm = 0
+            waterT = rnd(38, 46, 0)
+            oilP = 0
             faults = []
             prots = [{"name": n, "state": "投入", "level": "g"} for n in PROT]
 
@@ -1216,7 +1226,8 @@ def fuel():
         if idx == 1:
             for pp in prots:
                 if pp["name"] == "轴承温度高保护":
-                    pp["state"] = "动作"; pp["level"] = "a"
+                    pp["state"] = "动作"
+                    pp["level"] = "a"
         pumps.append({"id": pid, "state": st, "mode": mode, "alarms": alarms, "protections": prots})
 
     return {
@@ -1963,28 +1974,28 @@ def _build_equipment() -> list[dict]:
             feeder=t["feeder"], load_pct=t["load"], windingT=t["windingT"], oilT=t["oilT"],
             ambT=t["ambT"], humidity=t["humidity"], tap=t["tap"], fan=t["fan"])
 
-    l = lv()
-    for t in l["transformers"]:
+    lv_snap = lv()
+    for t in lv_snap["transformers"]:
         add("power_lv", "transformer", t["id"], "变压器", t["state"], load_pct=t["load"], t=t["t"],
             u=t["u"], i=t["i"], p=t["p"], pf=t["pf"], energy=t["energy"], thdu=t["thdu"], thdi=t["thdi"])
-    for u in l["upsGroups"]:
+    for u in lv_snap["upsGroups"]:
         add("power_lv", "ups", u["id"], "UPS 组", u["state"], load_pct=u["load"], uOut=u["uOut"], mode=u["mode"],
             iOut=u["iOut"], p=u["p"], pf=u["pf"], energy=u["energyIn"], thdu=u["thdu"], thdi=u["thdi"])
-    for hvdc in l["hvdc"]:
+    for hvdc in lv_snap["hvdc"]:
         add("power_lv", "hvdc", hvdc["id"], "高压直流", hvdc["state"], load_pct=hvdc["load"], u=hvdc["u"],
             modRun=hvdc["modRun"], modN=hvdc["modN"], i=hvdc["i"], p=hvdc["p"], pf=hvdc["pf"],
             energy=hvdc["energy"], thdi=hvdc["thdi"])
-    for a in l["ats"]:
+    for a in lv_snap["ats"]:
         add("power_lv", "ats", a["id"], "ATS 自动切换", a["state"], mode=a["mode"], lastSw=a["lastSw"],
             uOut=a["uOut"], pf=a["pf"], p=a["p"])
-    for b in l["busbars"]:
+    for b in lv_snap["busbars"]:
         add("power_lv", "busbar", b["id"], "低压母排", b["state"], load_pct=b["load"], i=b["i"], u=b["u"],
             pf=b["pf"], energy=b["energy"], thdu=b["thdu"])
-    for br in l["branches"]:
+    for br in lv_snap["branches"]:
         add("power_lv", "branch", br["id"], "低压馈线回路", br["breaker"], load=br["name"], rated=br["rated"],
             u=br["u"], i=br["i"], p=br["p"], pf=br["pf"], freq=br["freq"], energy=br["energy"],
             thdu=br["thdu"], thdi=br["thdi"], load_pct=br["loadPct"])
-    for s in l["spds"]:
+    for s in lv_snap["spds"]:
         add("power_lv", "spd", s["id"], "浪涌保护器(SPD)", s["status"], state=s["state"], leakI=s["leakI"],
             count=s["count"], level=s["level"])
 
@@ -2267,7 +2278,6 @@ def network():
     top_names = ["Core→Agg 上行", "A03 TOR→Core 上行", "B01→Core 上行",
                  "Agg→Core A 聚合", "办公网出口", "存储网络主干",
                  "管理口汇聚", "安全域互联", "视频流专线", "AI训练网络"]
-    top_idx = 0
     bw_items = []
     for i, (pn, desc) in enumerate(zip(top_ports, top_names), 1):
         util = _rnd(15, 95, 1)

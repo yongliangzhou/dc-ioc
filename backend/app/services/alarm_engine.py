@@ -19,6 +19,7 @@ from time import time
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.db.session import Base
 from app.services import alarm_store
 
 # [P2-8] 告警触发计数 (Prometheus). monitoring 不反向依赖本模块, 可安全导入。

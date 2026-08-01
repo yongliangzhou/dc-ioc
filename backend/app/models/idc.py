@@ -1,11 +1,14 @@
 """数据中心 (IDC) 模型。"""
-from typing import List
+from typing import TYPE_CHECKING, List
 
 from sqlalchemy import String, Integer, Numeric
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.cabinet import Cabinet
 
 
 class IDC(Base, TimestampMixin):

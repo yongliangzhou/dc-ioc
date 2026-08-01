@@ -14,7 +14,6 @@ import json
 import logging
 import threading
 import urllib.request
-from typing import Optional
 
 from app.core.config import settings
 

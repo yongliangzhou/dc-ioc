@@ -2,10 +2,10 @@
 import secrets
 from functools import lru_cache
 
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 # 开发环境未配置 SECRET_KEY 时自动生成的临时密钥 (模块级缓存, 重启失效)
 _DEV_SECRET: str | None = None
-
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):

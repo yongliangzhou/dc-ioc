@@ -14,7 +14,6 @@ from typing import Optional
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.crud.alarm import list_alarms as _list_alarms
 from app.crud.ticket import list_tickets as _list_tickets
 from app.models.alarm import AlarmEvent
 

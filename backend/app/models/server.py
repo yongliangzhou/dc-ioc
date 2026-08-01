@@ -1,9 +1,14 @@
 """物理服务器 (Server) 模型。"""
+from typing import TYPE_CHECKING
+
 from sqlalchemy import String, Integer, ForeignKey, Index, CheckConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
 from app.models.base import TimestampMixin
+
+if TYPE_CHECKING:
+    from app.models.cabinet import Cabinet
 
 
 class Server(Base, TimestampMixin):

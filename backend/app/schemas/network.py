@@ -1,5 +1,5 @@
 """网络监控域 DTO。"""
-from typing import List, Optional
+from typing import List
 
 from pydantic import BaseModel
 

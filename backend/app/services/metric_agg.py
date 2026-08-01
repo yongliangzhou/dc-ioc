@@ -144,7 +144,7 @@ def query_history_agg(
 
     try:
         sql = (
-            f"SELECT bucket, metric_name, avg_value, max_value, min_value, samples"  # noqa: S608
+            "SELECT bucket, metric_name, avg_value, max_value, min_value, samples"  # noqa: S608
             + (", unit" if cap["mode"] == "plain" else "")
             + f" FROM {view} WHERE device_id = :dev"
         )

@@ -331,8 +331,8 @@ def ark_closed_loop() -> dict:
             ],
         })
 
-    achieved_kw = round(sum(l["savedKw"] for l in loops if l["kind"] == "achieved"), 1)
-    potential_kw = round(sum(l["savedKw"] for l in loops if l["kind"] == "potential"), 1)
+    achieved_kw = round(sum(loop["savedKw"] for loop in loops if loop["kind"] == "achieved"), 1)
+    potential_kw = round(sum(loop["savedKw"] for loop in loops if loop["kind"] == "potential"), 1)
     achieved_kwh = _kwh_year(achieved_kw)
 
     return {
@@ -349,7 +349,7 @@ def ark_closed_loop() -> dict:
             "potentialKw": potential_kw,
             "carbonTonYear": round(achieved_kwh * _GRID_CO2_KG_PER_KWH / 1000, 1),
             "loopCount": len(loops),
-            "runningCount": len([l for l in loops if l["state"] == "闭环运行"]),
+            "runningCount": len([loop for loop in loops if loop["state"] == "闭环运行"]),
         },
         "loops": loops,
     }

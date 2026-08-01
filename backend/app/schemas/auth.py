@@ -1,8 +1,7 @@
 """认证 DTO 层: 登录请求/响应、用户信息。"""
-import json
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class LoginRequest(BaseModel):

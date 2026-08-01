@@ -1,4 +1,5 @@
-import sys, time
+import sys
+import time
 sys.path.insert(0, "/app")
 from app.services import manual_import as m
 t0 = time.time()

@@ -10,10 +10,8 @@ from __future__ import annotations
 import logging
 
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
 
 from app.core.deps import require_role
-from app.db.session import get_db
 from app.services import alarm_engine
 
 logger = logging.getLogger("api.alarms")

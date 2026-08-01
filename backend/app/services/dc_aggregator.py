@@ -12,7 +12,6 @@ from __future__ import annotations
 import logging
 import random
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional
 
 from sqlalchemy import func, or_
 
@@ -53,7 +52,7 @@ def _latest_metric_for_device(device_id: str, metric_name: str, db=None, fallbac
     # 兜底：从 metric_raws 批量取最近数据
     if db is not None:
         try:
-            from sqlalchemy import desc, text
+            from sqlalchemy import desc
             from app.models.external import MetricRaw
             row = db.query(MetricRaw).filter(
                 MetricRaw.device_id == device_id,
@@ -72,7 +71,6 @@ def dashboard_overview() -> dict:
     db = _get_db()
     try:
         items, total, online, offline = ext_crud.list_devices(db, skip=0, limit=10000)
-        total_metrics = ext_crud.total_metric_count(db)
     finally:
         if db is not None:
             db.close()

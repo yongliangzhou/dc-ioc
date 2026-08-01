@@ -10,18 +10,12 @@ from __future__ import annotations
 
 import json
 import logging
-from time import time as _now
 from typing import Optional
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
-from app.models.alarm_state import (
-    AlarmActiveState,
-    AlarmRule,
-    AlarmSuppressedDevice,
-)
 
 logger = logging.getLogger("alarm.engine")
 

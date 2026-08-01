@@ -6,16 +6,18 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.endpoints import ws
 from app.api.v1.router import api_router
+from app.core.audit import AuditMiddleware
 from app.core.config import settings
 from app.core.lifespan import lifespan
+from app.core.logging_config import setup_logging
+from app.core.monitoring import setup_monitoring
+from app.core.secret_check import check_secrets_on_startup
 
 # ---- 结构化日志 ----
-from app.core.logging_config import setup_logging
 setup_logging()
 logger = logging.getLogger("main")
 
 # ---- 密钥检查 (生产环境) ----
-from app.core.secret_check import check_secrets_on_startup
 try:
     check_secrets_on_startup(
         settings.APP_ENV,
@@ -37,7 +39,6 @@ app = FastAPI(
 )
 
 # ---- 监控 (Prometheus) ----
-from app.core.monitoring import setup_monitoring
 setup_monitoring(app)
 logger.info("Prometheus 监控已挂载: /metrics")
 
@@ -50,7 +51,6 @@ app.add_middleware(
 )
 
 # 操作审计 (记录所有 CRUD 写操作)
-from app.core.audit import AuditMiddleware
 app.add_middleware(AuditMiddleware)
 
 # 全部业务域 API 统一挂载于 /api

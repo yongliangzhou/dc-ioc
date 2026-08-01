@@ -22,7 +22,7 @@ import json
 import logging
 from typing import Optional
 
-from aiokafka.structs import OffsetAndMetadata, TopicPartition
+from aiokafka.structs import OffsetAndMetadata
 
 from app.core.config import settings
 from app.crud import external as ext_crud

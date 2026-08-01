@@ -14,7 +14,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_token
 from app.db.session import SessionLocal
-from app.models.user import User, Role
+from app.models.user import User
 
 security_scheme = HTTPBearer(auto_error=False)
 
