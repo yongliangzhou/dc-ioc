@@ -110,17 +110,24 @@ interface RawTopoEdge {
   type?: string
   label?: string | null
 }
+interface RawTopoContainer {
+  nodes?: RawTopoNode[]
+  edges?: RawTopoEdge[]
+  source?: string
+  name?: string
+  description?: string
+}
 interface RawTopology {
   name?: string
   description?: string
   source?: string
-  topology?: { nodes?: RawTopoNode[]; edges?: RawTopoEdge[]; source?: string; name?: string; description?: string }
+  topology?: RawTopoContainer
   twinGraph?: unknown
   summary?: { source?: string }
 }
 
 function mapTopology(raw: RawTopology): TwinTopology {
-  const topo = raw.topology ?? (raw as unknown as { nodes?: RawTopoNode[]; edges?: RawTopoEdge[] })
+  const topo: RawTopoContainer = raw.topology ?? (raw as unknown as RawTopoContainer)
   const nodes = (topo.nodes ?? []).map((n): TopoNode => ({
     id: String(n.id ?? n.label ?? Math.random()),
     label: n.label ?? n.name ?? String(n.id ?? ''),
