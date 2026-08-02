@@ -16,10 +16,10 @@
 
     <!-- 总览 KPI -->
     <div class="kpi-row">
-      <KpiCard label="探测点位" :value="s.points" unit="点" icon="radio-tower" :sub="'故障 ' + s.faultPoints + ' 点'" />
-      <KpiCard label="主机遇警率" :value="hostOkRate" unit="%" icon="shield-check" :trend="s.faultPoints ? 'down' : 'up'" :sub="s.faultPoints ? '需处置' : '正常'" />
-      <KpiCard label="气体灭火区" :value="s.gas.ready" :unit="'/ ' + s.gas.zones + ' 区'" icon="cloud" :sub="'药剂 ' + s.gas.agent" />
-      <KpiCard label="应急照明" :value="s.emergency.ok" :unit="'/ ' + s.emergency.lights" icon="lightbulb" :trend="batteryOk ? 'up' : 'down'" :sub="'蓄电池 ' + s.emergency.batteryOk + '%'" />
+      <KpiCard title="探测点位" :value="s.points" unit="点" :sub="'故障 ' + s.faultPoints + ' 点'" />
+      <KpiCard title="主机遇警率" :value="hostOkRate" unit="%" :trend="s.faultPoints ? -1 : 1" :sub="s.faultPoints ? '需处置' : '正常'" />
+      <KpiCard title="气体灭火区" :value="s.gas.ready" :unit="'/ ' + s.gas.zones + ' 区'" :sub="'药剂 ' + s.gas.agent" />
+      <KpiCard title="应急照明" :value="s.emergency.ok" :unit="'/ ' + s.emergency.lights" :trend="batteryOk ? 1 : -1" :sub="'蓄电池 ' + s.emergency.batteryOk + '%'" />
     </div>
 
     <div class="grid-main">
@@ -229,7 +229,7 @@ const s = ref<FireSummary>({
   hostState: '', loops: 0, points: 0, faultPoints: 0, detectors: [],
   gas: { zones: 0, ready: 0, released: 0, agent: '' }, vesda: [],
   qieFei: { desc: '', state: '', lastDrill: '' }, emergency: { lights: 0, ok: 0, batteryOk: 0, evacSigns: 0 },
-  events: [], knowledge: {},
+  events: [], knowledge: { thresholds: [] },
 })
 const usingMock = ref(false)
 

@@ -22,11 +22,11 @@
 
     <!-- 总览 KPI -->
     <div class="kpi-row">
-      <KpiCard label="摄像机总数" :value="summary.total" unit="路" icon="camera" :sub="'在线 ' + summary.online" />
-      <KpiCard label="在线率" :value="onlineRate" unit="%" icon="activity" :trend="summary.offline === 0 ? 'up' : 'down'" :sub="summary.offline + ' 路离线'" />
-      <KpiCard label="NVR 存储" :value="summary.nvr.storeDays" unit="天" icon="database" :sub="'要求≥' + summary.nvr.required + '天'" />
-      <KpiCard label="今日事件" :value="summary.events.length" unit="条" icon="bell" :sub="aiEvents + ' 条 AI 联动'" />
-      <KpiCard label="AI 算法" :value="summary.ai.length" unit="类" icon="cpu" :sub="'布控中'" />
+      <KpiCard title="摄像机总数" :value="summary.total" unit="路" :sub="'在线 ' + summary.online" />
+      <KpiCard title="在线率" :value="onlineRate" unit="%" :trend="summary.offline === 0 ? 1 : -1" :sub="summary.offline + ' 路离线'" />
+      <KpiCard title="NVR 存储" :value="summary.nvr.storeDays" unit="天" :sub="'要求≥' + summary.nvr.required + '天'" />
+      <KpiCard title="今日事件" :value="summary.events.length" unit="条" :sub="aiEvents + ' 条 AI 联动'" />
+      <KpiCard title="AI 算法" :value="summary.ai.length" unit="类" :sub="'布控中'" />
     </div>
 
     <div class="grid-main">
@@ -277,14 +277,15 @@ const filteredCams = computed(() =>
 // 分屏预览
 const layout = ref(4)
 const startIdx = ref(0)
-const gridCams = computed(() => {
+const gridCams = computed<CamView[]>(() => {
   const n = layout.value
   const online = cams.value.filter((c) => c.status === 'online')
-  const arr: (CamView | null)[] = []
-  for (let i = 0; i < n; i++) arr.push(online[(startIdx.value + i) % Math.max(1, online.length)] || null)
+  if (online.length === 0) return []
+  const arr: CamView[] = []
+  for (let i = 0; i < n; i++) arr.push(online[(startIdx.value + i) % online.length])
   return arr
 })
-const visibleCams = computed(() => gridCams.value.filter(Boolean) as CamView[])
+const visibleCams = computed(() => gridCams.value)
 function setLayout(n: number) { layout.value = n; startIdx.value = 0 }
 function focusCam(cam: CamView | null) {
   if (!cam) return

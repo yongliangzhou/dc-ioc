@@ -13,10 +13,10 @@
 
     <!-- 总览 KPI -->
     <div class="kpi-row">
-      <KpiCard label="门禁总数" :value="s.total" unit="樘" icon="door" :sub="'在线 ' + s.online" />
-      <KpiCard label="在线率" :value="onlinePercent" unit="%" icon="activity" :trend="s.openAbnormal ? 'down' : 'up'" :sub="s.openAbnormal + ' 樘门磁异常'" />
-      <KpiCard label="今日刷卡" :value="s.todayEvents" unit="次" icon="log-in" :sub="s.visitors + ' 名访客'" />
-      <KpiCard label="拒绝/异常" :value="s.denied + s.openAbnormal" unit="次" icon="shield-alert" :trend="(s.denied + s.openAbnormal) ? 'down' : 'up'" :sub="s.denied + ' 次拒绝'" />
+      <KpiCard title="门禁总数" :value="s.total" unit="樘" :sub="'在线 ' + s.online" />
+      <KpiCard title="在线率" :value="onlinePercent" unit="%" :trend="s.openAbnormal ? -1 : 1" :sub="s.openAbnormal + ' 樘门磁异常'" />
+      <KpiCard title="今日刷卡" :value="s.todayEvents" unit="次" :sub="s.visitors + ' 名访客'" />
+      <KpiCard title="拒绝/异常" :value="s.denied + s.openAbnormal" unit="次" :trend="(s.denied + s.openAbnormal) ? -1 : 1" :sub="s.denied + ' 次拒绝'" />
     </div>
 
     <div class="grid-main">
@@ -122,6 +122,7 @@
         <TrendChart
           title=""
           :series="passSeries"
+          :x-axis-data="passLabels"
           type="bar"
           :show-area="false"
           :height="220"
@@ -286,8 +287,9 @@ const alarms = computed(() => {
 // 通行统计（取前 8 个门点）
 const passSeries = computed(() => [{
   name: '今日通行(人次)',
-  data: points.value.slice(0, 8).map((p) => ({ t: p.short, v: p.pass })),
+  data: points.value.slice(0, 8).map((p) => p.pass),
 }])
+const passLabels = computed(() => points.value.slice(0, 8).map((p) => p.short))
 
 // 远程控制
 function noop() {}

@@ -17,9 +17,8 @@ import uuid
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, get_db, require_role
+from app.core.deps import get_current_user, require_role
 from app.models.user import User
 
 router = APIRouter(prefix="/uploads", tags=["uploads"])

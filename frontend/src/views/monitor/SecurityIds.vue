@@ -16,10 +16,10 @@
 
     <!-- 总览 KPI -->
     <div class="kpi-row">
-      <KpiCard label="周界防区" :value="s.perimeter.zones" unit="区" icon="fence" :sub="'布防 ' + s.perimeter.armed" />
-      <KpiCard label="周界布防率" :value="armRate" unit="%" icon="shield" :trend="s.perimeter.armed === s.perimeter.zones ? 'up' : 'down'" :sub="s.perimeter.zones - s.perimeter.armed + ' 区未布防'" />
-      <KpiCard label="室内探测器" :value="s.indoor.ir + s.indoor.glass" unit="个" icon="scan-eye" :sub="'红外 ' + s.indoor.ir + ' / 玻璃 ' + s.indoor.glass" />
-      <KpiCard label="周界告警" :value="s.perimeter.alarm" unit="起" icon="alert-triangle" :trend="s.perimeter.alarm ? 'down' : 'up'" :sub="s.perimeter.alarm ? '需处置' : '正常'" />
+      <KpiCard title="周界防区" :value="s.perimeter.zones" unit="区" :sub="'布防 ' + s.perimeter.armed" />
+      <KpiCard title="周界布防率" :value="armRate" unit="%" :trend="s.perimeter.armed === s.perimeter.zones ? 1 : -1" :sub="s.perimeter.zones - s.perimeter.armed + ' 区未布防'" />
+      <KpiCard title="室内探测器" :value="s.indoor.ir + s.indoor.glass" unit="个" :sub="'红外 ' + s.indoor.ir + ' / 玻璃 ' + s.indoor.glass" />
+      <KpiCard title="周界告警" :value="s.perimeter.alarm" unit="起" :trend="s.perimeter.alarm ? -1 : 1" :sub="s.perimeter.alarm ? '需处置' : '正常'" />
     </div>
 
     <div class="grid-main">
