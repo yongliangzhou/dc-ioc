@@ -29,18 +29,18 @@
 
         <!-- 双射频 -->
         <div class="radio-grid">
-          <div class="radio-block" v-for="(r, key) in [['2.4G', ap.radio_2g], ['5G', ap.radio_5g]]" :key="key">
+          <div class="radio-block" v-for="r in [{ band: '2.4G', radio: ap.radio_2g }, { band: '5G', radio: ap.radio_5g }]" :key="r.band">
             <div class="radio-head">
-              <span class="d-name">{{ r[0] }}</span>
-              <span class="tag" :class="r[1].status === 'up' ? 'g' : 'r'">{{ r[1].status }}</span>
+              <span class="d-name">{{ r.band }}</span>
+              <span class="tag" :class="r.radio.status === 'up' ? 'g' : 'r'">{{ r.radio.status }}</span>
             </div>
             <div class="radio-meta">
-              <span class="muted">{{ tl('信道') }}</span><span class="mono">{{ r[1].channel }}</span>
-              <span class="muted">{{ tl('功率') }}</span><span class="mono">{{ r[1].tx_power_dbm }}dBm</span>
-              <span class="muted">{{ tl('用户') }}</span><span class="mono">{{ r[1].users }}</span>
-              <span class="muted">{{ tl('利用率') }}</span><span class="mono" :class="r[1].util_pct > 70 ? 'a-text' : 'g-text'">{{ r[1].util_pct }}%</span>
+              <span class="muted">{{ tl('信道') }}</span><span class="mono">{{ r.radio.channel }}</span>
+              <span class="muted">{{ tl('功率') }}</span><span class="mono">{{ r.radio.tx_power_dbm }}dBm</span>
+              <span class="muted">{{ tl('用户') }}</span><span class="mono">{{ r.radio.users }}</span>
+              <span class="muted">{{ tl('利用率') }}</span><span class="mono" :class="r.radio.util_pct > 70 ? 'a-text' : 'g-text'">{{ r.radio.util_pct }}%</span>
             </div>
-            <div class="radio-bar"><span class="radio-fill" :class="r[1].util_pct > 70 ? 'a' : 'g'" :style="{ width: Math.min(100, r[1].util_pct) + '%' }"></span></div>
+            <div class="radio-bar"><span class="radio-fill" :class="r.radio.util_pct > 70 ? 'a' : 'g'" :style="{ width: Math.min(100, r.radio.util_pct) + '%' }"></span></div>
           </div>
         </div>
       </div>

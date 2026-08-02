@@ -6,8 +6,8 @@
     </div>
 
     <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="fw-total" :label="tl('防火墙')" :value="s.total" unit="台" quality="good" :online="true" />
-      <MetricCard metric-name="fw-sessions" :label="tl('并发会话')" :value="fmtNum(s.concurrentSessions)" unit="" quality="good" :online="true" />
+      <MetricCard metric-name="fw-total" :label="tl('防火墙')" :value="Number(s.total)" unit="台" quality="good" :online="true" />
+      <MetricCard metric-name="fw-sessions" :label="tl('并发会话')" :value="s.concurrentSessions" unit="" quality="good" :online="true" />
       <MetricCard metric-name="fw-policy" :label="tl('安全策略')" :value="s.policyTotal" unit="条" quality="good" :online="true" />
       <MetricCard metric-name="fw-threat" :label="tl('威胁拦截')" :value="s.threatBlocked" unit="次" :quality="s.threatBlocked ? 'uncertain' : 'good'" :online="true" :severity="s.threatBlocked ? 'warn' : 'normal'" />
     </div>

@@ -6,10 +6,10 @@
     </div>
 
     <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="rt-total" :label="tl('路由器')" :value="s.total" unit="台" quality="good" :online="true" />
-      <MetricCard metric-name="rt-bgp" :label="tl('BGP 状态')" :value="s.bgpState" unit="" :quality="s.bgpState === 'Established' ? 'good' : 'bad'" :online="true" :severity="s.bgpState === 'Established' ? 'normal' : 'crit'" />
-      <MetricCard metric-name="rt-routes" :label="tl('路由表')" :value="s.routesTotal" unit="条" quality="good" :online="true" />
-      <MetricCard metric-name="rt-sessions" :label="tl('会话数')" :value="fmtNum(s.totalSessions)" unit="" quality="good" :online="true" />
+      <MetricCard metric-name="rt-total" :label="tl('路由器')" :value="Number(s.total)" unit="台" quality="good" :online="true" />
+      <MetricCard metric-name="rt-bgp" :label="tl('BGP 状态')" :value="s.bgpState === 'Established' ? 1 : 0" unit="" :quality="s.bgpState === 'Established' ? 'good' : 'bad'" :online="true" :severity="s.bgpState === 'Established' ? 'normal' : 'crit'" />
+      <MetricCard metric-name="rt-routes" :label="tl('路由表')" :value="Number(s.routesTotal)" unit="条" quality="good" :online="true" />
+      <MetricCard metric-name="rt-sessions" :label="tl('会话数')" :value="s.totalSessions" unit="" quality="good" :online="true" />
     </div>
 
     <template v-if="s">

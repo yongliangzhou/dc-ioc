@@ -657,6 +657,42 @@ function mapChiller(raw: any): ChillerSummary {
     makeupDevice,
     bypassFilter,
     pipePressure,
+    chillerGroups: (raw?.chillerGroups ?? []).map((g: any) => ({
+      chiller: {
+        id: g?.chiller?.id ?? '',
+        state: g?.chiller?.state ?? '',
+        load: Number(g?.chiller?.load) || 0,
+        cop: Number(g?.chiller?.cop) || 0,
+        evapT: g?.chiller?.evapT ?? '-',
+        condT: g?.chiller?.condT ?? '-',
+        current: Number(g?.chiller?.current) || 0,
+        runHrs: Number(g?.chiller?.runHrs) || 0,
+      },
+      chwPump: g?.chwPump
+        ? {
+            id: g.chwPump.id,
+            state: g.chwPump.state,
+            hz: Number(g.chwPump.hz) || 0,
+            kw: Number(g.chwPump.kw) || 0,
+            flow: Number(g.chwPump.flow) || 0,
+            inP: Number(g.chwPump.inP) || 0,
+            outP: Number(g.chwPump.outP) || 0,
+          }
+        : null,
+      cwPump: g?.cwPump
+        ? {
+            id: g.cwPump.id,
+            state: g.cwPump.state,
+            hz: Number(g.cwPump.hz) || 0,
+            kw: Number(g.cwPump.kw) || 0,
+            flow: Number(g.cwPump.flow) || 0,
+            inP: Number(g.cwPump.inP) || 0,
+            outP: Number(g.cwPump.outP) || 0,
+          }
+        : null,
+      tankConnected: Boolean(g?.tankConnected),
+      tankFlow: Number(g?.tankFlow) || 0,
+    })),
   }
 }
 

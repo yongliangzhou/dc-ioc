@@ -309,7 +309,7 @@ def chiller_trends():
     for tag, n, step in [("24h", _n24, _s24), ("7d", _n7d, _s7d), ("30d", _n30d, _s30d)]:
         cond = [round(29.1 + math.sin(i / n * math.pi * 2) * 1.5 + (_rng.random() - 0.5) * 0.5, 1) for i in range(n)]
         cool = [round(19.2 + math.sin((i + 2) / n * math.pi * 2) * 1.2 + (_rng.random() - 0.5) * 0.4, 1) for i in range(n)]
-        diff = [round(c - l, 1) for c, l in zip(cond, cool)]
+        diff = [round(c - cool_t, 1) for c, cool_t in zip(cond, cool)]
         condCoolDiff[tag] = {"timestamps": _times(n, step), "condTemp": cond, "coolTemp": cool, "diff": diff}
 
     # ---- 4. 水泵频率(Hz) vs 流量(m³/h) 关联 (CHWP冷冻泵 + CWP冷却泵) ----

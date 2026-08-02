@@ -261,17 +261,41 @@ interface RawSwitch {
 }
 
 interface RawOverview {
-  total_switches: number
-  online_switches: number
-  offline_switches: number
-  total_ports: number
-  up_ports: number
-  down_ports: number
-  overall_port_rate: number
-  total_traffic_bps: number
-  avg_cpu_pct: number
-  avg_mem_pct: number
-  switches: RawSwitch[]
+  total_switches?: number
+  online_switches?: number
+  offline_switches?: number
+  total_ports?: number
+  up_ports?: number
+  down_ports?: number
+  overall_port_rate?: number
+  total_traffic_bps?: number
+  avg_cpu_pct?: number
+  avg_mem_pct?: number
+  switches?: RawSwitch[]
+  ping_targets?: Array<{
+    target: string
+    name?: string
+    category?: string
+    rtt_min_ms?: number
+    rtt_avg_ms?: number
+    rtt_max_ms?: number
+    loss_pct?: number
+    jitter_ms?: number
+    status?: string
+  }>
+  avg_ping_rtt_ms?: number
+  avg_ping_loss_pct?: number
+  worst_ping_target?: { target: string; rtt_ms?: number; loss_pct?: number; status?: string } | null
+  bw_topn?: Array<{
+    rank?: number
+    name?: string
+    device?: string
+    direction?: string
+    util_pct?: number
+    traffic_bps?: number
+    capacity_mbps?: number
+    alert?: boolean
+  }>
 }
 
 function mapSwitchToDevice(sw: RawSwitch, idx: number): NetworkDeviceView {

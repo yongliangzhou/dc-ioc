@@ -8,8 +8,8 @@
     <div class="grid cols-4" v-if="s">
       <MetricCard metric-name="sw-total" :label="tl('交换机')" :value="s.total" unit="台" quality="good" :online="true" />
       <MetricCard metric-name="sw-port-rate" :label="tl('端口可用率')" :value="s.overallPortRate" unit="%" :quality="s.overallPortRate < 95 ? 'uncertain' : 'good'" :online="true" />
-      <MetricCard metric-name="sw-cpu" :label="tl('平均CPU')" :value="s.avgCpu" unit="%" :quality="s.avgCpu > 80 ? 'bad' : s.avgCpu > 60 ? 'uncertain' : 'good'" :online="true" :severity="s.avgCpu > 80 ? 'crit' : 'normal'" />
-      <MetricCard metric-name="sw-traffic" :label="tl('总吞吐')" :value="fmtBps(s.totalTrafficBps)" unit="" quality="good" :online="true" />
+      <MetricCard metric-name="sw-cpu" :label="tl('平均CPU')" :value="Number(s.avgCpu)" unit="%" :quality="s.avgCpu > 80 ? 'bad' : s.avgCpu > 60 ? 'uncertain' : 'good'" :online="true" :severity="s.avgCpu > 80 ? 'crit' : 'normal'" />
+      <MetricCard metric-name="sw-traffic" :label="tl('总吞吐')" :value="s.totalTrafficBps" unit="" quality="good" :online="true" />
     </div>
 
     <template v-if="s">
