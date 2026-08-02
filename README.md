@@ -1,6 +1,6 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.5.0** | 生产就绪（智算中心级冷源 + 液冷系统） | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储）
+> **v0.6.0** | 生产就绪（网络监控深化 + 代码质量） | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储）
 
 ---
 
@@ -88,6 +88,12 @@ dc-ioc-platform/
 │   │   │   ├── security/              #   安防消防 (4 页面)
 │   │   │   │   ├── Cctv.vue / Acs.vue #     视频监控 / 门禁管理
 │   │   │   │   └── Fire.vue / Ids.vue #     消防报警 / 防入侵
+│   │   │   ├── monitor/               #   网络监控 (5 页面)
+│   │   │   │   ├── NetworkDashboard.vue #   网络总览
+│   │   │   │   ├── NetworkSwitches.vue  #   核心交换机
+│   │   │   │   ├── NetworkRouters.vue   #   路由器
+│   │   │   │   ├── NetworkFirewalls.vue #   防火墙
+│   │   │   │   └── NetworkWireless.vue  #   无线网络
 │   │   │   └── ops/                   #   智能运营与运维 (20 页面)
 │   │   │       ├── Twin.vue           #     数字孪生
 │   │   │       ├── Topology.vue       #     链路拓扑
@@ -243,6 +249,16 @@ dc-ioc-platform/
 | 机柜管理 | `/ops/cabinets` | admin/operator |
 | 统一设备台账 | `/ops/equipment` | admin/operator |
 
+### 3.7 网络监控
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 网络总览 | `/monitor/network` | admin/operator/viewer | 全网拓扑概览与 KPI 仪表盘 |
+| 核心交换机 | `/monitor/network/switches` | admin/operator/viewer | 交换机运行状态、端口流量、CPU/内存 |
+| 路由器 | `/monitor/network/routers` | admin/operator/viewer | BGP 状态、吞吐量、会话数、路由表 |
+| 防火墙 | `/monitor/network/firewalls` | admin/operator/viewer | 并发会话、吞吐量、规则命中统计 |
+| 无线网络 | `/monitor/network/wireless` | admin/operator/viewer | AP 在线状态、2.4G/5G 信道利用率、客户端分布 |
+
 ---
 
 ## 四、版本演进
@@ -304,6 +320,15 @@ MockCollector (模拟采集器) 或 真实采集器
 | **液冷系统** | `backend/app/services/dc_ioc_data.py` `frontend/src/views/hvac/LiquidCooling.vue` | 完整液冷分配系统：一次侧 CDU (4台) / 二次侧 CDU (8台, 按 A/B/C/D 区分区) / 冷板级 GPU 温度监控 (H800/H100/A800) / 分集液管路 / 漏液检测 (绳式+点式 128传感器) / 冷却液品质 (电导率/pH/乙二醇) / 闭塔+干冷器热排放 / 余热回收 1.2MW → 园区供暖 / 三级自然冷切换策略 / 故障知识库 |
 | **冷源系统扩容** | `backend/app/services/dc_ioc_data.py` `frontend/src/views/hvac/Chiller.vue` | 冷站规模从 2+1 扩容至 **4+2+N (8台冷机)**: CH-01~08、8台冷却塔、8套冷冻/冷却水泵、6套二次泵、4台板换、8个电动阀、6000m³蓄冷罐。总装机 28MW（单台 3500kW≈1000RT）。前端所有硬编码数字改为动态计算 (运行/备用/维保计数、COP均值、板换投入率) |
 | 前端路由补全 | `frontend/src/router/index.ts` | 新增 `/hvac/liquid-cooling` 路由，侧边栏「暖通监控系统」分组新增液冷系统入口 |
+
+### v0.6 — 网络监控深化 + 代码质量 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **网络监控套件** | `frontend/src/views/monitor/NetworkDashboard.vue` `NetworkSwitches.vue` `NetworkRouters.vue` `NetworkFirewalls.vue` `NetworkWireless.vue` | 5 个子页面完整覆盖数据中心网络：总览仪表盘、核心交换机（端口/CPU/内存）、路由器（BGP/吞吐量/路由表）、防火墙（并发会话/规则统计）、无线网络（AP/2.4G+5G 信道） |
+| API 类型补全 | `frontend/src/api/monitor.ts` `frontend/src/api/hvac.ts` | `NetworkRouterSummary`/`NetworkSwitchSummary`/`NetworkFirewallSummary`/`NetworkWirelessSummary` 类型完善；`mapChiller` 补充 `chillerGroups` 映射 |
+| vue-tsc 零错误 | 全项目 | 修复全部 TypeScript 类型错误：string→number 实参类型 (fmtNum/fmtBps 返回值)、数组字面量联合类型推断、接口可选字段补全，`vue-tsc --noEmit` 通过 |
+| Ruff 代码质量 | `backend/app/services/dc_ioc_data.py` | 修复 E741 模糊变量名，ruff check 零告警 |
 
 ---
 
