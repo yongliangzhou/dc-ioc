@@ -23,6 +23,8 @@ from app.core.security import (
     hash_password,
     verify_password,
 )
+import os
+
 from app.models.user import User, Role
 from app.schemas.auth import (
     ChangePasswordRequest,
@@ -30,6 +32,7 @@ from app.schemas.auth import (
     RefreshRequest,
     TokenResponse,
     UserCreate,
+    UserRegister,
     UserInfo,
 )
 
@@ -124,6 +127,37 @@ def change_password(
     user.password_hash = hash_password(payload.new_password)
     db.commit()
     return {"message": "密码修改成功"}
+
+
+# ------------------------------------------------------------------ 自助注册 (5.4.1)
+@router.post("/register", response_model=UserInfo, summary="[自助注册] 注册只读账号")
+def register(payload: UserRegister, db: Session = Depends(get_db)):
+    """开放注册开关由环境变量 ALLOW_SELF_REGISTER 控制 (默认关闭)。
+    注册账号固定为 viewer 只读角色, 不得自动获得写权限。"""
+    if os.environ.get("ALLOW_SELF_REGISTER", "false").lower() != "true":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="当前未开放自助注册, 请联系管理员分配账号",
+        )
+    existing = db.query(User).filter(User.username == payload.username).first()
+    if existing:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="用户名已存在")
+
+    viewer = db.query(Role).filter(Role.name == "viewer").first()
+    user = User(
+        username=payload.username,
+        password_hash=hash_password(payload.password),
+        display_name=payload.display_name or payload.username,
+        email=payload.email,
+        is_active=True,
+        is_superuser=False,
+    )
+    if viewer:
+        user.roles = [viewer]
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return _user_to_info(user)
 
 
 # ------------------------------------------------------------------ 管理员: 创建用户

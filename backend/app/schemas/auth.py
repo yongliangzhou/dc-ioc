@@ -47,3 +47,11 @@ class UserCreate(BaseModel):
 class ChangePasswordRequest(BaseModel):
     old_password: str
     new_password: str = Field(..., min_length=6, max_length=128)
+
+
+class UserRegister(BaseModel):
+    """5.4.1 自助注册: 仅暴露最小字段, 默认注册为只读 viewer 角色。"""
+    username: str = Field(..., min_length=2, max_length=64)
+    password: str = Field(..., min_length=6, max_length=128)
+    display_name: str = ""
+    email: Optional[str] = None

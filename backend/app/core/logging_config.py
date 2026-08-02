@@ -142,4 +142,15 @@ def setup_logging():
     for lib in ("uvicorn", "uvicorn.error", "uvicorn.access", "sqlalchemy.engine"):
         logging.getLogger(lib).handlers = [InterceptHandler()]
 
+    # 5.8.2 日志告警联动: ERROR 级系统日志 -> 统一告警通道 (仅已配置 webhook 时生效)
+    try:
+        from app.core.alert_bridge import AlertLogHandler
+
+        root = logging.getLogger()
+        alert_handler = AlertLogHandler()
+        alert_handler.setLevel(logging.ERROR)
+        root.addHandler(alert_handler)
+    except Exception:  # noqa: BLE001
+        pass
+
     logger.info("日志系统初始化完成: env=%s level=%s", env, settings.LOG_LEVEL)

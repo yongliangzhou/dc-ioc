@@ -167,8 +167,17 @@ def transition_ticket(
     t = ticket_crud.get_ticket(db, ticket_id)
     if t is None:
         raise HTTPException(status_code=404, detail="工单不存在")
+    # 5.5.2 业务规则: 非法状态流转 -> 400
+    if not ticket_crud.validate_transition(t.state, req.state):
+        raise HTTPException(
+            status_code=400,
+            detail=ticket_crud.transition_error(t.state, req.state),
+        )
     source_alarm_id = t.source_alarm_id
-    ticket_crud.transition_ticket(db, ticket_id, req.state, req.operator, req.note)
+    try:
+        ticket_crud.transition_ticket(db, ticket_id, req.state, req.operator, req.note)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
     # [B1] 关单联动: 工单进入终态时解析其关联的活跃告警 (写穿引擎状态机)
     if req.state in ("done", "resolved", "closed") and source_alarm_id:
         try:

@@ -368,3 +368,68 @@ docker restart dc-ioc-platform-frontend-1
 ---
 
 > 当前状态：第一批 1.0 基础设施搭建
+
+---
+
+## 🛠 第五阶段：后端与数据库补全（基于全面排查）
+
+> 排查时间：2026-08-03。结论：**后端已高度成熟，绝大多数基础能力已落地**。本阶段只针对**真实缺失/薄弱项**列任务，避免对已完成工作重复造轮子。
+>
+> **已验证具备（不重复列任务）**：
+> - 认证授权：JWT 登录/刷新/改密 + User/Role/Permission 模型 + `RoleChecker`/`PermissionChecker` 依赖 ✅
+> - 日志：`loguru` 结构化 JSON 日志 + 脱敏 + `request_id` 中间件 ✅
+> - 监控：Prometheus `/metrics` 指标（请求数/延迟/异常）✅
+> - 缓存：`redis_client` + `cache_result` 装饰器 ✅
+> - 文件上传：`/api/ops/knowledge/import` + `/api/external/devices/import` 已有 `UploadFile` ✅
+> - 备份恢复：`deploy/scripts/backup.sh`（PG dump + 压缩 + 保留 7 份）、`restore.sh` 已存在 ✅
+> - 时序优化：`deploy/sql/003_point_data_hypertable.sql` + `004_schema_design.md`（索引/压缩/保留建议）✅
+
+### 5.1 数据库设计与建模（真实缺失）
+
+- [ ] **5.1.1** 补全数据库设计文档：在 `004_schema_design.md` 基础上，补齐全部 23 张业务表（users/roles/permissions/audit_logs/alarm_event/alarm_rule/equipment/ticket/knowledge/inspection/shift/drill/risk/maintenance/external/capacity 等）的字段定义、类型、约束、索引。*优先级：高 / 模块：数据库*
+- [ ] **5.1.2** 绘制 ER 图（Mermaid 或 drawio）：覆盖 idc↔cabinet↔server↔point_data 核心链 + 业务表外键关系（user↔role↔permission、ticket↔user、alarm↔equipment 等）。*优先级：中 / 模块：数据库*
+- [ ] **5.1.3** 索引规划复核：为高频查询业务表（alarm_event、ticket、metric_raws、audit_logs）补充复合索引设计并以 `deploy/sql/009_*.sql` 落地。*优先级：中 / 模块：数据库*
+
+### 5.2 后端 API 接口（核对结论 + 缺口）
+
+- [ ] **5.2.1** 编制「前端 16 模块 ↔ 后端 API 对齐矩阵」文档：逐页面核对所需接口是否已实现（security 4 模块、power、hvac 等监控页均已覆盖；重点核对台账/工单/排班/演练/知识库等运维页 CRUD 是否齐全）。*优先级：高 / 模块：后端/API*
+- [ ] **5.2.2** 缺口补齐：根据 5.2.1 矩阵，实现缺失的增删改查接口（如某些运维页的批量操作、状态流转接口）。*优先级：高 / 模块：后端/API*
+- [ ] **5.2.3** 通用文件上传接口：当前仅知识库/外部导入支持上传，补充通用的「附件/头像/批量导入」上传端点（带类型/大小校验）。*优先级：中 / 模块：后端/API*
+
+### 5.3 数据迁移与初始化（薄弱）
+
+- [ ] **5.3.1** 建立完整 Alembic 迁移链：当前靠 `Base.metadata.create_all` 兜底 + 仅 4 个迁移版本，建议补全各业务表迁移脚本（`alembic revision --autogenerate`），使迁移可复现、可回滚。*优先级：高 / 模块：数据库/迁移*
+- [ ] **5.3.2** 种子数据方案：完善 `seed_admin.py` + `deploy/sql/006_seed_auth.sql` 之外的业务种子（演示设备/告警/工单），支持一键初始化演示环境。*优先级：中 / 模块：数据库/迁移*
+- [ ] **5.3.3** 数据变更迁移策略（schema 演进）：明确表结构变更流程（alembic upgrade/downgrade + 数据回填脚本约定），写入 `deploy/README.md`。*优先级：中 / 模块：数据库/迁移*
+
+### 5.4 用户认证与授权（已具备，补一处缺口）
+
+- [ ] **5.4.1** 用户自助注册接口：当前仅管理员创建用户（`POST /api/auth/users` 需权限），若产品需自助注册/邀请码注册，补充公开注册端点 + 邮箱/短信校验。*优先级：低（需确认产品需求）/ 模块：后端/认证*
+- [ ] **5.4.2** 权限矩阵文档：将 `roles`/`permissions` 与 `RoleChecker`/`PermissionChecker` 实际覆盖的端点整理为权限矩阵表，便于审计与前端按钮级控制对齐。*优先级：中 / 模块：后端/认证*
+
+### 5.5 数据验证与业务逻辑（薄弱）
+
+- [ ] **5.5.1** 统一输入校验：核对 Pydantic schemas 是否覆盖所有写接口边界（负数/超长/越界），对未校验端点补 `Field` 约束 + 自定义 validator。*优先级：高 / 模块：后端/逻辑*
+- [ ] **5.5.2** 业务规则引擎：对关键写操作补业务规则（如工单状态机流转合法性、设备告警抑制逻辑、权限不变量），写入 service 层并以单测覆盖。*优先级：中 / 模块：后端/逻辑*
+- [ ] **5.5.3** 统一异常处理：确认全局 `ExceptionMiddleware` 已覆盖 400/401/403/404/422/500 并返回标准化错误体（code/message/trace_id），补齐缺失分支。*优先级：高 / 模块：后端/逻辑*
+
+### 5.6 数据库备份与恢复（已具备，强化）
+
+- [ ] **5.6.1** 备份自动化与监控：将 `backup.sh` 接入 cron/systemd timer + 备份失败告警（钉钉/邮件），并校验 `restore.sh` 在空库可还原。*优先级：中 / 模块：运维*
+- [ ] **5.6.2** Redis 持久化与备份：明确 Redis（缓存/最新值）的 RDB/AOF 策略与重建流程，避免缓存丢失导致大屏雪崩。*优先级：低 / 模块：运维*
+
+### 5.7 性能优化（部分具备，补业务层）
+
+- [ ] **5.7.1** 连续聚合与压缩策略落地校验：确认 `point_data_5min` 物化视图、30 天压缩、1 年保留策略在初始化脚本中自动执行（lifespan 或 `003` 脚本），缺失则补。*优先级：中 / 模块：数据库/性能*
+- [ ] **5.7.2** 业务表查询优化：对 alarm_event/ticket/audit_logs 大表的慢查询做 `EXPLAIN` 分析并补索引（呼应 5.1.3）。*优先级：中 / 模块：数据库/性能*
+- [ ] **5.7.3** 缓存策略推广：将 `cache_result` 应用到高频只读接口（dashboard 聚合、监控页 summary），并补充缓存失效/预热机制文档。*优先级：低 / 模块：后端/性能*
+
+### 5.8 日志与监控（已具备，补审计生效 + 告警）
+
+- [ ] **5.8.1** **[关键] 挂载审计中间件**：`AuditMiddleware` 已写好但未在 `lifespan.py` 通过 `app.add_middleware(AuditMiddleware)` 注册，导致所有写操作审计从未记录。需挂载并验证 `audit_logs` 落库。*优先级：高 / 模块：后端/审计*
+- [ ] **5.8.2** 日志告警联动：将错误日志（5xx/异常）接入 Prometheus `alerts.yml` 或 Loki → 钉钉告警，形成「错误→告警」闭环。*优先级：中 / 模块：运维/监控*
+- [ ] **5.8.3** 审计日志查询前端：前端已有审计页（ops/AlarmHistory 之外）需对接 `GET /api/audit-logs`，确认过滤/导出功能完整。*优先级：低 / 模块：前端/运维*
+
+---
+
+> 注：第五阶段以「补齐真实缺口」为原则。最高优先级为 **5.8.1（审计中间件未挂载）** 与 **5.1.1/5.2.1/5.3.1（数据库文档/API对齐/迁移链）**。

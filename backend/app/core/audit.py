@@ -169,4 +169,19 @@ class AuditMiddleware(BaseHTTPMiddleware):
             query=query,
             detail=detail,
         )
+
+        # 5.8.2 日志/审计告警联动: 关键操作触发安全告警
+        if response.status_code < 400:
+            resource, action = _infer_resource_action(path, method)
+            try:
+                from app.core.alert_bridge import emit_security_alert, should_alert
+
+                if should_alert(action, resource):
+                    emit_security_alert(
+                        action=action, resource=resource,
+                        detail=detail, username=username, ip=ip,
+                    )
+            except Exception:  # noqa: BLE001
+                pass  # 告警失败不影响主流程
+
         return response

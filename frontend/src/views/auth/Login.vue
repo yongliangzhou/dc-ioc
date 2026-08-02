@@ -13,6 +13,21 @@
         <p v-if="error" class="err">{{ error }}</p>
         <button type="submit" :disabled="loading">{{ loading ? '登录中...' : '登 录' }}</button>
       </form>
+
+      <!-- 5.4.1 自助注册 (后端 ALLOW_SELF_REGISTER 开关控制, 默认关闭) -->
+      <div class="register-block">
+        <button class="link-btn" type="button" @click="showRegister = !showRegister">
+          {{ showRegister ? '收起注册' : '注册新账号' }}
+        </button>
+        <form v-if="showRegister" @submit.prevent="handleRegister" class="register-form">
+          <input v-model="reg.username" type="text" placeholder="用户名 (2-64 位)" />
+          <input v-model="reg.display_name" type="text" placeholder="显示名 (可选)" />
+          <input v-model="reg.password" type="password" placeholder="密码 (至少 6 位)" />
+          <p v-if="regError" class="err">{{ regError }}</p>
+          <button type="submit" :disabled="regLoading">{{ regLoading ? '提交中...' : '注册为只读账号' }}</button>
+        </form>
+      </div>
+
       <div class="login-footer">{{ tl('演示账号') }}: admin / admin123</div>
     </div>
   </div>
@@ -20,7 +35,8 @@
 
 <script setup lang="ts">import { useI18n } from "vue-i18n";
 const { t: tl } = useI18n();
-import { ref, reactive } from 'vue';import { useRouter } from 'vue-router';
+import { ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/modules/auth';
 
 const router = useRouter();
@@ -29,6 +45,11 @@ const authStore = useAuthStore();
 const form = reactive({ username: 'admin', password: 'admin123' });
 const loading = ref(false);
 const error = ref('');
+
+const showRegister = ref(false);
+const reg = reactive({ username: '', display_name: '', password: '' });
+const regLoading = ref(false);
+const regError = ref('');
 
 async function handleLogin() {
   if (!form.username || !form.password) {
@@ -44,6 +65,25 @@ async function handleLogin() {
     error.value = e?.detail || e?.message || '登录失败';
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleRegister() {
+  if (!reg.username || !reg.password) {
+    regError.value = '请输入用户名和密码';
+    return;
+  }
+  regLoading.value = true;
+  regError.value = '';
+  try {
+    const { registerUser } = await import('@/api');
+    await registerUser({ username: reg.username, password: reg.password, display_name: reg.display_name });
+    regError.value = '注册成功，请使用新账号登录';
+    showRegister.value = false;
+  } catch (e: any) {
+    regError.value = e?.detail || e?.message || '注册失败（可能未开放自助注册）';
+  } finally {
+    regLoading.value = false;
   }
 }
 </script>
@@ -82,4 +122,9 @@ button {
 }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 .login-footer { text-align: center; color: #5a6380; font-size: 11px; margin-top: 20px; }
+.register-block { margin-top: 18px; text-align: center; }
+.link-btn { background: none; border: none; color: #22e3ff; font-size: 12px; cursor: pointer; margin: 0; padding: 0; width: auto; }
+.register-form { margin-top: 14px; }
+.register-form input { margin-bottom: 10px; }
+.register-form button { margin-top: 4px; background: linear-gradient(135deg, #2a3a5e, #3a4a6e); }
 </style>

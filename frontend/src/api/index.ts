@@ -216,4 +216,17 @@ export const silenceAlarmRule = (id: string, durationMin = 30) =>
 export const assistantStatus = () =>
   request.get<unknown, AssistantStatusResp>("/api/ops/assistant/status");
 
+/* ================= 自助注册 API (5.4.1) ================= */
+
+export interface UserRegisterRequest {
+  username: string;
+  password: string;
+  display_name?: string;
+  email?: string;
+}
+
+/** 自助注册只读账号: POST /api/auth/register (后端 ALLOW_SELF_REGISTER 开关控制) */
+export const registerUser = (data: UserRegisterRequest) =>
+  request.post<unknown, { id: number; username: string; roles: string[] }>("/api/auth/register", data);
+
 

@@ -1,8 +1,10 @@
 """FastAPI 应用入口 — 仅负责装配, 生命周期/种子/KPI 广播见 app.core.lifespan。"""
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.endpoints import ws
 from app.api.v1.router import api_router
@@ -55,6 +57,11 @@ app.add_middleware(AuditMiddleware)
 
 # 全部业务域 API 统一挂载于 /api
 app.include_router(api_router, prefix="/api")
+
+# 上传文件静态访问 (/uploads/<date>/<file>) — 目录不存在时跳过, 不影响启动
+_upload_root = os.path.join(os.path.dirname(__file__), "..", "uploads")
+if os.path.isdir(_upload_root):
+    app.mount("/uploads", StaticFiles(directory=_upload_root), name="uploads")
 
 # 实时遥测 WebSocket
 app.include_router(ws.router)

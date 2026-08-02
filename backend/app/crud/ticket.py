@@ -1,7 +1,12 @@
-"""运维工单 CRUD + 统计 (对齐前端 /api/ops/tickets 契约)。"""
+"""运维工单 CRUD + 统计 (对齐前端 /api/ops/tickets 契约)。
+
+5.5.2 业务规则引擎:
+  - 工单状态机: 只允许合法状态流转, 非法跳转显式拒绝 (避免 done -> open 等回退)。
+  - SLA 计算: 由 created + sla 时限推导 due_at, 并判定是否超时。
+"""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 
 from sqlalchemy import func
@@ -10,7 +15,64 @@ from sqlalchemy.orm import Session
 from app.models.ticket import Ticket
 
 _SLA_BY_LV = {"crit": "1h", "warn": "4h", "info": "8h"}
+
+# 合法状态流转 (状态机)。key=当前态, value=允许到达的下一态集合。
+# 任意态 -> done(已关闭终态); done 不可再流转。
+_TRANSITIONS: dict[str, set[str]] = {
+    "open": {"doing", "pending", "done"},
+    "doing": {"pending", "open", "done"},
+    "pending": {"doing", "done"},
+    "done": set(),  # 终态, 不允许任何流转
+}
+
 _PROGRESS_BY_STATE = {"open": 0, "doing": 20, "pending": 80, "done": 100}
+
+# SLA 时限文本 -> 分钟, 用于推导 due_at 与超时判定
+_SLA_MINUTES = {"15m": 15, "30m": 30, "1h": 60, "2h": 120, "4h": 240, "8h": 480, "24h": 1440}
+
+
+def _parse_sla_minutes(sla: Optional[str]) -> int:
+    if not sla:
+        return _SLA_MINUTES["8h"]
+    return _SLA_MINUTES.get(sla, _SLA_MINUTES["8h"])
+
+
+def compute_due_at(created: str, sla: Optional[str]) -> Optional[str]:
+    """由创建时间与 SLA 时限推导应完成时间 (ISO)。"""
+    if not created:
+        return None
+    try:
+        base = datetime.fromisoformat(created)
+    except ValueError:
+        return None
+    return (base + timedelta(minutes=_parse_sla_minutes(sla))).isoformat(timespec="seconds")
+
+
+def is_overdue(t: Ticket) -> bool:
+    """未关闭且已超过 due_at 即视为超时 (终态 done 不计超时)。"""
+    if t.state == "done" or not t.due_at:
+        return False
+    try:
+        due = datetime.fromisoformat(t.due_at)
+    except ValueError:
+        return False
+    return datetime.now() > due
+
+
+def validate_transition(current: str, target: str) -> bool:
+    """业务规则: 校验状态流转是否合法。"""
+    if current == target:
+        return True
+    allowed = _TRANSITIONS.get(current, set())
+    return target in allowed
+
+
+def transition_error(current: str, target: str) -> str:
+    """生成非法流转的可读错误信息。"""
+    if current == "done":
+        return f"工单已处于终态 done, 不可再流转到 {target}"
+    allowed = sorted(_TRANSITIONS.get(current, set())) or ["(无可用流转)"]
+    return f"非法状态流转: {current} -> {target}; 允许: {', '.join(allowed)}"
 
 
 def _now_iso() -> str:
@@ -49,6 +111,7 @@ def create_ticket(
         created_by=operator,
         updated_at=now,
         sla=sla or _SLA_BY_LV.get(lv, "8h"),
+        due_at=compute_due_at(now, sla or _SLA_BY_LV.get(lv, "8h")),
         progress=0,
         source=source,
         source_alarm_id=source_alarm_id,
@@ -131,6 +194,9 @@ def transition_ticket(
     t = get_ticket(db, ticket_id)
     if not t or t.state == state:
         return t
+    # 5.5.2 业务规则: 非法状态流转显式拒绝 (由调用方转换为 400)
+    if not validate_transition(t.state, state):
+        raise ValueError(transition_error(t.state, state))
     old = t.state
     now = _now_iso()
     t.state = state

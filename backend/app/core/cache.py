@@ -5,6 +5,7 @@
 """
 import functools
 import hashlib
+import inspect
 import json
 from typing import Any
 
@@ -82,6 +83,22 @@ def cache_json(ttl: int = 30, key_prefix: str = "dc-ioc"):
 
             return result
 
+        # 关键修复: 保留被装饰函数的原始签名, 否则 FastAPI 无法注入 Request 参数
+        wrapper.__signature__ = inspect.signature(func)
         return wrapper
 
     return decorator
+
+
+def invalidate_prefix(prefix: str) -> int:
+    """5.7.3 缓存失效: 删除匹配 prefix 的缓存键, 返回删除数量 (Redis 不可用返回 0)。"""
+    try:
+        keys = rds.keys(f"cache:{prefix}:*") if hasattr(rds, "keys") else []
+    except Exception:
+        return 0
+    if not keys:
+        return 0
+    try:
+        return rds.delete(*keys) if hasattr(rds, "delete") else 0
+    except Exception:
+        return 0

@@ -1,6 +1,6 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.6.0** | 生产就绪（网络监控深化 + 代码质量） | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储）
+> **v0.7.0** | 生产就绪（网络监控深化 + 代码质量 + 后端全面排查与补齐） | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储）
 
 ---
 
@@ -15,51 +15,66 @@ dc-ioc-platform/
 │   ├── app/
 │   │   ├── main.py                    # 应用入口 (启动顺序: 密钥检查→日志→监控→DB→Kafka→Mock→KPI广播)
 │   │   ├── core/                      # 核心基础设施
-│   │   │   ├── config.py              #   pydantic-settings 读取 .env (含生产环境连接池参数)
+│   │   │   ├── config.py              #   pydantic-settings 读取 .env (连接池/速率限制/外部接入/告警 Webhook 等)
 │   │   │   ├── security.py            #   JWT 签发/验证 + bcrypt 密码哈希
-│   │   │   ├── deps.py                #   RBAC 依赖注入 (RoleChecker / PermissionChecker)
-│   │   │   ├── logging_config.py      #   结构化日志 (loguru: 控制台彩色 / JSON文件轮转)
+│   │   │   ├── deps.py                #   RBAC 依赖注入 (require_role / require_permission / get_current_user)
+│   │   │   ├── logging_config.py      #   结构化日志 (loguru: 控制台彩色 / JSON文件轮转) + 告警 Handler 挂载
 │   │   │   ├── monitoring.py          #   Prometheus 指标 (HTTP 延迟/QPS/WS连接/告警数/KPI)
 │   │   │   ├── secret_check.py        #   启动密钥安全检查 (prod 环境阻止默认凭据)
-│   │   │   ├── cache.py               #   Redis 响应缓存装饰器
-│   │   │   └── config.py              #   5 个生产参数: DB_POOL_SIZE / DB_ECHO 等
+│   │   │   ├── cache.py               #   Redis 响应缓存装饰器 cache_json (+ invalidate_prefix 失效工具)
+│   │   │   └── alert_bridge.py        #   日志/审计告警联动 (关键审计动作 + ERROR 日志 → 统一告警通道)
 │   │   ├── api/v1/
-│   │   │   ├── router.py              #   路由聚合 (22 个业务域 + 认证)
+│   │   │   ├── router.py              #   路由聚合 (28 个业务域 + 认证)
 │   │   │   └── endpoints/
-│   │   │       ├── auth.py            #   JWT 登录/刷新/用户管理 (7 个端点)
-│   │   │       ├── dashboard.py       #   IOC 驾驶舱
+│   │   │       ├── auth.py            #   JWT 登录/刷新/改密/用户管理 + 自助注册 (register, 受开关控制)
+│   │   │       ├── dashboard.py       #   IOC 驾驶舱 (overview/campuses/campus-comparison, 缓存)
 │   │   │       ├── equipment.py       #   统一设备台账 (11 个域)
 │   │   │       ├── hvac.py            #   暖通 (冷源/空调末端/液冷)
 │   │   │       ├── power.py           #   电力 (10KV/0.4KV/柴发/燃油/电池)
 │   │   │       ├── security.py        #   安防消防
-│   │   │       ├── ops.py             #   运维作业
+│   │   │       ├── ops.py            #   运维作业
 │   │   │       ├── alarms.py          #   告警中心
 │   │   │       ├── alarm_history.py   #   告警历史
 │   │   │       ├── alarm_rules.py     #   告警规则引擎
-│   │   │       ├── tickets.py         #   事件工单
-│   │   │       ├── inspect.py         #   巡检管理
-│   │   │       ├── maintain.py        #   维保管理
-│   │   │       ├── shift.py           #   排班管理
-│   │   │       ├── drill.py           #   演练管理
-│   │   │       ├── risk.py            #   风险管理
-│   │   │       ├── knowledge.py       #   知识库
+│   │   │       ├── tickets.py        #   事件工单 (含状态机校验)
+│   │   │       ├── inspect.py        #   巡检管理
+│   │   │       ├── maintain.py       #   维保管理
+│   │   │       ├── shift.py          #   排班管理
+│   │   │       ├── drill.py          #   演练管理
+│   │   │       ├── risk.py           #   风险管理
+│   │   │       ├── knowledge.py       #   知识库 (含批量导入)
 │   │   │       ├── cabinets.py        #   机柜管理
 │   │   │       ├── assistant.py       #   AI 运维助手
 │   │   │       ├── metrics.py         #   测点数据
 │   │   │       ├── external.py        #   外部设备接入 (注册/测点上报/告警评估)
-│   │   │       ├── ws.py              #   WebSocket 实时遥测
-│   │   │       └── demo.py            #   v2 演示/兜底数据
-│   │   ├── models/                    # SQLAlchemy ORM (User/Role/Device/MetricRaw 等)
-│   │   ├── schemas/                   # Pydantic DTO (请求/响应校验)
-│   │   ├── crud/                      # 数据访问层
+│   │   │       ├── runbooks.py        #   运维预案 (告警关联处置预案, /api/runbooks/related)
+│   │   │       ├── audit.py           #   审计日志查询 (/api/audit-logs, 过滤/分页/CSV 导出)
+│   │   │       ├── uploads.py         #   通用文件上传 (/api/uploads/avatar|attachment|batch)
+│   │   │       ├── network.py         #   网络监控 (交换机/路由/防火墙/无线)
+│   │   │       ├── domain.py          #   域名/路由监控
+│   │   │       ├── demo.py            #   v2 演示/兜底数据
+│   │   │       └── ws.py              #   WebSocket 实时遥测
+│   │   ├── models/                    # SQLAlchemy ORM (User/Role/Permission/audit_logs/equipment/ticket 等)
+│   │   ├── schemas/                   # Pydantic DTO (请求/响应校验, 含 UserRegister)
+│   │   ├── crud/                      # 数据访问层 (含 ticket 状态机 + SLA 计算)
 │   │   ├── services/                  # 业务逻辑层
 │   │   │   ├── dc_aggregator.py       #   ** 统一聚合出口 ** (真实链路→回退生成器, 35 个函数)
 │   │   │   ├── alarm_engine.py        #   告警引擎 (13类设备阈值+收敛+抑制+通知)
+│   │   │   ├── alarm_notify_webhook.py#   告警 Webhook 通知 (钉钉/邮件/微信)
 │   │   │   ├── ws_broadcaster.py      #   WebSocket 广播管理器
 │   │   │   └── dc_ioc_data.py         #   兜底数据生成器 (22 个业务域, 34 个函数)
-│   │   ├── db/session.py              # SQLAlchemy 引擎 (连接池参数配置化)
+│   │   ├── db/session.py              # SQLAlchemy 引擎 (连接池参数配置化) + lifespan 建表
 │   │   ├── collectors/                # 采集层 (MockCollector / Kafka 消费)
 │   │   └── cache/                     # Redis 客户端
+│   │   ├── seed_admin.py              # 种子脚本: 幂等创建 admin/operator/viewer 三角色账号
+│   │   ├── seed_demo.py               # 种子脚本: 演示数据 (IDC/机房/机柜/服务器/设备/知识库, 支持 --force)
+│   │   ├── api_endpoints.md           # 后端 API 端点静态提取清单 (gen_api.py 生成)
+│   │   └── deploy/sql/                 # 第五阶段新增文档 (与根 deploy/sql 迁移脚本互补):
+│   │       ├── 010_data_dictionary.md  #   数据字典 (27 表反射)
+│   │       ├── 011_er_diagram.md       #   ER 图 (Mermaid)
+│   │       ├── 012_permission_matrix.md#   权限矩阵
+│   │       ├── 009_index_optimization.sql    # 高频查询索引
+│   │       └── 013_timeseries_optimization.sql # 时序超表/压缩/连续聚合
 │   ├── tests/                         # 测试 (Phase 2 核心 / 负载)
 │   ├── requirements.txt               # Python 依赖
 │   ├── Dockerfile
@@ -73,9 +88,9 @@ dc-ioc-platform/
 │   │   ├── App.vue / main.ts          # 入口 (Pinia/Router 挂载 + Token 初始化)
 │   │   ├── api/
 │   │   │   ├── request.ts             #   axios 实例 (Bearer 注入 + 401 自动刷新 + Mock 兜底)
-│   │   │   └── index.ts              #   业务域 API (22 个端点)
+│   │   │   └── index.ts              #   业务域 API (含 registerUser 自助注册)
 │   │   ├── views/
-│   │   │   ├── auth/Login.vue         #   登录页
+│   │   │   ├── auth/Login.vue         #   登录页 (含可选自助注册表单)
 │   │   │   ├── overview/Index.vue     #   IOC 驾驶舱总览
 │   │   │   ├── hvac/                  #   暖通监控 (3 页面)
 │   │   │   │   ├── Chiller.vue        #     冷源系统 (8台冷机 4+2+N)
@@ -149,14 +164,21 @@ dc-ioc-platform/
 │   ├── promtail/promtail-config.yaml  #   日志采集 (app/error/external)
 │   ├── nginx/                         #   前端静态托管/反向代理
 │   ├── sql/
-│   │   ├── init.sql                   #   初始化
-│   │   ├── 002_core_tables.sql        #   核心表 DDL (7 张表)
-│   │   ├── 003_point_data_hypertable.sql  # TimescaleDB 超表
+│   │   ├── init.sql                    #   初始化 (数据库/扩展)
+│   │   ├── 002_core_tables.sql         #   核心表 DDL
+│   │   ├── 003_point_data_hypertable.sql   # TimescaleDB 超表
+│   │   ├── 004_schema_design.md         #   数据库设计文档
 │   │   ├── 005_metric_raws_hypertable.sql # metric_raws 超表+压缩+保留+连续聚合
-│   │   └── 006_seed_auth.sql          #   默认角色 + admin 用户
-│   └── scripts/
-│       ├── backup.sh                  #   pg_dump 备份 (SQL/自定义格式 + S3 + 自动清理)
-│       └── restore.sh                 #   pg_restore 恢复 (并行 + 自动重建)
+│   │   ├── 006_seed_auth.sql            #   默认角色 + admin 用户
+│   │   ├── 007_metric_raw_unique.sql    #   唯一约束修正
+│   │   └── 008_capacity_energy_history.sql # 容量/能耗历史表
+│   ├── scripts/
+│   │   ├── backup.sh                   #   pg_dump 备份 (SQL/自定义格式 + S3 + 自动清理)
+│   │   └── restore.sh                  #   pg_restore 恢复 (并行 + 自动重建)
+│   ├── README.md                       #   迁移与初始化策略 (create_all 兜底 + Alembic 受控变更)
+│   ├── redis_backup.md                 #   Redis 持久化/备份策略 (RDB/AOF/容量淘汰)
+│   ├── cache_strategy.md               #   缓存策略 (推广/失效/预热 + cache_json TTL)
+│   └── thing_models.example.json       #   物模型配置覆盖文件示例
 │
 ├── tests/load/
 │   ├── locustfile.py                  # Locust 压测 (只读/写入 9 端点)
@@ -291,6 +313,32 @@ MockCollector (模拟采集器) 或 真实采集器
 | 告警引擎 | `alarm_engine.py` | 13 类设备阈值规则 + 5min 收敛窗口 + 设备抑制 + 通知回调 |
 | WebSocket 实时推送 | `ws_broadcaster.py` `useWebSocket.ts` | KPI 快照 (5s) + 告警实时推送到驾驶舱全客户端 |
 
+### API 域汇总
+
+后端统一挂载于 `/api`，共 28 个业务域 + 认证。主要分组：
+
+| 分组 | 典型端点 |
+|------|----------|
+| 认证 `auth` | `POST /api/auth/login`、`/refresh`、`/change-password`、`/users`、`/register`（v0.7 新增，受 `ALLOW_SELF_REGISTER` 控制） |
+| 驾驶舱 `dashboard` | `GET /api/dashboard/overview`、`/campuses`、`/campus-comparison`（均缓存 30s） |
+| 设备台账 `equipment` | 11 个域 CRUD（冷机/空调末端/配电/机柜/柴发/消防/动环/安防等） |
+| 暖通 `hvac` / 电力 `power` | 冷源/空调末端/液冷、10KV/0.4KV/柴发/燃油/电池 |
+| 安防消防 `security` | 视频监控/门禁/消防报警主机/探测器/联动设备 |
+| 运维作业 `ops` | 设备资产、维保计划、采集器接入、设备遥测 |
+| 告警 `alarms` / `alarm_history` / `alarm_rules` | 告警中心、历史、规则引擎 |
+| 工单 `tickets` | 事件工单 CRUD + 状态机流转（`done→open` 等非法跳转被拒，返回 400） |
+| 巡检/维保/排班/演练/风险/知识库 | 运维全流程管理 |
+| 预案 `runbooks`（v0.7 新增） | `GET /api/runbooks/related`（告警关联处置预案，对齐前端 `Alarms.vue`） |
+| 审计 `audit`（v0.7 确认） | `GET /api/audit-logs`（分页/过滤/CSV 导出，前端 `AuditLogs.vue` 已对接） |
+| 上传 `uploads`（v0.7 新增） | `POST /api/uploads/avatar` / `/attachment` / `/batch`（类型/大小校验） |
+| 网络 `network` / 域名 `domain` | 交换机/路由/防火墙/无线、域名路由监控 |
+| 外部接入 `external` | 采集器注册/测点上报/告警评估（独立 `X-Collector-Token` 鉴权） |
+| AI 助手 `assistant` | 知识库问答 + NIM 诊断端点 `/api/ops/assistant/status` |
+
+> 完整端点清单（含方法/路径/鉴权）见 `backend/api_endpoints.md`（由 `gen_api.py` 静态反射生成）。
+
+
+
 ### v0.3 — Phase 3 (2026-07) 生产化
 
 | 模块 | 文件 | 功能 |
@@ -329,6 +377,23 @@ MockCollector (模拟采集器) 或 真实采集器
 | API 类型补全 | `frontend/src/api/monitor.ts` `frontend/src/api/hvac.ts` | `NetworkRouterSummary`/`NetworkSwitchSummary`/`NetworkFirewallSummary`/`NetworkWirelessSummary` 类型完善；`mapChiller` 补充 `chillerGroups` 映射 |
 | vue-tsc 零错误 | 全项目 | 修复全部 TypeScript 类型错误：string→number 实参类型 (fmtNum/fmtBps 返回值)、数组字面量联合类型推断、接口可选字段补全，`vue-tsc --noEmit` 通过 |
 | Ruff 代码质量 | `backend/app/services/dc_ioc_data.py` | 修复 E741 模糊变量名，ruff check 零告警 |
+
+### v0.7 — 后端及数据库全面排查与补齐 (2026-08)
+
+> 经实扫代码，后端实际成熟度远超预期，多数能力已具备。本阶段重点补齐唯一真实 API 缺口、缺失文档/脚本，并做若干增强。
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| API 缺口补齐 | `app/api/v1/endpoints/runbooks.py` `router.py` | 新增 `/api/runbooks/related`（告警关联处置预案，复用知识库 related 逻辑），对齐前端 `Alarms.vue` |
+| 通用文件上传 | `app/api/v1/endpoints/uploads.py` `main.py` | `/api/uploads/avatar`、`/attachment`、`/batch`，含类型/大小校验；`main.py` 挂载 `/uploads` 静态目录 |
+| 工单业务规则引擎 | `app/crud/ticket.py` `tickets.py` | 状态机流转校验（拒绝非法跳转如 `done→open`）+ SLA `due_at` 计算 + `is_overdue` |
+| 日志/审计告警联动 | `app/core/alert_bridge.py` `audit.py` `logging_config.py` | 关键审计动作（用户删/角色变更）→ 统一告警通道；ERROR 级日志 `AlertLogHandler` 告警 |
+| 自助注册 | `app/api/v1/endpoints/auth.py` `schemas/auth.py` `views/auth/Login.vue` | `POST /api/auth/register`（受 `ALLOW_SELF_REGISTER` 开关控制，固定 viewer 角色）+ 前端注册表单 |
+| 缓存修复 + 推广 | `app/core/cache.py` | 修复 `cache_json` 签名保留 bug（否则 Request 注入失败）；dashboard 三端点缓存；`invalidate_prefix()` 失效工具 |
+| 数据字典/API 文档 | `backend/deploy/sql/010~012` `api_endpoints.md` | 27 表数据字典、ER 图、权限矩阵、100 端点清单（反射生成） |
+| 索引/时序优化 | `backend/deploy/sql/009_index_optimization.sql` `013_timeseries_optimization.sql` | 高频查询复合索引 + TimescaleDB 超表/压缩/连续聚合 |
+| 种子数据 | `seed_admin.py`（重写幂等三角色） `seed_demo.py`（新建演示数据） | 一键初始化账号与演示环境 |
+| 运维文档 | `deploy/backup.sh`（新建） `deploy/README.md` `redis_backup.md` `cache_strategy.md` | 备份自动化+告警、迁移策略、Redis 持久化、缓存策略 |
 
 ---
 
@@ -444,6 +509,19 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 - 生产环境 `EXTERNAL_COLLECTOR_TOKEN` 必填 (外部采集器认证)
 - 启动时 `secret_check.py` 自动校验, 不通过则抛出 `RuntimeError` 阻止启动
 
+### 新增配置项 (v0.7)
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `ALLOW_SELF_REGISTER` | 是否开放自助注册 (`POST /api/auth/register`)；开启后注册账号固定为 `viewer` 只读角色 | `false` |
+| `UPLOAD_DIR` | 通用上传文件保存根目录 (`/api/uploads/*`) | `backend/uploads/` |
+| `UPLOAD_MAX_BYTES` | 单文件上传大小上限（字节） | `10485760` (10MB) |
+| `BACKUP_DIR` | `deploy/backup.sh` 备份输出目录 | `./backups` |
+| `RETENTION_DAYS` | `deploy/backup.sh` 备份保留天数 | `14` |
+| `BACKUP_ALERT_WEBHOOK` | 备份成功/失败告警 webhook（可选） | 空 |
+
+> 缓存 TTL、连续聚合刷新周期等以代码内常量为准（dashboard 缓存 30s；详见 `deploy/cache_strategy.md`）。
+
 ### AI 运维助手大模型接入 (`LLM_API_KEY` 等)
 
 `/ops/assistant` 的 AI 运维助手默认走**本地知识库检索生成** (无需任何外部依赖)；配置以下
@@ -477,17 +555,24 @@ LLM_MODEL=meta/llama-3.1-8b-instruct
 ## 八、数据库备份与恢复
 
 ```bash
-# 备份 (全量 + 压缩 + S3 上传 + 30 天本地保留)
-cd deploy/scripts
+# 备份 (全量 pg_dump + gzip 压缩 + 保留 14 天 + 文件校验 + 可选 webhook 告警)
+# 脚本位于根 deploy/ 目录
+cd deploy
 chmod +x backup.sh
-./backup.sh --compressed --s3 s3://my-bucket/dc-ioc/
+./backup.sh
 
-# 恢复 (并行恢复 + 自动重建 + TimescaleDB 扩展)
-./restore.sh backups/dc_ioc_20240101_020000.dump --parallel 4
+# 恢复 (使用 PostgreSQL 自带 pg_restore / psql 还原 dump)
+# 示例: 解压后还原
+# gunzip -c backups/dc_ioc_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"
 
 # 定时备份 (crontab: 每天凌晨 2 点)
-# 0 2 * * * /path/to/backup.sh --compressed >> /var/log/dc-ioc-backup.log 2>&1
+# 0 2 * * * /path/to/deploy/backup.sh >> /var/log/dc-ioc-backup.log 2>&1
+
+# 可选环境变量: BACKUP_DIR / RETENTION_DAYS / BACKUP_ALERT_WEBHOOK
+# 备份成功后通过 BACKUP_ALERT_WEBHOOK (JSON POST) 上报成功/失败
 ```
+
+> 注：根 `deploy/scripts/restore.sh` 亦可用（并行恢复 + 自动重建）；`deploy/backup.sh` 为 v0.7 新增的轻量备份脚本（含告警钩子），两者择一即可。详见 `deploy/README.md`。
 
 ---
 

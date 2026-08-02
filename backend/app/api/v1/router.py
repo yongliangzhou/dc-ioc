@@ -22,8 +22,10 @@ from app.api.v1.endpoints import (
     ops,
     power,
     risk,
+    runbooks,
     security,
     shift,
+    uploads,
     tickets,
     assistant,
 )
@@ -59,6 +61,8 @@ api_router.include_router(shift.router, prefix="/ops/shift", tags=["shift"], dep
 api_router.include_router(audit.router, prefix="/audit-logs", tags=["audit"], dependencies=_auth)
 api_router.include_router(drill.router, prefix="/ops/drill", tags=["drill"], dependencies=_auth)
 api_router.include_router(risk.router, prefix="/ops/risk", tags=["risk"], dependencies=_auth)
+# 运维预案 (runbooks): 告警关联处置预案, 复用知识库 related 逻辑
+api_router.include_router(runbooks.router, tags=["runbooks"], dependencies=_auth)
 api_router.include_router(inspection.router, prefix="/ops/inspection", tags=["inspection"], dependencies=_auth)
 api_router.include_router(assistant.router, prefix="", tags=["assistant"], dependencies=_auth)
 
@@ -68,6 +72,8 @@ api_router.include_router(domain.router, tags=["domain"], dependencies=_auth)
 
 # 外部设备接入 (采集器标准数据契约: 注册 / 测点上报), 使用独立 X-Collector-Token 鉴权
 api_router.include_router(external.router, prefix="/external", tags=["external"])
+# 通用文件上传 (头像/附件/批量)
+api_router.include_router(uploads.router, tags=["uploads"], dependencies=_auth)
 # WebSocket 遥测在 main 中单独挂载于 /ws
 
 # v2 演示 / 兜底数据路由 (新版实现, 与旧版占位解耦; 挂载于 /api/demo)
