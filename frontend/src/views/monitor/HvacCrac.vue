@@ -1,632 +1,806 @@
 <template>
-  <div>
-    <div class="view-head">
-      <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('nav.hvacMonitor') }} {{ tl('·') }} {{ tl('nav.crac') }} (CRAC)</h1>
-      <span class="sub">{{ tl('空调末端诊断') }} {{ tl('·') }} {{ tl('包间设备归集') }} {{ tl('·') }} {{ tl('7类趋势分析') }}</span>
+  <div class="hvac-crac">
+    <!-- ========== Header ========== -->
+    <div class="page-header">
+      <div class="ph-left">
+        <h2 class="ph-title">空调末端系统</h2>
+        <span class="ph-sub">精密空调 CRAC · 列间空调 · 包间环境 · 漏水检测</span>
+      </div>
+      <div class="ph-right">
+        <span class="ph-badge" :class="cracData ? 'ok' : 'loading'">
+          {{ cracData ? '在线' : '加载中…' }}
+        </span>
+        <span class="ph-time" v-if="lastUpdate">{{ lastUpdate }}</span>
+        <button class="ph-btn" @click="refresh" :disabled="loading">刷新</button>
+      </div>
     </div>
 
-    <!-- ======== KPI Row 1 ======== -->
-    <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="crac-total" :label="tl('末端设备总数')" :value="s.total" unit="台" quality="good" :online="true" />
-      <MetricCard metric-name="crac-online" :label="tl('运行/待机/故障')" :value="s.online" :unit="`/ ${s.standby} / ${s.fault}`" quality="good" :online="true" />
-      <MetricCard metric-name="crac-leak" :label="tl('漏水告警')" :value="s.leakAlarm" :unit="`/ ${s.leakTotal}`" :quality="s.leakAlarm ? 'bad' : 'good'" :severity="s.leakAlarm ? 'crit' : 'normal'" :online="true" />
-      <MetricCard metric-name="crac-outdoor" :label="tl('室外参照温度')" :value="s.outdoorRef" unit="°C" quality="good" :online="true" icon-hint="temp" />
+    <!-- ========== KPI Row 1 ========== -->
+    <div class="kpi-row" v-if="cracData">
+      <KpiCard title="设备总数" :value="cracData.total" unit="台" :detail="`在线 ${cracData.online} · 待机 ${cracData.standby}`" dot="#06b6d4" />
+      <KpiCard title="运行/待机/故障" :value="`${cracData.online}/${cracData.standby}/${cracData.fault}`" valueClass="gk-cv-cyan" detail="在线/待机/故障" dot="#22c55e" />
+      <KpiCard title="漏水告警" :value="cracData.leakAlarm" unit="处" :subtitle="`共 ${cracData.leakTotal} 个监测点`" :status="cracData.leakAlarm > 0 ? 'danger' : 'normal'" dot="#ef4444" />
+      <KpiCard title="室外参照温度" :value="cracData.outdoorRef" unit="℃" dot="#f97316" />
     </div>
 
-    <!-- KPI Row 2 -->
-    <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="crac-supply-t" :label="tl('平均送风温度')" :value="s.avgSupplyT" unit="°C" quality="good" :online="true" icon-hint="temp" />
-      <MetricCard metric-name="crac-return-t" :label="tl('平均回风温度')" :value="s.avgReturnT" unit="°C" :quality="s.avgReturnT > 30 ? 'uncertain' : 'good'" :severity="s.avgReturnT > 32 ? 'warn' : 'normal'" :online="true" icon-hint="temp" />
-      <MetricCard metric-name="crac-supply-wt" :label="tl('平均供水温度')" :value="s.avgSupplyWaterT" unit="°C" quality="good" :online="true" icon-hint="temp" />
-      <MetricCard metric-name="crac-inout-diff" :label="tl('平均室内外压差')" :value="s.avgInOutDiff" unit="Pa" :quality="s.avgInOutDiff > 0 ? 'good' : 'uncertain'" :online="true" />
+    <!-- ========== KPI Row 2 ========== -->
+    <div class="kpi-row" v-if="cracData">
+      <KpiCard title="平均送风温度" :value="cracData.avgSupplyT" unit="℃" :decimals="1" dot="#06b6d4" />
+      <KpiCard title="平均回风温度" :value="cracData.avgReturnT" unit="℃" :decimals="1" dot="#f97316" />
+      <KpiCard title="平均供水温度" :value="cracData.avgSupplyWaterT" unit="℃" :decimals="1" dot="#3b82f6" />
+      <KpiCard title="平均室内外压差" :value="cracData.avgInOutDiff" unit="Pa" :decimals="1" dot="#8b5cf6" />
     </div>
 
-    <!-- 加载 / 错误态 -->
-    <template v-if="!s">
-      <div class="card" v-if="!error"><div class="flex center" style="padding:40px"><span class="muted">{{ tl('加载中...') }}</span></div></div>
-      <div class="card" v-if="error"><div class="flex center" style="padding:40px"><span class="muted" style="color:var(--red)">{{ tl('加载失败') }}: {{ error }}</span></div></div>
-    </template>
+    <!-- Loading -->
+    <div class="skel-row" v-if="loading && !cracData">
+      <SkeletonCard v-for="i in 4" :key="i" size="sm" />
+    </div>
 
-    <template v-else>
-      <!-- ======== 包间设备归集卡片 ======== -->
-      <div class="section-title">
-        <span>{{ tl('包间设备归集') }}</span>
-        <span class="section-sub">{{ tl('每个包间一框：新风机组 + 房间级精密空调 + 列间空调 + 恒湿一体机 + 温湿度压差传感器') }}</span>
-      </div>
-      <div class="room-groups-grid">
-        <div class="room-card" v-for="g in roomGroups" :key="g.roomId">
-          <!-- 包间头部 -->
-          <div class="room-card-head">
-            <span class="rch-status" :class="g.status === '正常' ? 'g' : 'r'">●</span>
-            <span class="rch-name">{{ g.roomName }}</span>
-            <span class="rch-badges">
-              <span class="badge badge-info">{{ g.cracRun }}/{{ g.cracN }} {{ tl('运行') }}</span>
-              <span class="badge" :class="g.leak.status === '报警' ? 'badge-bad' : 'badge-ok'">{{ g.leak.status === '报警' ? '⚠ ' : '' }}{{ tl('漏水') }}: {{ g.leak.status }}</span>
-            </span>
-          </div>
+    <!-- ========== 设备全景列表 ========== -->
+    <div class="section" v-if="cracData">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--cyan)"></span>
+        设备全景列表
+        <span class="section-sum">{{ cracData.devices.length }} 台</span>
+      </h3>
+      <DeviceTable
+        :columns="deviceColumns"
+        :rows="deviceRows"
+        :count="cracData.devices.length"
+      />
+    </div>
 
-          <!-- 温湿度压差传感器 -->
-          <div class="sensor-row">
-            <div class="sensor-block" v-for="item in sensorItems(g)" :key="item.label">
-              <span class="sensor-label">{{ item.label }}</span>
-              <span class="sensor-val" :class="item.cls">{{ item.val }}</span>
-            </div>
-          </div>
+    <!-- ========== 包间温度热力图 ========== -->
+    <div class="section" v-if="roomHeatData.length">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--amber)"></span>
+        包间温度热力图
+      </h3>
+      <HeatmapView
+        :xAxisData="heatXLabels"
+        :yAxisData="heatYLabels"
+        :heatData="roomHeatData"
+        :valueRange="[10, 40]"
+        :colors="heatColors"
+        unit="℃"
+        :loading="trendsLoading"
+        title=""
+      />
+    </div>
 
-          <!-- 精密空调区域 -->
-          <div class="equip-section" v-if="g.roomCracs.length">
-            <span class="equip-tag tag-crac">{{ tl('房间级精密空调') }}</span>
-            <div class="equip-row" v-for="u in g.roomCracs" :key="u.code">
-              <span class="e-status" :class="pinCls(u.status)">●</span>
-              <span class="e-name">{{ u.code }}</span>
-              <span class="e-val">{{ u.supplyT === '-' ? '—' : u.supplyT + '°C' }}</span>
-              <span class="e-sep">/</span>
-              <span class="e-val">{{ u.returnT === '-' ? '—' : u.returnT + '°C' }}</span>
-              <span class="e-meta">{{ tl('风机') }} {{ u.fanSpeed }}% {{ tl('阀') }} {{ u.waterValve }}%</span>
-            </div>
-          </div>
-          <div class="equip-section" v-if="g.inRowCracs.length">
-            <span class="equip-tag tag-inrow">{{ tl('列间空调') }}</span>
-            <div class="equip-row" v-for="u in g.inRowCracs" :key="u.code">
-              <span class="e-status" :class="pinCls(u.status)">●</span>
-              <span class="e-name">{{ u.code }}</span>
-              <span class="e-val">{{ u.supplyT === '-' ? '—' : u.supplyT + '°C' }}</span>
-              <span class="e-sep">/</span>
-              <span class="e-val">{{ u.returnT === '-' ? '—' : u.returnT + '°C' }}</span>
-              <span class="e-meta">{{ tl('风机') }} {{ u.fanSpeed }}% {{ tl('阀') }} {{ u.waterValve }}%</span>
-            </div>
-          </div>
-
-          <!-- 新风机组 + 恒湿机 -->
-          <div class="aux-row">
-            <div class="aux-item" v-if="g.fau">
-              <span class="aux-tag tag-fau">FAU</span>
-              <span class="aux-status" :class="g.fau.state === '运行' ? 'g' : 'm'">●</span>
-              <span class="aux-name">{{ g.fau.id }}</span>
-              <span class="aux-val">{{ g.fau.state === '运行' ? g.fau.supplyT + '°C ' + g.fau.rh + '% CO₂' + g.fau.co2 + 'ppm ΔP' + g.fau.filterDp + 'Pa' : '待机' }}</span>
-            </div>
-            <div class="aux-item" v-if="g.humidifier">
-              <span class="aux-tag tag-hum">HUM</span>
-              <span class="aux-status" :class="g.humidifier.state === '运行' ? 'g' : 'm'">●</span>
-              <span class="aux-name">{{ g.humidifier.id }}</span>
-              <span class="aux-val">{{ g.humidifier.state === '运行' ? g.humidifier.mode + ' ' + g.humidifier.rh + '%RH' : '待机' }}</span>
-            </div>
+    <!-- ========== 包间设备归集 ========== -->
+    <div class="section" v-if="roomGroups.length">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--green)"></span>
+        包间设备归集
+        <span class="section-sum">{{ roomGroups.length }} 个包间</span>
+      </h3>
+      <GroupCard
+        v-for="rg in roomGroups"
+        :key="rg.roomId"
+        :title="rg.roomName"
+        :subtitle="`运行 ${rg.cracRun}/${rg.cracN} · 状态 ${rg.status}`"
+        :dot-color="rg.status === '正常' ? 'var(--green)' : rg.status === '告警' ? 'var(--red)' : 'var(--amber)'"
+      >
+        <!-- 环境传感器 -->
+        <div class="rg-env">
+          <h4 class="rg-subtitle">环境传感器</h4>
+          <div class="rg-kpi-grid">
+            <KpiCard title="平均温度" :value="rg.envSensors.avgTemp" unit="℃" size="sm" dot="var(--cyan)" />
+            <KpiCard title="平均湿度" :value="rg.envSensors.avgRh" unit="%" size="sm" dot="var(--blue)" />
+            <KpiCard title="热通道温度" :value="rg.envSensors.hotAisleTemp" unit="℃" size="sm" dot="var(--red)" />
+            <KpiCard title="冷通道温度" :value="rg.envSensors.coldAisleTemp" unit="℃" size="sm" dot="var(--cyan)" />
+            <KpiCard title="热通道湿度" :value="rg.envSensors.hotAisleRh" unit="%" size="sm" dot="var(--orange)" />
+            <KpiCard title="冷通道湿度" :value="rg.envSensors.coldAisleRh" unit="%" size="sm" dot="var(--teal)" />
+            <KpiCard title="露点温度" :value="rg.envSensors.dewPoint" unit="℃" size="sm" dot="var(--purple)" />
+            <KpiCard title="室内外压差" :value="rg.envSensors.inOutDiff" unit="Pa" size="sm" dot="var(--amber)" />
           </div>
         </div>
-      </div>
 
-      <!-- ======== 7类趋势诊断图表 ======== -->
-      <div class="section-title">{{ tl('趋势诊断分析') }}</div>
-
-      <!-- 1. 回风温度偏差累积 48h -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">{{ tl('1. 回风温度与设定值偏差累积 (温差积分)') }}</span>
-          <span class="chart-period">48h</span>
+        <!-- 精密空调 -->
+        <div v-if="rg.roomCracs.length" class="rg-devices">
+          <h4 class="rg-subtitle">精密空调 ({{ rg.roomCracs.length }} 台)</h4>
+          <DeviceTable :columns="cracUnitColumns" :rows="mapCracRows(rg.roomCracs)" />
         </div>
-        <div ref="elDeltaT" class="chart-body" style="height:320px"></div>
-      </div>
 
-      <!-- 2. 滤网压差爬升斜率 90d -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">{{ tl('2. 滤网压差(ΔP)月度爬升斜率') }}</span>
-          <span class="chart-period">90d</span>
+        <!-- 列间空调 -->
+        <div v-if="rg.inRowCracs.length" class="rg-devices">
+          <h4 class="rg-subtitle">列间空调 ({{ rg.inRowCracs.length }} 台)</h4>
+          <DeviceTable :columns="cracUnitColumns" :rows="mapCracRows(rg.inRowCracs)" />
         </div>
-        <div ref="elFilterDp" class="chart-body" style="height:340px"></div>
-      </div>
 
-      <!-- 3. SHR 长期趋势 周 -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">{{ tl('3. 显热比(SHR)长期趋势') }}</span>
-          <span class="chart-period">{{ tl('以周为单位') }}</span>
+        <!-- 新风 + 恒湿 -->
+        <div class="rg-aux" v-if="rg.fau || rg.humidifier">
+          <h4 class="rg-subtitle">辅助设备</h4>
+          <div class="rg-aux-grid">
+            <div v-if="rg.fau" class="rg-aux-card">
+              <span class="rg-aux-label">新风机组</span>
+              <StatusBadge :status="rg.fau.state" />
+              <span class="rg-aux-v">送风 {{ formatVal(rg.fau.supplyT) }}℃ / CO₂ {{ formatVal(rg.fau.co2) }}ppm</span>
+            </div>
+            <div v-if="rg.humidifier" class="rg-aux-card">
+              <span class="rg-aux-label">恒湿机</span>
+              <StatusBadge :status="rg.humidifier.state" />
+              <span class="rg-aux-v">RH {{ formatVal(rg.humidifier.rh) }}% / {{ rg.humidifier.mode }}</span>
+            </div>
+          </div>
         </div>
-        <div ref="elShr" class="chart-body" style="height:300px"></div>
-      </div>
 
-      <!-- 4. 送风 vs 机柜进风温差 -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">{{ tl('4. 送风温度与机柜进风区域温度温差对比') }}</span>
-          <span class="chart-period">
-            <button class="btn-tiny" :class="{ active: stPeriod === '24h' }" @click="setSupplyPeriod('24h')">24h</button>
-            <button class="btn-tiny" :class="{ active: stPeriod === '7d' }" @click="setSupplyPeriod('7d')">7d</button>
-            <button class="btn-tiny" :class="{ active: stPeriod === '30d' }" @click="setSupplyPeriod('30d')">30d</button>
-          </span>
+        <!-- 漏水状态 -->
+        <div class="rg-leak" v-if="rg.leak">
+          <span class="rg-leak-label">漏水检测 (Zone {{ rg.leak.zone }})</span>
+          <StatusBadge :status="rg.leak.status" />
+          <span v-if="rg.leak.level !== '正常'" class="rg-leak-level">级别: {{ rg.leak.level }}</span>
         </div>
-        <div ref="elSupplyCab" class="chart-body" style="height:320px"></div>
-      </div>
 
-      <!-- 5. 风机转速 vs 送风静压 关联滞后 -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">{{ tl('5. 风机转速(%)与送风静压(Pa)关联滞后分析') }}</span>
-          <span class="chart-period">{{ tl('7天 (逐日相关系数)') }}</span>
+        <!-- 远程控制 -->
+        <QuickControl
+          :showTemp="true"
+          tempLabel="回风温度设定"
+          :tempValue="rg.roomCracs[0]?.roomTSet ?? 24"
+          :tempMin="16"
+          :tempMax="32"
+          :tempStep="0.5"
+          tempUnit="℃"
+          :showStartStop="false"
+          @tempChange="v => onRoomTempChange(rg.roomId, v)"
+        />
+      </GroupCard>
+    </div>
+
+    <!-- ========== 群控策略 ========== -->
+    <div class="section" v-if="cracData?.ctrl">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--purple)"></span>
+        群控策略
+      </h3>
+      <div class="ctrl-grid">
+        <div class="ctrl-card">
+          <span class="ctrl-name">恒湿机联控</span>
+          <span class="ctrl-desc">加湿启动 RH ≤ {{ cracData.ctrl.humId.rhLowOn }}% · 关闭 RH ≥ {{ cracData.ctrl.humId.rhHighOff }}%</span>
         </div>
-        <div ref="elFanStatic" class="chart-body" style="height:360px"></div>
-      </div>
-
-      <!-- 6. 水阀开度 vs ΔT 叠加 -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">{{ tl('6. 冷冻水电动二通阀开度(%V)与进出水水温差(ΔT)趋势叠加') }}</span>
-          <span class="chart-period">24h</span>
+        <div class="ctrl-card">
+          <span class="ctrl-name">正压送风</span>
+          <span class="ctrl-desc">{{ cracData.ctrl.positivePressure.min }}~{{ cracData.ctrl.positivePressure.max }} {{ cracData.ctrl.positivePressure.unit }} · {{ cracData.ctrl.positivePressure.desc }}</span>
         </div>
-        <div ref="elValveDt" class="chart-body" style="height:320px"></div>
-      </div>
-
-      <!-- 7. 吸气/排气过热度 -->
-      <div class="chart-card">
-        <div class="chart-head">
-          <span class="chart-title">{{ tl('7. 吸气过热度与排气过热度趋势') }}</span>
-          <span class="chart-period">24h</span>
+        <div class="ctrl-card">
+          <span class="ctrl-name">二次泵策略</span>
+          <span class="ctrl-desc">压差目标 {{ cracData.ctrl.secPump.diffTarget }}{{ cracData.ctrl.secPump.diffUnit }} · 加泵 {{ cracData.ctrl.secPump.addHz }}Hz · 减泵 {{ cracData.ctrl.secPump.reduceHz }}Hz · {{ cracData.ctrl.secPump.desc }}</span>
         </div>
-        <div ref="elSuperheat" class="chart-body" style="height:320px"></div>
+      </div>
+    </div>
+
+    <!-- ========== 趋势诊断 ========== -->
+    <div class="section" v-if="trends">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--yellow)"></span>
+        趋势诊断分析
+        <span class="section-sum">7 项指标</span>
+      </h3>
+
+      <!-- Chart 1: ΔT Integral -->
+      <div class="trend-item" v-if="trends.deltaTIntegral?.rooms?.length">
+        <TrendChart
+          :title="trends.deltaTIntegral.title"
+          :xAxisData="dtiXData"
+          :series="dtiSeries"
+          :loading="trendsLoading"
+          :height="260"
+        />
       </div>
 
-      <!-- 底部统计 -->
-      <div class="footer-note muted">
-        {{ tl('空调末端') }} · {{ s.total }} {{ tl('台设备') }} · {{ s.devices.length }} {{ tl('台精密空调') }} · {{ s.leakTotal }} {{ tl('路漏水检测') }}
-        · {{ roomGroups.length }} {{ tl('包间设备归集') }}
+      <!-- Chart 2: Filter ΔP Slope (dual Y) -->
+      <div class="trend-item" v-if="trends.filterDpSlope?.units?.length">
+        <TrendChart
+          :title="trends.filterDpSlope.title"
+          :xAxisData="fdpXData"
+          :series="fdpSeries"
+          :loading="trendsLoading"
+          :height="270"
+        />
       </div>
-    </template>
+
+      <!-- Chart 3: SHR Trend -->
+      <div class="trend-item" v-if="trends.shrTrend?.units?.length">
+        <TrendChart
+          :title="trends.shrTrend.title"
+          :xAxisData="shrXData"
+          :series="shrSeries"
+          :loading="trendsLoading"
+          :height="240"
+        />
+      </div>
+
+      <!-- Chart 4: Supply vs Cabinet -->
+      <div class="trend-item" v-if="activeSVC">
+        <div class="trend-header">
+          <span class="trend-name">{{ trends.supplyVsCabinet.title }}</span>
+          <select v-model="svcPeriod" class="trend-period" v-if="trends.supplyVsCabinet.periods?.length > 1">
+            <option v-for="p in trends.supplyVsCabinet.periods" :key="p" :value="p">{{ p }}</option>
+          </select>
+        </div>
+        <TrendChart
+          :xAxisData="svcXData"
+          :series="svcSeries"
+          :loading="trendsLoading"
+          :height="270"
+        />
+      </div>
+
+      <!-- Chart 5: Fan vs Static Pressure (dual Y) -->
+      <div class="trend-item" v-if="trends.fanVsStaticPressure?.units?.length">
+        <TrendChart
+          :title="trends.fanVsStaticPressure.title"
+          :xAxisData="fspXData"
+          :series="fspSeries"
+          :loading="trendsLoading"
+          :height="260"
+        />
+      </div>
+
+      <!-- Chart 6: Valve vs ΔT (dual Y) -->
+      <div class="trend-item" v-if="trends.valveDeltaT?.units?.length">
+        <TrendChart
+          :title="trends.valveDeltaT.title"
+          :xAxisData="vdtXData"
+          :series="vdtSeries"
+          :loading="trendsLoading"
+          :height="260"
+        />
+      </div>
+
+      <!-- Chart 7: Superheat Trend -->
+      <div class="trend-item" v-if="trends.superheatTrend?.units?.length">
+        <TrendChart
+          :title="trends.superheatTrend.title"
+          :xAxisData="shXData"
+          :series="shSeries"
+          :loading="trendsLoading"
+          :height="260"
+        />
+      </div>
+    </div>
+
+    <!-- ========== 活跃告警 ========== -->
+    <div class="section" v-if="cracAlarms.length">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--red)"></span>
+        活跃告警
+        <span class="section-sum danger">{{ cracAlarms.length }} 条</span>
+      </h3>
+      <div class="alarm-list">
+        <div v-for="a in cracAlarms" :key="a.id" class="alarm-item">
+          <AlarmBadge :level="a.level || 'warning'" />
+          <span class="alarm-msg">{{ a.message || a.title || a.description || '-' }} <em class="alarm-tag">[{{ a.source || a.domain || '-' }}]</em></span>
+          <span class="alarm-time">{{ formatTime(a.time || a.created_at) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== Footer Stats ========== -->
+    <div class="page-footer" v-if="cracData">
+      <span>总设备 {{ cracData.total }} 台</span>
+      <span>在线 {{ cracData.online }} · 待机 {{ cracData.standby }} · 故障 {{ cracData.fault }}</span>
+      <span>新风机组 {{ cracData.freshAir?.length ?? 0 }} 台</span>
+      <span>恒湿机 {{ cracData.humidifiers?.length ?? 0 }} 台</span>
+      <span>功能房间 {{ cracData.funcRooms?.length ?? 0 }} 间</span>
+      <span v-if="lastUpdate">数据更新: {{ lastUpdate }}</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick, computed } from 'vue'
-import { useI18n } from 'vue-i18n'
-import * as echarts from 'echarts'
-import MetricCard from '@/components/common/MetricCard.vue'
-import { getCrac, getCracTrends, mapCracRoomGroups, type CracSummary, type CracRoomGroupView, type CracTrends } from '@/api/hvac'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { getCrac, getCracTrends, mapCracRoomGroups } from '@/api/hvac'
+import { getActiveAlarms } from '@/api'
+import type { CracSummary, CracView, CracRoomGroupView, CracTrends } from '@/api/hvac'
+import { CHART_COLORS } from '@/assets/echarts-theme'
+import KpiCard from '@/components/monitor/KpiCard.vue'
+import StatusBadge from '@/components/monitor/StatusBadge.vue'
+import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
+import GroupCard from '@/components/monitor/GroupCard.vue'
+import TrendChart from '@/components/monitor/TrendChart.vue'
+import DeviceTable from '@/components/monitor/DeviceTable.vue'
+import HeatmapView from '@/components/monitor/HeatmapView.vue'
+import QuickControl from '@/components/monitor/QuickControl.vue'
+import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 
-const { t: tl } = useI18n()
-
-// --- 基础数据 ---
-const s = ref<CracSummary | null>(null)
-const roomGroups = ref<CracRoomGroupView[]>([])
+// ===== State =====
+const cracData = ref<CracSummary | null>(null)
 const trends = ref<CracTrends | null>(null)
-const error = ref('')
+const rawCrac = ref<any>(null)
+const loading = ref(false)
+const trendsLoading = ref(false)
+const lastUpdate = ref('')
+let timer: ReturnType<typeof setInterval> | null = null
 
-const stPeriod = ref('24h')
+// ===== Alarm State =====
+const alarms = ref<any[]>([])
 
-function pinCls(st: string) {
-  if (st === 'online') return 'g'
-  if (st === 'fault') return 'r'
-  return 'm'
+// ===== Supply vs Cabinet period =====
+const svcPeriod = ref('1h')
+
+// ===== Data Loading =====
+async function loadCrac() {
+  try {
+    const [summary, alarmResult] = await Promise.all([
+      getCrac(),
+      getActiveAlarms().catch(() => ({ total: 0, items: [] })),
+    ])
+    cracData.value = summary
+    // Room groups come from mapCracRoomGroups — pass the summary directly
+    rawCrac.value = summary as any
+    alarms.value = alarmResult.items || []
+    lastUpdate.value = new Date().toLocaleTimeString('zh-CN')
+  } catch (e) {
+    console.error('Failed to load CRAC data:', e)
+  }
 }
 
-function tempCls(v: number): string {
-  if (v >= 32) return 'r'
-  if (v >= 28) return 'a'
-  return ''
+async function loadTrends() {
+  trendsLoading.value = true
+  try {
+    trends.value = await getCracTrends()
+    if (Object.keys(trends.value || {}).length > 0 && trends.value?.supplyVsCabinet?.periods?.length) {
+      svcPeriod.value = trends.value.supplyVsCabinet.periods[0]
+    }
+  } catch { /* trends optional */ }
+  finally { trendsLoading.value = false }
 }
 
-function sensorItems(g: CracRoomGroupView) {
-  const e = g.envSensors
-  return [
-    { label: '平均温度', val: e.avgTemp.toFixed(1) + '°C', cls: tempCls(e.avgTemp) },
-    { label: '湿度', val: e.avgRh.toFixed(0) + '%', cls: '' },
-    { label: '热通道', val: e.hotAisleTemp.toFixed(1) + '°C ' + e.hotAisleRh.toFixed(0) + '%', cls: tempCls(e.hotAisleTemp) },
-    { label: '冷通道', val: e.coldAisleTemp.toFixed(1) + '°C ' + e.coldAisleRh.toFixed(0) + '%', cls: '' },
-    { label: '露点', val: e.dewPoint.toFixed(1) + '°C', cls: '' },
-    { label: '压差', val: e.inOutDiff.toFixed(1) + 'Pa', cls: e.inOutDiff < 3 ? 'a' : '' },
-    { label: '静压', val: e.supplyStaticPressure.toFixed(0) + 'Pa', cls: '' },
-  ]
+async function refresh() {
+  loading.value = true
+  await Promise.all([loadCrac(), loadTrends()])
+  loading.value = false
 }
 
-// --- ECharts 容器 refs ---
-const elDeltaT = ref<HTMLElement | null>(null)
-const elFilterDp = ref<HTMLElement | null>(null)
-const elShr = ref<HTMLElement | null>(null)
-const elSupplyCab = ref<HTMLElement | null>(null)
-const elFanStatic = ref<HTMLElement | null>(null)
-const elValveDt = ref<HTMLElement | null>(null)
-const elSuperheat = ref<HTMLElement | null>(null)
+onMounted(() => {
+  refresh()
+  timer = setInterval(refresh, 30000)
+})
 
-const charts: Record<string, echarts.ECharts | null> = {}
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
 
-const COLORS = [
-  '#4fc3f7', '#81c784', '#ffb74d', '#e57373', '#ba68c8', '#4db6ac',
-  '#ff8a65', '#7986cb', '#a1887f', '#90a4ae'
+// ===== Room Groups =====
+const roomGroups = computed<CracRoomGroupView[]>(() => {
+  if (!rawCrac.value) return []
+  return mapCracRoomGroups(rawCrac.value)
+})
+
+// ===== Device Table =====
+const deviceColumns = [
+  { key: 'code', label: '设备编号', width: '130px' },
+  { key: 'roomName', label: '包间', width: '80px' },
+  { key: 'type', label: '类型', width: '80px' },
+  { key: 'status', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'supplyT', label: '送风(℃)', width: '75px' },
+  { key: 'returnT', label: '回风(℃)', width: '75px' },
+  { key: 'fanSpeed', label: '风机(%)', width: '75px' },
+  { key: 'valve', label: '风阀(%)', width: '75px' },
+  { key: 'waterValve', label: '水阀(%)', width: '75px' },
+  { key: 'power', label: '功率(kW)', width: '80px' },
+  { key: 'filter', label: '滤网', width: '70px' },
+  { key: 'coolingMode', label: '模式', width: '70px' },
 ]
 
-function initChart(key: string, el: HTMLElement | null, option: any) {
-  if (!el) return
-  if (charts[key]) {
-    try { charts[key]!.dispose() } catch {}
-    charts[key] = null
-  }
-  try {
-    const inst = echarts.init(el)
-    inst.setOption(option)
-    charts[key] = inst
-  } catch { /* DOM未就绪 */ }
+const cracUnitColumns = [
+  { key: 'code', label: '编号', width: '100px' },
+  { key: 'status', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'supplyT', label: '送风(℃)', width: '70px' },
+  { key: 'returnT', label: '回风(℃)', width: '70px' },
+  { key: 'fanSpeed', label: '风机(%)', width: '70px' },
+  { key: 'valve', label: '风阀(%)', width: '70px' },
+  { key: 'waterValve', label: '水阀(%)', width: '70px' },
+  { key: 'power', label: '功率(kW)', width: '75px' },
+  { key: 'filter', label: '滤网', width: '60px' },
+]
+
+function numVal(v: number | string): string {
+  if (v === '-' || v === undefined || v === null) return '-'
+  return String(Math.round(Number(v) * 10) / 10)
 }
 
-function disposeAll() {
-  Object.values(charts).forEach((c) => { try { c?.dispose() } catch {} })
-  Object.keys(charts).forEach((k) => { charts[k] = null })
+const deviceRows = computed(() => {
+  if (!cracData.value) return []
+  return cracData.value.devices.map((d: CracView) => ({
+    code: d.code,
+    roomName: d.roomName,
+    type: d.type,
+    status: d.status,
+    supplyT: numVal(d.supplyT),
+    returnT: numVal(d.returnT),
+    fanSpeed: d.fanSpeed,
+    valve: d.valve,
+    waterValve: d.waterValve,
+    power: d.power,
+    filter: d.filter,
+    coolingMode: d.coolingMode,
+    _rowClass: d.status === 'fault' ? 'row-danger' : d.status === 'standby' ? 'row-warning' : '',
+  }))
+})
+
+function mapCracRows(devices: CracView[]) {
+  return devices.map((d: CracView) => ({
+    code: d.code,
+    status: d.status,
+    supplyT: numVal(d.supplyT),
+    returnT: numVal(d.returnT),
+    fanSpeed: d.fanSpeed,
+    valve: d.valve,
+    waterValve: d.waterValve,
+    power: d.power,
+    filter: d.filter,
+    _rowClass: d.status === 'fault' ? 'row-danger' : d.status === 'standby' ? 'row-warning' : '',
+  }))
 }
 
-// --- 渲染所有图表 ---
-function renderCharts() {
-  if (!trends.value) return
-  const td = trends.value
+function formatVal(v: number | string): string {
+  if (v === '-' || v === undefined || v === null) return '-'
+  if (typeof v === 'string') return v
+  return v % 1 === 0 ? String(v) : v.toFixed(1)
+}
 
-  // 1. ΔT Integral 48h
-  if (td.deltaTIntegral?.rooms?.length) {
-    const series: any[] = []
-    td.deltaTIntegral.rooms.forEach((rm, ri) => {
-      (rm.series || []).forEach((s: any) => {
-        series.push({
-          name: `${rm.roomName} ${s.label}`,
-          type: 'line',
-          data: s.data,
-          smooth: true,
-          symbol: 'none',
-          lineStyle: { width: 1.5 },
-        })
-      })
-    })
-    initChart('deltaT', elDeltaT.value, {
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0, textStyle: { fontSize: 10, color: '#999' }, itemWidth: 12, itemHeight: 8, type: 'scroll' },
-      grid: { left: 60, right: 20, top: 35, bottom: 30 },
-      xAxis: { type: 'category', data: Array.from({ length: series[0]?.data?.length || 0 }, (_, i) => i * 5 + 'm'), axisLabel: { fontSize: 9, interval: 47 } },
-      yAxis: { type: 'value', name: '°C·h', axisLabel: { fontSize: 10 } },
-      dataZoom: [{ type: 'inside' }],
-      series,
-    })
-  }
+// ===== Heatmap =====
+const heatColors = ['#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444']
+const heatXLabels = ['平均温度', '热通道', '冷通道', '露点']
+const heatYLabels = computed(() => roomGroups.value.map(r => r.roomName))
 
-  // 2. Filter ΔP Slope 90d
-  if (td.filterDpSlope?.units?.length) {
-    const rawSeries: any[] = []
-    const slopeSeries: any[] = []
-    const days = (td.filterDpSlope.units[0]?.raw || []).map((p: any) => p.date)
-    td.filterDpSlope.units.forEach((u: any) => {
-      rawSeries.push({ name: `${u.roomName} ${u.label} ΔP`, type: 'line', data: (u.raw || []).map((p: any) => p.value), smooth: true, symbol: 'none', lineStyle: { width: 1.5 } })
-      slopeSeries.push({ name: `${u.roomName} ${u.label} 斜率`, type: 'line', data: (u.slope || []).map((p: any) => p.value), smooth: true, symbol: 'none', lineStyle: { width: 2, type: 'dashed' } })
-    })
-    initChart('filterDp', elFilterDp.value, {
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0, textStyle: { fontSize: 9, color: '#999' }, type: 'scroll' },
-      grid: { left: 60, right: 20, top: 35, bottom: 50 },
-      xAxis: { type: 'category', data: days, axisLabel: { fontSize: 9, interval: 9 } },
-      yAxis: [
-        { type: 'value', name: 'ΔP (Pa)', axisLabel: { fontSize: 10 } },
-        { type: 'value', name: '斜率 (Pa/d)', axisLabel: { fontSize: 10 } },
-      ],
-      dataZoom: [{ type: 'inside' }],
-      series: [...rawSeries, ...slopeSeries.map((s: any, i: number) => ({ ...s, yAxisIndex: 1 }))],
-    })
-  }
+const roomHeatData = computed<[number, number, number][]>(() => {
+  const data: [number, number, number][] = []
+  roomGroups.value.forEach((rg, yi) => {
+    data.push([0, yi, rg.envSensors.avgTemp])
+    data.push([1, yi, rg.envSensors.hotAisleTemp])
+    data.push([2, yi, rg.envSensors.coldAisleTemp])
+    data.push([3, yi, rg.envSensors.dewPoint])
+  })
+  return data
+})
 
-  // 3. SHR Trend Weekly
-  if (td.shrTrend?.units?.length) {
-    const weeks = (td.shrTrend.units[0]?.data || []).map((p: any) => p.week)
-    const shrSeries = td.shrTrend.units.map((u: any) => ({
-      name: `${u.roomName} ${u.label}`,
-      type: 'line',
-      data: (u.data || []).map((p: any) => p.value),
-      smooth: true,
-      symbol: 'circle', symbolSize: 6,
-      lineStyle: { width: 2 },
-      markLine: { silent: true, data: [{ yAxis: 0.80, label: { formatter: '下限' }, lineStyle: { color: '#e57373', type: 'dashed' } }] },
-    }))
-    initChart('shr', elShr.value, {
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0, textStyle: { fontSize: 9, color: '#999' }, type: 'scroll' },
-      grid: { left: 55, right: 20, top: 35, bottom: 30 },
-      xAxis: { type: 'category', data: weeks, axisLabel: { fontSize: 10 } },
-      yAxis: { type: 'value', name: 'SHR', min: 0.70, max: 1.0, axisLabel: { fontSize: 10 } },
-      series: shrSeries,
-    })
-  }
+// ===== Trend Charts =====
 
-  // 4. Supply vs Cabinet Temp
-  if (td.supplyVsCabinet?.rooms?.length) {
-    const pd = td.supplyVsCabinet.rooms[0]?.periods?.[stPeriod.value]
-    if (pd) {
-      initChart('supplyCab', elSupplyCab.value, {
-        tooltip: { trigger: 'axis' },
-        legend: { top: 0, textStyle: { fontSize: 10, color: '#999' } },
-        grid: { left: 55, right: 55, top: 35, bottom: 30 },
-        xAxis: { type: 'category', data: (pd.timestamps || []).map((_t, i) => i % Math.ceil(pd.timestamps.length / 20) === 0 ? _t.slice(11, 16) : ''), axisLabel: { fontSize: 9 } },
-        yAxis: [
-          { type: 'value', name: '温度 °C', axisLabel: { fontSize: 10 } },
-          { type: 'value', name: 'ΔT °C', axisLabel: { fontSize: 10 } },
-        ],
-        dataZoom: [{ type: 'inside' }],
-        series: [
-          { name: '送风温度', type: 'line', data: pd.supplyTemp, smooth: true, symbol: 'none', lineStyle: { color: '#4fc3f7', width: 1.5 } },
-          { name: '机柜进风温度', type: 'line', data: pd.cabinetInletTemp, smooth: true, symbol: 'none', lineStyle: { color: '#ffb74d', width: 1.5 } },
-          { name: '温差 ΔT', type: 'line', data: pd.deltaT, smooth: true, symbol: 'none', yAxisIndex: 1, lineStyle: { color: '#e57373', width: 2, type: 'dashed' }, areaStyle: { color: 'rgba(229,115,115,0.08)' } },
-        ],
+// Chart 1: ΔT Integral
+const dtiXData = computed<string[]>(() => {
+  const r = trends.value?.deltaTIntegral
+  if (!r?.rooms?.length) return ['--']
+  const room = r.rooms[0]
+  const s0 = room.series[0]
+  const len = s0?.data?.length || 0
+  return Array.from({ length: len }, (_, i) => `t${i + 1}`)
+})
+
+const dtiSeries = computed(() => {
+  const r = trends.value?.deltaTIntegral
+  if (!r?.rooms?.length) return []
+  const series: any[] = []
+  for (const room of r.rooms) {
+    for (const s of room.series) {
+      series.push({
+        name: `${room.roomName}·${s.label}`,
+        data: s.data as number[],
+        type: 'line',
+        areaStyle: { opacity: 0.06 },
       })
     }
   }
-
-  // 5. Fan Speed vs Static Pressure
-  if (td.fanVsStaticPressure?.units?.length) {
-    const u0 = td.fanVsStaticPressure.units[0]
-    const fanSeries: any[] = []
-    td.fanVsStaticPressure.units.forEach((u: any) => {
-      fanSeries.push({ name: `${u.roomName} ${u.label} 风机`, type: 'line', data: u.fanSpeed, smooth: true, symbol: 'none', lineStyle: { width: 1.5 }, yAxisIndex: 0 })
-      fanSeries.push({ name: `${u.roomName} ${u.label} 静压`, type: 'line', data: u.staticPressure, smooth: true, symbol: 'none', lineStyle: { width: 1.5 }, yAxisIndex: 1 })
-    })
-    initChart('fanStatic', elFanStatic.value, {
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0, textStyle: { fontSize: 9, color: '#999' }, type: 'scroll' },
-      grid: { left: 55, right: 55, top: 35, bottom: 55 },
-      xAxis: { type: 'category', data: (u0?.timestamps || []).map((t, i) => i % 48 === 0 ? t.slice(5, 16) : ''), axisLabel: { fontSize: 9 } },
-      yAxis: [
-        { type: 'value', name: '风机转速 %', axisLabel: { fontSize: 10 } },
-        { type: 'value', name: '静压 Pa', axisLabel: { fontSize: 10 } },
-      ],
-      dataZoom: [{ type: 'inside' }],
-      series: fanSeries,
-    })
-  }
-
-  // 6. Valve vs ΔT
-  if (td.valveDeltaT?.units?.length) {
-    const u0 = td.valveDeltaT.units[0]
-    const vSeries: any[] = []
-    td.valveDeltaT.units.forEach((u: any) => {
-      vSeries.push({ name: `${u.roomName} ${u.label} 阀开度`, type: 'line', data: u.valveOpening, smooth: true, symbol: 'none', lineStyle: { width: 1.5 }, yAxisIndex: 0 })
-      vSeries.push({ name: `${u.roomName} ${u.label} ΔT`, type: 'line', data: u.waterDeltaT, smooth: true, symbol: 'none', lineStyle: { width: 2, type: 'dashed' }, yAxisIndex: 1 })
-    })
-    initChart('valveDt', elValveDt.value, {
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0, textStyle: { fontSize: 9, color: '#999' }, type: 'scroll' },
-      grid: { left: 55, right: 55, top: 35, bottom: 30 },
-      xAxis: { type: 'category', data: (u0?.timestamps || []).map((t, i) => i % 60 === 0 ? t.slice(11, 16) : ''), axisLabel: { fontSize: 9 } },
-      yAxis: [
-        { type: 'value', name: '阀开度 %', max: 100, axisLabel: { fontSize: 10 } },
-        { type: 'value', name: 'ΔT °C', axisLabel: { fontSize: 10 } },
-      ],
-      dataZoom: [{ type: 'inside' }],
-      series: vSeries,
-    })
-  }
-
-  // 7. Superheat Trend
-  if (td.superheatTrend?.units?.length) {
-    const u0 = td.superheatTrend.units[0]
-    const shSeries: any[] = []
-    td.superheatTrend.units.forEach((u: any) => {
-      shSeries.push({ name: `${u.roomName} ${u.label} 吸气`, type: 'line', data: u.suctionSuperheat, smooth: true, symbol: 'none', lineStyle: { width: 2 } })
-      shSeries.push({ name: `${u.roomName} ${u.label} 排气`, type: 'line', data: u.dischargeSuperheat, smooth: true, symbol: 'none', lineStyle: { width: 2, type: 'dashed' } })
-    })
-    initChart('superheat', elSuperheat.value, {
-      tooltip: { trigger: 'axis' },
-      legend: { top: 0, textStyle: { fontSize: 9, color: '#999' }, type: 'scroll' },
-      grid: { left: 55, right: 20, top: 35, bottom: 30 },
-      xAxis: { type: 'category', data: (u0?.timestamps || []).map((t, i) => i % 24 === 0 ? t.slice(11, 16) : ''), axisLabel: { fontSize: 9 } },
-      yAxis: { type: 'value', name: '°C', axisLabel: { fontSize: 10 } },
-      dataZoom: [{ type: 'inside' }],
-      series: shSeries,
-    })
-  }
-}
-
-function setSupplyPeriod(p: string) {
-  stPeriod.value = p
-}
-
-// --- 数据加载 ---
-async function load() {
-  error.value = ''
-  try {
-    const [cracRaw, trendsRaw] = await Promise.all([
-      getCrac().then(() => getCracRaw()),
-      getCracTrends(),
-    ]) as [any, CracTrends]
-    s.value = mapCrac(cracRaw)
-    roomGroups.value = mapCracRoomGroups(cracRaw)
-    trends.value = trendsRaw
-    await nextTick()
-    renderCharts()
-  } catch (e: any) {
-    error.value = e?.message || String(e)
-  }
-}
-
-// helper: get raw data for mapCracRoomGroups
-async function getCracRaw() {
-  const { default: request } = await import('@/api/request')
-  return request.get('/api/hvac/crac')
-}
-
-function mapCrac(raw: any): CracSummary {
-  const list: any[] = raw?.units ?? []
-  const devices = list.map((d: any, i: number) => ({
-    id: i + 1,
-    code: d.id ?? `CRAC-${i + 1}`,
-    name: d.id ?? `CRAC-${i + 1}`,
-    roomName: d.room ?? '包间',
-    type: d.type ?? '精密空调',
-    status: d.state === '运行' ? 'online' : d.state === '故障' ? 'fault' : 'standby',
-    supplyT: d.supplyT === '-' ? '-' as const : Number(d.supplyT) || 0,
-    returnT: d.returnT === '-' ? '-' as const : Number(d.returnT) || 0,
-    supplyRh: d.supplyRh === '-' ? '-' as const : Number(d.supplyRh) || 0,
-    returnRh: d.returnRh === '-' ? '-' as const : Number(d.returnRh) || 0,
-    chilledWaterT: d.chilledWaterT === '-' ? '-' as const : Number(d.chilledWaterT) || 0,
-    returnWaterT: d.returnWaterT === '-' ? '-' as const : Number(d.returnWaterT) || 0,
-    fanSpeed: Number(d.fan) || 0,
-    valve: Number(d.valve) || 0,
-    waterValve: Number(d.waterValve) || 0,
-    power: Number(d.power) || 0,
-    dp: d.dp === '-' ? '-' as const : Number(d.dp) || 0,
-    filter: d.filter ?? '正常',
-    fanEnable: d.control?.fanEnable ?? true,
-    fanSpeedSet: Number(d.control?.fanSpeedSet) || 0,
-    waterValveSet: Number(d.control?.waterValveSet) || 0,
-    coolingMode: d.control?.coolingMode ?? '制冷',
-    humidOn: d.control?.humidOn ?? false,
-    supplyTSet: Number(d.setpoints?.supplyTSet) || 0,
-    rhSet: Number(d.setpoints?.rhSet) || 0,
-    roomTSet: Number(d.setpoints?.roomTSet) || 0,
-    highTempAlarm: Number(d.setpoints?.highTempAlarm) || 0,
-    lowTempAlarm: Number(d.setpoints?.lowTempAlarm) || 0,
-    highRhAlarm: Number(d.setpoints?.highRhAlarm) || 0,
-    commissionedOn: null,
-    healthScore: null,
-  } as any))
-  const onlineCount = devices.filter((d: any) => d.status === 'online').length
-  const ss = raw?.summary ?? {}
-  return {
-    total: Number(ss.total) || devices.length,
-    online: onlineCount,
-    standby: Number(ss.standby) || 0,
-    fault: Number(ss.fault) || 0,
-    outdoorRef: Number(ss.outdoorRef) || 0,
-    avgSupplyT: Number(ss.avgSupply) || 0,
-    avgReturnT: Number(ss.avgReturn) || 0,
-    avgSupplyWaterT: Number(ss.avgSupplyWater) || 0,
-    avgReturnWaterT: Number(ss.avgReturnWater) || 0,
-    avgInOutDiff: Number(ss.avgInOutDiff) || 0,
-    leakAlarm: Number(ss.leakAlarm) || 0,
-    leakTotal: Number(ss.leakTotal) || 0,
-    devices,
-    rooms: [],
-    leakDevices: [],
-    freshAir: [],
-    humidifiers: [],
-    funcRooms: [],
-    ctrl: {} as any,
-    avgTemperatureIn: 0,
-    avgTemperatureOut: 0,
-    avgHumidityIn: 0,
-    avgFanSpeed: 0,
-  }
-}
-
-// --- 生命周期 ---
-onMounted(load)
-
-watch(stPeriod, () => {
-  nextTick(() => renderCharts())
+  return series
 })
 
-import { onBeforeUnmount } from 'vue'
-onBeforeUnmount(() => { disposeAll() })
+// Chart 2: Filter ΔP Slope
+const fdpXData = computed(() => {
+  const u = trends.value?.filterDpSlope?.units
+  if (!u?.length) return ['--']
+  const u0 = u[0]
+  return u0.raw?.map((p: any) => p.date) ?? ['--']
+})
+
+const fdpSeries = computed(() => {
+  const units = trends.value?.filterDpSlope?.units ?? []
+  const series: any[] = []
+  const palette = CHART_COLORS.palette as readonly string[]
+  units.forEach((u, i) => {
+    series.push({
+      name: `${u.label} 原始值`,
+      data: (u.raw ?? []).map((p: any) => p.value),
+      type: 'line',
+      lineStyle: { color: palette[i % palette.length], width: 1.5 },
+    })
+    series.push({
+      name: `${u.label} 斜率(右轴)`,
+      data: (u.slope ?? []).map((p: any) => p.value),
+      type: 'line',
+      yAxisIndex: 1,
+      lineStyle: { color: palette[i % palette.length], width: 2, type: 'dashed' as const },
+    })
+  })
+  return series
+})
+
+// Chart 3: SHR Trend
+const shrXData = computed<string[]>(() => {
+  const units = trends.value?.shrTrend?.units ?? []
+  if (!units.length) return ['--']
+  return units[0].data?.map((p: any) => p.week) ?? ['--']
+})
+
+const shrSeries = computed(() => {
+  const units = trends.value?.shrTrend?.units ?? []
+  const palette = CHART_COLORS.palette as readonly string[]
+  return units.map((u, i) => ({
+    name: `${u.label} (${u.roomName})`,
+    data: u.data.map((p: any) => p.value) as number[],
+    type: 'line' as const,
+    lineStyle: { color: palette[i % palette.length] },
+    areaStyle: { opacity: 0.05 },
+  }))
+})
+
+// Chart 4: Supply vs Cabinet
+const activeSVC = computed(() => {
+  const svc = trends.value?.supplyVsCabinet
+  if (!svc?.rooms?.length) return null
+  return svc.rooms[0]
+})
+
+watch(svcPeriod, () => { /* reactive — recompute below */ })
+
+const svcXData = computed(() => {
+  const room = activeSVC.value
+  if (!room) return ['--']
+  const period = room.periods[svcPeriod.value]
+  return period?.timestamps ?? ['--']
+})
+
+const svcSeries = computed(() => {
+  const room = activeSVC.value
+  if (!room) return []
+  const period = room.periods[svcPeriod.value]
+  if (!period) return []
+  return [
+    { name: '送风温度', data: period.supplyTemp as number[], type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan } },
+    { name: '机柜进风温度', data: period.cabinetInletTemp as number[], type: 'line' as const, lineStyle: { color: CHART_COLORS.orange } },
+    { name: '温差 ΔT', data: period.deltaT as number[], type: 'bar' as const, yAxisIndex: 1, itemStyle: { color: CHART_COLORS.purple } },
+  ]
+})
+
+// Chart 5: Fan vs Static Pressure
+const fspXData = computed(() => {
+  const u = trends.value?.fanVsStaticPressure?.units
+  if (!u?.length) return ['--']
+  return u[0].timestamps ?? ['--']
+})
+
+const fspSeries = computed(() => {
+  const units = trends.value?.fanVsStaticPressure?.units ?? []
+  const palette = CHART_COLORS.palette as readonly string[]
+  const series: any[] = []
+  units.forEach((u, i) => {
+    series.push({
+      name: `${u.label} 风机转速`,
+      data: u.fanSpeed as number[],
+      type: 'line',
+      lineStyle: { color: palette[i % palette.length] },
+    })
+    series.push({
+      name: `${u.label} 静压(右轴)`,
+      data: u.staticPressure as number[],
+      type: 'line',
+      yAxisIndex: 1,
+      lineStyle: { color: palette[i % palette.length], type: 'dashed' as const },
+    })
+  })
+  return series
+})
+
+// Chart 6: Valve vs ΔT
+const vdtXData = computed(() => {
+  const u = trends.value?.valveDeltaT?.units
+  if (!u?.length) return ['--']
+  return u[0].timestamps ?? ['--']
+})
+
+const vdtSeries = computed(() => {
+  const units = trends.value?.valveDeltaT?.units ?? []
+  const palette = CHART_COLORS.palette as readonly string[]
+  const series: any[] = []
+  units.forEach((u, i) => {
+    series.push({
+      name: `${u.label} 水阀`,
+      data: u.valveOpening as number[],
+      type: 'line',
+      lineStyle: { color: palette[i % palette.length] },
+    })
+    series.push({
+      name: `${u.label} ΔT(右轴)`,
+      data: u.waterDeltaT as number[],
+      type: 'line',
+      yAxisIndex: 1,
+      lineStyle: { color: palette[i % palette.length], type: 'dashed' as const },
+    })
+  })
+  return series
+})
+
+// Chart 7: Superheat
+const shXData = computed(() => {
+  const u = trends.value?.superheatTrend?.units
+  if (!u?.length) return ['--']
+  return u[0].timestamps ?? ['--']
+})
+
+const shSeries = computed(() => {
+  const units = trends.value?.superheatTrend?.units ?? []
+  const palette = CHART_COLORS.palette as readonly string[]
+  const series: any[] = []
+  units.forEach((u, i) => {
+    series.push({
+      name: `${u.label} 吸气过热度`,
+      data: u.suctionSuperheat as number[],
+      type: 'line',
+      lineStyle: { color: palette[i % palette.length] },
+    })
+    series.push({
+      name: `${u.label} 排气过热度`,
+      data: u.dischargeSuperheat as number[],
+      type: 'line',
+      lineStyle: { color: palette[i % palette.length], type: 'dashed' as const },
+    })
+  })
+  return series
+})
+
+// ===== Alarms =====
+const cracAlarms = computed(() => {
+  return alarms.value.filter(a => {
+    const t = `${a.source || ''}${a.domain || ''}${a.message || ''}${a.title || ''}`.toLowerCase()
+    return t.includes('crac') || t.includes('空调') || t.includes('精密') || t.includes('列间') || t.includes('hvac')
+  })
+})
+
+function formatTime(t: string | undefined): string {
+  if (!t) return '-'
+  try {
+    const d = new Date(t)
+    if (isNaN(d.getTime())) return t
+    return d.toLocaleTimeString('zh-CN')
+  } catch { return t }
+}
+
+// ===== QuickControl Handler =====
+function onRoomTempChange(roomId: string, value: number) {
+  console.log('Room temp change:', roomId, value)
+  // Future: POST to /api/hvac/crac/setpoint
+}
 </script>
 
 <style scoped>
-/* ---- 通用 ---- */
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.ct { font-weight: 600; font-size: 14px; }
-.muted { color: var(--txt3); }
-.flex { display: flex; }
-.center { justify-content: center; align-items: center; }
-
-/* ---- Section ---- */
-.section-title {
-  display: flex; justify-content: space-between; align-items: baseline;
-  margin: 20px 0 12px; font-weight: 600; font-size: 15px; color: var(--cyan);
-  border-bottom: 1px solid var(--border); padding-bottom: 6px;
+.hvac-crac {
+  padding: 12px;
+  min-height: 100%;
 }
-.section-sub { font-weight: 400; font-size: 11px; color: var(--muted); }
 
-/* ---- Room Groups Grid ---- */
-.room-groups-grid {
+/* Header */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ph-left { display: flex; align-items: baseline; gap: 10px; }
+.ph-title { font-size: 18px; font-weight: 700; color: var(--txt); margin: 0; }
+.ph-sub { font-size: 12px; color: var(--txt3); }
+.ph-right { display: flex; align-items: center; gap: 10px; }
+.ph-badge {
+  padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+}
+.ph-badge.ok { background: rgba(34,197,94,.12); color: var(--green); }
+.ph-badge.loading { background: rgba(148,163,184,.10); color: var(--txt3); }
+.ph-time { font-size: 11px; color: var(--txt3); }
+.ph-btn {
+  border: 1px solid var(--line); background: transparent; color: var(--txt);
+  font-size: 11px; padding: 4px 14px; border-radius: 5px; cursor: pointer;
+  transition: border-color .15s;
+}
+.ph-btn:hover { border-color: var(--cyan); }
+
+/* KPI rows */
+.kpi-row {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .kpi-row { grid-template-columns: 1fr; } }
+
+.gk-cv-cyan { color: var(--cyan); font-weight: 700; }
+
+/* Skeleton */
+.skel-row {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;
 }
 
-.room-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 11px;
+/* Sections */
+.section { margin-top: 14px; }
+.section-title {
+  font-size: 14px; font-weight: 700; color: var(--txt);
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
 }
+.section-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.section-sum { font-size: 11px; font-weight: 400; color: var(--txt3); margin-left: auto; }
+.section-sum.danger { color: var(--red); }
 
-.room-card-head {
-  display: flex; align-items: center; gap: 6px;
-  margin-bottom: 8px; padding-bottom: 6px;
-  border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.05));
+/* Room Groups */
+.rg-subtitle {
+  font-size: 12px; font-weight: 600; color: var(--txt2);
+  margin: 10px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line);
 }
-.rch-status { font-size: 7px; }
-.rch-status.g { color: var(--green); }
-.rch-status.r { color: var(--red); }
-.rch-name { font-weight: 600; font-size: 13px; flex: 1; }
-.rch-badges { display: flex; gap: 4px; }
-.badge { font-size: 9px; padding: 1px 6px; border-radius: 8px; background: var(--bg3); }
-.badge-info { color: var(--blue); background: rgba(79,195,247,0.12); }
-.badge-ok { color: var(--green); background: rgba(82,196,26,0.12); }
-.badge-bad { color: var(--red); background: rgba(255,77,94,0.12); }
-
-/* ---- Sensor Row ---- */
-.sensor-row {
-  display: grid; grid-template-columns: repeat(4, 1fr);
-  gap: 4px 8px; margin-bottom: 8px;
-  padding: 4px 6px; background: var(--bg1); border-radius: 4px;
+.rg-env { margin-bottom: 10px; }
+.rg-kpi-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
 }
-.sensor-block { display: flex; flex-direction: column; }
-.sensor-label { font-size: 9px; color: var(--txt3); }
-.sensor-val { font-size: 11px; font-weight: 500; }
-.sensor-val.r { color: var(--red); }
-.sensor-val.a { color: var(--amber); }
-
-/* ---- Equipment Sections ---- */
-.equip-section { margin-bottom: 5px; }
-.equip-tag { font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-bottom: 3px; display: inline-block; }
-.tag-crac { background: rgba(79,195,247,0.15); color: var(--cyan); }
-.tag-inrow { background: rgba(129,199,132,0.15); color: #81c784; }
-
-.equip-row {
-  display: flex; align-items: center; gap: 3px;
-  padding: 2px 6px; font-size: 10px;
+@media (max-width: 900px) { .rg-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+.rg-devices { margin-bottom: 10px; }
+.rg-aux { margin-bottom: 10px; }
+.rg-aux-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+.rg-aux-card {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--bg);
 }
-.e-status { font-size: 7px; }
-.e-status.g { color: var(--green); }
-.e-status.r { color: var(--red); }
-.e-status.m { color: var(--muted); }
-.e-name { font-weight: 500; min-width: 50px; }
-.e-val { color: var(--txt1); min-width: 30px; }
-.e-sep { opacity: 0.3; font-size: 8px; }
-.e-meta { color: var(--txt3); font-size: 9px; margin-left: auto; }
-
-/* ---- Aux row (FAU + HUM) ---- */
-.aux-row { display: flex; gap: 6px; margin-top: 5px; }
-.aux-item { display: flex; align-items: center; gap: 3px; flex: 1; font-size: 10px; padding: 2px 4px; background: var(--bg1); border-radius: 3px; overflow: hidden; }
-.aux-tag { font-size: 8px; padding: 0 3px; border-radius: 2px; font-weight: 600; }
-.tag-fau { background: rgba(255,183,77,0.15); color: #ffb74d; }
-.tag-hum { background: rgba(186,104,200,0.15); color: #ba68c8; }
-.aux-status { font-size: 6px; flex-shrink: 0; }
-.aux-status.g { color: var(--green); }
-.aux-status.m { color: var(--muted); }
-.aux-name { font-weight: 500; white-space: nowrap; font-size: 9px; }
-.aux-val { color: var(--txt2); font-size: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* ---- Chart Cards ---- */
-.chart-card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
+.rg-aux-label { font-size: 11px; color: var(--txt3); min-width: 55px; }
+.rg-aux-v { font-size: 11px; color: var(--txt); }
+.rg-leak {
+  display: flex; align-items: center; gap: 8px;
+  margin: 6px 0; font-size: 11px;
 }
-.chart-head {
-  display: flex; justify-content: space-between; align-items: center;
+.rg-leak-label { color: var(--txt3); }
+.rg-leak-level { color: var(--red); font-weight: 600; }
+
+/* Control strategy */
+.ctrl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+@media (max-width: 900px) { .ctrl-grid { grid-template-columns: 1fr; } }
+.ctrl-card {
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--bg); display: flex; flex-direction: column; gap: 4px;
+}
+.ctrl-name { font-size: 13px; font-weight: 600; color: var(--txt); }
+.ctrl-desc { font-size: 11px; color: var(--txt2); line-height: 1.5; }
+
+/* Trend items */
+.trend-item { margin-bottom: 10px; }
+.trend-header {
+  display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 6px;
 }
-.chart-title { font-size: 13px; font-weight: 600; color: var(--txt1); }
-.chart-period { display: flex; gap: 4px; align-items: center; font-size: 10px; color: var(--muted); }
-.btn-tiny {
-  padding: 2px 8px; font-size: 10px; border-radius: 4px; border: 1px solid var(--border);
-  background: transparent; color: var(--txt2); cursor: pointer;
+.trend-name { font-size: 13px; font-weight: 600; color: var(--txt); }
+.trend-period {
+  background: var(--bg); border: 1px solid var(--line); color: var(--txt);
+  font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
 }
-.btn-tiny.active { background: var(--cyan); color: #000; border-color: var(--cyan); }
-.btn-tiny:hover { border-color: var(--cyan); }
-.chart-body { width: 100%; }
 
-/* ---- Footer ---- */
-.footer-note { text-align: center; margin-top: 20px; font-size: 11px; }
+/* Alarms */
+.alarm-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 240px; overflow-y: auto;
+}
+.alarm-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 10px; border-radius: 5px; font-size: 11px;
+  background: rgba(239,68,68,.04); border: 1px solid rgba(239,68,68,.10);
+}
+.alarm-msg { color: var(--txt); flex: 1; }
+.alarm-tag { color: var(--txt3); font-style: normal; }
+.alarm-time { color: var(--txt3); white-space: nowrap; font-size: 10px; }
+
+/* Footer */
+.page-footer {
+  margin-top: 16px; padding-top: 10px;
+  border-top: 1px solid var(--line);
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+  font-size: 11px; color: var(--txt3);
+}
 </style>

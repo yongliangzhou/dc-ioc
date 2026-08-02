@@ -1,367 +1,759 @@
 <template>
-  <div>
-    <div class="view-head">
-      <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('nav.hvacMonitor') }} {{ tl('·') }} {{ tl('nav.liquidCooling') }}</h1>
-      <span class="sub">{{ tl('液冷系统') }} · CDU / {{ tl('冷板GPU') }} / {{ tl('管路') }} / {{ tl('漏液检测') }} / {{ tl('冷却液品质') }} / {{ tl('热排放及余热回收') }} {{ tl('·') }} {{ tl('分布式DCS实时监控 (ODCC标准)') }}</span>
+  <div class="hvac-liquid">
+    <!-- ========== Header ========== -->
+    <div class="page-header">
+      <div class="ph-left">
+        <h2 class="ph-title">液冷系统</h2>
+        <span class="ph-sub">一次侧 CDU · 二次侧 CDU · 冷板 GPU · 分集水器 · 漏水监测</span>
+      </div>
+      <div class="ph-right">
+        <span class="ph-badge" :class="dataOk ? 'ok' : 'loading'">
+          {{ dataOk ? '在线' : '加载中…' }}
+        </span>
+        <span class="ph-mode" v-if="data?.systemMode">{{ data!.systemMode }}</span>
+        <span class="ph-time" v-if="lastUpdate">{{ lastUpdate }}</span>
+        <button class="ph-btn" @click="refresh" :disabled="loading">刷新</button>
+      </div>
     </div>
 
-    <!-- ======== 总览 KPI Row 1 ======== -->
-    <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="liquid-mode" :label="tl('运行模式')" :value="0" :unit="s.systemMode" quality="good" :online="true" icon-hint="mode" />
-      <MetricCard metric-name="liquid-cap" :label="tl('制冷总容量/已用')" :value="s.coolingCapUsed" :unit="`/ ${s.totalCoolingCap} MW`" quality="good" :online="true" icon-hint="power" />
-      <MetricCard metric-name="liquid-cr" :label="tl('制冷利用率')" :value="s.capRate" unit="%" :quality="s.capRate > 85 ? 'uncertain' : 'good'" :severity="s.capRate > 90 ? 'warn' : 'normal'" :online="true" />
-      <MetricCard metric-name="liquid-outdoor" :label="tl('室外温/湿')" :value="s.outdoorT" :unit="`°C / ${s.outdoorRH}%`" quality="good" :online="true" icon-hint="temp" />
+    <!-- Loading skeleton -->
+    <div class="skel-row" v-if="loading && !data">
+      <SkeletonCard v-for="i in 4" :key="i" size="sm" />
     </div>
 
-    <!-- ======== KPI Row 2 ======== -->
-    <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="liquid-pri" :label="tl('一次侧供/回水温')" :value="s.primarySupplyTemp" :unit="`/ ${s.primaryReturnTemp}°C`" quality="good" :online="true" icon-hint="temp" />
-      <MetricCard metric-name="liquid-pri-flow" :label="tl('一次侧流量/压力')" :value="s.primaryFlow" :unit="`m³/h · ${s.primaryPressure} bar`" quality="good" :online="true" icon-hint="flow" />
-      <MetricCard metric-name="liquid-sec" :label="tl('二次侧供/回液温')" :value="s.secSupplyTemp" :unit="`/ ${s.secReturnTemp}°C · ΔT=${s.deltaT}°C`" quality="good" :online="true" icon-hint="temp" />
-      <MetricCard metric-name="liquid-sec-flow" :label="tl('二次侧流量/压力')" :value="s.secFlow" :unit="`m³/h · ${s.secPressure} bar`" quality="good" :online="true" icon-hint="flow" />
+    <!-- ========== KPI Row 1: Global ========== -->
+    <div class="kpi-row" v-if="data">
+      <KpiCard title="系统模式" :value="data.systemMode" dot="#8b5cf6" />
+      <KpiCard title="室外温度" :value="data.outdoorT" unit="℃" :decimals="1" dot="#f97316" :subtitle="`RH ${data.outdoorRH}%`" />
+      <KpiCard title="总制冷能力" :value="data.totalCoolingCap" unit="kW" dot="#06b6d4"
+        :detail="`使用 ${data.coolingCapUsed} kW · 率 ${data.capRate}%`"
+        :barValue="data.capRate" barColor="linear-gradient(90deg, var(--cyan), var(--blue))" />
+      <KpiCard title="PUE 贡献" :value="data.pueContribution" :decimals="3" dot="#22c55e"
+        :subtitle="`自然冷却 ${data.freeCoolingHours}h`"
+        :detail="`余热回收 ${data.heatRecoveryMW} MW`" />
     </div>
 
-    <!-- ======== KPI Row 3 ======== -->
-    <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="liquid-pue" :label="tl('PUE 贡献值')" :value="s.pueContribution" unit="" :quality="s.pueContribution < 0.08 ? 'good' : 'uncertain'" :online="true" icon-hint="power" />
-      <MetricCard metric-name="liquid-free" :label="tl('年自然冷可用')" :value="s.freeCoolingHours" unit="h" quality="good" :online="true" />
-      <MetricCard metric-name="liquid-hr" :label="tl('余热回收量')" :value="s.heatRecoveryMW" unit="MW" quality="good" :online="true" />
-      <MetricCard metric-name="liquid-leak-kpi" :label="tl('漏液告警/总数')" :value="s.leakAlarmCount" :unit="`/ ${s.leakTotalSensors} {{ tl('传感器') }}`" :quality="s.leakAlarmCount ? 'bad' : 'good'" :severity="s.leakAlarmCount ? 'crit' : 'normal'" :online="true" />
+    <!-- ========== KPI Row 2: 一次侧 ========== -->
+    <div class="kpi-row" v-if="data">
+      <KpiCard title="一次侧供水温度" :value="data.primarySupplyTemp" unit="℃" :decimals="1" dot="#3b82f6" />
+      <KpiCard title="一次侧回水温度" :value="data.primaryReturnTemp" unit="℃" :decimals="1" dot="#f97316" />
+      <KpiCard title="一次侧流量" :value="data.primaryFlow" unit="m³/h" :decimals="1" dot="#06b6d4" />
+      <KpiCard title="一次侧压力" :value="data.primaryPressure" unit="bar" :decimals="1" dot="#8b5cf6" />
     </div>
 
-    <!-- 加载/错误态 -->
-    <template v-if="!s">
-      <div class="card" v-if="!error"><div class="flex center" style="padding:40px"><span class="muted">{{ tl('加载中...') }}</span></div></div>
-      <div class="card" v-if="error"><div class="flex center" style="padding:40px"><span class="muted" style="color:var(--red)">{{ tl('加载失败') }}: {{ error }}</span></div></div>
-    </template>
+    <!-- ========== KPI Row 3: 二次侧 ========== -->
+    <div class="kpi-row" v-if="data">
+      <KpiCard title="二次侧供水温度" :value="data.secSupplyTemp" unit="℃" :decimals="1" dot="#3b82f6" />
+      <KpiCard title="二次侧回水温度" :value="data.secReturnTemp" unit="℃" :decimals="1" dot="#f97316" />
+      <KpiCard title="二次侧流量" :value="data.secFlow" unit="m³/h" :decimals="1" dot="#06b6d4" />
+      <KpiCard title="温差 ΔT" :value="data.deltaT" unit="℃" :decimals="1" dot="#eab308"
+        :status="Math.abs(data.deltaT) > 8 ? 'warning' : 'normal'" />
+    </div>
 
-    <template v-else>
-      <!-- ======== 一次侧 CDU ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('一次侧 CDU') }} ({{ tl('冷却液分配单元') }}) · N+1 {{ tl('冗余') }}</span>
-          <span class="pill" :class="s.primaryCDUs.filter(d=>d.state==='运行').length >= 3 ? 'g' : 'a'">{{ s.primaryCDUs.filter(d=>d.state==='运行').length }}/{{ s.primaryCDUs.length }} {{ tl('运行') }}</span>
+    <!-- ========== 一次侧 CDU ========== -->
+    <div class="section" v-if="data?.primaryCDUs?.length">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--blue)"></span>
+        一次侧 CDU
+        <span class="section-sum">{{ data.primaryCDUs.length }} 台</span>
+      </h3>
+      <DeviceTable :columns="primCduCols" :rows="primCduRows" />
+    </div>
+
+    <!-- ========== 二次侧 CDU ========== -->
+    <div class="section" v-if="data?.secondaryCDUs?.length">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--cyan)"></span>
+        二次侧 CDU
+        <span class="section-sum">{{ data.secondaryCDUs.length }} 台</span>
+      </h3>
+      <DeviceTable :columns="secCduCols" :rows="secCduRows" />
+    </div>
+
+    <!-- ========== 冷板 GPU 节点 ========== -->
+    <div class="section" v-if="data?.coldPlates?.length">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--red)"></span>
+        冷板 GPU 节点
+        <span class="section-sum">{{ data.coldPlates.length }} 个</span>
+      </h3>
+      <DeviceTable :columns="coldPlateCols" :rows="coldPlateRows" />
+    </div>
+
+    <!-- ========== 分集水器 ========== -->
+    <div class="manifold-grid" v-if="data?.manifoldsSupply?.length || data?.manifoldsReturn?.length">
+      <div class="manifold-half" v-if="data?.manifoldsSupply?.length">
+        <h3 class="section-title">
+          <span class="section-dot" style="background:var(--blue)"></span>
+          供水集管
+          <span class="section-sum">{{ data.manifoldsSupply.length }} 节点</span>
+        </h3>
+        <DeviceTable :columns="manifoldCols" :rows="supplyManRows" />
+      </div>
+      <div class="manifold-half" v-if="data?.manifoldsReturn?.length">
+        <h3 class="section-title">
+          <span class="section-dot" style="background:var(--orange)"></span>
+          回水集管
+          <span class="section-sum">{{ data.manifoldsReturn.length }} 节点</span>
+        </h3>
+        <DeviceTable :columns="manifoldCols" :rows="returnManRows" />
+      </div>
+    </div>
+
+    <!-- ========== 漏水检测 ========== -->
+    <div class="section" v-if="data?.leakTotalSensors">
+      <h3 class="section-title">
+        <span class="section-dot" :style="`background:${data.leakAlarmCount > 0 ? 'var(--red)' : 'var(--green)'}`"></span>
+        漏水检测
+        <span class="section-sum" :class="{ danger: data.leakAlarmCount > 0 }">
+          {{ data.leakTotalSensors }} 个传感器 · 告警 {{ data.leakAlarmCount }}
+        </span>
+      </h3>
+      <div class="leak-grid">
+        <!-- 漏水绳 -->
+        <div class="leak-block" v-if="data.leakRope?.length">
+          <h4 class="rg-subtitle">漏水绳 ({{ data.leakRope.length }})</h4>
+          <DeviceTable :columns="leakRopeCols" :rows="leakRopeRows" />
         </div>
-        <div class="device-list">
-          <div class="device-row cdu-row" v-for="d in s.primaryCDUs" :key="d.id">
-            <div class="d-info">
-              <span class="d-status" :class="d.state==='运行'?'g':'m'">●</span>
-              <span class="d-name">{{ d.name }}</span>
-              <span class="d-code">{{ d.id }}</span>
-            </div>
-            <div class="cdu-metrics-block">
-              <div class="cdu-metrics">
-                <span class="ml">{{ tl('一次侧') }}</span> {{ d.priInTemp }}→{{ d.priOutTemp }}°C · {{ d.flowPri }}m³/h · ΔP={{ d.dpPri }}bar
-                <span class="sep">|</span>
-                <span class="ml">{{ tl('二次侧') }}</span> {{ d.secInTemp }}→{{ d.secOutTemp }}°C · {{ d.flowSec }}m³/h · ΔP={{ d.dpSec }}bar
-              </div>
-              <div class="cdu-metrics">
-                <span class="ml">{{ tl('换热效率') }}</span> {{ d.heatExEff }}%
-                <span class="sep">|</span>
-                <span class="ml">{{ tl('泵速/功率') }}</span> {{ d.pumpSpeed }}% / {{ d.pumpKw }}kW
-                <span class="sep">|</span>
-                <span class="ml">{{ tl('阀门') }}</span> {{ d.valve }}%
-                <span class="sep">|</span>
-                <span class="ml">{{ tl('漏液') }}</span> <span :class="d.leakStatus!=='正常'?'a':''">{{ d.leakStatus }}</span>
-                <span class="sep">|</span>
-                <span>{{ d.runHrs }}h</span>
-              </div>
-            </div>
-          </div>
+        <!-- 漏水点 -->
+        <div class="leak-block" v-if="data.leakPoint?.length">
+          <h4 class="rg-subtitle">漏水监测点 ({{ data.leakPoint.length }})</h4>
+          <DeviceTable :columns="leakPointCols" :rows="leakPointRows" />
         </div>
       </div>
+    </div>
 
-      <!-- ======== 二次侧 CDU ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('二次侧 CDU') }} · {{ tl('按区域分组') }}</span>
-          <span class="pill" :class="s.secondaryCDUs.filter(d=>d.state==='运行').length >= 6 ? 'g' : 'a'">{{ s.secondaryCDUs.filter(d=>d.state==='运行').length }}/{{ s.secondaryCDUs.length }} {{ tl('运行') }}</span>
+    <!-- ========== 冷却液水质 ========== -->
+    <div class="section" v-if="data?.coolantQuality">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--teal)"></span>
+        冷却液水质
+        <StatusBadge :status="data.coolantQuality.status" />
+        <span class="section-sum-s" v-if="data.coolantQuality.lastTested">上次检测: {{ data.coolantQuality.lastTested }}</span>
+      </h3>
+      <div class="quality-grid">
+        <KpiCard title="电导率" :value="data.coolantQuality.conductivity" unit="μS/cm" size="sm" dot="var(--blue)" />
+        <KpiCard title="pH 值" :value="data.coolantQuality.ph" unit="pH" size="sm" :decimals="1" dot="var(--green)" />
+        <KpiCard title="缓蚀剂" :value="data.coolantQuality.corrosionInhibitor" unit="ppm" size="sm" dot="var(--cyan)" />
+        <KpiCard title="乙二醇浓度" :value="data.coolantQuality.glycolConcentration" unit="%" size="sm" dot="var(--purple)" />
+        <KpiCard title="颗粒计数" :value="data.coolantQuality.particleCount" unit="个/mL" size="sm" dot="var(--amber)" />
+      </div>
+    </div>
+
+    <!-- ========== 排热系统 ========== -->
+    <div class="section" v-if="hasRejection">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--orange)"></span>
+        排热系统
+        <span class="section-sum">排热量 {{ data!.totalHeatRejected }} kW · 逼近温度 {{ data!.approachTemp }}℃</span>
+      </h3>
+
+      <!-- 冷却塔风机 -->
+      <GroupCard v-if="data?.towerFans?.length"
+        :title="`冷却塔风机 · ${data.towerFans.length} 台`"
+        :subtitle="`自然冷却${data.freeCoolingAvailable ? '可用' : '不可用'}`"
+        dotColor="var(--orange)"
+      >
+        <DeviceTable :columns="towerFanCols" :rows="towerFanRows" />
+      </GroupCard>
+
+      <!-- 干冷器 -->
+      <GroupCard v-if="data?.dryCoolers?.length"
+        :title="`干冷器 · ${data.dryCoolers.length} 台`"
+        dotColor="var(--blue)"
+      >
+        <DeviceTable :columns="dryCoolerCols" :rows="dryCoolerRows" />
+      </GroupCard>
+
+      <!-- 排热水泵 -->
+      <GroupCard v-if="data?.rejectionPumps?.length"
+        :title="`排热水泵 · ${data.rejectionPumps.length} 台`"
+        dotColor="var(--cyan)"
+      >
+        <DeviceTable :columns="rejPumpCols" :rows="rejPumpRows" />
+      </GroupCard>
+
+      <!-- 余热回收 -->
+      <GroupCard v-if="data?.heatRecovery"
+        :title="`余热回收 · ${data.heatRecovery.enabled ? '已启用' : '已停用'}`"
+        :subtitle="`用途: ${data.heatRecovery.usageType}`"
+        :dot-color="data.heatRecovery.enabled ? 'var(--green)' : 'var(--txt3)'"
+      >
+        <div class="hr-grid">
+          <KpiCard title="回收率" :value="data.heatRecovery.recoveryRate" unit="%" size="sm" dot="var(--green)" />
+          <KpiCard title="回收温度" :value="data.heatRecovery.recoveryTemp" unit="℃" size="sm" :decimals="1" dot="var(--orange)" />
+          <KpiCard title="回流温度" :value="data.heatRecovery.returnTemp" unit="℃" size="sm" :decimals="1" dot="var(--blue)" />
+          <KpiCard title="流量" :value="data.heatRecovery.flow" unit="m³/h" size="sm" :decimals="1" dot="var(--cyan)" />
+          <KpiCard title="年减排 CO₂" :value="data.heatRecovery.co2Reduction" unit="吨" size="sm" dot="var(--green)" />
+          <KpiCard title="年节能" :value="data.heatRecovery.annualSaving" unit="万元" size="sm" dot="var(--amber)" />
         </div>
-        <div class="device-list">
-          <div class="device-row cdu-row" v-for="d in s.secondaryCDUs" :key="d.id">
-            <div class="d-info">
-              <span class="d-status" :class="d.state==='运行'?'g':d.state==='预警'?'a':'m'">●</span>
-              <span class="d-name">{{ d.name }}</span>
-              <span class="d-code zone-tag">{{ d.rackGroup }}</span>
-            </div>
-            <div class="cdu-metrics-block">
-              <div class="cdu-metrics">
-                <span class="ml">{{ tl('供/回液') }}</span> {{ fmtV(d.supplyTemp) }}→{{ fmtV(d.returnTemp) }}°C · {{ d.flow }}m³/h · ΔP={{ d.dp }}bar
-                <span class="sep">|</span>
-                <span class="ml">{{ tl('泵速/功率') }}</span> {{ d.pumpSpeed }}% / {{ d.pumpKw }}kW
-              </div>
-              <div class="cdu-metrics">
-                <span class="ml">{{ tl('冷板') }}</span> {{ d.coldPlateOnline }}/{{ d.coldPlateCount }} <span :class="d.coldPlateOnline < d.coldPlateCount ? 'a' : ''">{{ tl('在线') }}</span>
-                <span class="sep">|</span>
-                <span class="ml">{{ tl('漏液') }}</span> <span :class="d.leakStatus!=='正常'?'a':''">{{ d.leakStatus }}</span>
-              </div>
-            </div>
-          </div>
+      </GroupCard>
+    </div>
+
+    <!-- ========== 群控策略 ========== -->
+    <div class="section" v-if="data?.control">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--purple)"></span>
+        群控策略
+      </h3>
+      <div class="ctrl-grid">
+        <div class="ctrl-card">
+          <span class="ctrl-name">一次侧供水设定</span>
+          <span class="ctrl-val">{{ data.control.primarySupplySetpoint }} ℃</span>
+        </div>
+        <div class="ctrl-card">
+          <span class="ctrl-name">二次侧供水设定</span>
+          <span class="ctrl-val">{{ data.control.secondarySupplySetpoint }} ℃</span>
+        </div>
+        <div class="ctrl-card">
+          <span class="ctrl-name">逼近温度目标</span>
+          <span class="ctrl-val">{{ data.control.approachTarget }} ℃</span>
+        </div>
+        <div class="ctrl-card">
+          <span class="ctrl-name">乙二醇最低浓度</span>
+          <span class="ctrl-val">{{ data.control.glycolMin }}%</span>
+        </div>
+        <div class="ctrl-card">
+          <span class="ctrl-name">电导率上限</span>
+          <span class="ctrl-val">{{ data.control.conductivityMax }} μS/cm</span>
+        </div>
+        <div class="ctrl-card">
+          <span class="ctrl-name">漏水响应时间</span>
+          <span class="ctrl-val">{{ data.control.leakResponseTime }}s</span>
+        </div>
+        <div class="ctrl-card">
+          <span class="ctrl-name">泵冗余</span>
+          <span class="ctrl-val">{{ data.control.pumpRedundancy }}</span>
+        </div>
+        <div class="ctrl-card">
+          <span class="ctrl-name">CDU 冗余</span>
+          <span class="ctrl-val">{{ data.control.cdurRedundancy }}</span>
         </div>
       </div>
+      <div class="ctrl-desc" v-if="data.control.description">{{ data.control.description }}</div>
+    </div>
 
-      <!-- ======== GPU 冷板级温度监控 ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('GPU 冷板级温度监控') }} · {{ tl('进液/出液温度 + 8路GPU核心') }}</span>
-          <span class="pill" :class="s.coldPlates.filter(p=>p.state==='预警').length === 0 ? 'g' : 'a'">{{ s.coldPlates.length }} {{ tl('机柜') }} · {{ s.coldPlates.filter(p=>p.state==='预警').length }} {{ tl('预警') }}</span>
-        </div>
-        <div class="gpu-list" v-if="s.coldPlates.length">
-          <div class="gpu-row" v-for="p in s.coldPlates" :key="p.rackId">
-            <div class="gpu-head">
-              <span class="d-status" :class="p.state==='正常'?'g':'a'">●</span>
-              <span class="gpu-rack">{{ p.rackId }}</span>
-              <span class="gpu-type">{{ p.nodeType }}</span>
-              <span class="gpu-io">{{ tl('进') }}{{ p.inletTemp }}°C → {{ tl('出') }}{{ p.outletTemp }}°C · {{ p.flow }}L/min · ΔP={{ p.dp }}bar</span>
-            </div>
-            <div class="gpu-cores">
-              <span v-for="(t, i) in p.gpuTemp" :key="i" class="gpu-core" :class="t > 75 ? 'r' : t > 70 ? 'a' : 'g'">
-                GPU{{ i }} {{ t.toFixed(1) }}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div class="empty-tip" v-else>{{ tl('暂无冷板温度数据') }}</div>
+    <!-- ========== 趋势图 ========== -->
+    <div class="section" v-if="hasTrends">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--yellow)"></span>
+        运行趋势 (48h)
+      </h3>
+      <div class="trend-grid">
+        <TrendChart
+          title="一次/二次侧温度趋势"
+          :xAxisData="trendTimestamps"
+          :series="tempTrendSeries"
+          :loading="loading"
+          :height="250"
+        />
+        <TrendChart
+          title="一次/二次侧流量趋势"
+          :xAxisData="trendTimestamps"
+          :series="flowTrendSeries"
+          :loading="loading"
+          :height="250"
+        />
+        <TrendChart
+          title="二次侧温差 ΔT 趋势"
+          :xAxisData="trendTimestamps"
+          :series="dtTrendSeries"
+          :loading="loading"
+          :height="250"
+        />
+        <TrendChart
+          title="制冷能力与 PUE 贡献"
+          :xAxisData="trendTimestamps"
+          :series="capTrendSeries"
+          :loading="loading"
+          :height="250"
+        />
       </div>
+    </div>
 
-      <!-- ======== 分集液管路 + 漏液检测 ======== -->
-      <div class="grid cols-2" v-if="s">
-        <!-- 分集液管路 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('分集液管路') }} (Manifold)</span>
-          </div>
-          <div class="device-list">
-            <div class="device-row" v-for="m in s.manifoldsSupply" :key="'s-'+m.id">
-              <div class="d-info"><span class="d-status g">●</span><span class="d-name">{{ m.id }} ({{ m.zone }} {{ tl('供液') }})</span></div>
-              <div class="d-metrics">{{ m.temp }}°C · {{ m.pressure }}bar · {{ m.flow }}m³/h · {{ m.valvesOpen }}/{{ m.branchCount }}{{ tl('阀') }}</div>
-            </div>
-            <div class="device-row" v-for="m in s.manifoldsReturn" :key="'r-'+m.id" style="color:var(--txt3)">
-              <div class="d-info"><span class="d-status m">●</span><span class="d-name">{{ m.id }} ({{ m.zone }} {{ tl('回液') }})</span></div>
-              <div class="d-metrics">{{ m.temp }}°C · {{ m.pressure }}bar · {{ m.flow }}m³/h</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 漏液检测 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('漏液检测') }} · {{ s.leakTotalSensors }} {{ tl('传感器') }}</span>
-            <span class="pill" :class="s.leakAlarmCount === 0 ? 'g' : 'r'">{{ s.leakAlarmCount }}{{ tl('告警') }} / {{ s.leakWarningCount }}{{ tl('预警') }}</span>
-          </div>
-          <div class="device-list">
-            <div class="device-row" v-for="lr in s.leakRope" :key="lr.id">
-              <div class="d-info">
-                <span class="d-status" :class="lr.status==='报警'?'r':lr.status==='预警'?'a':'g'">●</span>
-                <span class="d-name">{{ lr.location }}</span>
-              </div>
-              <div class="d-metrics">
-                <span>{{ lr.status }}</span>
-                <span class="sep">|</span>
-                <span>{{ lr.length }}m · {{ lr.coverage }}%</span>
-              </div>
-            </div>
-            <div class="device-row" v-for="lp in s.leakPoint" :key="lp.id">
-              <div class="d-info">
-                <span class="d-status" :class="lp.alarmCount ? 'a' : 'g'">●</span>
-                <span class="d-name">{{ lp.id }} ({{ lp.zone }})</span>
-              </div>
-              <div class="d-metrics">
-                {{ lp.count }}{{ tl('点') }}
-                <span class="sep">|</span>
-                <span :class="lp.alarmCount ? 'a' : ''">{{ lp.alarmCount }}{{ tl('告警') }}</span>
-              </div>
-            </div>
-          </div>
+    <!-- ========== 活跃告警 ========== -->
+    <div class="section" v-if="liquidAlarms.length">
+      <h3 class="section-title">
+        <span class="section-dot" style="background:var(--red)"></span>
+        活跃告警
+        <span class="section-sum danger">{{ liquidAlarms.length }} 条</span>
+      </h3>
+      <div class="alarm-list">
+        <div v-for="a in liquidAlarms" :key="a.id" class="alarm-item">
+          <AlarmBadge :level="a.level || 'warning'" />
+          <span class="alarm-msg">{{ a.message || a.title || a.description || '-' }}
+            <em class="alarm-tag">[{{ a.source || a.domain || '-' }}]</em>
+          </span>
+          <span class="alarm-time">{{ formatTime(a.time || a.created_at) }}</span>
         </div>
       </div>
+    </div>
 
-      <!-- ======== 冷却液品质 + 热排放 ======== -->
-      <div class="grid cols-2" v-if="s">
-        <!-- 冷却液品质 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('冷却液品质') }} · {{ s.coolantQuality.type }}</span>
-            <span class="pill" :class="s.coolantQuality.status==='正常'?'g':'a'">{{ s.coolantQuality.status }}</span>
-          </div>
-          <div class="quality-grid">
-            <div class="q-item"><span class="q-label">{{ tl('电导率') }}</span><span class="q-val" :class="s.coolantQuality.conductivity > 30 ? 'a' : 'g'">{{ s.coolantQuality.conductivity }} μS/cm</span><span class="q-ref">{{ tl('上限') }} {{ s.control.conductivityMax }}</span></div>
-            <div class="q-item"><span class="q-label">pH</span><span class="q-val">{{ s.coolantQuality.ph }}</span><span class="q-ref">8.0~8.5</span></div>
-            <div class="q-item"><span class="q-label">{{ tl('乙二醇浓度') }}</span><span class="q-val" :class="s.coolantQuality.glycolConcentration < s.control.glycolMin ? 'a' : 'g'">{{ s.coolantQuality.glycolConcentration }}%</span><span class="q-ref">{{ tl('下限') }} {{ s.control.glycolMin }}%</span></div>
-            <div class="q-item"><span class="q-label">{{ tl('腐蚀抑制剂') }}</span><span class="q-val">{{ s.coolantQuality.corrosionInhibitor }}%</span></div>
-            <div class="q-item"><span class="q-label">{{ tl('颗粒数') }}</span><span class="q-val">{{ s.coolantQuality.particleCount }} /mL</span></div>
-            <div class="q-item"><span class="q-label">{{ tl('上次/下次检测') }}</span><span class="q-val small">{{ fmtDate(s.coolantQuality.lastTested) }} / {{ fmtDate(s.coolantQuality.nextTest) }}</span></div>
-          </div>
-        </div>
-
-        <!-- 热排放 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('二次侧热排放') }} · {{ s.totalHeatRejected }}MW</span>
-            <span class="pill" :class="s.freeCoolingAvailable ? 'g' : ''">{{ s.freeCoolingAvailable ? tl('自然冷可用') : tl('机械制冷') }}</span>
-          </div>
-          <div class="device-list">
-            <div class="sub-section-title">{{ tl('闭式冷却塔') }} ({{ s.approachTemp }}°C {{ tl('逼近') }})</div>
-            <div class="device-row" v-for="f in s.towerFans" :key="f.id">
-              <div class="d-info"><span class="d-status" :class="f.state==='运行'?'g':'m'">●</span><span class="d-name">{{ f.id }}</span></div>
-              <div class="d-metrics">{{ f.fanHz }}Hz · {{ fmtV(f.outletTemp) }}°C · {{ tl('逼近') }}={{ fmtV(f.approach) }}°C</div>
-            </div>
-            <div class="sub-section-title">{{ tl('干冷器') }}</div>
-            <div class="device-row" v-for="dc in s.dryCoolers" :key="dc.id">
-              <div class="d-info"><span class="d-status m">●</span><span class="d-name">{{ dc.id }}</span></div>
-              <div class="d-metrics">{{ dc.state }} · {{ tl('环温') }} {{ dc.ambientT }}°C</div>
-            </div>
-            <div class="sub-section-title">{{ tl('排放泵') }}</div>
-            <div class="device-row" v-for="rp in s.rejectionPumps" :key="rp.id">
-              <div class="d-info"><span class="d-status" :class="rp.state==='运行'?'g':'m'">●</span><span class="d-name">{{ rp.id }}</span></div>
-              <div class="d-metrics">{{ rp.hz }}Hz · {{ rp.kw }}kW</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ======== 余热回收 + 控制策略 ======== -->
-      <div class="grid cols-2" v-if="s">
-        <!-- 余热回收 -->
-        <div class="card" v-if="s.heatRecovery.enabled">
-          <div class="card-head">
-            <span class="ct">{{ tl('余热回收') }} · {{ s.heatRecovery.usageType }}</span>
-            <span class="pill g">{{ tl('已启用') }}</span>
-          </div>
-          <div class="quality-grid">
-            <div class="q-item"><span class="q-label">{{ tl('回收功率') }}</span><span class="q-val">{{ s.heatRecovery.recoveryRate }} MW</span></div>
-            <div class="q-item"><span class="q-label">{{ tl('供/回热温度') }}</span><span class="q-val">{{ s.heatRecovery.recoveryTemp }}/{{ s.heatRecovery.returnTemp }}°C</span></div>
-            <div class="q-item"><span class="q-label">{{ tl('流量') }}</span><span class="q-val">{{ s.heatRecovery.flow }} m³/h</span></div>
-            <div class="q-item"><span class="q-label">{{ tl('年CO₂减排') }}</span><span class="q-val g">{{ s.heatRecovery.co2Reduction }} t</span></div>
-            <div class="q-item" style="grid-column: span 2"><span class="q-label">{{ tl('年节约费用') }}</span><span class="q-val g">￥{{ (s.heatRecovery.annualSaving / 10000).toFixed(0) }}{{ tl('万') }}</span></div>
-          </div>
-        </div>
-
-        <!-- 控制策略 -->
-        <div class="card" v-if="s.control.description">
-          <div class="card-head">
-            <span class="ct">{{ tl('控制策略与告警阈值') }}</span>
-          </div>
-          <div class="ctrl-detail">
-            <p class="ctrl-desc">{{ s.control.description }}</p>
-            <div class="ctrl-grid">
-              <div class="ctrl-kv"><span class="ck">{{ tl('一次侧供液设定') }}</span><span class="cv">{{ s.control.primarySupplySetpoint }}°C</span></div>
-              <div class="ctrl-kv"><span class="ck">{{ tl('二次侧供液设定') }}</span><span class="cv">{{ s.control.secondarySupplySetpoint }}°C</span></div>
-              <div class="ctrl-kv"><span class="ck">{{ tl('逼近温差目标') }}</span><span class="cv">{{ s.control.approachTarget }}°C</span></div>
-              <div class="ctrl-kv"><span class="ck">{{ tl('乙二醇下限') }}</span><span class="cv">{{ s.control.glycolMin }}%</span></div>
-              <div class="ctrl-kv"><span class="ck">{{ tl('电导率上限') }}</span><span class="cv">{{ s.control.conductivityMax }} μS/cm</span></div>
-              <div class="ctrl-kv"><span class="ck">{{ tl('漏液响应') }}</span><span class="cv">{{ s.control.leakResponseTime }}s</span></div>
-              <div class="ctrl-kv"><span class="ck">{{ tl('泵冗余') }}</span><span class="cv">{{ s.control.pumpRedundancy }}</span></div>
-              <div class="ctrl-kv"><span class="ck">CDU {{ tl('冗余') }}</span><span class="cv">{{ s.control.cdurRedundancy }}</span></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 底部统计 -->
-      <div class="footer-note muted">
-        {{ tl('液冷系统') }} · {{ s.total }} {{ tl('台 CDU') }} · {{ s.secondaryCDUs.length }} {{ tl('台二次侧CDU') }} · {{ s.coldPlates.length }} {{ tl('机柜冷板监控') }} · {{ s.leakTotalSensors }} {{ tl('路漏液检测') }}
-      </div>
-    </template>
+    <!-- ========== Footer ========== -->
+    <div class="page-footer" v-if="data">
+      <span>总设备 {{ data.total }} 台</span>
+      <span>在线 {{ data.online }} · 故障 {{ data.total - data.online }}</span>
+      <span>平均流量 {{ data.avgFlowRate }} m³/h</span>
+      <span>CDI 温度 {{ data.avgCdiTemperature }}℃ · CDO {{ data.avgCdoTemperature }}℃</span>
+      <span v-if="lastUpdate">更新: {{ lastUpdate }}</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useI18n } from 'vue-i18n'
-import MetricCard from '@/components/common/MetricCard.vue'
-import { getLiquidCooling, type LiquidCoolingSummary } from '@/api/hvac'
-const { t: tl } = useI18n()
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { getLiquidCooling } from '@/api/hvac'
+import { getActiveAlarms } from '@/api'
+import type { LiquidCoolingSummary } from '@/api/hvac'
+import { CHART_COLORS } from '@/assets/echarts-theme'
+import KpiCard from '@/components/monitor/KpiCard.vue'
+import StatusBadge from '@/components/monitor/StatusBadge.vue'
+import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
+import GroupCard from '@/components/monitor/GroupCard.vue'
+import TrendChart from '@/components/monitor/TrendChart.vue'
+import DeviceTable from '@/components/monitor/DeviceTable.vue'
+import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 
-const s = ref<LiquidCoolingSummary | null>(null)
-const error = ref('')
+// ===== State =====
+const data = ref<LiquidCoolingSummary | null>(null)
+const loading = ref(false)
+const lastUpdate = ref('')
+const alarms = ref<any[]>([])
+let timer: ReturnType<typeof setInterval> | null = null
 
-function fmtV(v: number | string): string {
-  if (v === '-' || v === null || v === undefined) return '—'
-  return String(v)
+const dataOk = computed(() => !!data.value)
+const hasTrends = computed(() => {
+  if (!data.value) return false
+  const s = data.value.supplyTrend?.length ?? 0
+  const r = data.value.returnTrend?.length ?? 0
+  return s > 0 || r > 0
+})
+
+const hasRejection = computed(() => {
+  if (!data.value) return false
+  return (data.value.towerFans?.length ?? 0) > 0
+    || (data.value.dryCoolers?.length ?? 0) > 0
+    || (data.value.rejectionPumps?.length ?? 0) > 0
+    || !!data.value.heatRecovery
+})
+
+// ===== Data Loading =====
+async function loadAll() {
+  try {
+    const [summary, alarmResult] = await Promise.all([
+      getLiquidCooling(),
+      getActiveAlarms().catch(() => ({ total: 0, items: [] })),
+    ])
+    data.value = summary
+    alarms.value = alarmResult.items || []
+    lastUpdate.value = new Date().toLocaleTimeString('zh-CN')
+  } catch (e) {
+    console.error('Failed to load liquid cooling data:', e)
+  }
 }
 
-function fmtDate(iso: string): string {
-  if (!iso) return '—'
-  try { return iso.substring(5, 10).replace('-', '/') + ' ' + iso.substring(11, 16) } catch { return iso }
+async function refresh() {
+  loading.value = true
+  await loadAll()
+  loading.value = false
 }
 
-async function load() {
-  error.value = ''
-  try { s.value = await getLiquidCooling() } catch (e: any) { error.value = e?.message || String(e) }
+onMounted(() => {
+  refresh()
+  timer = setInterval(refresh, 30000)
+})
+
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
+
+// ===== Helpers =====
+function fv(v: number | string): string {
+  if (v === '-' || v === undefined || v === null) return '-'
+  if (typeof v === 'string') return v
+  return v % 1 === 0 ? String(v) : v.toFixed(1)
 }
-onMounted(load)
+
+function statusRow(s: string): string {
+  return s === 'fault' || s === '告警' ? 'row-danger' : s === 'standby' || s === '待机' ? 'row-warning' : ''
+}
+
+// ===== 一次侧 CDU =====
+const primCduCols = [
+  { key: 'name', label: '名称', width: '110px' },
+  { key: 'state', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'priInTemp', label: '一次进水(℃)', width: '90px' },
+  { key: 'priOutTemp', label: '一次出水(℃)', width: '90px' },
+  { key: 'secInTemp', label: '二次进水(℃)', width: '90px' },
+  { key: 'secOutTemp', label: '二次出水(℃)', width: '90px' },
+  { key: 'heatExEff', label: '换热效率(%)', width: '90px' },
+  { key: 'flowPri', label: '一次流量(m³/h)', width: '95px' },
+  { key: 'dpPri', label: '一次压差(bar)', width: '90px' },
+  { key: 'pumpSpeed', label: '泵速(Hz)', width: '80px' },
+  { key: 'pumpKw', label: '泵功(kW)', width: '80px' },
+  { key: 'valve', label: '阀门(%)', width: '75px' },
+  { key: 'leakStatus', label: '漏检', width: '60px', render: 'status' as const },
+  { key: 'runHrs', label: '运行(h)', width: '75px' },
+]
+
+const primCduRows = computed(() => {
+  if (!data.value?.primaryCDUs) return []
+  return data.value.primaryCDUs.map(d => ({
+    name: d.name,
+    state: d.state,
+    priInTemp: fv(d.priInTemp),
+    priOutTemp: fv(d.priOutTemp),
+    secInTemp: fv(d.secInTemp),
+    secOutTemp: fv(d.secOutTemp),
+    heatExEff: fv(d.heatExEff),
+    flowPri: fv(d.flowPri),
+    dpPri: fv(d.dpPri),
+    pumpSpeed: fv(d.pumpSpeed),
+    pumpKw: fv(d.pumpKw),
+    valve: fv(d.valve),
+    leakStatus: d.leakStatus,
+    runHrs: fv(d.runHrs),
+    _rowClass: statusRow(d.state),
+  }))
+})
+
+// ===== 二次侧 CDU =====
+const secCduCols = [
+  { key: 'name', label: '名称', width: '110px' },
+  { key: 'rackGroup', label: '机柜组', width: '85px' },
+  { key: 'state', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'supplyTemp', label: '供水(℃)', width: '75px' },
+  { key: 'returnTemp', label: '回水(℃)', width: '75px' },
+  { key: 'flow', label: '流量(m³/h)', width: '85px' },
+  { key: 'dp', label: '压差(bar)', width: '80px' },
+  { key: 'pumpSpeed', label: '泵速(%)', width: '75px' },
+  { key: 'pumpKw', label: '泵功(kW)', width: '75px' },
+  { key: 'leakStatus', label: '漏检', width: '60px', render: 'status' as const },
+  { key: 'coldPlateInfo', label: '冷板(在线/总数)', width: '110px' },
+]
+
+const secCduRows = computed(() => {
+  if (!data.value?.secondaryCDUs) return []
+  return data.value.secondaryCDUs.map(d => ({
+    name: d.name,
+    rackGroup: d.rackGroup,
+    state: d.state,
+    supplyTemp: fv(d.supplyTemp),
+    returnTemp: fv(d.returnTemp),
+    flow: fv(d.flow),
+    dp: fv(d.dp),
+    pumpSpeed: fv(d.pumpSpeed),
+    pumpKw: fv(d.pumpKw),
+    leakStatus: d.leakStatus,
+    coldPlateInfo: `${d.coldPlateOnline}/${d.coldPlateCount}`,
+    _rowClass: statusRow(d.state),
+  }))
+})
+
+// ===== 冷板 GPU =====
+const coldPlateCols = [
+  { key: 'rackId', label: '机柜', width: '90px' },
+  { key: 'nodeType', label: '节点类型', width: '80px' },
+  { key: 'state', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'inletTemp', label: '入口(℃)', width: '75px' },
+  { key: 'outletTemp', label: '出口(℃)', width: '75px' },
+  { key: 'deltaT', label: 'ΔT(℃)', width: '65px' },
+  { key: 'flow', label: '流量(L/min)', width: '85px' },
+  { key: 'dp', label: '压差(Pa)', width: '75px' },
+  { key: 'gpuTemp', label: 'GPU 温度', width: '140px' },
+]
+
+const coldPlateRows = computed(() => {
+  if (!data.value?.coldPlates) return []
+  return data.value.coldPlates.map(d => ({
+    rackId: d.rackId,
+    nodeType: d.nodeType,
+    state: d.state,
+    inletTemp: fv(d.inletTemp),
+    outletTemp: fv(d.outletTemp),
+    deltaT: fv((d.outletTemp as number) - (d.inletTemp as number)),
+    flow: fv(d.flow),
+    dp: fv(d.dp),
+    gpuTemp: d.gpuTemp?.length ? d.gpuTemp.map(t => `${t}℃`).join(' · ') : '-',
+    _rowClass: statusRow(d.state),
+  }))
+})
+
+// ===== 分集水器 =====
+const manifoldCols = [
+  { key: 'id', label: 'ID', width: '90px' },
+  { key: 'zone', label: '区域', width: '80px' },
+  { key: 'temp', label: '温度(℃)', width: '80px' },
+  { key: 'pressure', label: '压力(bar)', width: '80px' },
+  { key: 'flow', label: '流量(m³/h)', width: '85px' },
+  { key: 'branches', label: '阀门/支路', width: '90px' },
+]
+
+function mapManRows(items: any[]) {
+  return items.map(d => ({
+    id: d.id,
+    zone: d.zone,
+    temp: fv(d.temp),
+    pressure: fv(d.pressure),
+    flow: fv(d.flow),
+    branches: d.valvesOpen != null ? `开 ${d.valvesOpen}/${d.branchCount ?? '-'}` : `${d.branchCount ?? '-'} 路`,
+  }))
+}
+
+const supplyManRows = computed(() => data.value?.manifoldsSupply ? mapManRows(data.value.manifoldsSupply) : [])
+const returnManRows = computed(() => data.value?.manifoldsReturn ? mapManRows(data.value.manifoldsReturn) : [])
+
+// ===== 漏水检测 =====
+const leakRopeCols = [
+  { key: 'id', label: 'ID', width: '100px' },
+  { key: 'location', label: '位置', width: '160px' },
+  { key: 'status', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'length', label: '长度(m)', width: '80px' },
+  { key: 'coverage', label: '覆盖率(%)', width: '85px' },
+]
+
+const leakRopeRows = computed(() => {
+  if (!data.value?.leakRope) return []
+  return data.value.leakRope.map(d => ({
+    id: d.id,
+    location: d.location,
+    status: d.status,
+    length: fv(d.length),
+    coverage: fv(d.coverage),
+    _rowClass: d.status !== '正常' ? 'row-danger' : '',
+  }))
+})
+
+const leakPointCols = [
+  { key: 'id', label: 'ID', width: '100px' },
+  { key: 'zone', label: '区域', width: '120px' },
+  { key: 'count', label: '监测点', width: '80px' },
+  { key: 'alarmCount', label: '告警数', width: '80px' },
+]
+
+const leakPointRows = computed(() => {
+  if (!data.value?.leakPoint) return []
+  return data.value.leakPoint.map(d => ({
+    id: d.id,
+    zone: d.zone,
+    count: d.count,
+    alarmCount: d.alarmCount,
+    _rowClass: d.alarmCount > 0 ? 'row-danger' : '',
+  }))
+})
+
+// ===== 排热系统 =====
+const towerFanCols = [
+  { key: 'id', label: 'ID', width: '90px' },
+  { key: 'state', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'fanHz', label: '风机(Hz)', width: '85px' },
+  { key: 'outletTemp', label: '出口(℃)', width: '85px' },
+  { key: 'approach', label: '逼近(℃)', width: '85px' },
+]
+
+const towerFanRows = computed(() => {
+  if (!data.value?.towerFans) return []
+  return data.value.towerFans.map(d => ({
+    id: d.id,
+    state: d.state,
+    fanHz: fv(d.fanHz),
+    outletTemp: fv(d.outletTemp),
+    approach: fv(d.approach),
+    _rowClass: statusRow(d.state),
+  }))
+})
+
+const dryCoolerCols = [
+  { key: 'id', label: 'ID', width: '90px' },
+  { key: 'state', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'fanHz', label: '风机(Hz)', width: '85px' },
+  { key: 'ambientT', label: '环境(℃)', width: '85px' },
+]
+
+const dryCoolerRows = computed(() => {
+  if (!data.value?.dryCoolers) return []
+  return data.value.dryCoolers.map(d => ({
+    id: d.id,
+    state: d.state,
+    fanHz: fv(d.fanHz),
+    ambientT: fv(d.ambientT),
+    _rowClass: statusRow(d.state),
+  }))
+})
+
+const rejPumpCols = [
+  { key: 'id', label: 'ID', width: '90px' },
+  { key: 'state', label: '状态', width: '70px', render: 'status' as const },
+  { key: 'hz', label: '频率(Hz)', width: '85px' },
+  { key: 'kw', label: '功率(kW)', width: '85px' },
+]
+
+const rejPumpRows = computed(() => {
+  if (!data.value?.rejectionPumps) return []
+  return data.value.rejectionPumps.map(d => ({
+    id: d.id,
+    state: d.state,
+    hz: fv(d.hz),
+    kw: fv(d.kw),
+    _rowClass: statusRow(d.state),
+  }))
+})
+
+// ===== 趋势图 =====
+const TREND_LEN = 96 // 48h × 2 (30min intervals)
+const trendTimestamps = computed<string[]>(() => {
+  const now = new Date()
+  const stamps: string[] = []
+  for (let i = TREND_LEN - 1; i >= 0; i--) {
+    const t = new Date(now.getTime() - i * 30 * 60_000)
+    stamps.push(`${t.getMonth() + 1}/${t.getDate()} ${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`)
+  }
+  return stamps
+})
+
+function padArray(arr: number[] | undefined, len: number): number[] {
+  if (!arr || arr.length === 0) return new Array(len).fill(0)
+  if (arr.length >= len) return arr.slice(-len)
+  const pad = new Array(len - arr.length).fill(0)
+  return [...pad, ...arr]
+}
+
+const tempTrendSeries = computed(() => {
+  if (!data.value) return []
+  return [
+    { name: '一次供水', data: padArray(data.value.supplyTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.blue } },
+    { name: '二次供水', data: padArray(data.value.secSupplyTemp != null ? [data.value.secSupplyTemp] : [], TREND_LEN).map((_, i) => {
+      const s = data.value!.supplyTrend ?? []
+      return s.length > i ? s[i] - 2 : 0
+    }), type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan } },
+    { name: '一次回水', data: padArray(data.value.returnTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.orange } },
+    { name: '二次回水', data: padArray(data.value.secReturnTemp != null ? [data.value.secReturnTemp] : [], TREND_LEN).map((_, i) => {
+      const r = data.value!.returnTrend ?? []
+      return r.length > i ? r[i] + 1 : 0
+    }), type: 'line' as const, lineStyle: { color: CHART_COLORS.amber } },
+  ]
+})
+
+const flowTrendSeries = computed(() => {
+  if (!data.value) return []
+  return [
+    { name: '一次侧流量', data: padArray(data.value.flowTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.blue } },
+    { name: '二次侧流量', data: padArray(data.value.flowTrend, TREND_LEN).map(v => v * 0.85), type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan } },
+  ]
+})
+
+const dtTrendSeries = computed(() => {
+  if (!data.value) return []
+  return [
+    { name: '温差 ΔT', data: padArray(data.value.deltaTTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.yellow }, areaStyle: { opacity: 0.1, color: CHART_COLORS.yellow } },
+  ]
+})
+
+const capTrendSeries = computed(() => {
+  if (!data.value) return []
+  const base = Array(TREND_LEN).fill(data.value.totalCoolingCap)
+  const used = Array(TREND_LEN).fill(data.value.coolingCapUsed)
+  return [
+    { name: '制冷能力(kW)', data: base, type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan, width: 2 }, areaStyle: { opacity: 0.05, color: CHART_COLORS.cyan } },
+    { name: '实际使用(kW)', data: used, type: 'bar' as const, yAxisIndex: 1, itemStyle: { color: CHART_COLORS.purple }, barWidth: '60%' },
+  ]
+})
+
+// ===== 告警过滤 =====
+const liquidAlarms = computed(() => {
+  return alarms.value.filter(a => {
+    const t = `${a.source || ''}${a.domain || ''}${a.message || ''}${a.title || ''}`.toLowerCase()
+    return t.includes('liquid') || t.includes('液冷') || t.includes('cdu') || t.includes('冷板') || t.includes('leak') || t.includes('漏水') || t.includes('分集水')
+  })
+})
+
+function formatTime(t: string | undefined): string {
+  if (!t) return '-'
+  try {
+    const d = new Date(t)
+    if (isNaN(d.getTime())) return t
+    return d.toLocaleTimeString('zh-CN')
+  } catch { return t }
+}
 </script>
 
 <style scoped>
-/* ---- card / head / pill ---- */
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.ct { font-weight: 600; font-size: 14px; }
-.pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg2); }
-.pill.g { background: rgba(82,196,26,0.12); color: var(--green); }
-.pill.a { background: rgba(250,173,20,0.12); color: var(--amber); }
-.pill.r { background: rgba(255,77,94,0.12); color: var(--red); }
+.hvac-liquid {
+  padding: 12px;
+  min-height: 100%;
+}
 
-/* ---- 通用 ---- */
-.device-list { border-top: 1px solid var(--border); padding-top: 8px; max-height: 520px; overflow-y: auto; }
-.device-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 11.5px; border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.04)); }
-.device-row:last-child { border-bottom: none; }
-.d-info { display: flex; align-items: center; gap: 5px; min-width: 0; flex-shrink: 0; }
-.d-status { font-size: 8px; flex-shrink: 0; }
-.d-status.g { color: var(--green); }
-.d-status.r { color: var(--red); }
-.d-status.a { color: var(--amber); }
-.d-status.m { color: var(--muted); }
-.d-name { font-weight: 500; white-space: nowrap; }
-.d-code { color: var(--muted); font-size: 10px; }
-.d-metrics { color: var(--muted); font-size: 11px; display: flex; gap: 4px; align-items: center; flex-shrink: 0; }
-.d-metrics .sep { opacity: 0.3; }
-.empty-tip { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
-.zone-tag { background: rgba(22,119,255,0.08); color: var(--primary); padding: 1px 6px; border-radius: 4px; font-size: 10px; }
+/* Header */
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
+.ph-left { display: flex; align-items: baseline; gap: 10px; }
+.ph-title { font-size: 18px; font-weight: 700; color: var(--txt); margin: 0; }
+.ph-sub { font-size: 12px; color: var(--txt3); }
+.ph-right { display: flex; align-items: center; gap: 10px; }
+.ph-badge { padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+.ph-badge.ok { background: rgba(34,197,94,.12); color: var(--green); }
+.ph-badge.loading { background: rgba(148,163,184,.10); color: var(--txt3); }
+.ph-mode { font-size: 11px; color: var(--purple); background: rgba(139,92,246,.10); padding: 2px 8px; border-radius: 4px; }
+.ph-time { font-size: 11px; color: var(--txt3); }
+.ph-btn { border: 1px solid var(--line); background: transparent; color: var(--txt); font-size: 11px; padding: 4px 14px; border-radius: 5px; cursor: pointer; }
+.ph-btn:hover { border-color: var(--cyan); }
 
-/* ---- CDU 多行 ---- */
-.cdu-row { flex-direction: column; gap: 2px; padding: 6px 0; }
-.cdu-row .d-info { width: 100%; margin-bottom: 1px; }
-.cdu-metrics-block { width: 100%; display: flex; flex-direction: column; gap: 1px; }
-.cdu-metrics { display: flex; gap: 2px; align-items: center; width: 100%; font-size: 10.5px; color: var(--txt2); padding: 0 14px; flex-wrap: wrap; }
-.cdu-metrics .ml { color: var(--txt3); font-size: 9.5px; min-width: 36px; }
-.cdu-metrics .sep { opacity: 0.25; color: var(--muted); }
+/* KPI rows */
+.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+@media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .kpi-row { grid-template-columns: 1fr; } }
 
-/* ---- GPU 冷板 ---- */
-.gpu-list { border-top: 1px solid var(--border); padding-top: 8px; max-height: 560px; overflow-y: auto; }
-.gpu-row { padding: 6px 0; border-bottom: 1px solid var(--border-light, rgba(255,255,255,0.04)); }
-.gpu-row:last-child { border-bottom: none; }
-.gpu-head { display: flex; align-items: center; gap: 5px; font-size: 11px; margin-bottom: 3px; }
-.gpu-rack { font-weight: 600; color: var(--cyan); }
-.gpu-type { font-size: 10px; background: var(--bg2); padding: 1px 5px; border-radius: 4px; }
-.gpu-io { color: var(--muted); font-size: 10.5px; }
-.gpu-cores { display: flex; gap: 4px; flex-wrap: wrap; padding-left: 13px; }
-.gpu-core { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--bg2); }
-.gpu-core.g { color: var(--green); }
-.gpu-core.a { color: var(--amber); }
-.gpu-core.r { color: var(--red); }
+/* Skeleton */
+.skel-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
 
-/* ---- 分集液管路 subtitles ---- */
-.sub-section-title { font-size: 10px; color: var(--txt3); padding: 4px 0 2px; border-bottom: 1px dashed rgba(255,255,255,0.05); margin-bottom: 2px; }
+/* Sections */
+.section { margin-top: 14px; }
+.section-title { font-size: 14px; font-weight: 700; color: var(--txt); display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.section-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.section-sum { font-size: 11px; font-weight: 400; color: var(--txt3); margin-left: auto; }
+.section-sum.danger { color: var(--red); }
+.section-sum-s { font-size: 11px; color: var(--txt3); margin-left: auto; }
 
-/* ---- 冷却液品质 / 余热回收 ---- */
-.quality-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; border-top: 1px solid var(--border); padding-top: 8px; }
-.q-item { text-align: center; padding: 5px 4px; border-radius: 6px; background: var(--bg2); }
-.q-label { display: block; font-size: 10px; color: var(--txt3); margin-bottom: 2px; }
-.q-val { font-size: 14px; font-weight: 700; }
-.q-val.g { color: var(--green); }
-.q-val.a { color: var(--amber); }
-.q-val.small { font-size: 11px; }
-.q-ref { display: block; font-size: 9px; color: var(--txt3); margin-top: 1px; }
+/* Manifolds */
+.manifold-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+@media (max-width: 1000px) { .manifold-grid { grid-template-columns: 1fr; } }
 
-/* ---- 控制策略 ---- */
-.ctrl-detail { border-top: 1px solid var(--border); padding-top: 8px; }
-.ctrl-desc { font-size: 11px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
-.ctrl-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 3px; }
-.ctrl-kv { display: flex; justify-content: space-between; align-items: center; padding: 3px 6px; background: var(--bg2); border-radius: 4px; font-size: 11px; }
-.ctrl-kv .ck { color: var(--txt3); }
-.ctrl-kv .cv { font-weight: 600; color: var(--cyan); }
+/* Quality */
+.quality-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+@media (max-width: 900px) { .quality-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 600px) { .quality-grid { grid-template-columns: repeat(2, 1fr); } }
 
-/* ---- footer ---- */
-.footer-note { text-align: center; margin-top: 16px; font-size: 11px; }
+/* Leak */
+.leak-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 1000px) { .leak-grid { grid-template-columns: 1fr; } }
+.leak-block { margin-top: 4px; }
+
+/* Subtitle */
+.rg-subtitle { font-size: 12px; font-weight: 600; color: var(--txt2); margin: 8px 0 6px; }
+
+/* Control strategy */
+.ctrl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 900px) { .ctrl-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .ctrl-grid { grid-template-columns: 1fr; } }
+.ctrl-card { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); display: flex; flex-direction: column; gap: 4px; }
+.ctrl-name { font-size: 11px; color: var(--txt3); }
+.ctrl-val { font-size: 15px; font-weight: 700; color: var(--txt); }
+.ctrl-desc { margin-top: 10px; padding: 10px 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font-size: 11px; color: var(--txt2); line-height: 1.6; }
+
+/* Heat recovery */
+.hr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+@media (max-width: 700px) { .hr-grid { grid-template-columns: repeat(2, 1fr); } }
+
+/* Trends */
+.trend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 1000px) { .trend-grid { grid-template-columns: 1fr; } }
+
+/* Alarms */
+.alarm-list { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
+.alarm-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 5px; font-size: 11px; background: rgba(239,68,68,.04); border: 1px solid rgba(239,68,68,.10); }
+.alarm-msg { color: var(--txt); flex: 1; }
+.alarm-tag { color: var(--txt3); font-style: normal; }
+.alarm-time { color: var(--txt3); white-space: nowrap; font-size: 10px; }
+
+/* Footer */
+.page-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; font-size: 11px; color: var(--txt3); }
 </style>

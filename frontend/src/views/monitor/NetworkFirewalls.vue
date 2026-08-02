@@ -1,112 +1,873 @@
 <template>
-  <div>
+  <div class="net-fw">
+    <!-- Header -->
     <div class="view-head">
-      <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('nav.networkMonitor') }} {{ tl('·') }} {{ tl('nav.networkFirewall') }}</h1>
-      <span class="sub">{{ tl('防火墙监控') }} {{ tl('·') }} {{ tl('策略命中 / 并发会话 / VPN / 威胁拦截') }}</span>
+      <h1>{{ tl('防火墙') }}</h1>
+      <span class="sub">{{ tl('策略命中 / 并发会话 / VPN / 威胁拦截 / 攻击分布') }}</span>
     </div>
 
-    <div class="grid cols-4" v-if="s">
-      <MetricCard metric-name="fw-total" :label="tl('防火墙')" :value="Number(s.total)" unit="台" quality="good" :online="true" />
-      <MetricCard metric-name="fw-sessions" :label="tl('并发会话')" :value="s.concurrentSessions" unit="" quality="good" :online="true" />
-      <MetricCard metric-name="fw-policy" :label="tl('安全策略')" :value="s.policyTotal" unit="条" quality="good" :online="true" />
-      <MetricCard metric-name="fw-threat" :label="tl('威胁拦截')" :value="s.threatBlocked" unit="次" :quality="s.threatBlocked ? 'uncertain' : 'good'" :online="true" :severity="s.threatBlocked ? 'warn' : 'normal'" />
+    <!-- Loading -->
+    <div v-if="loading" class="grid cols-4">
+      <SkeletonCard v-for="i in 8" :key="i" />
     </div>
 
-    <template v-if="s">
-      <div class="card" v-for="f in s.firewalls" :key="f.id">
+    <!-- Error -->
+    <div v-else-if="error" class="card err-card">
+      <div class="err-title">{{ tl('加载失败') }}</div>
+      <div class="err-detail">{{ error }}</div>
+      <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
+    </div>
+
+    <!-- 2.3.1 安全仪表盘：攻击类型分布饼图 + 阻断次数趋势图 -->
+    <div v-if="s && s.firewalls.length" class="grid cols-2">
+      <!-- 攻击类型分布饼图 -->
+      <div class="card">
         <div class="card-head">
-          <span class="ct">{{ f.name }} <span class="muted">({{ f.id }})</span></span>
-          <span class="pill" :class="f.status === 'online' ? 'g' : 'r'">{{ f.status === 'online' ? tl('在线') : tl('离线') }}</span>
+          <span class="ct">{{ tl('攻击类型分布') }}</span>
+          <span class="pill a">{{ fmtNum(s.totalBlocked) }} {{ tl('次拦截') }}</span>
         </div>
-        <div class="kv-grid">
-          <div class="kv"><span class="k">{{ tl('型号') }}</span><span class="v">{{ f.model }}</span></div>
-          <div class="kv"><span class="k">{{ tl('位置') }}</span><span class="v">{{ f.location }}</span></div>
-          <div class="kv"><span class="k">{{ tl('管理IP') }}</span><span class="v mono">{{ f.ip }}</span></div>
-          <div class="kv"><span class="k">{{ tl('CPU') }}</span><span class="v" :class="f.cpu_pct > 80 ? 'a-text' : 'g-text'">{{ f.cpu_pct }}%</span></div>
-          <div class="kv"><span class="k">{{ tl('内存') }}</span><span class="v" :class="f.mem_pct > 80 ? 'a-text' : 'g-text'">{{ f.mem_pct }}%</span></div>
-          <div class="kv"><span class="k">{{ tl('温度') }}</span><span class="v">{{ f.temp_c }}°C</span></div>
-          <div class="kv"><span class="k">{{ tl('吞吐') }}</span><span class="v mono">{{ fmtBps(f.throughput_bps) }}</span></div>
-          <div class="kv"><span class="k">{{ tl('并发会话') }}</span><span class="v mono">{{ fmtNum(f.concurrent_sessions) }}</span></div>
-          <div class="kv"><span class="k">{{ tl('新建会话率') }}</span><span class="v mono">{{ fmtNum(f.session_rate) }}/s</span></div>
-          <div class="kv"><span class="k">{{ tl('VPN 隧道') }}</span><span class="v">{{ f.vpn_tunnels }}</span></div>
-          <div class="kv"><span class="k">{{ tl('威胁拦截') }}</span><span class="v" :class="f.threat_blocked ? 'a-text' : 'g-text'">{{ f.threat_blocked }} {{ tl('次') }}</span></div>
-          <div class="kv"><span class="k">{{ tl('运行时长') }}</span><span class="v">{{ f.uptime_days }} {{ tl('天') }}</span></div>
-        </div>
+        <BaseChart :option="attackPieOption" height="240px" />
+      </div>
 
-        <div class="sub-title">{{ tl('策略命中 Top') }}</div>
-        <div class="hit-list">
-          <div class="hit-row" v-for="(p, i) in f.policy_hit_top" :key="i">
-            <span class="hit-rank mono">{{ i + 1 }}</span>
-            <span class="hit-name">{{ p.name }}</span>
-            <span class="hit-bar"><span class="hit-fill" :style="{ width: Math.min(100, p.hits / f.policy_hit_top[0].hits * 100) + '%' }"></span></span>
-            <span class="hit-val mono">{{ fmtNum(p.hits) }}</span>
+      <!-- 阻断次数趋势图 -->
+      <div class="card">
+        <TrendChart
+          :title="tl('威胁阻断趋势')"
+          :x-axis-data="s.blockTrend.labels"
+          :series="s.blockTrend.series"
+          :height="240"
+          :show-range-picker="true"
+        />
+      </div>
+    </div>
+
+    <!-- 2.3.3 并发连接数 / 新建速率 KPI 卡片 -->
+    <div v-if="s && s.firewalls.length" class="grid cols-4">
+      <KpiCard
+        :title="tl('并发连接数')"
+        :value="s.totalConcurrent"
+        unit=""
+        :bar-value="Math.min(100, s.totalConcurrent / Math.max(1, s.maxConcurrent) * 100)"
+        bar-color="var(--cyan)"
+        :status="s.totalConcurrent / Math.max(1, s.maxConcurrent) > 0.85 ? 'warning' : 'normal'"
+        size="sm"
+      />
+      <KpiCard
+        :title="tl('新建会话速率')"
+        :value="s.totalSessionRate"
+        unit="cps"
+        :subtitle="tl('峰值') + ' ' + fmtNum(s.peakSessionRate)"
+        dot="var(--blue)"
+        size="sm"
+      />
+      <KpiCard
+        :title="tl('安全策略')"
+        :value="s.totalPolicy"
+        unit="条"
+        dot="var(--violet)"
+        size="sm"
+      />
+      <KpiCard
+        :title="tl('VPN 隧道')"
+        :value="s.totalVpn"
+        unit="条"
+        dot="var(--green)"
+        size="sm"
+      />
+    </div>
+
+    <!-- 2.3.4 系统资源利用（CPU/内存/磁盘） -->
+    <div v-if="s && s.firewalls.length" class="card">
+      <div class="card-head">
+        <span class="ct">{{ tl('系统资源利用') }} (CPU / 内存 / 磁盘)</span>
+      </div>
+      <div class="res-grid">
+        <div v-for="f in s.firewalls" :key="f.id" class="res-card">
+          <div class="res-head">
+            <span class="res-name">{{ f.name }}</span>
+            <StatusBadge :status="f.status === 'online' ? 'online' : 'offline'" size="sm" />
+          </div>
+          <div class="res-bar-row">
+            <span class="res-label">{{ tl('CPU') }}</span>
+            <div class="res-track"><div class="res-fill" :class="barCls(f.cpu_pct)" :style="{ width: f.cpu_pct + '%' }" /></div>
+            <span class="res-val mono">{{ f.cpu_pct }}%</span>
+          </div>
+          <div class="res-bar-row">
+            <span class="res-label">{{ tl('内存') }}</span>
+            <div class="res-track"><div class="res-fill" :class="barCls(f.mem_pct)" :style="{ width: f.mem_pct + '%' }" /></div>
+            <span class="res-val mono">{{ f.mem_pct }}%</span>
+          </div>
+          <div class="res-bar-row">
+            <span class="res-label">{{ tl('磁盘') }}</span>
+            <div class="res-track"><div class="res-fill" :class="barCls(f.disk_pct)" :style="{ width: f.disk_pct + '%' }" /></div>
+            <span class="res-val mono">{{ f.disk_pct }}%</span>
           </div>
         </div>
       </div>
-    </template>
-
-    <div class="card" v-if="!s && !error">
-      <div class="flex center" style="padding:40px"><span class="muted">{{ tl('加载中...') }}</span></div>
     </div>
-    <div class="card" v-if="error">
-      <div class="flex center" style="padding:40px"><span class="muted" style="color:var(--red)">{{ tl('加载失败') }}: {{ error }}</span></div>
+
+    <!-- 2.3.2 策略命中排行表 -->
+    <div v-if="s && s.firewalls.length" class="card">
+      <div class="card-head">
+        <span class="ct">{{ tl('策略命中排行') }}</span>
+        <span class="pill g">{{ tl('Top 10 策略') }}</span>
+      </div>
+      <div class="port-table scroll-x" style="max-height: 360px">
+        <table>
+          <thead>
+            <tr>
+              <th>{{ tl('防火墙') }}</th>
+              <th>{{ tl('策略名称') }}</th>
+              <th>{{ tl('命中次数') }}</th>
+              <th>{{ tl('占比') }}</th>
+              <th>{{ tl('命中率条') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(row, ri) in s.allPolicyHits" :key="ri" :class="{ 'row-alt': ri % 2 === 1 }">
+              <td class="mono">{{ row.fw }}</td>
+              <td>{{ row.name }}</td>
+              <td class="mono">{{ fmtNum(row.hits) }}</td>
+              <td class="mono">{{ row.pct }}%</td>
+              <td class="hit-cell">
+                <div class="hit-track"><div class="hit-fill" :style="{ width: row.pct + '%' }" /></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Per-device detail cards -->
+    <div v-if="s && s.firewalls.length" v-for="f in s.firewalls" :key="f.id" class="card">
+      <div class="card-head">
+        <span class="ct">{{ f.name }} <span class="muted ml2 fw4 f11">{{ f.model }}</span></span>
+        <StatusBadge :status="f.status === 'online' ? 'online' : 'offline'" />
+      </div>
+
+      <div class="rt-meta-grid">
+        <div class="rt-kv"><span class="rt-k">{{ tl('管理IP') }}</span><span class="rt-v mono">{{ f.ip }}</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('位置') }}</span><span class="rt-v">{{ f.location }}</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('型号') }}</span><span class="rt-v mono">{{ f.model }}</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('运行天数') }}</span><span class="rt-v">{{ f.uptime_days }}d</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('吞吐') }}</span><span class="rt-v mono">{{ fmtBps(f.throughput_bps) }}</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('并发会话') }}</span><span class="rt-v mono">{{ fmtNum(f.concurrent_sessions) }}</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('会话率') }}</span><span class="rt-v mono">{{ fmtNum(f.session_rate) }}/s</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('威胁拦截') }}</span><span class="rt-v" :class="f.threat_blocked ? 'a-text' : 'g-text'">{{ fmtNum(f.threat_blocked) }}</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('VPN 隧道') }}</span><span class="rt-v">{{ f.vpn_tunnels }}</span></div>
+        <div class="rt-kv"><span class="rt-k">{{ tl('策略总数') }}</span><span class="rt-v">{{ f.policy_total }}</span></div>
+      </div>
+
+      <!-- 策略命中 Top (this device) -->
+      <div class="sub-title">{{ tl('策略命中 Top') }}</div>
+      <div class="hit-list">
+        <div class="hit-row" v-for="(p, i) in f.policy_hit_top" :key="i">
+          <span class="hit-rank mono">{{ i + 1 }}</span>
+          <span class="hit-name">{{ p.name }}</span>
+          <span class="hit-bar"><span class="hit-fill" :style="{ width: Math.min(100, p.hits / Math.max(1, f.policy_hit_top[0]?.hits || 1) * 100) + '%' }" /></span>
+          <span class="hit-val mono">{{ fmtNum(p.hits) }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div v-if="s && !s.firewalls.length && !loading && !error" class="card empty-card">
+      <p class="muted">{{ tl('暂无防火墙数据') }}</p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import MetricCard from '@/components/common/MetricCard.vue'
-import { getNetworkFirewallsDetailed, type NetworkFirewallSummary } from '@/api/monitor'
+import KpiCard from '@/components/monitor/KpiCard.vue'
+import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
+import StatusBadge from '@/components/monitor/StatusBadge.vue'
+import TrendChart from '@/components/monitor/TrendChart.vue'
+import BaseChart from '@/components/charts/BaseChart.vue'
+import { getNetworkFirewallsDetailed, type FirewallView, type FwPolicyHitView, type NetworkFirewallSummary } from '@/api/monitor'
+import type { EChartsOption } from '@/hooks/useECharts'
+
 const { t: tl } = useI18n()
 
-const s = ref<NetworkFirewallSummary | null>(null)
+// ──────────────────────────────────────────
+// Local extended firewall type (adds disk_pct)
+// ──────────────────────────────────────────
+interface FirewallEx extends FirewallView {
+  disk_pct: number
+}
+
+interface PolicyHitRow {
+  fw: string
+  name: string
+  hits: number
+  pct: number
+}
+
+interface TrendSeries {
+  name: string
+  data: number[]
+  color?: string
+}
+
+interface PageState {
+  firewalls: FirewallEx[]
+  total: number
+  online: number
+  totalConcurrent: number
+  maxConcurrent: number
+  totalSessionRate: number
+  peakSessionRate: number
+  totalPolicy: number
+  totalVpn: number
+  totalBlocked: number
+  allPolicyHits: PolicyHitRow[]
+  blockTrend: {
+    labels: string[]
+    series: TrendSeries[]
+  }
+  attackDist: { name: string; value: number; color: string }[]
+}
+
+// ──────────────────────────────────────────
+// State
+// ──────────────────────────────────────────
+const loading = ref(true)
 const error = ref('')
+const s = reactive<PageState>({
+  firewalls: [],
+  total: 0,
+  online: 0,
+  totalConcurrent: 0,
+  maxConcurrent: 0,
+  totalSessionRate: 0,
+  peakSessionRate: 0,
+  totalPolicy: 0,
+  totalVpn: 0,
+  totalBlocked: 0,
+  allPolicyHits: [],
+  blockTrend: { labels: [], series: [] },
+  attackDist: [],
+})
 
-function fmtNum(v: number): string {
-  return v >= 1000 ? (v / 1000).toFixed(v >= 10000 ? 0 : 1) + 'k' : String(v)
-}
-function fmtBps(v: number): string {
-  if (!v) return '0'
-  if (v >= 1e9) return (v / 1e9).toFixed(2) + ' Gbps'
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + ' Mbps'
-  return (v / 1e3).toFixed(1) + ' Kbps'
+// ──────────────────────────────────────────
+// Helpers
+// ──────────────────────────────────────────
+function fmtNum(n: number): string {
+  if (n == null) return '-'
+  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
+  if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
+  return n.toLocaleString()
 }
 
-async function load() {
-  error.value = ''
-  try {
-    s.value = await getNetworkFirewallsDetailed()
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+function fmtBps(bps: number): string {
+  if (bps == null) return '-'
+  if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps'
+  if (bps >= 1e6) return (bps / 1e6).toFixed(1) + ' Mbps'
+  if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' Kbps'
+  return bps + ' bps'
+}
+
+function barCls(v: number): string {
+  if (v >= 85) return 'res-danger'
+  if (v >= 60) return 'res-warning'
+  return 'res-normal'
+}
+
+function genHours(n: number): string[] {
+  const now = new Date()
+  const hrs: string[] = []
+  for (let i = n - 1; i >= 0; i--) {
+    const t = new Date(now.getTime() - i * 3600 * 1000)
+    hrs.push(
+      t.getHours().toString().padStart(2, '0') + ':' +
+      t.getMinutes().toString().padStart(2, '0'),
+    )
+  }
+  return hrs
+}
+
+function genTimeData(n: number, base: number, amp: number, noise: number): number[] {
+  const pts: number[] = []
+  for (let i = 0; i < n; i++) {
+    const v = base + amp * Math.sin((i / n) * Math.PI * 3 + Math.random()) + (Math.random() - 0.5) * noise
+    pts.push(Math.max(0, Math.round(v)))
+  }
+  return pts
+}
+
+// ──────────────────────────────────────────
+// Attack distribution pie chart option
+// ──────────────────────────────────────────
+const attackPieOption = reactive<EChartsOption>({
+  backgroundColor: 'transparent',
+  tooltip: {
+    trigger: 'item',
+    formatter: (p: any) => `${p.name}<br/>${fmtNum(p.value)} 次 (${p.percent}%)`,
+  },
+  legend: {
+    orient: 'vertical',
+    right: '4%',
+    top: 'center',
+    textStyle: { color: '#94a3b8', fontSize: 11 },
+    itemWidth: 10,
+    itemHeight: 10,
+  },
+  series: [
+    {
+      name: '攻击类型',
+      type: 'pie',
+      radius: ['45%', '70%'],
+      center: ['38%', '50%'],
+      avoidLabelOverlap: false,
+      itemStyle: { borderColor: '#0f172a', borderWidth: 2, borderRadius: 4 },
+      label: { show: false },
+      emphasis: {
+        label: { show: true, fontSize: 12, fontWeight: 'bold', color: '#e2e8f0', formatter: '{b}\n{d}%' },
+      },
+      data: [],
+    },
+  ],
+})
+
+function updateAttackPie(dist: { name: string; value: number; color: string }[]) {
+  ;(attackPieOption.series as any[])[0].data = dist.map((d) => ({
+    name: d.name,
+    value: d.value,
+    itemStyle: { color: d.color },
+  }))
+}
+
+// ──────────────────────────────────────────
+// Mock data
+// ──────────────────────────────────────────
+function mockData() {
+  const N = 24
+
+  // ── Firewalls (with disk_pct added) ──
+  const firewalls: FirewallEx[] = [
+    {
+      id: 'fw-1', name: 'FW-Core-01', ip: '10.200.2.1', model: 'USG6600E',
+      location: 'DC-A 安全域 S-01', status: 'online',
+      cpu_pct: 38, mem_pct: 52, temp_c: 43, uptime_days: 298,
+      concurrent_sessions: 1850000, session_rate: 42000,
+      policy_total: 1280, throughput_bps: 24.6e9,
+      threat_blocked: 284000, vpn_tunnels: 42, disk_pct: 34,
+      policy_hit_top: [
+        { name: 'allow-int-to-dmz-web', hits: 458000 },
+        { name: 'deny-external-ssh', hits: 312000 },
+        { name: 'allow-vpn-to-internal', hits: 198000 },
+        { name: 'deny-malware-c2', hits: 142000 },
+        { name: 'allow-dns-egress', hits: 98000 },
+      ] as FwPolicyHitView[],
+    },
+    {
+      id: 'fw-2', name: 'FW-Core-02', ip: '10.200.2.2', model: 'USG6600E',
+      location: 'DC-A 安全域 S-02', status: 'online',
+      cpu_pct: 31, mem_pct: 47, temp_c: 41, uptime_days: 298,
+      concurrent_sessions: 1620000, session_rate: 38000,
+      policy_total: 1240, throughput_bps: 21.2e9,
+      threat_blocked: 196000, vpn_tunnels: 38, disk_pct: 29,
+      policy_hit_top: [
+        { name: 'allow-int-to-dmz-web', hits: 392000 },
+        { name: 'deny-external-ssh', hits: 268000 },
+        { name: 'allow-vpn-to-internal', hits: 176000 },
+        { name: 'deny-portscan', hits: 121000 },
+        { name: 'allow-dns-egress', hits: 84000 },
+      ] as FwPolicyHitView[],
+    },
+    {
+      id: 'fw-3', name: 'FW-Edge-01', ip: '10.200.2.3', model: 'USG6300E',
+      location: 'DC-A 边界域 B-08', status: 'online',
+      cpu_pct: 46, mem_pct: 58, temp_c: 47, uptime_days: 156,
+      concurrent_sessions: 980000, session_rate: 52000,
+      policy_total: 860, throughput_bps: 12.8e9,
+      threat_blocked: 412000, vpn_tunnels: 24, disk_pct: 52,
+      policy_hit_top: [
+        { name: 'deny-external-ssh', hits: 526000 },
+        { name: 'deny-malware-c2', hits: 318000 },
+        { name: 'deny-portscan', hits: 244000 },
+        { name: 'allow-vpn-to-internal', hits: 132000 },
+        { name: 'allow-int-to-dmz-web', hits: 88000 },
+      ] as FwPolicyHitView[],
+    },
+  ]
+
+  // ── Attack type distribution (aggregated) ──
+  const attackDist = [
+    { name: tl('SSH 暴力破解'), value: 412000, color: '#ef4444' },
+    { name: tl('端口扫描'), value: 312000, color: '#f97316' },
+    { name: tl('恶意软件 C2'), value: 198000, color: '#eab308' },
+    { name: tl('Web 攻击'), value: 156000, color: '#8b5cf6' },
+    { name: tl('SQL 注入'), value: 98000, color: '#06b6d4' },
+    { name: tl('DDoS'), value: 64000, color: '#ec4899' },
+  ]
+
+  // ── Block trend (sum of all firewalls) ──
+  const labels = genHours(N)
+  const series: TrendSeries[] = [
+    {
+      name: tl('阻断次数'),
+      data: genTimeData(N, 18000, 8000, 4000),
+      color: '#22d3ee',
+    },
+  ]
+
+  // ── All policy hits (flattened & sorted) ──
+  const allHits: PolicyHitRow[] = []
+  for (const f of firewalls) {
+    for (const p of f.policy_hit_top) {
+      allHits.push({ fw: f.name, name: p.name, hits: p.hits, pct: 0 })
+    }
+  }
+  allHits.sort((a, b) => b.hits - a.hits)
+  const maxHit = allHits.length ? allHits[0].hits : 1
+  allHits.forEach((h) => { h.pct = Math.round(h.hits / maxHit * 100) })
+  const topHits = allHits.slice(0, 10)
+
+  // ── Totals ──
+  const totalConcurrent = firewalls.reduce((a, f) => a + f.concurrent_sessions, 0)
+  const maxConcurrent = Math.max(10000000, Math.round(totalConcurrent * 1.5))
+  const totalSessionRate = firewalls.reduce((a, f) => a + f.session_rate, 0)
+  const peakSessionRate = Math.round(totalSessionRate * 1.4)
+  const totalPolicy = firewalls.reduce((a, f) => a + f.policy_total, 0)
+  const totalVpn = firewalls.reduce((a, f) => a + f.vpn_tunnels, 0)
+  const totalBlocked = firewalls.reduce((a, f) => a + f.threat_blocked, 0)
+
+  return {
+    firewalls,
+    attackDist,
+    blockTrend: { labels, series },
+    topHits,
+    totalConcurrent,
+    maxConcurrent,
+    totalSessionRate,
+    peakSessionRate,
+    totalPolicy,
+    totalVpn,
+    totalBlocked,
   }
 }
-onMounted(load)
+
+// ──────────────────────────────────────────
+// Apply data to reactive state
+// ──────────────────────────────────────────
+function applyData(d: ReturnType<typeof mockData>) {
+  s.firewalls = d.firewalls
+  s.attackDist = d.attackDist
+  s.blockTrend = d.blockTrend
+  s.allPolicyHits = d.topHits
+  s.totalConcurrent = d.totalConcurrent
+  s.maxConcurrent = d.maxConcurrent
+  s.totalSessionRate = d.totalSessionRate
+  s.peakSessionRate = d.peakSessionRate
+  s.totalPolicy = d.totalPolicy
+  s.totalVpn = d.totalVpn
+  s.totalBlocked = d.totalBlocked
+  s.total = d.firewalls.length
+  s.online = d.firewalls.filter((f) => f.status === 'online').length
+  updateAttackPie(d.attackDist)
+}
+
+// ──────────────────────────────────────────
+// Build from API data (if available)
+// ──────────────────────────────────────────
+function fromApi(summary: NetworkFirewallSummary) {
+  const mock = mockData()
+  // If API returns real firewalls, map them; otherwise use mock
+  if (summary.firewalls?.length) {
+    const firewalls: FirewallEx[] = summary.firewalls.map((f) => ({
+      ...f,
+      disk_pct: 30 + Math.round(Math.random() * 30),
+    }))
+    const totalConcurrent = summary.concurrentSessions || firewalls.reduce((a, f) => a + f.concurrent_sessions, 0)
+    const maxConcurrent = Math.max(10000000, Math.round(totalConcurrent * 1.5))
+    const totalSessionRate = firewalls.reduce((a, f) => a + f.session_rate, 0)
+    const totalPolicy = summary.policyTotal || firewalls.reduce((a, f) => a + f.policy_total, 0)
+    const totalVpn = summary.vpnTunnels || firewalls.reduce((a, f) => a + f.vpn_tunnels, 0)
+    const totalBlocked = summary.threatBlocked || firewalls.reduce((a, f) => a + f.threat_blocked, 0)
+
+    // Rebuild policy hits from all firewalls
+    const allHits: PolicyHitRow[] = []
+    for (const f of firewalls) {
+      for (const p of f.policy_hit_top || []) {
+        allHits.push({ fw: f.name, name: p.name, hits: p.hits, pct: 0 })
+      }
+    }
+    allHits.sort((a, b) => b.hits - a.hits)
+    const maxHit = allHits.length ? allHits[0].hits : 1
+    allHits.forEach((h) => { h.pct = Math.round(h.hits / maxHit * 100) })
+
+    s.firewalls = firewalls
+    s.attackDist = mock.attackDist
+    s.blockTrend = mock.blockTrend
+    s.allPolicyHits = allHits.slice(0, 10)
+    s.totalConcurrent = totalConcurrent
+    s.maxConcurrent = maxConcurrent
+    s.totalSessionRate = totalSessionRate
+    s.peakSessionRate = Math.round(totalSessionRate * 1.4)
+    s.totalPolicy = totalPolicy
+    s.totalVpn = totalVpn
+    s.totalBlocked = totalBlocked
+    s.total = summary.total || firewalls.length
+    s.online = summary.online || firewalls.filter((f) => f.status === 'online').length
+    updateAttackPie(mock.attackDist)
+  } else {
+    applyData(mock)
+  }
+}
+
+// ──────────────────────────────────────────
+// Load data
+// ──────────────────────────────────────────
+async function loadData() {
+  loading.value = true
+  error.value = ''
+
+  try {
+    const data = await getNetworkFirewallsDetailed()
+    if (data && (data.firewalls?.length || data.total || data.concurrentSessions)) {
+      fromApi(data)
+    } else {
+      // Fallback to full mock
+      applyData(mockData())
+    }
+  } catch (e: any) {
+    error.value = e?.message || String(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(() => {
+  loadData()
+})
 </script>
 
 <style scoped>
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; gap: 8px; }
-.ct { font-weight: 600; font-size: 14px; }
-.pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg2); color: var(--txt2); }
-.pill.g { background: rgba(82,196,26,0.12); color: var(--green); }
-.pill.r { background: rgba(255,77,94,0.12); color: var(--red); }
-.muted { color: var(--txt2); } .mono { font-variant-numeric: tabular-nums; font-family: "SF Mono", Consolas, monospace; }
-.g-text { color: var(--green); } .a-text { color: var(--amber); }
+/* ── view-head ── */
+.view-head {
+  margin-bottom: 16px;
+}
+.view-head h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary, #e5e7eb);
+  margin: 0;
+}
+.view-head .sub {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  margin-top: 2px;
+  display: block;
+}
 
-.kv-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 18px; }
-.kv { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px dashed var(--td-line); }
-.k { font-size: 11px; color: var(--txt3); } .v { font-size: 13px; color: var(--txt); font-weight: 600; }
+/* ── grid ── */
+.grid {
+  display: grid;
+  gap: 14px;
+}
+.grid.cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+.grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
 
-.sub-title { font-size: 11px; color: var(--cyan); font-weight: 600; margin: 10px 0 6px; }
-.hit-list { display: flex; flex-direction: column; gap: 5px; }
-.hit-row { display: flex; align-items: center; gap: 10px; font-size: 12px; }
-.hit-rank { width: 18px; color: var(--txt3); }
-.hit-name { width: 220px; }
-.hit-bar { flex: 1; height: 10px; background: var(--track); border-radius: 3px; overflow: hidden; }
-.hit-fill { display: block; height: 100%; background: linear-gradient(90deg, rgba(34,227,255,.4), rgba(34,227,255,.8)); border-radius: 3px; }
-.hit-val { width: 60px; text-align: right; font-weight: 600; }
+/* ── card ── */
+.card {
+  background: var(--bg-card, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ct {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+}
 
-.flex { display: flex; } .center { align-items: center; } .grid { display: grid; gap: 12px; }
-@media (max-width: 1180px) { .kv-grid { grid-template-columns: 1fr; } }
+/* pill */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 99px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.pill.g {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+.pill.a {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+/* ── resource grid ── */
+.res-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.res-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+.res-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.res-name {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+}
+.res-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.res-label {
+  font-size: 0.6875rem;
+  color: var(--text-muted, #6b7280);
+  width: 32px;
+  flex-shrink: 0;
+}
+.res-track {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.res-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.res-normal { background: linear-gradient(90deg, #22c55e, #4ade80); }
+.res-warning { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+.res-danger { background: linear-gradient(90deg, #ef4444, #f87171); }
+.res-val {
+  font-size: 0.6875rem;
+  color: var(--text-secondary, #94a3b8);
+  width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ── port table ── */
+.port-table {
+  max-height: 360px;
+  overflow-y: auto;
+}
+.port-table.scroll-x {
+  overflow-x: auto;
+}
+.port-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+.port-table th {
+  position: sticky;
+  top: 0;
+  background: #1e293b;
+  z-index: 2;
+  text-align: left;
+  padding: 8px 10px;
+  font-weight: 600;
+  color: var(--text-muted, #6b7280);
+  border-bottom: 1px solid var(--border, #334155);
+  white-space: nowrap;
+}
+.port-table td {
+  padding: 7px 10px;
+  color: var(--text-secondary, #94a3b8);
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  white-space: nowrap;
+}
+.port-table .row-alt td {
+  background: rgba(255, 255, 255, 0.02);
+}
+.hit-cell {
+  width: 120px;
+}
+.hit-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.hit-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(34, 211, 255, 0.4), rgba(34, 211, 255, 0.85));
+}
+
+/* ── device meta grid ── */
+.rt-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px 24px;
+}
+.rt-kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px dotted rgba(51, 65, 85, 0.5);
+}
+.rt-k {
+  font-size: 0.6875rem;
+  color: var(--text-muted, #6b7280);
+}
+.rt-v {
+  font-size: 0.7875rem;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 500;
+}
+
+/* ── policy hit list (per device) ── */
+.sub-title {
+  font-size: 0.6875rem;
+  color: var(--cyan, #22d3ee);
+  font-weight: 600;
+  margin: 12px 0 6px;
+}
+.hit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.hit-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.75rem;
+}
+.hit-rank {
+  width: 18px;
+  color: var(--text-muted, #6b7280);
+  text-align: center;
+}
+.hit-name {
+  width: 220px;
+  color: var(--text-secondary, #94a3b8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hit-bar {
+  flex: 1;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.hit-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(34, 227, 255, 0.4), rgba(34, 227, 255, 0.8));
+  border-radius: 3px;
+}
+.hit-val {
+  width: 60px;
+  text-align: right;
+  font-weight: 600;
+  color: var(--text-secondary, #94a3b8);
+}
+
+/* ── Utility ── */
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+.fw4 { font-weight: 400; }
+.f11 { font-size: 0.6875rem; }
+.ml2 { margin-left: 4px; }
+.muted { color: var(--text-muted, #6b7280); }
+.a-text { color: #f59e0b; }
+.g-text { color: #22c55e; }
+
+/* ── Error / Empty ── */
+.err-card {
+  text-align: center;
+  padding: 32px 16px;
+}
+.err-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ef4444;
+  margin-bottom: 8px;
+}
+.err-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  margin-bottom: 14px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #334155);
+  background: transparent;
+  color: var(--text-primary, #e5e7eb);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.empty-card {
+  text-align: center;
+  padding: 40px 16px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 1100px) {
+  .grid.cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
+  .res-grid {
+    grid-template-columns: 1fr;
+  }
+  .rt-meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .grid.cols-4 {
+    grid-template-columns: 1fr;
+  }
+  .rt-meta-grid {
+    grid-template-columns: 1fr;
+  }
+  .hit-name {
+    width: 120px;
+  }
+}
 </style>

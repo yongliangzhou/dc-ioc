@@ -68,3 +68,21 @@ grafana_data/
 # ---- 临时 ----
 tmp/
 temp/
+
+# ---- 本地诊断 / 验收临时产物 (截图, 日志, 脚本) ----
+*.png
+*.err
+*.out
+*.cjs
+accept*.result.txt
+accept*.txt
+diag*.cjs
+diag*.txt
+vtsc_*.txt
+v5174.*
+router-nav.yaml
+router-page*.png
+firewall-*.png
+wireless-*.png
+.frontend/.playwright-cli/
+frontend/.playwright-cli/

@@ -103,6 +103,7 @@
         @resolve="handleResolve"
         @runbook="openRunbooks"
         @ticket="openTicketFromAlarm"
+        @goDevice="handleGoDevice"
       />
     </template>
 
@@ -197,6 +198,7 @@
 <script setup lang="ts">import { useI18n } from "vue-i18n";
 const { t: tl } = useI18n();
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { useRouter } from "vue-router"
 import {
   getAlarms,
   getAlarmRules,
@@ -236,6 +238,7 @@ function ruleBandLabel(r: AlarmRuleDef): string {
   return haveCrit ? `${parts[0]} ⚠` : parts[0]
 }
 
+const router = useRouter()
 const ticketsStore = useTicketsStore()
 const ticketModalOpen = ref(false)
 const ticketInitial = ref<Partial<TicketCreateRequest>>({})
@@ -305,6 +308,28 @@ function linkToTicket(kb: KnowledgeItem) {
     ...ticketInitial.value,
     description: `${ticketInitial.value.description || ""}\n关联处置预案: ${kb.code} ${kb.title}\n步骤: ${(kb.steps || []).join(" / ")}`,
   }
+}
+
+/** 从活动告警跳转到关联设备页面 (1.5.3) */
+const DEVICE_ROUTE_MAP: Record<string, string> = {
+  chiller: '/monitor/hvac/chiller',
+  crac: '/monitor/hvac/crac',
+  liquid: '/monitor/hvac/liquid',
+  power: '/monitor/power',
+  fire: '/ops/fire',
+  security: '/ops/security',
+  network: '/monitor/network',
+  hvac: '/monitor/hvac/chiller',
+}
+function handleGoDevice(payload: { sys: string; deviceId: string }) {
+  const s = (payload.sys || '').toLowerCase()
+  let path = ''
+  for (const [key, route] of Object.entries(DEVICE_ROUTE_MAP)) {
+    if (s.includes(key)) { path = route; break }
+  }
+  if (!path) path = '/monitor/hvac/chiller' // fallback
+  if (payload.deviceId) path += `?device=${payload.deviceId}`
+  router.push(path)
 }
 import { realtimeLinkage } from "@/engine/realtimeLinkage"
 import type {

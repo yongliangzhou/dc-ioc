@@ -73,7 +73,7 @@ a{text-decoration:none; color:inherit}
 .nav-item.active{background:linear-gradient(90deg,rgba(34,227,255,.16),rgba(34,227,255,.02));
   color:var(--txt-strong); border-color:rgba(34,227,255,.4)}
 .nav-item.active::before{content:""; position:absolute; left:0; top:8px; bottom:8px; width:3px; border-radius:3px; background:var(--cyan); box-shadow:var(--glow)}
-.nav-item .ico{width:18px; text-align:center; opacity:.9}
+.nav-item .nav-icon{display:inline-flex; align-items:center; justify-content:center; width:18px; opacity:.9}
 .nav-item .badge{margin-left:auto; font-size:10px; background:var(--badge-bg); color:var(--txt2); padding:1px 6px; border-radius:9px}
 .nav-item .badge.alert{background:rgba(255,77,94,.18); color:var(--red)}
 /* ---------- Main ---------- */
