@@ -164,6 +164,14 @@ def chiller_plant() -> dict:
 def crac() -> dict:
     return _aggregate("hvac_terminal", generated.crac, ["leak", "crac"])
 
+def chiller_trends() -> dict:
+    """冷源趋势数据 (7类趋势图 + 1类柱状图) —— 纯时序数据，无需聚合"""
+    return generated.chiller_trends()
+
+def crac_trends() -> dict:
+    """空调末端趋势诊断 (7类趋势图) —— 纯时序数据，无需聚合"""
+    return generated.crac_trends()
+
 def liquid_cooling() -> dict:
     """液冷系统聚合: CDU + 冷板 + 管路 + 漏液检测 + 热回收"""
     return _aggregate("hvac_liquid_cooling", generated.liquid_cooling, ["primary_cdu", "secondary_cdu", "leak", "heat_rejection"])
@@ -607,6 +615,14 @@ def network_overview() -> dict:
         "avg_cpu_pct": data["avg_cpu_pct"],
         "avg_mem_pct": data["avg_mem_pct"],
         "switches": data["switches"],
+        "routers": data["routers"],
+        "firewalls": data["firewalls"],
+        "wireless": data["wireless"],
+        "ping_targets": data["ping_targets"],
+        "avg_ping_rtt_ms": data["avg_ping_rtt_ms"],
+        "avg_ping_loss_pct": data["avg_ping_loss_pct"],
+        "worst_ping_target": data["worst_ping_target"],
+        "bw_topn": data["bw_topn"],
     }
 
 

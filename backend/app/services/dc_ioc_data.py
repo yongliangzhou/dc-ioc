@@ -22,6 +22,11 @@ def rnd(a: float, b: float, f: int = 1) -> float:
     return round(a + _rng.random() * (b - a), f)
 
 
+# 全局 _rnd 别名（修复 chiller_plant 等在模块加载期调用 _rnd 的历史遗留问题）
+def _rnd(a, b, f=1):
+    return round(a + _rng.random() * (b - a), f)
+
+
 def pick(arr):
     return arr[_rng.randint(0, len(arr) - 1)]
 
@@ -79,28 +84,28 @@ def chiller_plant():
         {"id": "CT-07", "state": "待机", "fanHz": 0, "outT": "-"},
         {"id": "CT-08", "state": "检修", "fanHz": 0, "outT": "-"},
     ]
-    pumps_chw = [{"id": "CHWP-01", "state": "运行", "hz": 40, "kw": 55},
-                 {"id": "CHWP-02", "state": "运行", "hz": 40, "kw": 54},
-                 {"id": "CHWP-03", "state": "运行", "hz": 38, "kw": 52},
-                 {"id": "CHWP-04", "state": "运行", "hz": 38, "kw": 53},
-                 {"id": "CHWP-05", "state": "运行", "hz": 36, "kw": 50},
-                 {"id": "CHWP-06", "state": "待机", "hz": 0, "kw": 0},
-                 {"id": "CHWP-07", "state": "待机", "hz": 0, "kw": 0},
-                 {"id": "CHWP-08", "state": "检修", "hz": 0, "kw": 0}]
-    pumps_cw = [{"id": "CWP-01", "state": "运行", "hz": 42, "kw": 75},
-                {"id": "CWP-02", "state": "运行", "hz": 42, "kw": 74},
-                {"id": "CWP-03", "state": "运行", "hz": 40, "kw": 72},
-                {"id": "CWP-04", "state": "运行", "hz": 40, "kw": 73},
-                {"id": "CWP-05", "state": "运行", "hz": 38, "kw": 70},
-                {"id": "CWP-06", "state": "待机", "hz": 0, "kw": 0},
-                {"id": "CWP-07", "state": "待机", "hz": 0, "kw": 0},
-                {"id": "CWP-08", "state": "检修", "hz": 0, "kw": 0}]
-    pumps_sec = [{"id": "SCHWP-01", "state": "运行", "hz": 40, "kw": 52, "flow": 620},
-                 {"id": "SCHWP-02", "state": "运行", "hz": 40, "kw": 51, "flow": 615},
-                 {"id": "SCHWP-03", "state": "运行", "hz": 38, "kw": 49, "flow": 590},
-                 {"id": "SCHWP-04", "state": "运行", "hz": 38, "kw": 50, "flow": 595},
-                 {"id": "SCHWP-05", "state": "待机", "hz": 0, "kw": 0, "flow": 0},
-                 {"id": "SCHWP-06", "state": "待机", "hz": 0, "kw": 0, "flow": 0}]
+    pumps_chw = [{"id": "CHWP-01", "state": "运行", "hz": 40, "kw": 55, "flow": 580, "inP": 2.8, "outP": 3.2},
+                 {"id": "CHWP-02", "state": "运行", "hz": 40, "kw": 54, "flow": 575, "inP": 2.8, "outP": 3.2},
+                 {"id": "CHWP-03", "state": "运行", "hz": 38, "kw": 52, "flow": 560, "inP": 2.7, "outP": 3.1},
+                 {"id": "CHWP-04", "state": "运行", "hz": 38, "kw": 53, "flow": 565, "inP": 2.7, "outP": 3.1},
+                 {"id": "CHWP-05", "state": "运行", "hz": 36, "kw": 50, "flow": 540, "inP": 2.6, "outP": 3.0},
+                 {"id": "CHWP-06", "state": "待机", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0},
+                 {"id": "CHWP-07", "state": "待机", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0},
+                 {"id": "CHWP-08", "state": "检修", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0}]
+    pumps_cw = [{"id": "CWP-01", "state": "运行", "hz": 42, "kw": 75, "flow": 720, "inP": 3.0, "outP": 3.6},
+                {"id": "CWP-02", "state": "运行", "hz": 42, "kw": 74, "flow": 715, "inP": 3.0, "outP": 3.5},
+                {"id": "CWP-03", "state": "运行", "hz": 40, "kw": 72, "flow": 700, "inP": 2.9, "outP": 3.4},
+                {"id": "CWP-04", "state": "运行", "hz": 40, "kw": 73, "flow": 705, "inP": 2.9, "outP": 3.4},
+                {"id": "CWP-05", "state": "运行", "hz": 38, "kw": 70, "flow": 680, "inP": 2.8, "outP": 3.2},
+                {"id": "CWP-06", "state": "待机", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0},
+                {"id": "CWP-07", "state": "待机", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0},
+                {"id": "CWP-08", "state": "检修", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0}]
+    pumps_sec = [{"id": "SCHWP-01", "state": "运行", "hz": 40, "kw": 52, "flow": 620, "inP": 3.2, "outP": 3.8},
+                 {"id": "SCHWP-02", "state": "运行", "hz": 40, "kw": 51, "flow": 615, "inP": 3.2, "outP": 3.7},
+                 {"id": "SCHWP-03", "state": "运行", "hz": 38, "kw": 49, "flow": 590, "inP": 3.1, "outP": 3.5},
+                 {"id": "SCHWP-04", "state": "运行", "hz": 38, "kw": 50, "flow": 595, "inP": 3.1, "outP": 3.6},
+                 {"id": "SCHWP-05", "state": "待机", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0},
+                 {"id": "SCHWP-06", "state": "待机", "hz": 0, "kw": 0, "flow": 0, "inP": 0, "outP": 0}]
     hexs = [
         {"id": "HEX-01", "state": "投入", "eff": 93, "priIn": 16.8, "priOut": 14.6, "secIn": 13.2, "secOut": 15.9},
         {"id": "HEX-02", "state": "投入", "eff": 92, "priIn": 16.9, "priOut": 14.7, "secIn": 13.3, "secOut": 16.0},
@@ -108,15 +113,36 @@ def chiller_plant():
         {"id": "HEX-04", "state": "待机", "eff": 0, "priIn": "-", "priOut": "-", "secIn": "-", "secOut": "-"},
     ]
     valves = [
-        {"id": "V-101", "name": "CH-01~02 冷机侧电动阀", "pos": 100, "state": "开"},
-        {"id": "V-102", "name": "CH-03~04 冷机侧电动阀", "pos": 100, "state": "开"},
-        {"id": "V-201", "name": "板换 A 组电动阀", "pos": 100, "state": "开"},
-        {"id": "V-202", "name": "板换 B 组电动阀", "pos": 65, "state": "调节"},
-        {"id": "V-301", "name": "蓄冷罐放冷阀", "pos": 0, "state": "关"},
-        {"id": "V-401", "name": "旁通调节阀", "pos": 18, "state": "调节"},
-        {"id": "V-501", "name": "供回水总管隔离阀", "pos": 100, "state": "开"},
-        {"id": "V-601", "name": "二次侧分水器调阀", "pos": 80, "state": "调节"},
+        {"id": "V-101", "name": "CH-01~02 冷机侧电动阀", "pos": 100, "state": "开", "type": "电动蝶阀"},
+        {"id": "V-102", "name": "CH-03~04 冷机侧电动阀", "pos": 100, "state": "开", "type": "电动蝶阀"},
+        {"id": "V-201", "name": "板换 A 组电动阀", "pos": 100, "state": "开", "type": "电动蝶阀"},
+        {"id": "V-202", "name": "板换 B 组电动阀", "pos": 65, "state": "调节", "type": "电动调节阀"},
+        {"id": "V-301", "name": "蓄冷罐放冷阀", "pos": 0, "state": "关", "type": "电动蝶阀"},
+        {"id": "V-401", "name": "旁通调节阀", "pos": 18, "state": "调节", "type": "电动调节阀"},
+        {"id": "V-501", "name": "供回水总管隔离阀", "pos": 100, "state": "开", "type": "电动闸阀"},
+        {"id": "V-601", "name": "二次侧分水器调阀", "pos": 80, "state": "调节", "type": "电动调节阀"},
     ]
+    # 定压补水装置 (constant pressure makeup water unit)
+    makeupDevice = {
+        "id": "MU-01", "state": "运行", "mode": "自动定压",
+        "supplyP": 3.5, "setpointP": 3.5, "tankLevel": 72,
+        "waterTemp": 22.8, "pumpHz": 0, "makeupFlow": 0,
+        "alarms": [],
+    }
+    # 旁滤水装置 (bypass filtration unit)
+    bypassFilter = {
+        "id": "BF-01", "state": "运行", "mode": "自动循环",
+        "flow": 85, "inP": 2.1, "outP": 2.8, "diffP": 0.7,
+        "turbidity": 0.8, "backwashInterval": 48, "lastBackwash": "07:15",
+        "filterHealth": 94, "alarms": [],
+    }
+    # 管路压力监测 (pipeline pressure monitoring points)
+    pipePressure = {
+        "supplyHeader": 3.8, "returnHeader": 2.5,
+        "secSupplyHeader": 3.6, "secReturnHeader": 2.3,
+        "condenserSupply": 3.4, "condenserReturn": 2.7,
+        "makeupSupply": 3.5, "makeupReturn": 1.8,
+    }
     return {
         "mode": "预冷模式",
         "modes": ["制冷模式", "预冷模式", "自然冷却模式"],
@@ -132,6 +158,9 @@ def chiller_plant():
         "pumps": {"chw": pumps_chw, "cw": pumps_cw, "sec": pumps_sec},
         "hex": hexs,
         "valves": valves,
+        "makeupDevice": makeupDevice,
+        "bypassFilter": bypassFilter,
+        "pipePressure": pipePressure,
         "staging": {"rule": "供水温度 > 设定+1.0℃ 持续 5min 加机；PLR < 45% 持续 15min 减机",
                     "lastAction": "10:42 CH-03 自动加机(负载爬升)", "next": "—"},
         # ===== 基于《阿里云数据中心弱电手册》的运行模式决策（设计阈值）=====
@@ -196,9 +225,19 @@ def chiller_plant():
         ],
         "tempTrend": series(48, 14.6, 15.8),
         "loadTrend": series(48, 55, 80),
+        # ===== 制冷机组×水泵×蓄冷罐分组 (CH↔CHWP↔CWP↔关联蓄冷罐) =====
+        "chillerGroups": [
+            {
+                "chiller": chillers[i],
+                "chwPump": pumps_chw[i] if i < len(pumps_chw) else None,
+                "cwPump": pumps_cw[i] if i < len(pumps_cw) else None,
+                "tankConnected": i < 4,  # 前4台冷机直连蓄冷罐
+                "tankFlow": _rnd(0, 120, 0) if i < 4 else 0,
+            } for i in range(len(chillers))
+        ],
         "knowledge": {
             "arch": {
-                "components": ["冷机群(8台 CH)", "冷却塔(8台 CT)", "冷冻/冷却/二次泵(8/8/6)", "板式换热器(4台 自然冷)", "蓄冷罐(6000m³)", "电动阀/旁通(8个)"],
+                "components": ["冷机群(8台 CH)", "冷却塔(8台 CT)", "一次冷冻泵(8台 CHWP)", "冷却泵(8台 CWP)", "二次冷冻泵(6台 SCHWP)", "板式换热器(4台 自然冷)", "蓄冷罐(6000m³)", "电动阀/旁通(8个)", "定压补水装置(1套)", "旁滤水装置(1套)"],
                 "design": "8 台冷机 (4+2+N 冗余)，三级自然冷(制冷/预冷/自然冷)按需切换；蓄冷罐保冷 20min 停电续冷。",
                 "redundancy": "冷机 N+2、冷却塔 N+3、水泵 N+2、双路供电、蓄冷罐兜底。",
             },
@@ -212,6 +251,120 @@ def chiller_plant():
             ],
             "note": "制冷系统占数据中心总电费约 24%；充分利用自然冷(source free cooling)是 PUE 优化的核心。温升是 IT 设备宕机的第一大杀手——从“阈值报警”升级为“趋势预警”可大幅减少漏报与误报。",
         },
+    }
+
+
+# ---- 冷源趋势数据 (7类趋势图 + 1类柱状图) ----
+def chiller_trends():
+    """生成冷源系统全部时序趋势数据:
+    1. 冷冻水出水温度 vs 室外湿球温度 vs 负载率 叠加趋势 (24h/7d/30d)
+    2. COP vs %RLA 散点 (24h/7d/30d)
+    3. 冷凝水 vs 冷却水出水温差趋势 (24h/7d/30d)
+    4. 水泵频率 vs 流量关联 (24h/7d/30d)
+    5. 罐体垂直温度梯度色阶图/热力图 (24h/7d/30d)
+    6. 总制冷负载(RT) + 自然冷源利用率 月度柱状叠加 (30d)
+    7. 冷冻水供回水温差 vs 旁通阀开度 (1h)
+    """
+    now = datetime.now(timezone.utc).astimezone()
+
+    def _pts(n, base, amp, step_mins):
+        """生成带正弦趋势的时间-值序列"""
+        pts = []
+        for i in range(n):
+            t = now - timedelta(minutes=step_mins * (n - 1 - i))
+            v = base + math.sin(i / n * math.pi * 2) * amp * 0.5 + (_rng.random() - 0.5) * amp * 0.3
+            pts.append({"ts": t.isoformat(timespec="minutes"), "value": round(v, 2)})
+        return pts
+
+    def _times(n, step_mins):
+        return [(now - timedelta(minutes=step_mins * (n - 1 - i))).isoformat(timespec="minutes") for i in range(n)]
+
+    # ---- 1. 冷冻水出水温度(℃) + 室外湿球温度(℃) + 负载率(%) 叠加趋势 ----
+    _n24, _n7d, _n30d = 48, 84, 60  # 30min / 2h / 12h
+    _s24, _s7d, _s30d = 30, 120, 720
+
+    freezeTrend = {}
+    for tag, n, step in [("24h", _n24, _s24), ("7d", _n7d, _s7d), ("30d", _n30d, _s30d)]:
+        freezeTrend[tag] = {
+            "timestamps": _times(n, step),
+            "supplyTemp": [round(15.0 + math.sin(i / n * math.pi * 2) * 0.8 + (_rng.random() - 0.5) * 0.4, 1) for i in range(n)],
+            "wetBulb": [round(14.1 + math.sin((i + 4) / n * math.pi * 2) * 3.5 + (_rng.random() - 0.5) * 1.0, 1) for i in range(n)],
+            "loadPct": [round(64 + math.sin(i / n * math.pi * 2 + 0.5) * 18 + (_rng.random() - 0.5) * 5, 0) for i in range(n)],
+        }
+
+    # ---- 2. COP vs %RLA 散点 (8台冷机 × 采样点) ----
+    copRlaScatter = {}
+    for tag, n, step in [("24h", _n24, _s24), ("7d", _n7d, _s7d), ("30d", _n30d, _s30d)]:
+        pts = []
+        for ch_idx in range(4):  # 运行中的冷机 CH-01~04
+            for i in range(n // 4):
+                rla = round(45 + (_rng.random()) * 45, 1)  # 45~90%
+                cop = round(max(3.0, 6.5 - (rla - 45) * 0.04 + (_rng.random() - 0.5) * 0.8), 2)
+                pts.append({"chiller": f"CH-0{ch_idx+1}", "rla": rla, "cop": cop,
+                           "ts": (now - timedelta(minutes=step * (n - 1 - (ch_idx * n // 4 + i)))).isoformat(timespec="minutes")})
+        copRlaScatter[tag] = pts
+
+    # ---- 3. 冷凝水出水温度(condOut) vs 冷却水出水温度(coolOut) 及其温差 ----
+    condCoolDiff = {}
+    for tag, n, step in [("24h", _n24, _s24), ("7d", _n7d, _s7d), ("30d", _n30d, _s30d)]:
+        cond = [round(29.1 + math.sin(i / n * math.pi * 2) * 1.5 + (_rng.random() - 0.5) * 0.5, 1) for i in range(n)]
+        cool = [round(19.2 + math.sin((i + 2) / n * math.pi * 2) * 1.2 + (_rng.random() - 0.5) * 0.4, 1) for i in range(n)]
+        diff = [round(c - l, 1) for c, l in zip(cond, cool)]
+        condCoolDiff[tag] = {"timestamps": _times(n, step), "condTemp": cond, "coolTemp": cool, "diff": diff}
+
+    # ---- 4. 水泵频率(Hz) vs 流量(m³/h) 关联 (CHWP冷冻泵 + CWP冷却泵) ----
+    pumpFreqFlow = {}
+    for tag, n, step in [("24h", _n24, _s24), ("7d", _n7d, _s7d), ("30d", _n30d, _s30d)]:
+        chw_pts = []
+        cw_pts = []
+        for i in range(n // 2):
+            hz = round(36 + (_rng.random()) * 8, 1)
+            chw_pts.append({"hz": hz, "flow": round(hz * 14.5 + (_rng.random() - 0.5) * 10, 0)})
+            hz2 = round(38 + (_rng.random()) * 8, 1)
+            cw_pts.append({"hz": hz2, "flow": round(hz2 * 17.1 + (_rng.random() - 0.5) * 12, 0)})
+        pumpFreqFlow[tag] = {"chwPump": chw_pts, "cwPump": cw_pts}
+
+    # ---- 5. 罐体垂直温度梯度色阶图 (6层 × 时间) ----
+    levels = ["0m(顶)", "2m", "4m", "6m", "8m", "10m(底)"]
+    tankGradient = {}
+    for tag, n, step in [("24h", _n24, _s24), ("7d", _n7d, _s7d), ("30d", _n30d, _s30d)]:
+        timestamps = _times(n, step)
+        base_temps = [5.6, 6.5, 7.8, 9.2, 11.0, 12.8]
+        data = []
+        for lv in range(6):
+            row = []
+            for i in range(n):
+                season = math.sin(i / n * math.pi * 2) * 0.8
+                row.append(round(base_temps[lv] + season + (_rng.random() - 0.5) * 0.6, 1))
+            data.append(row)
+        tankGradient[tag] = {"timestamps": timestamps, "levels": levels, "data": data}
+
+    # ---- 6. 总制冷负载(RT) + 自然冷源利用率(%) 月度柱状叠加 (30天) ----
+    days = []
+    coolingRts = []
+    freeCoolingPcts = []
+    for d in range(30):
+        days.append((now - timedelta(days=29 - d)).strftime("%m-%d"))
+        baseRt = 18000 + math.sin(d / 30 * math.pi * 2) * 3000
+        coolingRts.append(round(baseRt + (_rng.random() - 0.5) * 800, 0))
+        freeCoolingPcts.append(round(15 + math.sin((d + 5) / 30 * math.pi * 2) * 25 + (_rng.random() - 0.5) * 8, 0))
+    coolingFreecoolingMonthly = {"days": days, "coolingLoad": coolingRts, "freeCoolingPct": freeCoolingPcts, "unit": "RT"}
+
+    # ---- 7. 冷冻水供回水温差(ΔT) vs 旁通阀开度(%) 实时趋势 (过去1小时, 60点/1min) ----
+    n1h = 60
+    ts_1h = _times(n1h, 1)
+    deltaT_1h = [round(5.6 + math.sin(i / n1h * math.pi * 2) * 0.8 + (_rng.random() - 0.5) * 0.3, 1) for i in range(n1h)]
+    bypass_1h = [round(18 + math.sin(i / n1h * math.pi * 2 + 1.2) * 8 + (_rng.random() - 0.5) * 3, 0) for i in range(n1h)]
+    deltaTBypass1h = {"timestamps": ts_1h, "deltaT": deltaT_1h, "bypassValve": bypass_1h, "deltaTDesign": 6.0, "bypassHighAlarm": 50}
+
+    return {
+        "freezeTrend": freezeTrend,
+        "copRlaScatter": copRlaScatter,
+        "condCoolDiff": condCoolDiff,
+        "pumpFreqFlow": pumpFreqFlow,
+        "tankGradient": tankGradient,
+        "coolingFreecoolingMonthly": coolingFreecoolingMonthly,
+        "deltaTBypass1h": deltaTBypass1h,
     }
 
 
@@ -550,6 +703,12 @@ def crac():
             wvalve = 0 if (offline or standby) else rnd(40, 80, 0)
             power = 0 if (offline or standby) else rnd(8, 22, 1)
             dp = "-" if (offline or standby) else rnd(40, 120, 0)
+            # --- 趋势分析额外字段 ---
+            supply_sp = "-" if (offline or standby) else rnd(120, 320, 1)        # 送风静压 Pa
+            suction_sh = "-" if (offline or standby) else round(rnd(4.5, 9.5, 1), 1)  # 吸气过热度 °C
+            discharge_sh = "-" if (offline or standby) else round(rnd(22, 38, 1), 1)  # 排气过热度 °C
+            shr_val = "-" if (offline or standby) else round(rnd(0.75, 0.94, 3), 2)  # 显热比
+            cab_inlet = "-" if (offline or standby) else rnd(20.5, 24.5, 1)      # 机柜进风区域温度
             units.append({
                 "id": f"CRAC-{prefix}{str(k + 1).zfill(2)}",
                 "room": room,
@@ -561,6 +720,9 @@ def crac():
                 "chilledWaterT": chilled_wt, "returnWaterT": return_wt,
                 "fan": fan, "valve": valve, "waterValve": wvalve,
                 "power": power, "dp": dp,
+                "supplyStaticPressure": supply_sp, "suctionSuperheat": suction_sh,
+                "dischargeSuperheat": discharge_sh, "shr": shr_val,
+                "cabinetInletTemp": cab_inlet,
                 "filter": "脏堵" if (not offline and _rng.random() < 0.1) else "正常",
                 "control": {
                     "fanEnable": not standby,
@@ -607,6 +769,54 @@ def crac():
     avg_rw = round(sum(rw) / len(rw), 1) if rw else 0
     avg_inout = round(sum(r["inOutDiff"] for r in rooms) / len(rooms), 1)
 
+    # === 按包间分组设备 (新风/房间级空调/列间空调/恒湿机/温湿度压差 ===
+    fau_by_room = {
+        "A 包间": {"id": "FAU-01", "state": "运行", "supplyT": 20.1, "rh": 55, "co2": 520, "filterDp": 86},
+        "B 包间": {"id": "FAU-02", "state": "运行", "supplyT": 20.3, "rh": 54, "co2": 545, "filterDp": 92},
+        "C 包间": {"id": "FAU-03", "state": "待机", "supplyT": "-", "rh": "-", "co2": "-", "filterDp": 44},
+        "D 包间": {"id": "FAU-04", "state": "待机", "supplyT": "-", "rh": "-", "co2": "-", "filterDp": 38},
+        "E 包间": {"id": "FAU-05", "state": "运行", "supplyT": 20.5, "rh": 57, "co2": 538, "filterDp": 78},
+        "F 包间": {"id": "FAU-06", "state": "运行", "supplyT": 20.2, "rh": 53, "co2": 512, "filterDp": 82},
+    }
+    hum_by_room = {
+        "A 包间": {"id": "HUM-01", "name": "恒湿机", "state": "运行", "rh": 51, "mode": "加湿"},
+        "B 包间": {"id": "HUM-02", "name": "恒湿机", "state": "运行", "rh": 49, "mode": "除湿"},
+        "C 包间": {"id": "HUM-03", "name": "恒湿机", "state": "待机", "rh": "-", "mode": "-"},
+        "D 包间": {"id": "HUM-04", "name": "恒湿机", "state": "运行", "rh": 48, "mode": "加湿"},
+        "E 包间": {"id": "HUM-05", "name": "恒湿机", "state": "运行", "rh": 53, "mode": "除湿"},
+        "F 包间": {"id": "HUM-06", "name": "恒湿机", "state": "运行", "rh": 50, "mode": "加湿"},
+    }
+
+    room_groups = []
+    for r in rooms:
+        rn = r["id"]
+        # 该包间的精密空调
+        r_cracs = [u for u in units if u["room"] == rn]
+        room_level = [u for u in r_cracs if u["type"] == "房间级精密空调"]
+        in_row = [u for u in r_cracs if u["type"] == "列间空调"]
+
+        # 温湿度压差传感器 (架空地板下送风静压)
+        group = {
+            "roomId": rn,
+            "roomName": rn,
+            "status": r["state"],
+            "cracRun": r["cracRun"], "cracN": r["cracN"],
+            "envSensors": {
+                "avgTemp": r["avgTemp"], "avgRh": r["avgRh"],
+                "hotAisleTemp": r["hotAisle"], "hotAisleRh": r["hotRh"],
+                "coldAisleTemp": r["coldAisle"], "coldAisleRh": r["coldRh"],
+                "dewPoint": r["dewPoint"],
+                "inOutDiff": r["inOutDiff"],
+                "supplyStaticPressure": round(rnd(22, 55, 1), 1),  # Pa 架空地板下静压
+            },
+            "roomCracs": room_level,
+            "inRowCracs": in_row,
+            "fau": fau_by_room.get(rn),
+            "humidifier": hum_by_room.get(rn),
+            "leak": r["leak"],
+        }
+        room_groups.append(group)
+
     return {
         "summary": {
             "total": len(units), "running": running, "standby": standby_n,
@@ -618,6 +828,7 @@ def crac():
             "leakAlarm": leak_alarm, "leakTotal": len(leak_devices),
         },
         "rooms": rooms,
+        "roomGroups": room_groups,
         "units": units,
         "leak": {
             "total": len(leak_devices), "alarm": leak_alarm,
@@ -664,6 +875,189 @@ def crac():
             ],
             "note": "机房温升(冷热通道温度异常)是 IT 宕机首要诱因；末端空调失效将直接推高包间温度，需以趋势预警替代单一阈值报警。",
         },
+    }
+
+
+
+# ---- 空调末端趋势诊断 (7类趋势图) ----
+def crac_trends():
+    """生成空调末端全部时序趋势数据:
+    1. 回风温度 vs 设定值偏差累积(温差积分) — 48h
+    2. 滤网压差(ΔP)的月度爬升斜率 — 90d
+    3. 显热比(SHR)的长期趋势(以周为单位)
+    4. 送风温度 vs 机柜进风区域温度温差对比 — 24h/7d/30d
+    5. 风机转速(%) vs 送风静压(Pa)关联滞后分析(以天为单位)
+    6. 冷冻水电动二通阀开度(%V) vs 进出水水温差(ΔT)趋势叠加
+    7. 吸气过热度(℃) + 排气过热度(℃)趋势
+    """
+    import math
+    now = datetime.now()
+
+    def _ts(hours, step_min=5):
+        n = hours * 60 // step_min
+        return [(now - timedelta(hours=hours) + timedelta(minutes=i * step_min)).isoformat() for i in range(n)]
+
+    def _dly(days):
+        return [(now - timedelta(days=days - i)).strftime('%m-%d') for i in range(days)]
+
+    def _wly(weeks):
+        return [f"W-{i + 1}" for i in range(weeks)]
+
+    def _sine(n, base, amp, ramp=0):
+        vals = []
+        for i in range(n):
+            v = base + amp * math.sin(2 * math.pi * i / max(1, n) * (48 if n > 500 else 7))
+            v += rnd(-amp * 0.2, amp * 0.2, 1)  # noise
+            v += ramp * i / max(1, n)
+            vals.append(round(v, 2))
+        return vals
+
+    # 代表性机房单元 (选3间有CRAC的包间)
+    room_units = {
+        "A 包间": ["CRAC-A01", "CRAC-A02", "CRAC-A03", "CRAC-A04"],
+        "B 包间": ["CRAC-B01", "CRAC-B02", "CRAC-B03"],
+        "C 包间": ["CRAC-C01", "CRAC-C02", "CRAC-C03"],
+    }
+
+    # ===== 1. 回风温度偏差累积 (温差积分) 48h =====
+    delta_t_integral = {"title": "回风温度与设定值偏差累积(温差积分)", "unit": "°C·h", "period": "48小时", "rooms": []}
+    for room_name, uids in room_units.items():
+        series_list = []
+        for uid in uids:
+            t_return = _sine(576, 27.5, 2.5, ramp=1.2)   # 48h * 60 / 5 = 576 points
+            t_set = [24.0] * 576
+            delta = [round(a - b, 2) for a, b in zip(t_return, t_set)]
+            # 累积积分 (简单梯形)
+            integral = []
+            cum = 0.0
+            for j in range(len(delta)):
+                if delta[j] > 0:
+                    cum += delta[j] * 5 / 60  # 5min -> hours
+                integral.append(round(cum, 3))
+            series_list.append({"unitId": uid, "label": uid, "data": integral})
+        delta_t_integral["rooms"].append({"roomId": room_name, "roomName": room_name, "series": series_list})
+
+    # ===== 2. 滤网压差(ΔP)月度爬升斜率 90d =====
+    filter_dp_slope = {"title": "滤网压差(ΔP)月度爬升斜率", "unit": "Pa/月", "period": "90天", "units": []}
+    for room_name, uids in room_units.items():
+        for uid in uids[:-1]:  # exclude one for variety
+            daily_vals = _sine(90, 80, 25, ramp=35)  # 90 daily data points, ramping up
+            # Calculate monthly slope (rolling 30-day)
+            slopes = []
+            for j in range(30, len(daily_vals)):
+                slope_30 = round((daily_vals[j] - daily_vals[j - 30]) / 30, 3)
+                slopes.append({"date": _dly(90)[j], "value": slope_30})
+            filter_dp_slope["units"].append({
+                "unitId": uid, "label": uid, "roomName": room_name,
+                "raw": [{"date": _dly(90)[j], "value": daily_vals[j]} for j in range(90)],
+                "slope": slopes,
+                "trend": "上升" if daily_vals[-1] - daily_vals[0] > 10 else "稳定",
+            })
+
+    # ===== 3. 显热比(SHR)长期趋势 以周为单位 =====
+    shr_trend = {"title": "显热比(SHR)长期趋势", "unit": "SHR", "period": "12周", "units": []}
+    for room_name, uids in room_units.items():
+        for uid in uids[:2]:
+            vals = _sine(12, 0.85, 0.06, ramp=-0.02)  # 12 weekly, slight decline
+            vals = [max(0.72, min(0.95, v)) for v in vals]
+            shr_trend["units"].append({
+                "unitId": uid, "label": uid, "roomName": room_name,
+                "data": [{"week": _wly(12)[j], "value": vals[j]} for j in range(12)],
+            })
+
+    # ===== 4. 送风温度 vs 机柜进风区域温度温差对比 24h/7d/30d =====
+    supply_vs_cabinet = {"title": "送风温度与机柜进风区域温度温差对比", "unit": "°C", "periods": ["24h", "7d", "30d"], "rooms": []}
+    periods_h = [24, 168, 720]
+    for room_name in room_units:
+        period_data = {}
+        for pi, hours in enumerate(periods_h):
+            n = hours * 60 // 15  # 15-min
+            labels = _ts(hours, 15)
+            t_supply = _sine(n, 18.5, 1.0)
+            t_cabinet = _sine(n, 22.5, 1.5, ramp=-0.3)
+            t_diff = [round(a - b, 2) for a, b in zip(t_supply, t_cabinet)]
+            period_data[["24h", "7d", "30d"][pi]] = {
+                "timestamps": labels,
+                "supplyTemp": t_supply,
+                "cabinetInletTemp": t_cabinet,
+                "deltaT": t_diff,
+            }
+        supply_vs_cabinet["rooms"].append({"roomId": room_name, "roomName": room_name, "periods": period_data})
+
+    # ===== 5. 风机转速(%) vs 送风静压(Pa)关联滞后分析 以天为单位 =====
+    fan_static = {"title": "风机转速与送风静压关联滞后分析", "unit": "% / Pa", "period": "7天(96点/天,15min)", "units": []}
+    for room_name, uids in room_units.items():
+        for uid in uids[:2]:
+            n = 7 * 96
+            timestamps = _ts(168, 15)
+            fan_speed = _sine(n, 75, 12)
+            # Static pressure with ~2 lag (8 * 15min = 2h)
+            lag = 8
+            static_p = [0.0] * n
+            for j in range(n):
+                src_idx = max(0, j - lag)
+                static_p[j] = round(55 + fan_speed[src_idx] * 1.8 + rnd(-5, 5, 1), 1)
+            # Cross-correlation per day
+            daily_ccf = []
+            for d in range(7):
+                start = d * 96
+                end = start + 96
+                fs_seg = fan_speed[start:end]
+                sp_seg = static_p[start:end]
+                # Pearson r
+                mean_fs, mean_sp = sum(fs_seg) / 96, sum(sp_seg) / 96
+                num = sum((a - mean_fs) * (b - mean_sp) for a, b in zip(fs_seg, sp_seg))
+                den1 = math.sqrt(sum((a - mean_fs) ** 2 for a in fs_seg))
+                den2 = math.sqrt(sum((b - mean_sp) ** 2 for b in sp_seg))
+                r = round(num / max(den1 * den2, 0.001), 3)
+                daily_ccf.append({"day": _dly(7)[d], "correlation": r, "bestLag": 2})
+            fan_static["units"].append({
+                "unitId": uid, "label": uid, "roomName": room_name,
+                "timestamps": timestamps,
+                "fanSpeed": fan_speed,
+                "staticPressure": static_p,
+                "dailyCorrelation": daily_ccf,
+            })
+
+    # ===== 6. 冷冻水电动二通阀开度(%V) vs 进出水水温差(ΔT)趋势叠加 =====
+    valve_dt = {"title": "冷冻水电动二通阀开度与进出水水温差趋势叠加", "unit": "%V / °C", "period": "24小时", "units": []}
+    n_24h = 24 * 60
+    for room_name, uids in room_units.items():
+        for uid in uids[:2]:
+            timestamps = _ts(24, 1)  # 1-min
+            valve_op = _sine(n_24h, 60, 18)
+            delta_t = [round(v * 0.12 + 3.5 + rnd(-0.5, 0.5, 1), 1) for v in valve_op]
+            valve_dt["units"].append({
+                "unitId": uid, "label": uid, "roomName": room_name,
+                "timestamps": timestamps,
+                "valveOpening": valve_op,
+                "waterDeltaT": delta_t,
+            })
+
+    # ===== 7. 吸气过热度 + 排气过热度趋势 =====
+    superheat_trend = {"title": "吸气过热度与排气过热度趋势", "unit": "°C", "period": "24小时", "units": []}
+    for room_name, uids in room_units.items():
+        for uid in uids[:2]:
+            timestamps = _ts(24, 5)
+            n = len(timestamps)
+            suction = _sine(n, 6.5, 1.8)
+            discharge = _sine(n, 28, 5, ramp=1.5)
+            superheat_trend["units"].append({
+                "unitId": uid, "label": uid, "roomName": room_name,
+                "timestamps": timestamps,
+                "suctionSuperheat": suction,
+                "dischargeSuperheat": discharge,
+            })
+
+    # Manual y-axis labels for dual y-axis charts
+    return {
+        "deltaTIntegral": delta_t_integral,
+        "filterDpSlope": filter_dp_slope,
+        "shrTrend": shr_trend,
+        "supplyVsCabinet": supply_vs_cabinet,
+        "fanVsStaticPressure": fan_static,
+        "valveDeltaT": valve_dt,
+        "superheatTrend": superheat_trend,
     }
 
 
@@ -772,15 +1166,104 @@ def hv():
              {"name": "有载调压", "value": "自动 5档", "level": "b"},
          ]},
     ]
+    # 直流屏 (为开关柜操作/保护/控制回路提供 DC 220V/110V 电源)
+    dcPanel = {
+        "id": "直流屏 DC-01",
+        "dcBus": 220, "dcBusTarget": 220,  # V
+        "batteryBank": 108,  # V (18节×12V 蓄电池组)
+        "chargeI": 4.2, "dischargeI": 0,
+        "insulationR": 28.5,  # MΩ 正负极对地绝缘
+        "ripple": 0.08,  # 纹波电压 V
+        "state": "浮充",
+        "alarms": [
+            {"name": "交流失电", "value": "无", "level": "g"},
+            {"name": "充电模块故障", "value": "无", "level": "g"},
+            {"name": "蓄电池组过压", "value": "无", "level": "g"},
+            {"name": "绝缘降低", "value": "无", "level": "g"},
+            {"name": "馈线空开跳闸", "value": "无", "level": "g"},
+        ],
+    }
+    # 开关柜环境监测 (柜内温湿度、局放 TEV/超声)
+    switchgearEnv = {
+        "rows": [
+            {"id": "进线柜列", "t": 27.2, "h": 45, "tev": 2.1, "us": -5.2, "state": "正常"},
+            {"id": "馈线柜列 A", "t": 27.8, "h": 47, "tev": 3.4, "us": -3.1, "state": "正常"},
+            {"id": "馈线柜列 B", "t": 28.1, "h": 48, "tev": 4.2, "us": -2.8, "state": "注意"},
+            {"id": "母联/PT柜列", "t": 26.9, "h": 44, "tev": 1.8, "us": -4.7, "state": "正常"},
+        ],
+        "note": "TEV(dBmV) <20 正常; 超声波(dB) <0 正常",
+    }
+    # 保护装置 (每路进线/馈线配备微机保护)
+    protectionRelays = [
+        {"id": "1# 进线保护 REF615", "device": "10KV 1# 进线", "state": "运行",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "投入",
+         "overVoltage": "投入", "freq": "投入", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+        {"id": "2# 进线保护 REF615", "device": "10KV 2# 进线", "state": "运行",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "投入",
+         "overVoltage": "投入", "freq": "投入", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+        {"id": "F-01 馈线保护 REF611", "device": "1# 变压器馈线", "state": "运行",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "退出",
+         "overVoltage": "退出", "freq": "退出", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+        {"id": "F-02 馈线保护 REF611", "device": "2# 变压器馈线", "state": "运行",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "退出",
+         "overVoltage": "退出", "freq": "退出", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+        {"id": "F-03 馈线保护 REF611", "device": "3# 变压器馈线", "state": "运行",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "退出",
+         "overVoltage": "退出", "freq": "退出", "lastTrip": "2026-05-12 过流II段 动作", "tripCount": 1, "comm": "正常"},
+        {"id": "F-04 馈线保护 REF611", "device": "4# 变压器馈线", "state": "运行",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "退出",
+         "overVoltage": "退出", "freq": "退出", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+        {"id": "F-05 馈线保护 REF611", "device": "冷机房变馈线", "state": "运行",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "退出",
+         "overVoltage": "退出", "freq": "退出", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+        {"id": "F-06 馈线保护 REF611", "device": "备用馈线", "state": "热备",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "退出",
+         "overVoltage": "退出", "freq": "退出", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+        {"id": "母联保护 REF615", "device": "10KV 母联 QF-M", "state": "热备",
+         "overcurrent": "投入", "earthFault": "投入", "diff": "退出", "underVoltage": "退出",
+         "overVoltage": "退出", "freq": "退出", "lastTrip": "无", "tripCount": 0, "comm": "正常"},
+    ]
+    # 消弧线圈 / 接地变 (10KV 中性点接地方式)
+    arcSuppression = {
+        "mode": "消弧线圈接地 (自动调谐)",
+        "coilCurrent": 12.3,  # A (补偿电容电流)
+        "coilPosition": 7,   # 档位 (1~15)
+        "neutralV": 86,      # V 中性点位移电压
+        "earthCapacitance": 42.5,  # A 系统电容电流估算值
+        "residualCurrent": 0.8,    # A 残余电流
+        "state": "正常运行·自动调谐",
+        "groundingTx": {"id": "接地变 DKSC-315/10.5", "state": "运行", "t": 42, "i": 15.8},
+    }
+    # 计量柜 (关口计量)
+    metering = {
+        "incomer1": {"energyTotal": 142860, "energyPeak": 52140, "energyValley": 38420, "energyFlat": 52300, "demand": 6.62, "demandMax": 7.85},
+        "incomer2": {"energyTotal": 138420, "energyPeak": 49870, "energyValley": 37210, "energyFlat": 51340, "demand": 6.35, "demandMax": 7.52},
+    }
+    # 增强电能质量 (各进线单独 THD)
+    quality = {
+        "thdU": 2.1, "thdI": 3.4, "unbalance": 0.8,
+        "incomer1": {"thdU": 2.0, "thdI": 3.2, "unbalance": 0.6, "flicker": 0.3},
+        "incomer2": {"thdU": 2.2, "thdI": 3.6, "unbalance": 1.0, "flicker": 0.4},
+    }
     return {
         "scheme": "两路市电 + 母联备自投 (单母线分段)",
         "incomers": incomers,
-        "busTie": {"id": "10KV 母联 QF-M", "state": "分闸(热备用)", "autoSwitch": "投入", "mode": "备自投·自动"},
+        "busTie": {"id": "10KV 母联 QF-M", "state": "分闸(热备用)", "autoSwitch": "投入", "mode": "备自投·自动",
+                   "iRated": 1250, "i": 0},
+        "busSections": [
+            {"id": "I 段母线", "u": 10.42, "freq": 50.01, "state": "带电"},
+            {"id": "II 段母线", "u": 10.38, "freq": 49.99, "state": "带电"},
+        ],
         "ats": {"logic": "任一进线失压 → 延时 2.5s 确认 → 跳故障进线 → 合母联 (先分后合)",
                 "lastTest": "2026-07-05 全停演练通过", "switchTime": "1.82s"},
         "feeders": feeders,
         "transformers": transformers,
-        "quality": {"thdU": 2.1, "thdI": 3.4, "unbalance": 0.8},
+        "dcPanel": dcPanel,
+        "switchgearEnv": switchgearEnv,
+        "protectionRelays": protectionRelays,
+        "arcSuppression": arcSuppression,
+        "metering": metering,
+        "quality": quality,
         "knowledge": {
             "thresholds": [
                 {"k": "额定线电压", "v": "10 kV"},
@@ -796,7 +1279,7 @@ def hv():
                 {"k": "可调延时范围", "v": "0~60 s", "note": "调试后固化，部分 HMI 可调"},
             ],
             "arch": {
-                "components": ["高压隔离柜", "高压电压电流互感器柜(PT/CT)", "高压断路器柜", "高压计量柜", "母联柜(备自投)", "馈线柜"],
+                "components": ["高压隔离柜", "高压电压电流互感器柜(PT/CT)", "高压断路器柜", "高压计量柜", "母联柜(备自投)", "馈线柜", "直流屏(DC220V)", "保护装置(REF615/611)", "消弧线圈柜", "开关柜环境监测(TEV/超声局放)"],
                 "design": "系统通过双环、双星型网络实现高可用；按不同场景实现两路市电并用 / 市电与柴发并用 / 柴发与 UPS 并用等切换。",
                 "redundancy": "双路市电独立电源(城东/城西 220KV 变电站) + 母联备自投",
             },
@@ -2106,7 +2589,7 @@ def equipment_metrics(equipment_id: int, minutes: int = 60, step_sec: int = 60, 
 
 # ------------------------------------------------------------------ 对外聚合
 _DC_BUILDERS = {
-    "chiller_plant": chiller_plant, "crac": crac,
+    "chiller_plant": chiller_plant, "chiller_trends": chiller_trends, "crac": crac, "crac_trends": crac_trends,
     "hv": hv, "lv": lv, "genset": genset, "fuel": fuel, "battery": battery,
     "cctv": cctv, "acs": acs, "ids": ids, "fire": fire,
     "twin": twin, "capacity": capacity, "alarms": alarms, "energy": energy,
@@ -2204,8 +2687,44 @@ def network():
 
         cpu = _rnd(15, 65, 1)
         mem = _rnd(30, 75, 1)
+        temp = _rnd(38, 62, 1)
         uptime = _r.randint(30, 365)
         is_online = _r.random() > 0.05
+
+        # 光模块收发光功率 (dBm): 100GE/40GE/25GE 为光口
+        optical_ports = [p for p in ports if p["name"].split("/")[0] in ("10GE", "25GE", "40GE", "100GE") and p["status"] == "up"]
+        for op in optical_ports:
+            op["tx_power_dbm"] = round(_r.uniform(-2.5, 1.5), 2)
+            # 收光偏低/偏高告警
+            op["rx_power_dbm"] = round(_r.uniform(-8.0, -1.0), 2)
+            op["optical_alarm"] = "正常"
+            if op["rx_power_dbm"] < -9.5:
+                op["optical_alarm"] = "收光过低"
+            elif op["rx_power_dbm"] > -1.0:
+                op["optical_alarm"] = "收光过高"
+
+        # 链路聚合 (Eth-Trunk): 将若干端口捆绑成上行链路组
+        trunks = []
+        t_idx = 1
+        port_names = [p["name"] for p in ports if p["status"] == "up"]
+        for _ in range(2 if sw["role"] in ("core", "agg") else 1):
+            members = port_names[_*2:(_+1)*2]
+            if members:
+                tr_util = _rnd(20, 90, 1)
+                trunks.append({
+                    "id": f"Eth-Trunk{t_idx}", "members": members,
+                    "mode": "LACP", "status": "up", "util_pct": round(tr_util, 1),
+                    "traffic_bps": round(40000 * 1e6 * tr_util / 100, 0),
+                })
+                t_idx += 1
+
+        # 堆叠/集群 (核心与汇聚支持)
+        stack = None
+        if sw["role"] in ("core", "agg"):
+            stack = {
+                "enabled": True, "topo": "环型" if sw["role"] == "core" else "链型",
+                "members": 2, "master": sw["id"], "status": "正常",
+            }
 
         switches.append({
             "id": sw["id"], "name": sw["name"], "ip": sw["ip"],
@@ -2213,10 +2732,13 @@ def network():
             "location": sw["location"],
             "status": "online" if is_online else "offline",
             "cpu_pct": round(cpu, 1), "mem_pct": round(mem, 1),
+            "temp_c": round(temp, 1),
             "uptime_days": uptime,
             "total_ports": n_ports, "up_ports": up_ports_count,
             "down_ports": down_ports_count,
             "ports": ports,
+            "trunks": trunks,
+            "stack": stack,
         })
 
         total_ports += n_ports
@@ -2294,6 +2816,112 @@ def network():
 
     return {
         "switches": switches,
+        "total_switches": n_sw,
+        "online_switches": online_count,
+        "offline_switches": n_sw - online_count,
+        "total_ports": total_ports,
+        "up_ports": up_ports_total,
+        "down_ports": total_ports - up_ports_total,
+        "overall_port_rate": round(up_ports_total / total_ports * 100, 1) if total_ports else 0,
+        "total_traffic_bps": round(total_traffic, 0),
+        "avg_cpu_pct": round(sum_cpu / online_count, 1) if online_count else 0,
+        "avg_mem_pct": round(sum_mem / online_count, 1) if online_count else 0,
+        "ping_targets": pings,
+        "avg_ping_rtt_ms": round(sum_rtt / len(ping_targets), 1),
+        "avg_ping_loss_pct": round(sum_loss / len(ping_targets), 1),
+        "worst_ping_target": worst_rtt_name,
+        "bw_topn": bw_items,
+    }
+
+    # ---- 路由器 (核心出口 + 内网路由) ----
+    router_cfgs = [
+        {"id": "RT-CORE-01", "name": "Core-RT-01", "ip": "10.0.0.1", "model": "NE40E-X8", "location": "A01 核心机房", "role": "核心出口"},
+        {"id": "RT-CORE-02", "name": "Core-RT-02", "ip": "10.0.0.2", "model": "NE40E-X8", "location": "A01 核心机房", "role": "核心出口"},
+        {"id": "RT-AGG-01", "name": "Agg-RT-01", "ip": "10.0.1.1", "model": "NE40E-X3", "location": "A02 汇聚", "role": "区域路由"},
+    ]
+    protocols = [
+        {"name": "BGP", "peer_total": 6, "peer_up": 6, "state": "Established", "routes": 48210, "desc": "骨干/ISP/多云互联"},
+        {"name": "OSPF", "area": 0, "neighbor_total": 12, "neighbor_up": 12, "state": "Full", "routes": 1840, "desc": "内网 IGP 路由"},
+        {"name": "ISIS", "area": "49.0001", "neighbor_total": 8, "neighbor_up": 8, "state": "Up", "routes": 920, "desc": "核心层 IGP 备份"},
+        {"name": "静态路由", "neighbor_total": 4, "neighbor_up": 4, "state": "有效", "routes": 4, "desc": "管理/带外/灾备"},
+    ]
+    routers = []
+    for i, rc in enumerate(router_cfgs):
+        cpu = _rnd(20, 55, 1)
+        mem = _rnd(35, 70, 1)
+        routers.append({
+            "id": rc["id"], "name": rc["name"], "ip": rc["ip"], "model": rc["model"],
+            "role": rc["role"], "location": rc["location"],
+            "status": "online" if _r.random() > 0.03 else "offline",
+            "cpu_pct": round(cpu, 1), "mem_pct": round(mem, 1), "temp_c": round(_rnd(40, 58, 1), 1),
+            "uptime_days": _r.randint(60, 400),
+            "throughput_bps": round(_rnd(2, 18, 1) * 1e9, 0),
+            "sessions": _r.randint(120000, 480000),
+            "bgp_state": "Established" if i == 0 else "Established",
+            "ospf_neighbors": 12 if i == 0 else 6,
+            "routes_total": 51000 + _r.randint(-500, 500),
+            "protocols": [
+                {**p, "state": "Established" if p["name"] == "BGP" else p["state"],
+                 "flake": 0 if _r.random() > 0.1 else 1} for p in protocols
+            ],
+        })
+
+    # ---- 防火墙 (南北向安全隔离 + 策略) ----
+    fw_cfgs = [
+        {"id": "FW-CORE-01", "name": "Core-FW-01", "ip": "10.0.0.254", "model": "USG6630E", "location": "A01 安全域"},
+        {"id": "FW-DMZ-01", "name": "DMZ-FW-01", "ip": "10.50.0.254", "model": "USG6630E", "location": "B01 DMZ"},
+    ]
+    firewalls = []
+    for i, fc in enumerate(fw_cfgs):
+        cpu = _rnd(15, 50, 1)
+        mem = _rnd(30, 65, 1)
+        firewalls.append({
+            "id": fc["id"], "name": fc["name"], "ip": fc["ip"], "model": fc["model"],
+            "location": fc["location"],
+            "status": "online" if _r.random() > 0.04 else "offline",
+            "cpu_pct": round(cpu, 1), "mem_pct": round(mem, 1), "temp_c": round(_rnd(38, 55, 1), 1),
+            "uptime_days": _r.randint(45, 320),
+            "concurrent_sessions": _r.randint(200000, 950000),
+            "session_rate": _r.randint(20000, 120000),
+            "policy_total": _r.randint(180, 420),
+            "policy_hit_top": [
+                {"name": f"策略-{j:03d} {desc}", "hits": _r.randint(500, 98000)}
+                for j, desc in enumerate(["允许-业务网→数据库", "拒绝-外网→管理网", "允许-DMZ→互联网", "限制-办公→生产"], 1)
+            ],
+            "throughput_bps": round(_rnd(1, 12, 1) * 1e9, 0),
+            "threat_blocked": _r.randint(0, 35),
+            "vpn_tunnels": _r.randint(8, 24),
+        })
+
+    # ---- 无线 (AP + 射频) ----
+    ap_locations = [
+        ("AP-A01-01", "A01 办公区", 42), ("AP-A02-01", "A02 会议室", 56),
+        ("AP-A03-01", "A03 值班室", 38), ("AP-B01-01", "B01 走廊", 47),
+        ("AP-B02-01", "B02 展示厅", 63), ("AP-OD-01", "室外园区广场", 29),
+        ("AP-OD-02", "室外周界", 24), ("AP-LOBBY", "大堂", 71),
+    ]
+    wireless = []
+    for i, (aid, loc, base_users) in enumerate(ap_locations):
+        users = _r.randint(max(0, base_users - 15), base_users + 10)
+        wireless.append({
+            "id": aid, "name": aid, "location": loc,
+            "status": "online" if _r.random() > 0.08 else "offline",
+            "model": "AirEngine 5760", "ip": f"10.9.{(i // 250) + 1}.{(i % 250) + 1}",
+            "radio_2g": {"status": "up", "channel": _r.choice([1, 6, 11]), "tx_power_dbm": _r.randint(14, 23),
+                         "users": _r.randint(0, users // 2), "util_pct": round(_rnd(5, 60, 1), 1)},
+            "radio_5g": {"status": "up", "channel": _r.choice([36, 44, 149, 157]), "tx_power_dbm": _r.randint(15, 23),
+                         "users": _r.randint(0, users - users // 2), "util_pct": round(_rnd(5, 75, 1), 1)},
+            "users_total": users,
+            "rx_rssi_dbm": round(_r.uniform(-65, -42), 1),
+            "noise_floor_dbm": round(_r.uniform(-98, -88), 1),
+            "uptime_days": _r.randint(20, 300),
+        })
+
+    return {
+        "switches": switches,
+        "routers": routers,
+        "firewalls": firewalls,
+        "wireless": wireless,
         "total_switches": n_sw,
         "online_switches": online_count,
         "offline_switches": n_sw - online_count,

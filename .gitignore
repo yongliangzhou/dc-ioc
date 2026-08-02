@@ -44,6 +44,7 @@ bandit-report.json
 node_modules/
 frontend/dist/
 frontend/.vite/
+*.tsbuildinfo
 
 # ---- IDE ----
 .vscode/
