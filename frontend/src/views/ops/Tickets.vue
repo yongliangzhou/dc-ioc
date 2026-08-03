@@ -213,7 +213,7 @@ const ticketKb: PowerKnowledge = {
       { step: 4, text: tl('EOP 覆盖 62 类主要事件, 一键拉预案'), ok: true },
     ] },
   ],
-  note: "事件工单中心是"运维闭环的纽带"：把瞬时告警转化为可追踪、可复盘的工作项，并向上沉淀为问题与风险。",
+  note: "事件工单中心是“运维闭环的纽带”：把瞬时告警转化为可追踪、可复盘的工作项，并向上沉淀为问题与风险。",
 };
 
 const STATUS_ORDER = TICKET_STATUS_ORDER;
