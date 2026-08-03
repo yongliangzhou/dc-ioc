@@ -71,6 +71,7 @@ const emit = defineEmits<{
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInst: echarts.ECharts | null = null
 let resizeObserver: ResizeObserver | null = null
+let pendingRender = false
 const activeRange = ref('24h')
 
 const containerHeight = computed(() => props.height ? `${props.height}px` : '200px')
@@ -161,13 +162,35 @@ function initChart() {
   const el = chartRef.value
   if (!el) return
   chartInst = echarts.init(el)
-  resizeObserver = new ResizeObserver(() => chartInst?.resize())
+  resizeObserver = new ResizeObserver(() => {
+    // 容器尺寸变化（含从隐藏变为显示）时触发，避免 0 尺寸报错
+    if (chartInst && el.clientWidth > 0 && el.clientHeight > 0) {
+      chartInst.resize()
+      if (pendingRender) {
+        pendingRender = false
+        applyOption()
+      }
+    }
+  })
   resizeObserver.observe(el)
-  applyOption()
+  nextTick(() => {
+    // 若挂载时容器已可见则直接渲染，否则等待 ResizeObserver 在显示后触发
+    if (el.clientWidth > 0 && el.clientHeight > 0) {
+      applyOption()
+    } else {
+      pendingRender = true
+    }
+  })
 }
 
 function applyOption() {
   if (!chartInst) return
+  const el = chartRef.value
+  // 容器不可见时暂不渲染，避免 "Can't get DOM width or height"
+  if (el && (el.clientWidth === 0 || el.clientHeight === 0)) {
+    pendingRender = true
+    return
+  }
   const opt = builtOption.value
   if (!opt.series || !(opt.series as any[]).length) {
     nextTick(() => {

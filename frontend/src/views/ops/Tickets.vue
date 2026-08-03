@@ -3,7 +3,7 @@
     <div class="view-head">
       <h1>{{ tl('运维作业') }} {{ tl('·') }} {{ tl('事件工单中心') }}</h1>
       <span class="sub">{{ tl('工单') }} CRUD {{ tl('生命周期') }} {{ tl('·') }} {{ tl('告警自动转单') }} {{ tl('·') }} {{ tl('状态流转') }} {{ tl('·') }} SLA {{ tl('跟踪') }} {{ tl('·') }} {{ tl('按看板分组') }}</span>
-      <button class="hdr-btn" @click="openCreate">+ {{ tl('新建工单') }}</button>
+      <button class="hdr-btn" v-bind="authState('write')" @click="openCreate">+ {{ tl('新建工单') }}</button>
     </div>
 
     <!-- KPI -->
@@ -51,9 +51,9 @@
             <div class="km">{{ tl('创建') }} {{ x.created }} {{ tl('·') }} SLA {{ x.sla }}</div>
             <div class="progress kbar" style="height:5px"><i :style="{ width: x.progress + '%', background: colColor(col) }"></i></div>
             <div class="kacts" @click.stop>
-              <button class="kbtn" v-if="col!=='done'" @click="advance(x)" :title="tl('推进到下一状态')">{{ tl('推进') }} ▸</button>
-              <button class="kbtn ghost" @click="openEdit(x)" :title="tl('编辑')">✎</button>
-              <button class="kbtn ghost danger" @click="askDelete(x)" :title="tl('删除')">🗑</button>
+              <button class="kbtn" v-if="col!=='done'" v-bind="authState('write')" @click="advance(x)" :title="tl('推进到下一状态')">{{ tl('推进') }} ▸</button>
+              <button class="kbtn ghost" v-bind="authState('write')" @click="openEdit(x)" :title="tl('编辑')">✎</button>
+              <button class="kbtn ghost danger" v-bind="authState('write')" @click="askDelete(x)" :title="tl('删除')">🗑</button>
             </div>
           </div>
           <div class="kempty muted" v-if="!filtered.filter(y => y.state === col).length">{{ tl('无工单') }}</div>
@@ -75,9 +75,9 @@
               <td><div class="progress" style="width:80px"><i :style="{ width: x.progress + '%', background: pctColor(x.progress, 50, 80) }"></i></div></td>
               <td>
                 <div class="flex gap4" @click.stop>
-                  <button class="act-btn" v-if="x.state!=='done'" @click="advance(x)">推进</button>
-                  <button class="act-btn ghost" @click="openEdit(x)">编辑</button>
-                  <button class="act-btn danger" @click="askDelete(x)">删</button>
+                  <button class="act-btn" v-if="x.state!=='done'" v-bind="authState('write')" @click="advance(x)">推进</button>
+                  <button class="act-btn ghost" v-bind="authState('write')" @click="openEdit(x)">编辑</button>
+                  <button class="act-btn danger" v-bind="authState('write')" @click="askDelete(x)">删</button>
                 </div>
               </td>
             </tr>
@@ -175,13 +175,23 @@
 
 <script setup lang="ts">import { useI18n } from "vue-i18n";
 const { t: tl } = useI18n();
-import { computed, ref } from "vue";import { storeToRefs } from "pinia";
+import { computed, ref } from "vue";
+import { storeToRefs } from "pinia";
 import { useTicketsStore } from "@/stores/modules/tickets";
 import { lvClass, lvText, tagClass, pctColor } from "@/utils/state";
 import { TICKET_STATUS_ORDER, TICKET_STATUS_LABEL } from "@/types";
 import type { Ticket, TicketStatus, TicketCreateRequest, PowerKnowledge } from "@/types"
 import KnowledgePanels from "@/components/KnowledgePanels.vue";
 import TicketFormModal from "@/components/business/TicketFormModal.vue";
+import { useToast } from "@/hooks/useToast";
+import { usePermission, type PermAction } from "@/hooks/usePermission";
+
+const toast = useToast();
+const { can, denyTip } = usePermission();
+function authState(action: PermAction) {
+  const ok = can(action);
+  return { disabled: !ok, title: ok ? "" : denyTip(action) };
+}
 
 const store = useTicketsStore();
 const { stats, tickets } = storeToRefs(store);
@@ -203,7 +213,7 @@ const ticketKb: PowerKnowledge = {
       { step: 4, text: tl('EOP 覆盖 62 类主要事件, 一键拉预案'), ok: true },
     ] },
   ],
-  note: "事件工单中心是“运维闭环的纽带”：把瞬时告警转化为可追踪、可复盘的工作项，并向上沉淀为问题与风险。",
+  note: "事件工单中心是"运维闭环的纽带"：把瞬时告警转化为可追踪、可复盘的工作项，并向上沉淀为问题与风险。",
 };
 
 const STATUS_ORDER = TICKET_STATUS_ORDER;
@@ -251,8 +261,10 @@ function closeForm() {
 function onFormSubmit(data: TicketCreateRequest) {
   if (editing.value) {
     store.update(editing.value.id, data);
+    toast.success(tl("已更新工单"));
   } else {
     store.create(data);
+    toast.success(tl("已新建工单"));
   }
   closeForm();
 }
@@ -265,17 +277,23 @@ function openDetail(t: Ticket) {
 function advance(t: Ticket) {
   store.advance(t.id);
   if (detail.value) detail.value = store.getById(t.id) ?? null;
+  const after = store.getById(t.id);
+  if (after) toast.info(`${tl("已推进至")} ${statusLabel(after.state)}`);
 }
 function jumpState(t: Ticket, s: TicketStatus) {
   store.transition(t.id, { state: s, operator: "运维人员" });
   if (detail.value) detail.value = store.getById(t.id) ?? null;
+  toast.info(`${tl("已流转至")} ${statusLabel(s)}`);
 }
 
 /* ---- 删除 ---- */
 const toDelete = ref<Ticket | null>(null);
 function askDelete(t: Ticket) { toDelete.value = t; }
 function doDelete() {
-  if (toDelete.value) store.remove(toDelete.value.id);
+  if (toDelete.value) {
+    store.remove(toDelete.value.id);
+    toast.success(tl("已删除工单"));
+  }
   toDelete.value = null;
 }
 

@@ -23,8 +23,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import * as echarts from 'echarts'
+import SkeletonCard from './SkeletonCard.vue'
+import EmptyState from './EmptyState.vue'
 
 const props = withDefaults(defineProps<{
   title?: string
@@ -50,6 +52,7 @@ const props = withDefaults(defineProps<{
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInst: echarts.ECharts | null = null
 let ro: ResizeObserver | null = null
+let pendingRender = false
 
 const gradientCSS = computed(() =>
   `linear-gradient(90deg, ${(props.colors ?? ['#06b6d4', '#ef4444']).join(',')})`,
@@ -134,6 +137,11 @@ function buildOption(): echarts.EChartsOption {
 
 function render() {
   if (!chartInst || !normData.value) return
+  const el = chartRef.value
+  if (el && (el.clientWidth === 0 || el.clientHeight === 0)) {
+    pendingRender = true
+    return
+  }
   chartInst.setOption(buildOption(), { notMerge: true })
 }
 
@@ -143,9 +151,20 @@ onMounted(() => {
   const el = chartRef.value
   if (!el) return
   chartInst = echarts.init(el)
-  ro = new ResizeObserver(() => chartInst?.resize())
+  ro = new ResizeObserver(() => {
+    if (chartInst && el.clientWidth > 0 && el.clientHeight > 0) {
+      chartInst.resize()
+      if (pendingRender) {
+        pendingRender = false
+        render()
+      }
+    }
+  })
   ro.observe(el)
-  render()
+  nextTick(() => {
+    if (el.clientWidth > 0 && el.clientHeight > 0) render()
+    else pendingRender = true
+  })
 })
 
 onUnmounted(() => {

@@ -103,6 +103,7 @@
         @resolve="handleResolve"
         @runbook="openRunbooks"
         @ticket="openTicketFromAlarm"
+        @feedback="openFeedback"
         @goDevice="handleGoDevice"
       />
     </template>
@@ -192,6 +193,56 @@
         </div>
       </div>
     </transition>
+
+    <!-- 处理反馈 / 经验沉淀 -->
+    <transition name="fade">
+      <div v-if="fbModalOpen" class="modal-mask" @click.self="fbModalOpen = false">
+        <div class="modal fb-modal">
+          <div class="modal-h">处理反馈 · 经验沉淀 · {{ fbAlarm?.sys }}</div>
+          <div class="fb-subj">{{ fbAlarm?.desc }}</div>
+
+          <!-- 智能匹配的场景化根因 / 排查 / 修复 -->
+          <div class="fb-scn" v-if="fbScenario">
+            <div class="fb-scn-tabs">
+              <button :class="{ on: fbTab === 'cause' }" @click="fbTab = 'cause'">根因分析</button>
+              <button :class="{ on: fbTab === 'steps' }" @click="fbTab = 'steps'">排查步骤</button>
+              <button :class="{ on: fbTab === 'fix' }" @click="fbTab = 'fix'">修复方案</button>
+            </div>
+            <div class="fb-scn-body">
+              <p v-if="fbTab === 'cause'" class="cause">{{ fbScenario.rootCause }}</p>
+              <ol v-else-if="fbTab === 'steps'" class="steps"><li v-for="(s, i) in fbScenario.steps" :key="i">{{ s }}</li></ol>
+              <p v-else class="fix">{{ fbScenario.fix }}</p>
+            </div>
+            <button class="btn primary sm" @click="gotoKb(fbScenario.kbQuery)">一键跳转知识库</button>
+          </div>
+
+          <!-- 标注处理结果 -->
+          <div class="fb-row"><span class="fb-label">处理结果</span>
+            <div class="fb-tags">
+              <button v-for="opt in fbOptions" :key="opt" class="fb-tag" :class="{ on: fbResult === opt }" @click="fbResult = opt">{{ opt }}</button>
+            </div>
+          </div>
+          <div class="fb-row col"><span class="fb-label">处理备注 / 经验</span>
+            <textarea v-model="fbNote" rows="3" class="fb-text" placeholder="记录根因确认、处置动作、后续优化建议…"></textarea>
+          </div>
+
+          <!-- 已有处理记录 -->
+          <div class="fb-records" v-if="fbRecords.length">
+            <div class="fb-rec-title">已沉淀处理记录 ({{ fbRecords.length }})</div>
+            <div class="fb-rec" v-for="(r, i) in fbRecords" :key="i">
+              <span class="fb-rec-tag">{{ r.result }}</span>
+              <span class="fb-rec-note">{{ r.note || '—' }}</span>
+              <span class="fb-rec-time">{{ fmtTs(r.ts) }}</span>
+            </div>
+          </div>
+
+          <div class="modal-f">
+            <button class="btn" @click="fbModalOpen = false">取消</button>
+            <button class="btn primary" :disabled="!fbResult || fbSaving" @click="submitFeedback">{{ fbSaving ? '提交中…' : '提交并记录' }}</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -218,6 +269,7 @@ import { useTicketsStore } from "@/stores/modules/tickets"
 import TicketFormModal from "@/components/business/TicketFormModal.vue"
 import AlarmRulePanel from "./components/AlarmRulePanel.vue"
 import AlarmListPanel from "./components/AlarmListPanel.vue"
+import { matchScenario } from "@/engine/alarmNotifier"
 import type { TicketCreateRequest, KnowledgeItem } from "@/types"
 
 function opSymbol(op: string): string {
@@ -307,6 +359,64 @@ function linkToTicket(kb: KnowledgeItem) {
   ticketInitial.value = {
     ...ticketInitial.value,
     description: `${ticketInitial.value.description || ""}\n关联处置预案: ${kb.code} ${kb.title}\n步骤: ${(kb.steps || []).join(" / ")}`,
+  }
+}
+
+/* ---- 处理反馈 / 经验沉淀 (闭环入口) ---- */
+const fbModalOpen = ref(false)
+const fbAlarm = ref<Alarm | null>(null)
+const fbScenario = ref<ReturnType<typeof matchScenario> | null>(null)
+const fbTab = ref<"cause" | "steps" | "fix">("cause")
+const fbOptions = ["已处理修复", "误报", "转工单", "持续观察"]
+const fbResult = ref("")
+const fbNote = ref("")
+const fbSaving = ref(false)
+const fbRecords = ref<{ result: string; note: string; ts: number }[]>([])
+
+function fbKey(id: string) { return `alarm_feedback_${id}` }
+function loadFbRecords(id: string) {
+  try {
+    const raw = localStorage.getItem(fbKey(id))
+    fbRecords.value = raw ? JSON.parse(raw) : []
+  } catch { fbRecords.value = [] }
+}
+function fmtTs(ts: number) {
+  const d = new Date(ts)
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`
+}
+
+function openFeedback(alarm: Alarm) {
+  const id = (alarm as any).rt ? (alarm as any).id : `evt-${alarm.ts}-${alarm.sys}`
+  fbAlarm.value = alarm
+  fbScenario.value = matchScenario(alarm)
+  fbTab.value = "cause"
+  fbResult.value = ""
+  fbNote.value = ""
+  loadFbRecords(id)
+  fbModalOpen.value = true
+}
+
+function gotoKb(query: string) {
+  if (query) router.push({ path: "/ops/knowledge", query: { q: query } })
+  else router.push({ path: "/ops/knowledge" })
+}
+
+async function submitFeedback() {
+  if (!fbAlarm.value || !fbResult.value) return
+  const id = (fbAlarm.value as any).rt ? (fbAlarm.value as any).id : `evt-${fbAlarm.value.ts}-${fbAlarm.value.sys}`
+  fbSaving.value = true
+  try {
+    const rec = { result: fbResult.value, note: fbNote.value, ts: Date.now() }
+    const all = [...fbRecords.value, rec]
+    try { localStorage.setItem(fbKey(id), JSON.stringify(all)) } catch { /* ignore */ }
+    // 闭环：确认 + 关单
+    handleAck(fbAlarm.value)
+    handleResolve(fbAlarm.value)
+    fbModalOpen.value = false
+    showToast(`已记录处理反馈 (${fbResult.value}) 并关闭告警`)
+  } finally {
+    fbSaving.value = false
   }
 }
 
@@ -610,11 +720,37 @@ onBeforeUnmount(() => clearInterval(timer))
 .rel-sum { font-size: 12px; color: var(--muted); margin: 6px 0; }
 .rel-steps { margin: 0; padding-left: 18px; font-size: 12px; color: var(--txt2); }
 .rel-steps li { margin-bottom: 3px; }
-.modal-f { display: flex; justify-content: flex-end; margin-top: 12px; }
+.modal-f { display: flex; justify-content: flex-end; margin-top: 12px; gap: 10px; }
 .btn { border: 1px solid var(--line); background: var(--bg2); color: var(--txt); border-radius: 8px; padding: 7px 14px; cursor: pointer; font-size: 13px; }
 .btn.primary { background: var(--cyan); color: #04222b; border-color: var(--cyan); font-weight: 600; }
 .btn.sm { padding: 5px 12px; font-size: 12px; margin-top: 4px; }
 .center { text-align: center; padding: 14px; }
+
+/* 处理反馈弹窗 */
+.fb-modal { width: 560px; }
+.fb-subj { font-size: 12px; color: var(--txt3); margin: 4px 0 12px; }
+.fb-scn { border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-bottom: 12px; }
+.fb-scn-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.fb-scn-tabs button { padding: 5px 11px; border-radius: 7px; cursor: pointer; font-size: 12px; border: 1px solid var(--line); background: var(--bg2); color: var(--txt2); }
+.fb-scn-tabs button.on { background: rgba(34,211,238,.14); color: var(--cyan); border-color: rgba(34,211,238,.5); }
+.fb-scn-body { font-size: 12px; line-height: 1.6; color: var(--txt2); min-height: 60px; margin-bottom: 10px; }
+.fb-scn-body .cause { color: var(--amber); }
+.fb-scn-body .fix { color: var(--green); }
+.fb-scn-body .steps { margin: 0; padding-left: 18px; }
+.fb-scn-body .steps li { margin-bottom: 4px; }
+.fb-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.fb-row.col { flex-direction: column; align-items: stretch; }
+.fb-label { font-size: 12px; color: var(--txt2); flex: none; width: 60px; }
+.fb-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.fb-tag { padding: 5px 12px; border-radius: 7px; cursor: pointer; border: 1px solid var(--line); background: var(--bg2); color: var(--txt2); font-size: 12px; }
+.fb-tag.on { background: linear-gradient(90deg, var(--cyan), var(--blue)); color: #04121f; border-color: transparent; font-weight: 700; }
+.fb-text { width: 100%; resize: vertical; border-radius: 8px; border: 1px solid var(--line); background: var(--bg2); color: var(--txt); padding: 8px 10px; font-size: 12px; line-height: 1.5; }
+.fb-records { border-top: 1px dashed var(--line); margin-top: 6px; padding-top: 10px; }
+.fb-rec-title { font-size: 12px; color: var(--txt3); margin-bottom: 6px; }
+.fb-rec { display: flex; align-items: center; gap: 8px; font-size: 11.5px; padding: 4px 0; }
+.fb-rec-tag { padding: 2px 8px; border-radius: 5px; background: rgba(34,211,238,.14); color: var(--cyan); flex: none; }
+.fb-rec-note { color: var(--txt2); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fb-rec-time { color: var(--txt3); flex: none; font-variant-numeric: tabular-nums; }
 .act-btn.ack:hover { background: rgba(34,227,255,.1); }
 .act-btn.resolve {
   border-color: var(--green);

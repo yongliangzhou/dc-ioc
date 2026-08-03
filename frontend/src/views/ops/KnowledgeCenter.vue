@@ -13,8 +13,8 @@
         <button class="kb-search-btn" @click="doSearch">{{ tl('搜索') }}</button>
       </div>
       <div class="kb-actions">
-        <button class="kb-act-btn primary" @click="showCreate = true">{{ tl('新建条目') }}</button>
-        <button class="kb-act-btn" @click="triggerImport">
+        <button class="kb-act-btn primary" v-bind="authState('write')" @click="showCreate = true">{{ tl('新建条目') }}</button>
+        <button class="kb-act-btn" v-bind="authState('write')" @click="triggerImport">
           <input ref="fileInput" type="file" accept=".txt,.pdf,.docx" style="display:none" @change="handleImport" />
           {{ tl('导入指导书') }}
         </button>
@@ -100,8 +100,8 @@
             </div>
           </div>
           <div class="kb-modal-foot">
-            <button class="kb-act-btn" @click="detailItem = null; showCreate = true; editItem = detailItem">{{ tl('编辑') }}</button>
-            <button class="kb-act-btn danger" @click="handleDelete(detailItem!)">{{ tl('删除') }}</button>
+            <button class="kb-act-btn" v-bind="authState('write')" @click="openEdit(detailItem!)">{{ tl('编辑') }}</button>
+            <button class="kb-act-btn danger" v-bind="authState('write')" @click="handleDelete(detailItem!)">{{ tl('删除') }}</button>
           </div>
         </div>
       </div>
@@ -156,9 +156,20 @@ import {
   createKnowledgeItem, updateKnowledgeItem, deleteKnowledgeItem,
   importKnowledge,
 } from '@/api/knowledge'
+import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
+import { usePermission, type PermAction } from '@/hooks/usePermission'
 
 const { t } = useI18n()
 const tl = (key: string) => t(key) || key
+const toast = useToast()
+const { can, denyTip } = usePermission()
+
+/** 权限按钮：禁用态 + 提示 */
+function authState(action: PermAction) {
+  const ok = can(action)
+  return { disabled: !ok, title: ok ? '' : denyTip(action) }
+}
 
 // ---- list state ----
 const items = ref<KnowledgeItem[]>([])
@@ -218,6 +229,20 @@ function filterCat(cat: string) { activeCat.value = cat; page.value = 1; load() 
 function openDetail(item: KnowledgeItem) { detailItem.value = item }
 
 // ---- create/edit ----
+function openEdit(item: KnowledgeItem) {
+  // 注意顺序：先取 item，再关闭详情，再填充表单，避免 detailItem 先置空
+  editItem.value = item
+  detailItem.value = null
+  showCreate.value = true
+  form.title = item.title || ''
+  form.category = item.category || ''
+  form.domain = item.domain || ''
+  form.type = item.type || 'sop'
+  form.summary = item.summary || ''
+  form.content = item.content || ''
+  form.tagsStr = (item.tags || []).join(', ')
+}
+
 function closeCreate() {
   showCreate.value = false
   editItem.value = null
@@ -226,6 +251,10 @@ function closeCreate() {
 }
 
 async function saveItem() {
+  if (!form.title.trim()) {
+    toast.warning(tl('标题不能为空'))
+    return
+  }
   saving.value = true
   try {
     const tags = form.tagsStr.split(',').map(s => s.trim()).filter(Boolean)
@@ -235,21 +264,32 @@ async function saveItem() {
     }
     if (editItem.value) {
       await updateKnowledgeItem(editItem.value.id, data)
+      toast.success(tl('已更新知识条目'))
     } else {
       await createKnowledgeItem(data)
+      toast.success(tl('已新建知识条目'))
     }
     closeCreate()
     load()
-  } catch { /* noop */ } finally { saving.value = false }
+  } catch (e: any) {
+    toast.error(e?.detail || e?.response?.data?.detail || e?.message || tl('保存失败'))
+  } finally { saving.value = false }
 }
 
 async function handleDelete(item: KnowledgeItem) {
-  if (!confirm(tl('确定要删除该知识条目') + '「' + item.title + '」？')) return
-  try {
-    await deleteKnowledgeItem(item.id)
+  const ok = await useConfirm({
+    title: tl('删除知识条目'),
+    message: tl('确定要删除该知识条目') + '「' + item.title + '」？',
+    detail: tl('此操作不可恢复。'),
+    danger: true,
+    confirmText: tl('删除'),
+    onConfirm: async () => { await deleteKnowledgeItem(item.id) },
+  })
+  if (ok) {
     detailItem.value = null
+    toast.success(tl('已删除'))
     load()
-  } catch { /* noop */ }
+  }
 }
 
 function triggerImport() { fileInput.value?.click() }
@@ -262,8 +302,9 @@ async function handleImport(e: Event) {
     const r = await importKnowledge(file)
     importMsg.value = tl('导入完成') + '：' + r.imported + ' ' + tl('条')
     load(); loadCats()
-  } catch {
-    importMsg.value = tl('导入失败') + '，' + tl('请检查文件格式')
+    toast.success(tl('导入完成'))
+  } catch (e: any) {
+    importMsg.value = tl('导入失败') + '，' + (e?.detail || e?.response?.data?.detail || e?.message || tl('请检查文件格式'))
     importErr.value = true
   }
 }

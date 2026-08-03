@@ -398,7 +398,7 @@ function formatAlarmTime(t: string | undefined): string {
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
   } catch { return t.slice(0, 10) }
 }
-function goAlarms() { router.push('/monitor/alarms/active') }
+function goAlarms() { router.push('/ops/alarms') }
 function goMonitor(path: string) { router.push(path) }
 function selectCampus(c: any) {
   // Navigate to campus detail or highlight

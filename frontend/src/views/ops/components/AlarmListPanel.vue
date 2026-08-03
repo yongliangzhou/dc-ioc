@@ -50,6 +50,7 @@
               <button v-if="x.state === '待确认'" class="act-btn ack" @click="$emit('ack', x)">{{ tl('确认') }}</button>
               <button v-if="x.state !== '已关闭'" class="act-btn ticket" @click="$emit('ticket', x)">{{ tl('转工单') }}</button>
               <button v-if="x.state !== '已关闭'" class="act-btn resolve" @click="$emit('resolve', x)">{{ tl('关单') }}</button>
+              <button class="act-btn fb" @click="$emit('feedback', x)">{{ tl('反馈') }}</button>
               <button v-if="x.state === '已关闭'" class="act-btn done" disabled>{{ tl('已处理') }}</button>
             </div>
           </td>
@@ -73,6 +74,7 @@ const emit = defineEmits<{
   (e: "resolve", x: Alarm): void;
   (e: "runbook", x: Alarm): void;
   (e: "ticket", x: Alarm): void;
+  (e: "feedback", x: Alarm): void;
   (e: "goDevice", payload: { sys: string; deviceId: string }): void;
 }>();
 
@@ -277,6 +279,8 @@ function goDevice(alarm: Alarm) {
 .act-btn.ticket:hover { background: rgba(167,139,250,.12); }
 .act-btn.runbook { border-color: #2bd47a; color: #2bd47a; }
 .act-btn.runbook:hover { background: rgba(43,212,122,.1); }
+.act-btn.fb { border-color: var(--amber, #ffb020); color: var(--amber, #ffb020); }
+.act-btn.fb:hover { background: rgba(255,176,32,.12); }
 .act-btn.resolve { border-color: var(--green); color: var(--green); }
 .act-btn.resolve:hover { background: rgba(43,212,122,.1); }
 .act-btn.done { border-color: rgba(255,255,255,.1); color: var(--txt3); cursor: default; }

@@ -6,7 +6,7 @@
         {{ tl("引擎状态") }}: {{ tl("已启用") }} <b>{{ engine.enabled }}</b> / {{ tl("共") }} <b>{{ engine.total }}</b> {{ tl("条") }}
         <button class="btn-sm" @click="loadAll">{{ tl("刷新") }}</button>
       </div>
-      <button class="btn-sm primary" @click="openCreate">{{ tl("新建规则") }}</button>
+      <button class="btn-sm primary" v-bind="authState('write')" @click="openCreate">{{ tl("新建规则") }}</button>
     </div>
 
     <div class="ar-table">
@@ -32,14 +32,14 @@
             <td class="mono">{{ band(r.critLo, r.critHi) }}</td>
             <td>{{ r.unit || "—" }}</td>
             <td>
-              <button class="pill" :class="r.enabled ? 'g' : 'a'" @click="toggle(r)">
+              <button class="pill" :class="r.enabled ? 'g' : 'a'" v-bind="authState('write')" :disabled="busy['t'+r.id]" @click="toggle(r)">
                 {{ r.enabled ? tl("已启用") : tl("已禁用") }}
               </button>
             </td>
             <td class="ops">
-              <button class="link" @click="openEdit(r)">{{ tl("编辑") }}</button>
-              <button class="link" @click="silence(r)">{{ tl("静默30m") }}</button>
-              <button class="link danger" @click="remove(r)">{{ tl("删除") }}</button>
+              <button class="link" v-bind="authState('write')" @click="openEdit(r)">{{ tl("编辑") }}</button>
+              <button class="link" v-bind="authState('write')" :disabled="busy['s'+r.id]" @click="silence(r)">{{ tl("静默30m") }}</button>
+              <button class="link danger" v-bind="authState('write')" @click="remove(r)">{{ tl("删除") }}</button>
             </td>
           </tr>
           <tr v-if="!rules.length">
@@ -103,13 +103,25 @@ import {
   toggleAlarmRule,
   silenceAlarmRule,
 } from "@/api";
+import { useToast } from "@/hooks/useToast";
+import { useConfirm } from "@/hooks/useConfirm";
+import { usePermission, type PermAction } from "@/hooks/usePermission";
 
 const { t: tl } = useI18n();
+const toast = useToast();
+const { can, denyTip } = usePermission();
+
+function authState(action: PermAction) {
+  const ok = can(action);
+  return { disabled: !ok, title: ok ? "" : denyTip(action) };
+}
 
 const rules = ref<AlarmRuleDef[]>([]);
 const editing = ref(false);
 const saving = ref(false);
 const err = ref("");
+// 行内动作 loading 防护（防止重复点击）
+const busy = ref<Record<string, boolean>>({});
 
 // 引擎态由规则列表本地计算 (后端无 /state 端点)
 const engine = computed(() => ({
@@ -184,35 +196,51 @@ async function save() {
 }
 
 async function toggle(r: AlarmRuleDef) {
+  if (busy.value["t" + r.id]) return;
   const next: AlarmRuleStatus = r.enabled ? "disabled" : "enabled";
   const prev = r.status;
   const prevEnabled = r.enabled;
   r.enabled = !r.enabled;
   r.status = next;
+  busy.value["t" + r.id] = true;
   try {
     await toggleAlarmRule(String(r.id), next);
-  } catch {
+    toast.success(r.enabled ? tl("已启用规则") : tl("已禁用规则"));
+  } catch (e: any) {
     r.enabled = prevEnabled;
     r.status = prev;
+    toast.error(e?.detail || e?.response?.data?.detail || e?.response?.data?.message || e?.message || tl("操作失败"));
+  } finally {
+    busy.value["t" + r.id] = false;
   }
 }
 
 async function silence(r: AlarmRuleDef) {
+  if (busy.value["s" + r.id]) return;
+  busy.value["s" + r.id] = true;
   try {
     await silenceAlarmRule(String(r.id), 30);
     await loadAll();
+    toast.success(tl("已静默 30 分钟"));
   } catch (e: any) {
-    err.value = e?.response?.data?.message || tl("静默失败");
+    toast.error(e?.detail || e?.response?.data?.detail || e?.response?.data?.message || e?.message || tl("静默失败"));
+  } finally {
+    busy.value["s" + r.id] = false;
   }
 }
 
 async function remove(r: AlarmRuleDef) {
-  if (!confirm(`${tl("确认删除规则")} ${r.ruleCode || r.metric}?`)) return;
-  try {
-    await deleteAlarmRule(String(r.id));
+  const ok = await useConfirm({
+    title: tl("删除告警规则"),
+    message: `${tl("确认删除规则")} ${r.ruleCode || r.metric}?`,
+    detail: tl("删除后该测点将不再触发此规则告警。"),
+    danger: true,
+    confirmText: tl("删除"),
+    onConfirm: async () => { await deleteAlarmRule(String(r.id)); },
+  });
+  if (ok) {
     rules.value = rules.value.filter((x) => x.id !== r.id);
-  } catch (e: any) {
-    err.value = e?.response?.data?.message || tl("删除失败");
+    toast.success(tl("已删除规则"));
   }
 }
 

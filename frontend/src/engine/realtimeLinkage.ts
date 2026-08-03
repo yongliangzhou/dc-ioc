@@ -21,6 +21,7 @@ import {
   resolveActiveAlarm,
   toggleAlarmRule,
 } from "@/api";
+import { notifyNew } from "@/engine/alarmNotifier";
 
 /** 联动产生的活动告警 (在 Alarm 基础上附加定位字段) */
 export interface RtAlarm extends Alarm {
@@ -74,11 +75,13 @@ class RealtimeLinkage {
 
   private timer = 0;
   private rulesLoaded = false;
+  private initialized = false;
 
   /** 启动全局引擎 (幂等) — 仅启动轮询, 评估在后端 */
   start(intervalMs = 5000) {
     if (this.running) return;
     this.running = true;
+    this.initialized = false;
     void this.refreshRules();
     void this.tick();
     // 轮询间隔下限 3s, 避免高频打后端
@@ -109,9 +112,21 @@ class RealtimeLinkage {
     try {
       const res = await getActiveAlarms();
       const list = Array.isArray(res?.items) ? res.items : [];
-      // 保留本地已确认状态 (后端未同步前的乐观 UI)
+      const mapped = list.map(mapAlarm);
       const acked = new Set(this.active.filter((a) => a.state === "已确认").map((a) => a.id));
-      this.active = list.map(mapAlarm).map((a) => (acked.has(a.id) && a.state === "待确认" ? { ...a, state: "已确认" } : a));
+      const next = mapped.map((a) => (acked.has(a.id) && a.state === "待确认" ? { ...a, state: "已确认" } : a));
+
+      // 检测新增告警 -> 实时通知（首轮快照不弹窗，避免存量轰炸）
+      if (this.initialized) {
+        const prevIds = new Set(this.active.map((a) => a.id));
+        for (const a of next) {
+          if (!prevIds.has(a.id)) notifyNew(a);
+        }
+      } else {
+        this.initialized = true;
+      }
+
+      this.active = next;
       if (!this.rulesLoaded) void this.refreshRules();
     } catch {
       /* 后端不可达: 保持上次快照 */
