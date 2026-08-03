@@ -48,6 +48,9 @@ class NetworkOverviewOut(BaseModel):
     avg_cpu_pct: float
     avg_mem_pct: float
     switches: List[SwitchOut] = []
+    routers: List[dict] = []      # 路由器列表 (前端 mapRouterDetailed 消费)
+    firewalls: List[dict] = []    # 防火墙列表 (前端 mapFirewallDetailed 消费)
+    wireless: List[dict] = []     # 无线 AP 列表 (前端无线页消费)
 
 
 class PingTargetOut(BaseModel):

@@ -116,12 +116,12 @@ async function submitFeedback() {
   const it = feedbackItem.value;
   try {
     // 闭环：确认并关单 + 保留处理记录
-    realtimeLinkage.ack(it.alarm.id);
-    realtimeLinkage.resolve(it.alarm.id);
+    realtimeLinkage.ack(it.alarmId);
+    realtimeLinkage.resolve(it.alarmId);
     // 本地沉淀（可扩展为后端处理记录接口）
     try {
       localStorage.setItem(
-        `alarm_feedback_${it.alarm.id}`,
+        `alarm_feedback_${it.alarmId}`,
         JSON.stringify({ result: result.value, note: note.value, ts: Date.now() })
       );
     } catch { /* ignore */ }

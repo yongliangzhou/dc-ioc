@@ -2814,25 +2814,6 @@ def network():
             "alert": util > 80,
         })
 
-    return {
-        "switches": switches,
-        "total_switches": n_sw,
-        "online_switches": online_count,
-        "offline_switches": n_sw - online_count,
-        "total_ports": total_ports,
-        "up_ports": up_ports_total,
-        "down_ports": total_ports - up_ports_total,
-        "overall_port_rate": round(up_ports_total / total_ports * 100, 1) if total_ports else 0,
-        "total_traffic_bps": round(total_traffic, 0),
-        "avg_cpu_pct": round(sum_cpu / online_count, 1) if online_count else 0,
-        "avg_mem_pct": round(sum_mem / online_count, 1) if online_count else 0,
-        "ping_targets": pings,
-        "avg_ping_rtt_ms": round(sum_rtt / len(ping_targets), 1),
-        "avg_ping_loss_pct": round(sum_loss / len(ping_targets), 1),
-        "worst_ping_target": worst_rtt_name,
-        "bw_topn": bw_items,
-    }
-
     # ---- 路由器 (核心出口 + 内网路由) ----
     router_cfgs = [
         {"id": "RT-CORE-01", "name": "Core-RT-01", "ip": "10.0.0.1", "model": "NE40E-X8", "location": "A01 核心机房", "role": "核心出口"},

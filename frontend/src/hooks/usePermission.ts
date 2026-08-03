@@ -14,7 +14,7 @@ export function usePermission() {
   const isViewer = computed(() => auth.user?.roles?.includes("viewer") ?? false);
 
   const can = (action: PermAction): boolean => {
-    if (action === "admin") return auth.isAdmin;
+    if (action === "admin") return auth.isAdmin ?? false;
     // write: 任何已登录且非 viewer 的角色
     return !isViewer.value;
   };

@@ -126,6 +126,7 @@ export function matchScenario(a: Alarm): AlarmScenario {
 // ---------- 通知状态 ----------
 export interface AlarmNotificationItem {
   id: string;
+  alarmId: string;
   alarm: Alarm;
   scenario: AlarmScenario;
   ts: number;
@@ -205,8 +206,11 @@ function pushBrowserNotification(item: AlarmNotificationItem) {
 /** 由 realtimeLinkage 在检测到新增告警时调用 */
 export function notifyNew(alarm: Alarm, force = false) {
   const id = `an_${++seq}`;
+  // alarm 实际为后端 RtAlarm（含 id 字段），类型层面 Alarm 无 id，故用指纹兜底
+  const alarmId = (alarm as any).id ?? fingerprint(alarm);
   const item: AlarmNotificationItem = {
     id,
+    alarmId,
     alarm,
     scenario: matchScenario(alarm),
     ts: Date.now(),

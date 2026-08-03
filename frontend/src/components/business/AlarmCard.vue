@@ -40,7 +40,7 @@ import { computed, ref } from "vue";
 import type { AlarmNotificationItem } from "@/engine/alarmNotifier";
 
 const props = defineProps<{ it: AlarmNotificationItem }>();
-defineEmits<{
+const emit = defineEmits<{
   (e: "close"): void;
   (e: "feedback", it: AlarmNotificationItem): void;
   (e: "kb", query: string): void;

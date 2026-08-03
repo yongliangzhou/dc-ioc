@@ -96,8 +96,8 @@
               <rect x="0" y="0" width="120" height="150" rx="8"
                     :fill="groupFill(g)" :stroke="groupStroke(g)" stroke-width="2" />
               <!-- 组 SOC 填充条 -->
-              <rect x="4" y="146 - 142 * (g.soc/100)" width="112" height="142 * (g.soc/100)" rx="5"
-                    :fill="socBarColor(g.soc)" opacity="0.35" />
+              <rect x="4" :y="146 - 142 * ((g.soc ?? 0)/100)" width="112" :height="Math.max(0, 142 * ((g.soc ?? 0)/100))" rx="5"
+                    :fill="socBarColor(g.soc ?? 0)" opacity="0.35" />
               <!-- 组号 -->
               <text x="60" y="22" class="topo-g-id" text-anchor="middle">{{ g.id }}</text>
               <text x="60" y="40" class="topo-g-type" text-anchor="middle">{{ g.type }}</text>
