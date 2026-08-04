@@ -149,6 +149,16 @@ export interface Alarm {
   state: string
   ts?: string
   owner?: string
+  // 视图层展示字段 (与后端告警实体对齐, 可选以兼容扁平结构)
+  level?: 'crit' | 'warn' | 'info'
+  message?: string
+  title?: string
+  source?: string
+  domain?: string
+  time?: string
+  created_at?: string
+  status?: string
+  description?: string
 }
 export interface AlarmCenter {
   convergence: { raw: number; converged: number; rate: number }
@@ -212,6 +222,16 @@ export interface AlarmEvent {
   note?: string
   autoResolved: boolean
   escalationCount: number // 升级次数
+  // 视图层兼容字段
+  level?: 'crit' | 'warn' | 'info'
+  message?: string
+  title?: string
+  source?: string
+  domain?: string
+  time?: string
+  created_at?: string
+  status?: string
+  description?: string
 }
 
 /** 告警历史查询参数 */

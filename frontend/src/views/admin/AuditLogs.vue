@@ -77,7 +77,7 @@
               <span class="tag b">{{ row.method }}</span>
             </td>
             <td>
-              <span class="tag" :class="actionTag(row.action)">{{ row.action }}</span>
+              <span class="tag" :class="actionTag(row.action ?? '')">{{ row.action }}</span>
             </td>
             <td>{{ row.resource }}</td>
             <td
@@ -90,7 +90,7 @@
             <td>{{ row.username || '匿名' }}</td>
             <td class="mono" style="font-size: 11px">{{ row.ip }}</td>
             <td>
-              <span class="tag" :class="statusTag(row.status_code)">{{ row.status_code }}</span>
+              <span class="tag" :class="statusTag(row.status_code ?? 0)">{{ row.status_code }}</span>
             </td>
             <td
               class="mono"

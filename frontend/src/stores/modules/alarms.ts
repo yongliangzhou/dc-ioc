@@ -94,13 +94,13 @@ export const useAlarmsStore = defineStore('alarms', {
         throw e
       }
     },
-    async toggleRule(id: string, status: 'enabled' | 'silenced') {
-      const prev = this.rules.find((r) => r.id === id)?.status
-      const target = this.rules.find((r) => r.id === id)
+    async toggleRule(id: string | number, status: 'enabled' | 'silenced') {
+      const prev = this.rules.find((r) => String(r.id) === String(id))?.status
+      const target = this.rules.find((r) => String(r.id) === String(id))
       if (target) target.status = status // 乐观
       try {
         const updated = await toggleAlarmRule(id, status)
-        const idx = this.rules.findIndex((r) => r.id === id)
+        const idx = this.rules.findIndex((r) => String(r.id) === String(id))
         if (idx >= 0 && updated) this.rules[idx] = updated
       } catch (e) {
         if (target && prev) target.status = prev // 回滚

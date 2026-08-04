@@ -271,16 +271,16 @@ function parseValidationError(e: unknown): string {
         const msgMap: Record<string, string> = {
           string_too_short: `${label} 长度不足`,
           string_too_long: `${label} 超出最大长度`,
-          value_error: `${label}: ${d.msg.replace(/^Value error,\s*/i, '')}`,
+          value_error: `${label}: ${(d.msg ?? '').replace(/^Value error,\s*/i, '')}`,
           string_pattern_mismatch: `${label}: 须以字母或数字开头，仅允许字母/数字/._:-`,
           type_error: `${label} 类型不正确`,
         }
-        return msgMap[d.type] || `${label}: ${d.msg}`
+        return msgMap[d.type ?? ''] || `${label}: ${d.msg ?? ''}`
       })
       .join('；')
   }
   if (typeof detail === 'string') return detail
-  if (typeof (e as ErrorLike)?.message === 'string') return e.message
+  if (typeof (e as ErrorLike)?.message === 'string') return (e as ErrorLike).message ?? ''
   return '注册失败，请检查网络连接或联系管理员'
 }
 

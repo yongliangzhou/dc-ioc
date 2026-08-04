@@ -38,9 +38,9 @@ import {
 } from '@/assets/echarts-theme'
 
 export interface TrendSeries {
-  name: string
+  name?: string | number
   type?: 'line' | 'bar' | 'scatter'
-  data?: (number | string | [number, number])[]
+  data?: unknown[]
   color?: string
   yAxisIndex?: number
   smooth?: boolean
@@ -60,7 +60,7 @@ const props = withDefaults(
     option?: echarts.EChartsOption | null
     // 模式 B: xAxisData + series（组件内部构建 option）
     xAxisData?: string[]
-    series?: TrendSeries[]
+    series?: unknown[]
     height?: number
     showRangePicker?: boolean
     loading?: boolean
@@ -89,7 +89,10 @@ const containerHeight = computed(() => (props.height ? `${props.height}px` : '20
 const isEmpty = computed(() => {
   if (props.option) return false
   const seriesData = props.series ?? []
-  return seriesData.length === 0 || seriesData.every((s) => !s.data || s.data.length === 0)
+  return seriesData.length === 0 || seriesData.every((s) => {
+    const d = (s as TrendSeries).data
+    return !Array.isArray(d) || d.length === 0
+  })
 })
 
 // 从 xAxisData + series 构建 ECharts option
@@ -99,7 +102,7 @@ const builtOption = computed<echarts.EChartsOption>(() => {
   const s = props.series ?? []
   if (!xData.length || !s.length) return { series: [] }
 
-  const hasDualY = s.some((ser) => ser.yAxisIndex === 1)
+  const hasDualY = s.some((ser) => (ser as TrendSeries).yAxisIndex === 1)
   const yAxis: echarts.YAXisComponentOption[] = [
     {
       ...baseYAxis(),
@@ -121,7 +124,8 @@ const builtOption = computed<echarts.EChartsOption>(() => {
     '#ec4899',
   ]
 
-  const echartsSeries: echarts.SeriesOption[] = s.map((ser, i) => {
+  const echartsSeries: echarts.SeriesOption[] = s.map((serRaw, i) => {
+    const ser = serRaw as TrendSeries
     const c = ser.color ?? colors[i % colors.length]
     const base: Record<string, unknown> = {
       name: ser.name,
@@ -164,7 +168,7 @@ const builtOption = computed<echarts.EChartsOption>(() => {
                 { offset: 1, color: 'rgba(0,0,0,0)' },
               ]),
             }
-          : (ser.areaStyle as LineSeriesOption['areaStyle'])
+          : (ser.areaStyle as echarts.LineSeriesOption['areaStyle'])
     }
 
     return base

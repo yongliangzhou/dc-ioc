@@ -1002,7 +1002,7 @@ async function loadAlarms() {
   try {
     const res = await getActiveAlarms()
     const items = res.items ?? []
-    const lite = items as AlarmLite[]
+    const lite = items as unknown as AlarmLite[]
     activeAlarms.value = lite
       .filter(
         (a) =>
@@ -1369,7 +1369,7 @@ const pumpColumns = [
   { key: 'inP', label: '入口bar', width: '80px', align: 'right' as const },
   { key: 'outP', label: '出口bar', width: '80px', align: 'right' as const },
 ]
-const allPumpRows = computed(() => {
+const allPumpRows = computed<Record<string, unknown>[]>(() => {
   const rows: PumpRow[] = []
   ;(chiller.value?.pumpsChw ?? []).forEach((p) =>
     rows.push({
@@ -1398,7 +1398,7 @@ const allPumpRows = computed(() => {
       outP: p.outPressure,
     }),
   )
-  return rows
+  return rows as unknown as Record<string, unknown>[]
 })
 
 // ---- Controls ----

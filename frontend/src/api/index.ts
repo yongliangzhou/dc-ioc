@@ -58,8 +58,15 @@ export interface EquipmentQuery {
 export interface AuditLogItem {
   id: number | string
   timestamp?: string
+  ts?: string
+  method?: string
   action?: string
+  resource?: string
+  path?: string
+  username?: string
   user?: string
+  ip?: string
+  status_code?: number
   detail?: string
   [key: string]: unknown
 }
@@ -141,7 +148,7 @@ export const updateAlarmRule = (id: string, data: Partial<AlarmRuleDef>) =>
 export const deleteAlarmRule = (id: string) =>
   request.delete<unknown, void>(`/api/alarm-rules/${encodeURIComponent(id)}`)
 
-export const toggleAlarmRule = (id: string, status: AlarmRuleStatus) =>
+export const toggleAlarmRule = (id: string | number, status: AlarmRuleStatus) =>
   request.patch<unknown, AlarmRuleDef>(`/api/alarm-rules/${encodeURIComponent(id)}/status`, {
     status,
   })

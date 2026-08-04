@@ -426,7 +426,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 interface RtAlarm extends Alarm {
   rt?: boolean
-  id?: string
   domain?: string
   metric?: string
 }
@@ -499,7 +498,7 @@ async function onTicketSubmit(data: TicketCreateRequest) {
   const t = await ticketsStore.create({ ...data, source: 'alarm' })
   // 联动告警转工单后标记为已确认, 形成闭环
   if (currentAlarm.value && (currentAlarm.value as RtAlarm).rt) {
-    realtimeLinkage.ack((currentAlarm.value as RtAlarm).id)
+    realtimeLinkage.ack((currentAlarm.value as RtAlarm).id ?? '')
   }
   ticketModalOpen.value = false
   currentAlarm.value = null
@@ -581,7 +580,7 @@ function fmtTs(ts: number) {
 }
 
 function openFeedback(alarm: Alarm) {
-  const id = (alarm as RtAlarm).rt ? (alarm as RtAlarm).id : `evt-${alarm.ts}-${alarm.sys}`
+  const id = (alarm as RtAlarm).rt ? ((alarm as RtAlarm).id ?? '') : `evt-${alarm.ts}-${alarm.sys}`
   fbAlarm.value = alarm
   fbScenario.value = matchScenario(alarm)
   fbTab.value = 'cause'
@@ -599,7 +598,7 @@ function gotoKb(query: string) {
 async function submitFeedback() {
   if (!fbAlarm.value || !fbResult.value) return
   const id = (fbAlarm.value as RtAlarm).rt
-  ? (fbAlarm.value as RtAlarm).id
+  ? ((fbAlarm.value as RtAlarm).id ?? '')
     : `evt-${fbAlarm.value.ts}-${fbAlarm.value.sys}`
   fbSaving.value = true
   try {
@@ -698,7 +697,7 @@ const sortedActive = computed<Alarm[]>(() => {
 async function handleAck(alarm: Alarm) {
   const rt = (alarm as RtAlarm).rt
   if (rt) {
-    realtimeLinkage.ack((alarm as RtAlarm).id)
+    realtimeLinkage.ack((alarm as RtAlarm).id ?? '')
     return
   }
   try {
@@ -713,7 +712,7 @@ async function handleAck(alarm: Alarm) {
 async function handleResolve(alarm: Alarm) {
   const rt = (alarm as RtAlarm).rt
   if (rt) {
-    realtimeLinkage.resolve((alarm as RtAlarm).id)
+    realtimeLinkage.resolve((alarm as RtAlarm).id ?? '')
     return
   }
   try {

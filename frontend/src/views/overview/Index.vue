@@ -218,7 +218,7 @@
         class="alarm-row"
         @click="goAlarms"
       >
-        <AlarmBadge :level="a.level" :count="0" />
+        <AlarmBadge :level="a.level ?? 'info'" :count="0" />
         <span class="alarm-msg">{{ a.title || a.message }}</span>
         <span class="alarm-time">{{ formatAlarmTime(a.time || a.created_at) }}</span>
       </div>
@@ -289,6 +289,8 @@ interface CampusLike extends Partial<CampusComparisonItem> {
   campus?: string
   pue?: number
   online_rate?: number
+  it_load_mw?: number
+  today_alarms?: number
   [k: string]: unknown
 }
 import KpiCard from '@/components/monitor/KpiCard.vue'
@@ -319,7 +321,7 @@ const dashboard = reactive<OverviewState>({
   climat_c: 0,
   clusters: [],
   liquid: null,
-  alarms: {},
+  alarms: { crit: 0, warn: 0, info: 0 },
 })
 const campuses = ref<CampusLike[]>([])
 const activeAlarms = ref<Alarm[]>([])
