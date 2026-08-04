@@ -131,10 +131,7 @@
       <button
         class="btn-sm"
         :disabled="page >= totalPages"
-        @click="
-          page++
-          reload()
-        "
+        @click="page++; reload()"
       >
         {{ tl('下一页') }}
       </button>
