@@ -139,10 +139,7 @@
         v-model="pageSize"
         class="ipt"
         style="width: 120px; margin-left: auto"
-        @change="
-          page = 1
-          reload()
-        "
+        @change="page = 1; reload()"
       >
         <option :value="20">20 {{ tl('条') }}/{{ tl('页') }}</option>
         <option :value="50">50 {{ tl('条') }}/{{ tl('页') }}</option>
