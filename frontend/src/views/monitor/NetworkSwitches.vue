@@ -55,7 +55,7 @@
       </template>
       <svg class="topo-svg" :viewBox="`0 0 ${svgW} ${svgH}`">
         <!-- spine switches -->
-        <g v-for="(sp, si) in spineSwitches" :key="sp.id">
+        <g v-for="sp in spineSwitches" :key="sp.id">
           <rect :x="sp.x" :y="sp.y" :width="sp.w" :height="sp.h" rx="6"
             :fill="sp.status === 'online' ? 'rgba(34,227,255,0.10)' : 'rgba(107,114,128,0.08)'"
             :stroke="sp.status === 'online' ? 'rgba(34,227,255,0.5)' : 'rgba(107,114,128,0.3)'"
@@ -70,7 +70,7 @@
         </g>
 
         <!-- leaf switches -->
-        <g v-for="(lf, li) in leafSwitches" :key="lf.id">
+        <g v-for="lf in leafSwitches" :key="lf.id">
           <rect :x="lf.x" :y="lf.y" :width="lf.w" :height="lf.h" rx="6"
             :fill="lf.status === 'online' ? 'rgba(168,85,247,0.08)' : 'rgba(107,114,128,0.06)'"
             :stroke="lf.status === 'online' ? 'rgba(168,85,247,0.4)' : 'rgba(107,114,128,0.25)'"
@@ -114,10 +114,10 @@
             <span class="trunk-members">{{ t.members.join(' / ') }}</span>
           </div>
           <div class="trunk-util-bar">
-            <div class="bar-label" style="font-size:10px;color:var(--txt2)">{{ tl('链路利用率') }} {{ t.util_pct }}%</div>
+            <div class="bar-label" style="font-size:10px;color:var(--txt2)">{{ tl('链路利用率') }} {{ t.util_pct ?? 0 }}%</div>
             <div class="bar-track">
-              <div class="bar-fill" :class="t.util_pct > 85 ? 'bar-r' : t.util_pct > 60 ? 'bar-a' : 'bar-g'"
-                :style="{ width: Math.min(100, t.util_pct) + '%' }"></div>
+              <div class="bar-fill" :class="(t.util_pct ?? 0) > 85 ? 'bar-r' : (t.util_pct ?? 0) > 60 ? 'bar-a' : 'bar-g'"
+                :style="{ width: Math.min(100, t.util_pct ?? 0) + '%' }"></div>
             </div>
           </div>
         </div>
@@ -239,8 +239,8 @@
             <span class="muted">{{ tl('丢包') }}</span><span class="mono" :class="p.loss_pct > 1 ? 'a-text' : 'g-text'">{{ p.loss_pct }}%</span>
           </div>
         </div>
+      </div>
       </Panel>
-    </div>
 
     <!-- 负载状态 -->
     <div class="flex center" style="padding:40px" v-if="!s && !error">
@@ -335,13 +335,30 @@ function nodeDef(sw: SwitchView, i: number, total: number): TopoNode {
 }
 
 // ---- Trunk health ----
+interface TrunkItem {
+  id: string
+  mode?: string
+  members: string[]
+  device: string
+  isHealthy: boolean
+  status?: string
+  util_pct?: number
+  traffic_bps?: number
+  [k: string]: unknown
+}
+
 const allTrunks = computed(() => {
   if (!s.value) return []
-  const trunks: (any & { isHealthy: boolean })[] = []
+  const trunks: TrunkItem[] = []
   for (const sw of s.value.switches) {
     for (const t of sw.trunks) {
       const isHealthy = t.status === 'up' && t.util_pct < 90
-      trunks.push({ ...t, device: sw.name, isHealthy })
+      trunks.push({
+        ...t,
+        device: sw.name,
+        isHealthy,
+        members: (t.members ?? []).map(String),
+      })
     }
   }
   return trunks
@@ -405,10 +422,10 @@ function mockData(): NetworkSwitchSummary {
     { id: 'lf-02', name: 'Leaf-02', role: 'aggregation', status: 'online', ip: '10.1.2.2', location: '机房A列头', model: 'CE6881-48S6CQ', cpu_pct: 29, mem_pct: 48, temp_c: 34, uptime_days: 320, total_ports: 48, up_ports: 43, down_ports: 5, ports: mockPorts(48, 145), trunks: [makeTrunk('Eth-Trunk2', ['Eth1/47', 'Eth1/48'], 48)], stack: null },
     { id: 'ac-01', name: 'Access-01', role: 'access', status: 'online', ip: '10.1.3.1', location: 'A01列', model: 'S6735-S', cpu_pct: 18, mem_pct: 30, temp_c: 32, uptime_days: 290, total_ports: 24, up_ports: 22, down_ports: 2, ports: mockPorts(24, 193), trunks: [makeTrunk('Eth-Trunk100', ['Eth1/23', 'Eth1/24'], 22)], stack: null },
   ]
-  const avgCpu = Math.round(sws.reduce((a, b) => a + b.cpu_pct, 0) / sws.length)
-  const avgMem = Math.round(sws.reduce((a, b) => a + b.mem_pct, 0) / sws.length)
-  const totalP = sws.reduce((a, b) => a + b.total_ports, 0)
-  const upP = sws.reduce((a, b) => a + b.up_ports, 0)
+  const avgCpu = Math.round(sws.reduce((a, b) => a + (b.cpu_pct ?? 0), 0) / sws.length)
+  const avgMem = Math.round(sws.reduce((a, b) => a + (b.mem_pct ?? 0), 0) / sws.length)
+  const totalP = sws.reduce((a, b) => a + (b.total_ports ?? 0), 0)
+  const upP = sws.reduce((a, b) => a + (b.up_ports ?? 0), 0)
   const pingTargets = [
     { target: '10.1.2.1', name: 'Leaf-01 Spine侧', category: 'leaf', status: 'ok', rtt_avg_ms: 1.2, rtt_min_ms: 0.8, rtt_max_ms: 2.1, jitter_ms: 0.3, loss_pct: 0 },
     { target: '10.1.2.2', name: 'Leaf-02 Spine侧', category: 'leaf', status: 'ok', rtt_avg_ms: 1.3, rtt_min_ms: 0.9, rtt_max_ms: 2.4, jitter_ms: 0.4, loss_pct: 0 },

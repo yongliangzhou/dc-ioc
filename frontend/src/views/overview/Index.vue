@@ -268,6 +268,29 @@ import { getDashboardOverview, getActiveAlarms, getCampusComparison } from '@/ap
 import { getHvacOverview } from '@/api/hvac'
 import type { DashboardOverview, CampusComparisonResponse } from '@/types'
 import type { HvacOverview } from '@/api/hvac'
+import type { Alarm, CampusComparisonItem } from '@/types'
+
+interface OverviewState extends Partial<DashboardOverview> {
+  halls?: unknown
+  power_load_mw?: number
+  cop?: number
+  climat_a?: number
+  climat_b?: number
+  climat_c?: number
+  clusters?: unknown
+  liquid?: unknown
+  [k: string]: unknown
+}
+
+interface CampusLike extends Partial<CampusComparisonItem> {
+  name?: string
+  code?: string
+  id?: string
+  campus?: string
+  pue?: number
+  online_rate?: number
+  [k: string]: unknown
+}
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
@@ -276,7 +299,7 @@ import TrendChart from '@/components/monitor/TrendChart.vue'
 const router = useRouter()
 
 // ===== State =====
-const dashboard = reactive<DashboardOverview>({
+const dashboard = reactive<OverviewState>({
   total_devices: 0,
   online_devices: 0,
   online_rate: 0,
@@ -288,10 +311,18 @@ const dashboard = reactive<DashboardOverview>({
   cool_load_mw: 0,
   availability: 0,
   free_cool_hours: 0,
-  alarms: {} as any,
-} as any)
-const campuses = ref<any[]>([])
-const activeAlarms = ref<any[]>([])
+  halls: [],
+  power_load_mw: 0,
+  cop: 0,
+  climat_a: 0,
+  climat_b: 0,
+  climat_c: 0,
+  clusters: [],
+  liquid: null,
+  alarms: {},
+})
+const campuses = ref<CampusLike[]>([])
+const activeAlarms = ref<Alarm[]>([])
 const refreshTime = ref('--:--:--')
 let timer: ReturnType<typeof setInterval> | undefined
 
@@ -509,11 +540,11 @@ function goAlarms() {
 function goMonitor(path: string) {
   router.push(path)
 }
-function selectCampus(c: any) {
+function selectCampus(c: CampusLike) {
   // Navigate to campus detail or highlight
   console.log('Selected campus:', c.name)
 }
-function computeCampusStatus(c: any): 'success' | 'warning' | 'critical' {
+function computeCampusStatus(c: CampusLike): 'success' | 'warning' | 'critical' {
   const or = c.online_rate ?? 0
   if (or >= 95) return 'success'
   if (or >= 80) return 'warning'
@@ -531,11 +562,7 @@ async function loadAll() {
 
   try {
     const list = await getActiveAlarms()
-    activeAlarms.value = Array.isArray((list as any)?.items)
-      ? (list as any).items
-      : Array.isArray(list)
-        ? list
-        : []
+    activeAlarms.value = Array.isArray(list.items) ? list.items : []
   } catch {
     activeAlarms.value = []
   }
@@ -551,7 +578,7 @@ async function loadAll() {
       }
     }
     if (hvac.liquidCooling) {
-      const pueC = (hvac.liquidCooling as any).pueContribution
+      const pueC = hvac.liquidCooling.pueContribution
       if (pueC != null) {
         coolingStats.pueC = pueC.toFixed(3)
         coolingStats.pueCTrend = +(Math.random() * 0.06 - 0.03).toFixed(3)
@@ -565,9 +592,9 @@ async function loadAll() {
     const cmpRaw = await getCampusComparison().catch(
       () => ({ comparisons: [] }) as unknown as CampusComparisonResponse,
     )
-    const cmpList = Array.isArray((cmpRaw as any)?.comparisons) ? (cmpRaw as any).comparisons : []
+    const cmpList = Array.isArray(cmpRaw.comparisons) ? cmpRaw.comparisons : []
     if (cmpList.length) {
-      campuses.value = cmpList
+      campuses.value = cmpList as CampusLike[]
     } else {
       // fallback: try individual campus data
       campuses.value = [

@@ -178,7 +178,7 @@
           :series="phaseTrend.series"
           :height="240"
         />
-      </div>
+      </Panel>
 
       <!-- ======== 3.2.2 回路电参量表 (DeviceTable: 全电参量) ======== -->
       <Panel class="scroll-x moni-card">
@@ -367,6 +367,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt, breakerCls, pfCls, loadCls, tempCls, thduCls, genHours } from '@/utils/format'
@@ -377,6 +378,10 @@ import TrendChart from '@/components/monitor/TrendChart.vue'
 import { getPowerLvDetailed, type LvSummary, type LvBranchView } from '@/api/power'
 import Panel from '@/components/common/Panel.vue'
 const { t: tl } = useI18n()
+
+/** 电量格式化：原始值以 Wh 计，折算为 kWh 并以千分位整数展示 */
+const fmtEnergy = (v: number | null | undefined): string =>
+  fmtInt(v == null ? null : v / 1000)
 
 // ──────────────────────────────────────────
 // SVG 几何
@@ -516,7 +521,6 @@ const onlinePercent = computed(() => {
 const branches = computed(() => s.value?.branches ?? [])
 const totalPower = computed(() => Number(branches.value.reduce((sum, d) => sum + (d.p || 0), 0).toFixed(0)))
 const avgBranchLoad = computed(() => avgNum(branches.value.map((d) => d.loadPct)))
-const avgBranchVoltage = computed(() => avgNum(branches.value.map((d) => d.u)))
 const avgThdu = computed(() => avgNum(branches.value.map((d) => d.thdu)))
 const totalEnergy = computed(() => branches.value.reduce((sum, d) => sum + (d.energy || 0), 0))
 
@@ -561,10 +565,6 @@ function genCurrent(n: number, base: number, peak: number): number[] {
     return Number((base + daily * (peak - base) + (Math.random() - 0.5) * peak * 0.08).toFixed(1))
   })
 }
-const repBranch = computed<LvBranchView | null>(() => {
-  const id = repBranchId.value
-  return branches.value.find((b) => b.id === id) ?? null
-})
 const phaseTrend = reactive({
   labels: genHours(24),
   series: [
@@ -735,8 +735,8 @@ async function loadData() {
     } else {
       s.value = mockSummary()
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

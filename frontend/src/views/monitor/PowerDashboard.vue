@@ -137,6 +137,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -166,8 +167,8 @@ async function load() {
   error.value = ''
   try {
     overview.value = await getPowerOverview()
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   }
 }
 

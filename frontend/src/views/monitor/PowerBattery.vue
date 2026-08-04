@@ -509,13 +509,14 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt } from '@/utils/format'
 import { KpiCard, ProgressGauge, TrendChart } from '@/components/monitor'
 import Panel from '@/components/common/Panel.vue'
 import KnowledgePanels from '@/components/KnowledgePanels.vue'
-import type { EChartsOption } from 'echarts'
+import type { EChartsOption, MarkLineComponentOption } from 'echarts'
 import {
   getPowerBatteryDetailed,
   type BatterySummary,
@@ -660,7 +661,7 @@ const cellChartOption = computed<EChartsOption>(() => {
   let seriesData: number[] = []
   let unit = 'V'
   let color = '#22e3ff'
-  let markLine: any = undefined
+  let markLine: MarkLineComponentOption | undefined = undefined
   if (cellMetric.value === 'u') {
     seriesData = cells.map((c) => round(c.u, 3))
     unit = 'V'
@@ -747,8 +748,8 @@ const cellChartOption = computed<EChartsOption>(() => {
 // ---------- 3.5.3 内阻分布 (箱线 + 散点) ----------
 const irDistOption = computed<EChartsOption>(() => {
   if (!groups.value.length) return {}
-  const boxData: any[] = []
-  const scatterData: any[] = []
+  const boxData: number[][] = []
+  const scatterData: number[][] = []
   groups.value.forEach((g, gi) => {
     const irs = (g.cells ?? []).map((c) => c.ir)
     if (irs.length) {
@@ -980,8 +981,8 @@ async function load() {
     if (s.value?.groups?.length && !selectedGroupObj.value) {
       selectedGroupObj.value = s.value.groups[0]
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

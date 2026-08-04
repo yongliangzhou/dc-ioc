@@ -124,6 +124,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
@@ -143,8 +144,8 @@ async function load() {
   error.value = ''
   try {
     overview.value = await getHvacOverview()
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   }
 }
 

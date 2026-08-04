@@ -21,9 +21,9 @@
           <tr v-for="(row, ri) in rows" :key="ri" :class="getRowClass(row)">
             <td v-for="col in columns" :key="col.key" :style="{ textAlign: col.align || 'left' }">
               <!-- 状态列渲染 StatusBadge -->
-              <StatusBadge v-if="col.render === 'status'" :status="row[col.key] ?? ''" />
+              <StatusBadge v-if="col.render === 'status'" :status="(row[col.key] as string) ?? ''" />
               <!-- 告警列渲染 AlarmBadge -->
-              <AlarmBadge v-else-if="col.render === 'alarm'" :level="row[col.key] ?? 'info'" />
+              <AlarmBadge v-else-if="col.render === 'alarm'" :level="(row[col.key] as string) ?? 'info'" />
               <!-- 自定义渲染 -->
               <slot
                 v-else-if="col.render === 'custom'"
@@ -32,7 +32,7 @@
                 :value="row[col.key]"
               />
               <!-- 默认文本 -->
-              <span v-else :class="row._rowClass">{{ row[col.key] ?? '-' }}</span>
+              <span v-else :class="(row._rowClass as string) ?? ''">{{ row[col.key] ?? '-' }}</span>
             </td>
           </tr>
         </tbody>
@@ -59,7 +59,7 @@ withDefaults(
   defineProps<{
     title?: string
     columns: TableColumn[]
-    rows: Record<string, any>[]
+    rows: Record<string, unknown>[]
     count?: number
   }>(),
   {
@@ -67,8 +67,8 @@ withDefaults(
   },
 )
 
-function getRowClass(row: any): string {
-  return row._rowClass ?? ''
+function getRowClass(row: Record<string, unknown>): string {
+  return (row._rowClass as string) ?? ''
 }
 </script>
 

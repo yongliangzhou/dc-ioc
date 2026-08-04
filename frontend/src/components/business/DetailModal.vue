@@ -32,7 +32,7 @@ export interface DetailRow {
   value: string | number
   color?: string
 }
-const props = defineProps<{
+defineProps<{
   open: boolean
   title: string
   rows: DetailRow[]

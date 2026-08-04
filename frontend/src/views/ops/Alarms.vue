@@ -108,10 +108,7 @@
         <button
           class="tv-btn"
           :class="{ on: activeTab === 'history' }"
-          @click="
-            activeTab = 'history'
-            loadHistory()
-          "
+          @click="activeTab = 'history'; loadHistory()"
         >
           {{ tl('告警历史') }}
         </button>
@@ -426,6 +423,13 @@
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+
+interface RtAlarm extends Alarm {
+  rt?: boolean
+  id?: string
+  domain?: string
+  metric?: string
+}
 import { useRouter } from 'vue-router'
 import {
   getAlarms,
@@ -443,31 +447,13 @@ import type { MetricHistoryPoint } from '@/types'
 import KnowledgePanels from '@/components/KnowledgePanels.vue'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import Panel from '@/components/common/Panel.vue'
-import { tagClass, lvClass, lvText, pctColor } from '@/utils/state'
+import { lvClass, lvText } from '@/utils/state'
 import { useTicketsStore } from '@/stores/modules/tickets'
 import TicketFormModal from '@/components/business/TicketFormModal.vue'
 import AlarmRulePanel from './components/AlarmRulePanel.vue'
 import AlarmListPanel from './components/AlarmListPanel.vue'
 import { matchScenario } from '@/engine/alarmNotifier'
 import type { TicketCreateRequest, KnowledgeItem } from '@/types'
-
-function opSymbol(op: string): string {
-  const map: Record<string, string> = {
-    '>': '>',
-    '<': '<',
-    '>=': '≥',
-    '<=': '≤',
-    '==': '=',
-    '!=': '≠',
-    '=': '=',
-    eq: '=',
-    gt: '>',
-    lt: '<',
-    ge: '≥',
-    le: '≤',
-  }
-  return map[op] ?? op
-}
 
 /** 按阈值带格式显示规则范围, 兼容 AlarmRuleDef 的可选字段类型 */
 function ruleBandLabel(r: AlarmRuleDef): string {
@@ -512,8 +498,8 @@ function openTicketFromAlarm(alarm: Alarm) {
 async function onTicketSubmit(data: TicketCreateRequest) {
   const t = await ticketsStore.create({ ...data, source: 'alarm' })
   // 联动告警转工单后标记为已确认, 形成闭环
-  if (currentAlarm.value && (currentAlarm.value as any).rt) {
-    realtimeLinkage.ack((currentAlarm.value as any).id)
+  if (currentAlarm.value && (currentAlarm.value as RtAlarm).rt) {
+    realtimeLinkage.ack((currentAlarm.value as RtAlarm).id)
   }
   ticketModalOpen.value = false
   currentAlarm.value = null
@@ -545,8 +531,8 @@ async function openRunbooks(alarm: Alarm) {
   try {
     relRunbooks.value = await getRelatedRunbooks({
       system: alarm.sys,
-      domain: (alarm as any).domain,
-      metric: (alarm as any).metric,
+      domain: (alarm as RtAlarm).domain,
+      metric: (alarm as RtAlarm).metric,
     })
   } catch (_) {
     /* ignore */
@@ -595,7 +581,7 @@ function fmtTs(ts: number) {
 }
 
 function openFeedback(alarm: Alarm) {
-  const id = (alarm as any).rt ? (alarm as any).id : `evt-${alarm.ts}-${alarm.sys}`
+  const id = (alarm as RtAlarm).rt ? (alarm as RtAlarm).id : `evt-${alarm.ts}-${alarm.sys}`
   fbAlarm.value = alarm
   fbScenario.value = matchScenario(alarm)
   fbTab.value = 'cause'
@@ -612,8 +598,8 @@ function gotoKb(query: string) {
 
 async function submitFeedback() {
   if (!fbAlarm.value || !fbResult.value) return
-  const id = (fbAlarm.value as any).rt
-    ? (fbAlarm.value as any).id
+  const id = (fbAlarm.value as RtAlarm).rt
+  ? (fbAlarm.value as RtAlarm).id
     : `evt-${fbAlarm.value.ts}-${fbAlarm.value.sys}`
   fbSaving.value = true
   try {
@@ -710,9 +696,9 @@ const sortedActive = computed<Alarm[]>(() => {
 
 /* ---- 告警操作 (兼容实时联动告警) ---- */
 async function handleAck(alarm: Alarm) {
-  const rt = (alarm as any).rt
+  const rt = (alarm as RtAlarm).rt
   if (rt) {
-    realtimeLinkage.ack((alarm as any).id)
+    realtimeLinkage.ack((alarm as RtAlarm).id)
     return
   }
   try {
@@ -725,9 +711,9 @@ async function handleAck(alarm: Alarm) {
 }
 
 async function handleResolve(alarm: Alarm) {
-  const rt = (alarm as any).rt
+  const rt = (alarm as RtAlarm).rt
   if (rt) {
-    realtimeLinkage.resolve((alarm as any).id)
+    realtimeLinkage.resolve((alarm as RtAlarm).id)
     return
   }
   try {

@@ -107,8 +107,11 @@ function buildOption(): echarts.EChartsOption {
   return {
     tooltip: {
       position: 'top',
-      formatter: (p: any) =>
-        `${yLabels[p.value[1]]}<br/>${xLabels[p.value[0]]}: <b>${p.value[2]}${props.unit}</b>`,
+      formatter: (p) => {
+        const params = Array.isArray(p) ? p[0] : p
+        const v = (Array.isArray(params.value) ? params.value : []) as number[]
+        return `${yLabels[v[1]]}<br/>${xLabels[v[0]]}: <b>${v[2]}${props.unit}</b>`
+      },
     },
     grid: { left: 80, right: 80, top: 10, bottom: 10 },
     xAxis: {

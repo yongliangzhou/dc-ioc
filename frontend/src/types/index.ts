@@ -142,6 +142,7 @@ export interface EquipmentMetrics {
 
 /* ===== 告警 ===== */
 export interface Alarm {
+  id?: string
   lv: 'crit' | 'warn' | 'info'
   sys: string
   desc: string

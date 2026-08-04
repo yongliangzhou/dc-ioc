@@ -122,6 +122,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AlarmRuleDef, AlarmRuleStatus } from '@/types'
@@ -218,8 +219,8 @@ async function save() {
     else await createAlarmRule(payload)
     editing.value = false
     await loadAll()
-  } catch (e: any) {
-    err.value = e?.response?.data?.message || tl('保存失败')
+  } catch (e: unknown) {
+    err.value = (e as ErrorLike)?.response?.data?.message || tl('保存失败')
   } finally {
     saving.value = false
   }
@@ -236,14 +237,14 @@ async function toggle(r: AlarmRuleDef) {
   try {
     await toggleAlarmRule(String(r.id), next)
     toast.success(r.enabled ? tl('已启用规则') : tl('已禁用规则'))
-  } catch (e: any) {
+  } catch (e: unknown) {
     r.enabled = prevEnabled
     r.status = prev
     toast.error(
-      e?.detail ||
-        e?.response?.data?.detail ||
-        e?.response?.data?.message ||
-        e?.message ||
+      (e as ErrorLike)?.detail ||
+        (e as ErrorLike)?.response?.data?.detail ||
+        (e as ErrorLike)?.response?.data?.message ||
+        (e as ErrorLike)?.message ||
         tl('操作失败'),
     )
   } finally {
@@ -258,12 +259,12 @@ async function silence(r: AlarmRuleDef) {
     await silenceAlarmRule(String(r.id), 30)
     await loadAll()
     toast.success(tl('已静默 30 分钟'))
-  } catch (e: any) {
+  } catch (e: unknown) {
     toast.error(
-      e?.detail ||
-        e?.response?.data?.detail ||
-        e?.response?.data?.message ||
-        e?.message ||
+      (e as ErrorLike)?.detail ||
+        (e as ErrorLike)?.response?.data?.detail ||
+        (e as ErrorLike)?.response?.data?.message ||
+        (e as ErrorLike)?.message ||
         tl('静默失败'),
     )
   } finally {

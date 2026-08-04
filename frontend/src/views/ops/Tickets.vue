@@ -271,10 +271,7 @@
             <button
               class="tf-btn primary"
               v-if="detail.state !== 'done'"
-              @click="
-                advance(detail)
-                detail = store.getById(detail.id) ?? null
-              "
+              @click="advance(detail); detail = store.getById(detail.id) ?? null"
             >
               推进状态
             </button>

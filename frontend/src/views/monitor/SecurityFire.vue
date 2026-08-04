@@ -138,7 +138,7 @@
           </div>
           <EmptyState v-if="!filteredDets.length" text="无探测器" />
         </div>
-      </section>
+      </Panel>
 
       <!-- 消防联动设备状态 -->
       <Panel>
@@ -185,7 +185,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { RadioTower, ShieldCheck, Cloud, Lightbulb, Fan, Volume2, DoorOpen, ArrowDownToLine } from 'lucide-vue-next'
+import type { Component } from 'vue'
+import { Fan, Volume2, DoorOpen, ArrowDownToLine } from 'lucide-vue-next'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import Panel from '@/components/common/Panel.vue'
 import SecurityKnowledge from '@/components/SecurityKnowledge.vue'
@@ -194,7 +195,7 @@ import EmptyState from '@/components/monitor/EmptyState.vue'
 import { getSecurityFireDetailed, type FireSummary, type FireDetectorView, type FireEventView } from '@/api/security'
 
 interface Point { id: string; label: string; short: string; kind: 'smoke' | 'temp' | 'sprinkler' | 'manual' | 'hydrant'; state: 'normal' | 'alarm' | 'fault' | 'offline'; x: number; y: number; zone: string; desc?: string }
-interface LinkDev { name: string; icon: any; state: 'ok' | 'act' | 'fault'; stateText: string }
+interface LinkDev { name: string; icon: Component; state: 'ok' | 'act' | 'fault'; stateText: string }
 
 const s = ref<FireSummary>({
   hostState: '', loops: 0, points: 0, faultPoints: 0, detectors: [],

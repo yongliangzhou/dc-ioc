@@ -461,6 +461,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pfCls, loadCls, tempCls, fmt, breakerCls, genHours } from '@/utils/format'
@@ -499,10 +500,10 @@ function unitX(i: number): number {
     span = right - left
   return n <= 1 ? (left + right) / 2 : Math.round(left + (span * i) / Math.max(1, n - 1))
 }
-function unitY(i: number): number {
+function unitY(_i: number): number {
   return 60
 }
-function UNIT_BR_Y(i: number): number {
+function UNIT_BR_Y(_i: number): number {
   return 110
 }
 
@@ -569,8 +570,6 @@ const busStateText = computed(() => {
       ? tl('并联运行')
       : tl('单机/待机')
 })
-const autoModeText = computed(() => autoModeLocal.value || s.value?.autoMode || '-')
-
 // 同步判据
 const syncOk = computed(() => {
   const list = s.value?.units ?? []
@@ -785,10 +784,6 @@ const alarms = computed(() => {
 // ──────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────
-function isClosed(v?: string): boolean {
-  const t = String(v ?? '').trim()
-  return t.includes('合闸') || (t.includes('合') && !t.includes('分'))
-}
 function stateCls(state: string): string {
   if (state === '运行') return 'run'
   if (state === '停机' || state === '检修') return 'stop'
@@ -905,8 +900,8 @@ async function loadData() {
     }
     if (s.value.units.length) selectedUnitId.value = s.value.units[0].id
     rebuildTrend()
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

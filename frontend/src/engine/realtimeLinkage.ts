@@ -48,22 +48,25 @@ function toClock(iso: string): string {
   }
 }
 
+// 后端活动告警原始形状 (动态 JSON, 字段以 unknown 呈现)
+type RawAlarm = Record<string, unknown>
+
 /** 后端活动告警 -> 前端 RtAlarm 形状映射 */
-function mapAlarm(a: any): RtAlarm {
+function mapAlarm(a: RawAlarm): RtAlarm {
   return {
     id: String(a.id ?? `${a.device_id}:${a.metric_name}:${a.level}`),
     ruleId: `${a.category}:${a.metric_name}`,
-    deviceId: a.device_id ?? '',
-    metric: a.metric_name ?? '',
+    deviceId: String(a.device_id ?? ''),
+    metric: String(a.metric_name ?? ''),
     value: Number(a.value ?? 0),
     threshold: Number(a.threshold ?? 0),
-    unit: a.unit ?? '',
+    unit: String(a.unit ?? ''),
     lv: (a.level === 'crit' ? 'crit' : a.level === 'warn' ? 'warn' : 'info') as Alarm['lv'],
-    sys: a.system ?? '其他',
-    desc: a.desc ?? '',
-    state: a.state ?? '待确认',
-    ts: toClock(a.ts ?? new Date().toISOString()),
-    owner: a.owner || '—',
+    sys: String(a.system ?? '其他'),
+    desc: String(a.desc ?? ''),
+    state: String(a.state ?? '待确认'),
+    ts: toClock(String(a.ts ?? new Date().toISOString())),
+    owner: String(a.owner || '—'),
     rt: true,
   }
 }
@@ -112,7 +115,7 @@ class RealtimeLinkage {
     try {
       const res = await getActiveAlarms()
       const list = Array.isArray(res?.items) ? res.items : []
-      const mapped = list.map(mapAlarm)
+      const mapped = list.map((a) => mapAlarm(a as unknown as RawAlarm))
       const acked = new Set(this.active.filter((a) => a.state === '已确认').map((a) => a.id))
       const next = mapped.map((a) =>
         acked.has(a.id) && a.state === '待确认' ? { ...a, state: '已确认' } : a,

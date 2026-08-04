@@ -511,12 +511,22 @@ export interface HvacOverview {
 //  字段映射
 // ============================================================
 
-function mapChiller(raw: any): ChillerSummary {
-  const list: any[] = raw?.chillers ?? []
+// 后端动态 JSON 的宽松原始记录类型 (字段为 unknown, 经由 num()/String() 收窄)
+interface RawItem {
+  [k: string]: unknown
+}
+
+// 将 unknown 索引值收窄为 RawItem 数组 (后端数组字段)
+function asRawList(v: unknown): RawItem[] {
+  return Array.isArray(v) ? (v as RawItem[]) : []
+}
+
+function mapChiller(raw: RawItem): ChillerSummary {
+  const list = asRawList(raw?.chillers)
   const devices: ChillerPlantView[] = list.map((d, i) => ({
     id: i + 1,
-    code: d.id ?? `CH-${i + 1}`,
-    name: d.id ?? `CH-${i + 1}`,
+    code: String(d.id ?? `CH-${i + 1}`),
+    name: String(d.id ?? `CH-${i + 1}`),
     roomName: '冷站',
     status: d.state === '运行' ? 'online' : d.state === '检修' ? 'fault' : 'standby',
     coolingCapacity: 3500,
@@ -538,31 +548,31 @@ function mapChiller(raw: any): ChillerSummary {
     : 0
 
   // 泵组映射
-  const mapPump = (p: any): PumpView => ({
-    code: p.id ?? '',
-    state: p.state ?? '',
+  const mapPump = (p: RawItem): PumpView => ({
+    code: String(p.id ?? ''),
+    state: String(p.state ?? ''),
     hz: Number(p.hz) || 0,
     kw: Number(p.kw) || 0,
     flow: Number(p.flow) || 0,
     inPressure: Number(p.inP) || 0,
     outPressure: Number(p.outP) || 0,
   })
-  const pumpsChw: PumpView[] = (raw?.pumps?.chw ?? []).map(mapPump)
-  const pumpsCw: PumpView[] = (raw?.pumps?.cw ?? []).map(mapPump)
-  const pumpsSec: PumpView[] = (raw?.pumps?.sec ?? []).map(mapPump)
+  const pumpsChw: PumpView[] = asRawList(raw?.pumps && (raw.pumps as RawItem).chw).map(mapPump)
+  const pumpsCw: PumpView[] = asRawList(raw?.pumps && (raw.pumps as RawItem).cw).map(mapPump)
+  const pumpsSec: PumpView[] = asRawList(raw?.pumps && (raw.pumps as RawItem).sec).map(mapPump)
 
   // 冷却塔映射
-  const towers: TowerView[] = (raw?.towers ?? []).map((t: any) => ({
-    code: t.id ?? '',
-    state: t.state ?? '',
+  const towers: TowerView[] = asRawList(raw?.towers).map((t) => ({
+    code: String(t.id ?? ''),
+    state: String(t.state ?? ''),
     fanHz: Number(t.fanHz) || 0,
     outTemp: t.outT === '-' ? '-' : Number(t.outT) || 0,
   }))
 
   // 板换映射
-  const hexs: HexView[] = (raw?.hex ?? []).map((h: any) => ({
-    code: h.id ?? '',
-    state: h.state ?? '',
+  const hexs: HexView[] = asRawList(raw?.hex).map((h) => ({
+    code: String(h.id ?? ''),
+    state: String(h.state ?? ''),
     eff: Number(h.eff) || 0,
     priIn: h.priIn === '-' ? '-' : Number(h.priIn) || 0,
     priOut: h.priOut === '-' ? '-' : Number(h.priOut) || 0,
@@ -571,20 +581,20 @@ function mapChiller(raw: any): ChillerSummary {
   }))
 
   // 阀门映射
-  const valves: ValveView[] = (raw?.valves ?? []).map((v: any) => ({
-    code: v.id ?? '',
-    name: v.name ?? '',
+  const valves: ValveView[] = asRawList(raw?.valves).map((v) => ({
+    code: String(v.id ?? ''),
+    name: String(v.name ?? ''),
     position: Number(v.pos) || 0,
-    state: v.state ?? '',
-    type: v.type ?? '电动阀',
+    state: String(v.state ?? ''),
+    type: String(v.type ?? '电动阀'),
   }))
 
   // 蓄冷罐
-  const st = raw?.storageTank ?? {}
+  const st = (raw?.storageTank as RawItem) ?? {}
   const storageTank: StorageTankView = {
     level: Number(st.level) || 0,
     dischargeMin: Number(st.dischargeMin) || 0,
-    mode: st.mode ?? '',
+    mode: String(st.mode ?? ''),
     capacity: Number(st.capacity) || 0,
     topTemp: Number(st.topTemp) || 0,
     botTemp: Number(st.botTemp) || 0,
@@ -593,11 +603,11 @@ function mapChiller(raw: any): ChillerSummary {
   }
 
   // 定压补水
-  const mu = raw?.makeupDevice ?? {}
+  const mu = (raw?.makeupDevice as RawItem) ?? {}
   const makeupDevice: MakeupDeviceView = {
-    id: mu.id ?? '',
-    state: mu.state ?? '',
-    mode: mu.mode ?? '',
+    id: String(mu.id ?? ''),
+    state: String(mu.state ?? ''),
+    mode: String(mu.mode ?? ''),
     supplyPressure: Number(mu.supplyP) || 0,
     setpointPressure: Number(mu.setpointP) || 0,
     tankLevel: Number(mu.tankLevel) || 0,
@@ -607,23 +617,23 @@ function mapChiller(raw: any): ChillerSummary {
   }
 
   // 旁滤装置
-  const bf = raw?.bypassFilter ?? {}
+  const bf = (raw?.bypassFilter as RawItem) ?? {}
   const bypassFilter: BypassFilterView = {
-    id: bf.id ?? '',
-    state: bf.state ?? '',
-    mode: bf.mode ?? '',
+    id: String(bf.id ?? ''),
+    state: String(bf.state ?? ''),
+    mode: String(bf.mode ?? ''),
     flow: Number(bf.flow) || 0,
     inletPressure: Number(bf.inP) || 0,
     outletPressure: Number(bf.outP) || 0,
     diffPressure: Number(bf.diffP) || 0,
     turbidity: Number(bf.turbidity) || 0,
     backwashInterval: Number(bf.backwashInterval) || 0,
-    lastBackwash: bf.lastBackwash ?? '',
+    lastBackwash: String(bf.lastBackwash ?? ''),
     filterHealth: Number(bf.filterHealth) || 0,
   }
 
   // 管路压力
-  const pp = raw?.pipePressure ?? {}
+  const pp = (raw?.pipePressure as RawItem) ?? {}
   const pipePressure: PipePressureView = {
     supplyHeader: Number(pp.supplyHeader) || 0,
     returnHeader: Number(pp.returnHeader) || 0,
@@ -646,7 +656,7 @@ function mapChiller(raw: any): ChillerSummary {
     2 // makeup + bypass filter
 
   return {
-    mode: raw?.mode ?? '',
+    mode: String(raw?.mode ?? ''),
     supplyTemp: Number(raw?.supplyT) || 0,
     returnTemp: Number(raw?.returnT) || 0,
     targetSupplyTemp: Number(raw?.targetSupplyT) || 0,
@@ -672,54 +682,59 @@ function mapChiller(raw: any): ChillerSummary {
     makeupDevice,
     bypassFilter,
     pipePressure,
-    chillerGroups: (raw?.chillerGroups ?? []).map((g: any) => ({
-      chiller: {
-        id: g?.chiller?.id ?? '',
-        state: g?.chiller?.state ?? '',
-        load: Number(g?.chiller?.load) || 0,
-        cop: Number(g?.chiller?.cop) || 0,
-        evapT: g?.chiller?.evapT ?? '-',
-        condT: g?.chiller?.condT ?? '-',
-        current: Number(g?.chiller?.current) || 0,
-        runHrs: Number(g?.chiller?.runHrs) || 0,
-      },
-      chwPump: g?.chwPump
-        ? {
-            id: g.chwPump.id,
-            state: g.chwPump.state,
-            hz: Number(g.chwPump.hz) || 0,
-            kw: Number(g.chwPump.kw) || 0,
-            flow: Number(g.chwPump.flow) || 0,
-            inP: Number(g.chwPump.inP) || 0,
-            outP: Number(g.chwPump.outP) || 0,
-          }
-        : null,
-      cwPump: g?.cwPump
-        ? {
-            id: g.cwPump.id,
-            state: g.cwPump.state,
-            hz: Number(g.cwPump.hz) || 0,
-            kw: Number(g.cwPump.kw) || 0,
-            flow: Number(g.cwPump.flow) || 0,
-            inP: Number(g.cwPump.inP) || 0,
-            outP: Number(g.cwPump.outP) || 0,
-          }
-        : null,
-      tankConnected: Boolean(g?.tankConnected),
-      tankFlow: Number(g?.tankFlow) || 0,
-    })),
+    chillerGroups: asRawList(raw?.chillerGroups).map((g) => {
+      const c = (g?.chiller as RawItem) ?? {}
+      const chw = g?.chwPump as RawItem | undefined
+      const cw = g?.cwPump as RawItem | undefined
+      return {
+        chiller: {
+          id: String(c.id ?? ''),
+          state: String(c.state ?? ''),
+          load: Number(c.load) || 0,
+          cop: Number(c.cop) || 0,
+          evapT: (c.evapT as number | string) ?? '-',
+          condT: (c.condT as number | string) ?? '-',
+          current: Number(c.current) || 0,
+          runHrs: Number(c.runHrs) || 0,
+        },
+        chwPump: chw
+          ? {
+              id: String(chw.id ?? ''),
+              state: String(chw.state ?? ''),
+              hz: Number(chw.hz) || 0,
+              kw: Number(chw.kw) || 0,
+              flow: Number(chw.flow) || 0,
+              inP: Number(chw.inP) || 0,
+              outP: Number(chw.outP) || 0,
+            }
+          : null,
+        cwPump: cw
+          ? {
+              id: String(cw.id ?? ''),
+              state: String(cw.state ?? ''),
+              hz: Number(cw.hz) || 0,
+              kw: Number(cw.kw) || 0,
+              flow: Number(cw.flow) || 0,
+              inP: Number(cw.inP) || 0,
+              outP: Number(cw.outP) || 0,
+            }
+          : null,
+        tankConnected: Boolean(g?.tankConnected),
+        tankFlow: Number(g?.tankFlow) || 0,
+      }
+    }),
   }
 }
 
-function mapCrac(raw: any): CracSummary {
+function mapCrac(raw: RawItem): CracSummary {
   // ---- 精密空调机组 ----
-  const list: any[] = raw?.units ?? []
+  const list = asRawList(raw?.units)
   const devices: CracView[] = list.map((d, i) => ({
     id: i + 1,
-    code: d.id ?? `CRAC-${i + 1}`,
-    name: d.id ?? `CRAC-${i + 1}`,
-    roomName: d.room ?? '包间',
-    type: d.type ?? '精密空调',
+    code: String(d.id ?? `CRAC-${i + 1}`),
+    name: String(d.id ?? `CRAC-${i + 1}`),
+    roomName: String(d.room ?? '包间'),
+    type: String(d.type ?? '精密空调'),
     status: d.state === '运行' ? 'online' : d.state === '故障' ? 'fault' : 'standby',
     supplyT: d.supplyT === '-' ? '-' : Number(d.supplyT) || 0,
     returnT: d.returnT === '-' ? '-' : Number(d.returnT) || 0,
@@ -732,18 +747,18 @@ function mapCrac(raw: any): CracSummary {
     waterValve: Number(d.waterValve) || 0,
     power: Number(d.power) || 0,
     dp: d.dp === '-' ? '-' : Number(d.dp) || 0,
-    filter: d.filter ?? '正常',
-    fanEnable: d.control?.fanEnable ?? true,
-    fanSpeedSet: Number(d.control?.fanSpeedSet) || 0,
-    waterValveSet: Number(d.control?.waterValveSet) || 0,
-    coolingMode: d.control?.coolingMode ?? '制冷',
-    humidOn: d.control?.humidOn ?? false,
-    supplyTSet: Number(d.setpoints?.supplyTSet) || 0,
-    rhSet: Number(d.setpoints?.rhSet) || 0,
-    roomTSet: Number(d.setpoints?.roomTSet) || 0,
-    highTempAlarm: Number(d.setpoints?.highTempAlarm) || 0,
-    lowTempAlarm: Number(d.setpoints?.lowTempAlarm) || 0,
-    highRhAlarm: Number(d.setpoints?.highRhAlarm) || 0,
+    filter: String(d.filter ?? '正常'),
+    fanEnable: Boolean((d.control as RawItem | undefined)?.fanEnable ?? true),
+    fanSpeedSet: Number((d.control as RawItem | undefined)?.fanSpeedSet) || 0,
+    waterValveSet: Number((d.control as RawItem | undefined)?.waterValveSet) || 0,
+    coolingMode: String((d.control as RawItem | undefined)?.coolingMode ?? '制冷'),
+    humidOn: Boolean((d.control as RawItem | undefined)?.humidOn ?? false),
+    supplyTSet: Number(d.setpoints && (d.setpoints as RawItem).supplyTSet) || 0,
+    rhSet: Number(d.setpoints && (d.setpoints as RawItem).rhSet) || 0,
+    roomTSet: Number(d.setpoints && (d.setpoints as RawItem).roomTSet) || 0,
+    highTempAlarm: Number(d.setpoints && (d.setpoints as RawItem).highTempAlarm) || 0,
+    lowTempAlarm: Number(d.setpoints && (d.setpoints as RawItem).lowTempAlarm) || 0,
+    highRhAlarm: Number(d.setpoints && (d.setpoints as RawItem).highRhAlarm) || 0,
     commissionedOn: null,
     healthScore: null,
   }))
@@ -751,9 +766,9 @@ function mapCrac(raw: any): CracSummary {
   const onlineCount = devices.filter((d) => d.status === 'online').length
 
   // ---- 包间环境 ----
-  const rooms: RoomView[] = (raw?.rooms ?? []).map((r: any) => ({
-    id: r.id ?? '',
-    name: r.name ?? '',
+  const rooms: RoomView[] = asRawList(raw?.rooms).map((r) => ({
+    id: String(r.id ?? ''),
+    name: String(r.name ?? ''),
     avgTemp: Number(r.avgTemp) || 0,
     avgRh: Number(r.avgRh) || 0,
     hotAisle: Number(r.hotAisle) || 0,
@@ -764,25 +779,27 @@ function mapCrac(raw: any): CracSummary {
     dewPoint: Number(r.dewPoint) || 0,
     cracRun: Number(r.cracRun) || 0,
     cracN: Number(r.cracN) || 0,
-    state: r.state ?? '正常',
-    leak: r.leak ?? { status: '正常', level: '正常', position: null, zone: 0 },
+    state: String(r.state ?? '正常'),
+    leak: (r.leak as RoomView['leak']) ?? { status: '正常', level: '正常', position: null, zone: 0 },
   }))
 
   // ---- 定位式漏水检测 ----
-  const leakDevices: LeakDeviceView[] = (raw?.leak?.devices ?? []).map((l: any) => ({
-    id: l.id ?? '',
-    location: l.location ?? '',
-    zone: Number(l.zone) || 0,
-    status: l.status ?? '正常',
-    position: l.position ?? null,
-    cableLength: Number(l.cableLength) || 0,
-    cableStatus: l.cableStatus ?? '正常',
-  }))
+  const leakDevices: LeakDeviceView[] = asRawList(raw?.leak && (raw.leak as RawItem).devices).map(
+    (l) => ({
+      id: String(l.id ?? ''),
+      location: String(l.location ?? ''),
+      zone: Number(l.zone) || 0,
+      status: String(l.status ?? '正常'),
+      position: (l.position as number | null) ?? null,
+      cableLength: Number(l.cableLength) || 0,
+      cableStatus: String(l.cableStatus ?? '正常'),
+    }),
+  )
 
   // ---- 新风机组 ----
-  const freshAir: FreshAirView[] = (raw?.fresh ?? []).map((f: any) => ({
-    id: f.id ?? '',
-    state: f.state ?? '',
+  const freshAir: FreshAirView[] = asRawList(raw?.fresh).map((f) => ({
+    id: String(f.id ?? ''),
+    state: String(f.state ?? ''),
     supplyT: f.supplyT === '-' ? '-' : Number(f.supplyT) || 0,
     rh: f.rh === '-' ? '-' : Number(f.rh) || 0,
     co2: f.co2 === '-' ? '-' : Number(f.co2) || 0,
@@ -790,27 +807,32 @@ function mapCrac(raw: any): CracSummary {
   }))
 
   // ---- 恒湿机 ----
-  const humidifiers: HumidifierView[] = (raw?.humid ?? []).map((h: any) => ({
-    id: h.id ?? '',
-    name: h.name ?? '',
-    state: h.state ?? '',
+  const humidifiers: HumidifierView[] = asRawList(raw?.humid).map((h) => ({
+    id: String(h.id ?? ''),
+    name: String(h.name ?? ''),
+    state: String(h.state ?? ''),
     rh: h.rh === '-' ? '-' : Number(h.rh) || 0,
-    mode: h.mode ?? '',
+    mode: String(h.mode ?? ''),
   }))
 
   // ---- 功能房间 ----
-  const funcRooms: FuncRoomView[] = (raw?.funcRooms ?? []).map((f: any) => ({
-    id: f.id ?? '',
+  const funcRooms: FuncRoomView[] = asRawList(raw?.funcRooms).map((f) => ({
+    id: String(f.id ?? ''),
     t: Number(f.t) || 0,
     rh: Number(f.rh) || 0,
   }))
 
   // ---- 控制策略 ----
-  const ctrlRaw = raw?.ctrl ?? {}
+  const ctrlRaw = (raw?.ctrl as RawItem) ?? {}
   const ctrl: CracCtrlView = {
-    humId: ctrlRaw.humId ?? { rhLowOn: 30, rhHighOff: 65, desc: '' },
-    positivePressure: ctrlRaw.positivePressure ?? { min: 5, max: 10, unit: 'Pa', desc: '' },
-    secPump: ctrlRaw.secPump ?? {
+    humId: (ctrlRaw.humId as CracCtrlView['humId']) ?? { rhLowOn: 30, rhHighOff: 65, desc: '' },
+    positivePressure: (ctrlRaw.positivePressure as CracCtrlView['positivePressure']) ?? {
+      min: 5,
+      max: 10,
+      unit: 'Pa',
+      desc: '',
+    },
+    secPump: (ctrlRaw.secPump as CracCtrlView['secPump']) ?? {
       diffTarget: 0.1,
       diffUnit: 'MPa',
       addHz: 50,
@@ -822,7 +844,7 @@ function mapCrac(raw: any): CracSummary {
     },
   }
 
-  const s = raw?.summary ?? {}
+  const s = (raw?.summary as RawItem) ?? {}
 
   // backward compat: compute old dashboard fields from device list
   const dashAvgSupply = devices.length
@@ -871,14 +893,14 @@ function mapCrac(raw: any): CracSummary {
   }
 }
 
-function mapLiquid(raw: any): LiquidCoolingSummary {
+function mapLiquid(raw: RawItem): LiquidCoolingSummary {
   // 传统 device 列表 (一次 + 二次 CDU 扁平化为兼容视图)
-  const list: any[] = [...(raw?.primaryCDUs ?? []), ...(raw?.secondaryCDUs ?? [])]
+  const list = [...asRawList(raw?.primaryCDUs), ...asRawList(raw?.secondaryCDUs)]
   const devices: LiquidCoolingView[] = list.map((d, i) => ({
     id: i + 1,
-    code: d.id ?? `CDU-${i + 1}`,
-    name: d.name ?? d.id ?? `CDU-${i + 1}`,
-    roomName: d.rackGroup ?? d.id ?? '液冷间',
+    code: String(d.id ?? `CDU-${i + 1}`),
+    name: String(d.name ?? d.id ?? `CDU-${i + 1}`),
+    roomName: String(d.rackGroup ?? d.id ?? '液冷间'),
     status: d.state === '运行' ? 'online' : d.state === '故障' ? 'fault' : 'standby',
     flowRate: Number(d.flowPri) || Number(d.flowSec) || Number(d.flow) || 0,
     cdiTemperature: Number(d.priInTemp) || Number(d.secInTemp) || Number(d.supplyTemp) || 0,
@@ -897,10 +919,10 @@ function mapLiquid(raw: any): LiquidCoolingSummary {
     : 0
 
   // 一次侧 CDU
-  const primaryCDUs: LiquidCDUView[] = (raw?.primaryCDUs ?? []).map((d: any) => ({
-    id: d.id ?? '',
-    name: d.name ?? '',
-    state: d.state ?? '',
+  const primaryCDUs: LiquidCDUView[] = asRawList(raw?.primaryCDUs).map((d) => ({
+    id: String(d.id ?? ''),
+    name: String(d.name ?? ''),
+    state: String(d.state ?? ''),
     heatExEff: Number(d.heatExEff) || 0,
     priInTemp: Number(d.priInTemp) || 0,
     priOutTemp: Number(d.priOutTemp) || 0,
@@ -913,124 +935,128 @@ function mapLiquid(raw: any): LiquidCoolingSummary {
     pumpSpeed: Number(d.pumpSpeed) || 0,
     pumpKw: Number(d.pumpKw) || 0,
     valve: Number(d.valve) || 0,
-    leakStatus: d.leakStatus ?? '正常',
+    leakStatus: String(d.leakStatus ?? '正常'),
     runHrs: Number(d.runHrs) || 0,
   }))
 
   // 二次侧 CDU
-  const secondaryCDUs: LiquidSecCDUView[] = (raw?.secondaryCDUs ?? []).map((d: any) => ({
-    id: d.id ?? '',
-    name: d.name ?? '',
-    rackGroup: d.rackGroup ?? '',
-    state: d.state ?? '',
+  const secondaryCDUs: LiquidSecCDUView[] = asRawList(raw?.secondaryCDUs).map((d) => ({
+    id: String(d.id ?? ''),
+    name: String(d.name ?? ''),
+    rackGroup: String(d.rackGroup ?? ''),
+    state: String(d.state ?? ''),
     supplyTemp: d.supplyTemp === '-' ? '-' : Number(d.supplyTemp) || 0,
     returnTemp: d.returnTemp === '-' ? '-' : Number(d.returnTemp) || 0,
     flow: Number(d.flow) || 0,
     dp: Number(d.dp) || 0,
     pumpSpeed: Number(d.pumpSpeed) || 0,
     pumpKw: Number(d.pumpKw) || 0,
-    leakStatus: d.leakStatus ?? '正常',
+    leakStatus: String(d.leakStatus ?? '正常'),
     coldPlateCount: Number(d.coldPlateCount) || 0,
     coldPlateOnline: Number(d.coldPlateOnline) || 0,
   }))
 
   // 冷板 GPU 温度
-  const coldPlates: ColdPlateGPUView[] = (raw?.coldPlateMonitoring ?? []).map((p: any) => ({
-    rackId: p.rackId ?? '',
-    nodeType: p.nodeType ?? '',
+  const coldPlates: ColdPlateGPUView[] = asRawList(raw?.coldPlateMonitoring).map((p) => ({
+    rackId: String(p.rackId ?? ''),
+    nodeType: String(p.nodeType ?? ''),
     inletTemp: Number(p.inletTemp) || 0,
     outletTemp: Number(p.outletTemp) || 0,
     flow: Number(p.flow) || 0,
     dp: Number(p.dp) || 0,
-    gpuTemp: (p.gpuTemp ?? []).map((t: any) => Number(t) || 0),
-    state: p.state ?? '正常',
+    gpuTemp: asRawList(p.gpuTemp).map((t) => Number(t) || 0),
+    state: String(p.state ?? '正常'),
   }))
 
   // 分集液管路
-  const manifoldsSupply: ManifoldNodeView[] = (raw?.manifolds?.supply ?? []).map((m: any) => ({
-    id: m.id ?? '',
-    zone: m.zone ?? '',
+  const manifoldsSupply: ManifoldNodeView[] = asRawList(
+    raw?.manifolds && (raw.manifolds as RawItem).supply,
+  ).map((m) => ({
+    id: String(m.id ?? ''),
+    zone: String(m.zone ?? ''),
     temp: Number(m.temp) || 0,
     pressure: Number(m.pressure) || 0,
     flow: Number(m.flow) || 0,
-    valvesOpen: m.valvesOpen,
-    branchCount: m.branchCount,
+    valvesOpen: (m.valvesOpen as number | undefined) ?? undefined,
+    branchCount: (m.branchCount as number | undefined) ?? undefined,
   }))
-  const manifoldsReturn: ManifoldNodeView[] = (raw?.manifolds?.return ?? []).map((m: any) => ({
-    id: m.id ?? '',
-    zone: m.zone ?? '',
+  const manifoldsReturn: ManifoldNodeView[] = asRawList(
+    raw?.manifolds && (raw.manifolds as RawItem).return,
+  ).map((m) => ({
+    id: String(m.id ?? ''),
+    zone: String(m.zone ?? ''),
     temp: Number(m.temp) || 0,
     pressure: Number(m.pressure) || 0,
     flow: Number(m.flow) || 0,
   }))
 
   // 漏液检测
-  const ld = raw?.leakDetection ?? {}
-  const leakRope: LeakRopeView[] = (ld.ropeLeak ?? []).map((lr: any) => ({
-    id: lr.id ?? '',
-    location: lr.location ?? '',
-    status: lr.status ?? '正常',
+  const ld = (raw?.leakDetection as RawItem) ?? {}
+  const leakRope: LeakRopeView[] = asRawList(ld.ropeLeak).map((lr) => ({
+    id: String(lr.id ?? ''),
+    location: String(lr.location ?? ''),
+    status: String(lr.status ?? '正常'),
     length: Number(lr.length) || 0,
     coverage: Number(lr.coverage) || 0,
   }))
-  const leakPoint: LeakPointView[] = (ld.pointLeak ?? []).map((lp: any) => ({
-    id: lp.id ?? '',
-    zone: lp.zone ?? '',
+  const leakPoint: LeakPointView[] = asRawList(ld.pointLeak).map((lp) => ({
+    id: String(lp.id ?? ''),
+    zone: String(lp.zone ?? ''),
     count: Number(lp.count) || 0,
     alarmCount: Number(lp.alarmCount) || 0,
   }))
 
   // 冷却液品质
-  const cq = raw?.coolantQuality ?? {}
+  const cq = (raw?.coolantQuality as RawItem) ?? {}
   const coolantQuality: CoolantQualityView = {
-    type: cq.type ?? '',
+    type: String(cq.type ?? ''),
     conductivity: Number(cq.conductivity) || 0,
     ph: Number(cq.ph) || 0,
     corrosionInhibitor: Number(cq.corrosionInhibitor) || 0,
     glycolConcentration: Number(cq.glycolConcentration) || 0,
     particleCount: Number(cq.particleCount) || 0,
-    lastTested: cq.lastTested ?? '',
-    nextTest: cq.nextTest ?? '',
-    status: cq.status ?? '正常',
+    lastTested: String(cq.lastTested ?? ''),
+    nextTest: String(cq.nextTest ?? ''),
+    status: String(cq.status ?? '正常'),
   }
 
   // 热排放
-  const hr = raw?.heatRejection ?? {}
-  const towerFans: RejectionTowerView[] = (hr.towerFans ?? []).map((f: any) => ({
-    id: f.id ?? '',
-    state: f.state ?? '',
+  const hr = (raw?.heatRejection as RawItem) ?? {}
+  const towerFans: RejectionTowerView[] = asRawList(hr.towerFans).map((f) => ({
+    id: String(f.id ?? ''),
+    state: String(f.state ?? ''),
     fanHz: Number(f.fanHz) || 0,
     outletTemp: f.outletTemp === '-' ? '-' : Number(f.outletTemp) || 0,
     approach: f.approach === '-' ? '-' : Number(f.approach) || 0,
   }))
-  const dryCoolers: DryCoolerView[] = (hr.dryCoolers ?? []).map((dc: any) => ({
-    id: dc.id ?? '',
-    state: dc.state ?? '',
+  const dryCoolers: DryCoolerView[] = asRawList(hr.dryCoolers).map((dc) => ({
+    id: String(dc.id ?? ''),
+    state: String(dc.state ?? ''),
     fanHz: Number(dc.fanHz) || 0,
     ambientT: Number(dc.ambientT) || 0,
   }))
-  const rejectionPumps: RejectionPumpView[] = (hr.rejectionPumps ?? []).map((rp: any) => ({
-    id: rp.id ?? '',
-    state: rp.state ?? '',
+  const rejectionPumps: RejectionPumpView[] = asRawList(hr.rejectionPumps).map((rp) => ({
+    id: String(rp.id ?? ''),
+    state: String(rp.state ?? ''),
     hz: Number(rp.hz) || 0,
     kw: Number(rp.kw) || 0,
   }))
 
   // 余热回收
-  const rh = raw?.heatRecoveryDetail ?? {}
+  const rh = (raw?.heatRecoveryDetail as RawItem) ?? {}
   const heatRecovery: HeatRecoveryView = {
-    enabled: rh.enabled ?? false,
+    enabled: Boolean(rh.enabled ?? false),
     recoveryRate: Number(rh.recoveryRate) || 0,
     recoveryTemp: Number(rh.recoveryTemp) || 0,
     returnTemp: Number(rh.returnTemp) || 0,
     flow: Number(rh.flow) || 0,
-    usageType: rh.usageType ?? '',
+    usageType: String(rh.usageType ?? ''),
     co2Reduction: Number(rh.co2Reduction) || 0,
     annualSaving: Number(rh.annualSaving) || 0,
   }
 
   // 控制策略
-  const cs = raw?.controlStrategy ?? {}
+  const cs = (raw?.controlStrategy as RawItem) ?? {}
   const control: LiquidControlView = {
     primarySupplySetpoint: Number(cs.primarySupplySetpoint) || 0,
     secondarySupplySetpoint: Number(cs.secondarySupplySetpoint) || 0,
@@ -1038,13 +1064,13 @@ function mapLiquid(raw: any): LiquidCoolingSummary {
     glycolMin: Number(cs.glycolMin) || 0,
     conductivityMax: Number(cs.conductivityMax) || 0,
     leakResponseTime: Number(cs.leakResponseTime) || 0,
-    pumpRedundancy: cs.pumpRedundancy ?? '',
-    cdurRedundancy: cs.cdurRedundancy ?? '',
-    description: cs.description ?? '',
+    pumpRedundancy: String(cs.pumpRedundancy ?? ''),
+    cdurRedundancy: String(cs.cdurRedundancy ?? ''),
+    description: String(cs.description ?? ''),
   }
 
   return {
-    systemMode: raw?.systemMode ?? '',
+    systemMode: String(raw?.systemMode ?? ''),
     outdoorT: Number(raw?.outdoorT) || 0,
     outdoorRH: Number(raw?.outdoorRH) || 0,
     totalCoolingCap: Number(raw?.totalCoolingCap) || 0,
@@ -1084,13 +1110,13 @@ function mapLiquid(raw: any): LiquidCoolingSummary {
     rejectionPumps,
     totalHeatRejected: Number(hr.totalHeatRejected) || 0,
     approachTemp: Number(hr.approachTemp) || 0,
-    freeCoolingAvailable: hr.freeCoolingAvailable ?? false,
+    freeCoolingAvailable: Boolean(hr.freeCoolingAvailable ?? false),
     heatRecovery,
     control,
-    supplyTrend: (raw?.supplyTempTrend ?? []).map(Number),
-    returnTrend: (raw?.returnTempTrend ?? []).map(Number),
-    flowTrend: (raw?.flowTrend ?? []).map(Number),
-    deltaTTrend: (raw?.deltaTTrend ?? []).map(Number),
+    supplyTrend: asRawList(raw?.supplyTempTrend).map((t) => Number(t)),
+    returnTrend: asRawList(raw?.returnTempTrend).map((t) => Number(t)),
+    flowTrend: asRawList(raw?.flowTrend).map((t) => Number(t)),
+    deltaTTrend: asRawList(raw?.deltaTTrend).map((t) => Number(t)),
   }
 }
 
@@ -1098,14 +1124,14 @@ function mapLiquid(raw: any): LiquidCoolingSummary {
 //  API 调用
 // ============================================================
 
-function getChillerPlantRaw(): Promise<any> {
-  return request.get('/api/hvac/chiller-plant')
+function getChillerPlantRaw(): Promise<RawItem> {
+  return request.get<unknown, RawItem>('/api/hvac/chiller-plant')
 }
-function getCracRaw(): Promise<any> {
-  return request.get('/api/hvac/crac')
+function getCracRaw(): Promise<RawItem> {
+  return request.get<unknown, RawItem>('/api/hvac/crac')
 }
-function getLiquidCoolingRaw(): Promise<any> {
-  return request.get('/api/hvac/liquid-cooling')
+function getLiquidCoolingRaw(): Promise<RawItem> {
+  return request.get<unknown, RawItem>('/api/hvac/liquid-cooling')
 }
 
 export function getHvacOverview(): Promise<HvacOverview> {
@@ -1234,7 +1260,7 @@ export interface ChillerTrends {
 }
 
 export function getChillerTrends(): Promise<ChillerTrends> {
-  return request.get<unknown, any>('/api/hvac/chiller-trends').catch(() => ({}))
+  return request.get<unknown, RawItem>('/api/hvac/chiller-trends').then((r) => r as unknown as ChillerTrends).catch(() => ({} as ChillerTrends))
 }
 
 // ============================================================
@@ -1267,56 +1293,63 @@ export interface CracRoomGroupView {
   leak: { status: string; level: string; position: number | null; zone: number }
 }
 
-export function mapCracRoomGroups(raw: any): CracRoomGroupView[] {
-  return (raw?.roomGroups ?? []).map((g: any) => ({
-    roomId: g.roomId ?? '',
-    roomName: g.roomName ?? '',
-    status: g.status ?? '正常',
-    cracRun: Number(g.cracRun) || 0,
-    cracN: Number(g.cracN) || 0,
-    envSensors: {
-      avgTemp: Number(g.envSensors?.avgTemp) || 0,
-      avgRh: Number(g.envSensors?.avgRh) || 0,
-      hotAisleTemp: Number(g.envSensors?.hotAisleTemp) || 0,
-      hotAisleRh: Number(g.envSensors?.hotAisleRh) || 0,
-      coldAisleTemp: Number(g.envSensors?.coldAisleTemp) || 0,
-      coldAisleRh: Number(g.envSensors?.coldAisleRh) || 0,
-      dewPoint: Number(g.envSensors?.dewPoint) || 0,
-      inOutDiff: Number(g.envSensors?.inOutDiff) || 0,
-      supplyStaticPressure: Number(g.envSensors?.supplyStaticPressure) || 0,
-    },
-    roomCracs: (g.roomCracs ?? []).map(mapCracView),
-    inRowCracs: (g.inRowCracs ?? []).map(mapCracView),
-    fau: g.fau
-      ? {
-          id: g.fau.id ?? '',
-          state: g.fau.state ?? '',
-          supplyT: g.fau.supplyT === '-' ? '-' : Number(g.fau.supplyT) || 0,
-          rh: g.fau.rh === '-' ? '-' : Number(g.fau.rh) || 0,
-          co2: g.fau.co2 === '-' ? '-' : Number(g.fau.co2) || 0,
-          filterDp: Number(g.fau.filterDp) || 0,
-        }
-      : null,
-    humidifier: g.humidifier
-      ? {
-          id: g.humidifier.id ?? '',
-          name: g.humidifier.name ?? '',
-          state: g.humidifier.state ?? '',
-          rh: g.humidifier.rh === '-' ? '-' : Number(g.humidifier.rh) || 0,
-          mode: g.humidifier.mode ?? '',
-        }
-      : null,
-    leak: g.leak ?? { status: '正常', level: '正常', position: null, zone: 0 },
-  }))
+export function mapCracRoomGroups(raw: RawItem): CracRoomGroupView[] {
+  return asRawList(raw?.roomGroups).map((g) => {
+    const es = (g.envSensors as RawItem) ?? {}
+    const fau = g.fau as RawItem | undefined
+    const hum = g.humidifier as RawItem | undefined
+    return {
+      roomId: String(g.roomId ?? ''),
+      roomName: String(g.roomName ?? ''),
+      status: String(g.status ?? '正常'),
+      cracRun: Number(g.cracRun) || 0,
+      cracN: Number(g.cracN) || 0,
+      envSensors: {
+        avgTemp: Number(es.avgTemp) || 0,
+        avgRh: Number(es.avgRh) || 0,
+        hotAisleTemp: Number(es.hotAisleTemp) || 0,
+        hotAisleRh: Number(es.hotAisleRh) || 0,
+        coldAisleTemp: Number(es.coldAisleTemp) || 0,
+        coldAisleRh: Number(es.coldAisleRh) || 0,
+        dewPoint: Number(es.dewPoint) || 0,
+        inOutDiff: Number(es.inOutDiff) || 0,
+        supplyStaticPressure: Number(es.supplyStaticPressure) || 0,
+      },
+      roomCracs: asRawList(g.roomCracs).map(mapCracView),
+      inRowCracs: asRawList(g.inRowCracs).map(mapCracView),
+      fau: fau
+        ? {
+            id: String(fau.id ?? ''),
+            state: String(fau.state ?? ''),
+            supplyT: fau.supplyT === '-' ? '-' : Number(fau.supplyT) || 0,
+            rh: fau.rh === '-' ? '-' : Number(fau.rh) || 0,
+            co2: fau.co2 === '-' ? '-' : Number(fau.co2) || 0,
+            filterDp: Number(fau.filterDp) || 0,
+          }
+        : null,
+      humidifier: hum
+        ? {
+            id: String(hum.id ?? ''),
+            name: String(hum.name ?? ''),
+            state: String(hum.state ?? ''),
+            rh: hum.rh === '-' ? '-' : Number(hum.rh) || 0,
+            mode: String(hum.mode ?? ''),
+          }
+        : null,
+      leak: (g.leak as CracRoomGroupView['leak']) ?? { status: '正常', level: '正常', position: null, zone: 0 },
+    }
+  })
 }
 
-function mapCracView(d: any): CracView {
+function mapCracView(d: RawItem): CracView {
+  const control = (d.control as RawItem) ?? {}
+  const setpoints = (d.setpoints as RawItem) ?? {}
   return {
     id: d.id ? parseInt(String(d.id).replace(/\D/g, '')) || 1 : 1,
-    code: d.id ?? '',
-    name: d.id ?? '',
-    roomName: d.room ?? '',
-    type: d.type ?? '精密空调',
+    code: String(d.id ?? ''),
+    name: String(d.id ?? ''),
+    roomName: String(d.room ?? ''),
+    type: String(d.type ?? '精密空调'),
     status: d.state === '运行' ? 'online' : d.state === '故障' ? 'fault' : 'standby',
     supplyT: d.supplyT === '-' ? '-' : Number(d.supplyT) || 0,
     returnT: d.returnT === '-' ? '-' : Number(d.returnT) || 0,
@@ -1329,18 +1362,18 @@ function mapCracView(d: any): CracView {
     waterValve: Number(d.waterValve) || 0,
     power: Number(d.power) || 0,
     dp: d.dp === '-' ? '-' : Number(d.dp) || 0,
-    filter: d.filter ?? '正常',
-    fanEnable: d.control?.fanEnable ?? true,
-    fanSpeedSet: Number(d.control?.fanSpeedSet) || 0,
-    waterValveSet: Number(d.control?.waterValveSet) || 0,
-    coolingMode: d.control?.coolingMode ?? '制冷',
-    humidOn: d.control?.humidOn ?? false,
-    supplyTSet: Number(d.setpoints?.supplyTSet) || 0,
-    rhSet: Number(d.setpoints?.rhSet) || 0,
-    roomTSet: Number(d.setpoints?.roomTSet) || 0,
-    highTempAlarm: Number(d.setpoints?.highTempAlarm) || 0,
-    lowTempAlarm: Number(d.setpoints?.lowTempAlarm) || 0,
-    highRhAlarm: Number(d.setpoints?.highRhAlarm) || 0,
+    filter: String(d.filter ?? '正常'),
+    fanEnable: Boolean(control.fanEnable ?? true),
+    fanSpeedSet: Number(control.fanSpeedSet) || 0,
+    waterValveSet: Number(control.waterValveSet) || 0,
+    coolingMode: String(control.coolingMode ?? '制冷'),
+    humidOn: Boolean(control.humidOn ?? false),
+    supplyTSet: Number(setpoints.supplyTSet) || 0,
+    rhSet: Number(setpoints.rhSet) || 0,
+    roomTSet: Number(setpoints.roomTSet) || 0,
+    highTempAlarm: Number(setpoints.highTempAlarm) || 0,
+    lowTempAlarm: Number(setpoints.lowTempAlarm) || 0,
+    highRhAlarm: Number(setpoints.highRhAlarm) || 0,
     commissionedOn: null,
     healthScore: null,
   }
@@ -1446,5 +1479,5 @@ export interface CracTrends {
 }
 
 export function getCracTrends(): Promise<CracTrends> {
-  return request.get<unknown, any>('/api/hvac/crac-trends').catch(() => ({}) as any)
+  return request.get<unknown, RawItem>('/api/hvac/crac-trends').then((r) => r as unknown as CracTrends).catch(() => ({} as CracTrends))
 }

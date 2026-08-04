@@ -4,7 +4,6 @@ import type {
   MetricRealtimePoint,
   MetricRealtimeResponse,
   MetricHistoryResponse,
-  MetricHistoryPoint,
   MetricQuality,
 } from '@/types'
 

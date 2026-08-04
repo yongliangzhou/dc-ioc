@@ -44,12 +44,12 @@ export interface TrendSeries {
   color?: string
   yAxisIndex?: number
   smooth?: boolean
-  areaStyle?: any
-  lineStyle?: Record<string, any>
+  areaStyle?: boolean | Record<string, unknown>
+  lineStyle?: Record<string, unknown>
   symbol?: string
   symbolSize?: number
   barWidth?: string
-  itemStyle?: any
+  itemStyle?: Record<string, unknown>
   silent?: boolean
 }
 
@@ -100,7 +100,7 @@ const builtOption = computed<echarts.EChartsOption>(() => {
   if (!xData.length || !s.length) return { series: [] }
 
   const hasDualY = s.some((ser) => ser.yAxisIndex === 1)
-  const yAxis: any[] = [
+  const yAxis: echarts.YAXisComponentOption[] = [
     {
       ...baseYAxis(),
       nameTextStyle: { color: CHART_BASE.textColor },
@@ -121,9 +121,9 @@ const builtOption = computed<echarts.EChartsOption>(() => {
     '#ec4899',
   ]
 
-  const echartsSeries = s.map((ser, i) => {
+  const echartsSeries: echarts.SeriesOption[] = s.map((ser, i) => {
     const c = ser.color ?? colors[i % colors.length]
-    const base: any = {
+    const base: Record<string, unknown> = {
       name: ser.name,
       type: ser.type ?? 'line',
       data: ser.data ?? [],
@@ -164,7 +164,7 @@ const builtOption = computed<echarts.EChartsOption>(() => {
                 { offset: 1, color: 'rgba(0,0,0,0)' },
               ]),
             }
-          : ser.areaStyle
+          : (ser.areaStyle as LineSeriesOption['areaStyle'])
     }
 
     return base
@@ -219,7 +219,7 @@ function applyOption() {
     return
   }
   const opt = builtOption.value
-  if (!opt.series || !(opt.series as any[]).length) {
+  if (!opt.series || !(opt.series as echarts.SeriesOption[]).length) {
     nextTick(() => {
       chartInst?.clear()
     })

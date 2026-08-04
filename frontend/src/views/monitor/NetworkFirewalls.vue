@@ -148,7 +148,7 @@
     </Panel>
 
     <!-- Per-device detail cards -->
-    <Panel v-if="s && s.firewalls.length" v-for="f in s.firewalls" :key="f.id" :title="f.name">
+    <Panel v-for="f in firewallCards" :key="f.id" :title="f.name">
       <template #ct>
         {{ f.name }} <span class="muted ml2 fw4 f11">{{ f.model }}</span>
       </template>
@@ -228,7 +228,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import type { ErrorLike } from '@/utils/error'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps, genHours } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
@@ -243,6 +244,7 @@ import {
   type FwPolicyHitView,
   type NetworkFirewallSummary,
 } from '@/api/monitor'
+import type * as echarts from 'echarts'
 import type { EChartsOption } from '@/hooks/useECharts'
 
 const { t: tl } = useI18n()
@@ -307,6 +309,8 @@ const s = reactive<PageState>({
   attackDist: [],
 })
 
+const firewallCards = computed(() => s.firewalls ?? [])
+
 // ──────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────
@@ -333,7 +337,10 @@ const attackPieOption = reactive<EChartsOption>({
   backgroundColor: 'transparent',
   tooltip: {
     trigger: 'item',
-    formatter: (p: any) => `${p.name}<br/>${fmtNum(p.value)} 次 (${p.percent}%)`,
+    formatter: (p) => {
+      const item = Array.isArray(p) ? p[0] : p
+      return `${item.name}<br/>${fmtNum(Number(item.value))} 次 (${item.percent}%)`
+    },
   },
   legend: {
     orient: 'vertical',
@@ -367,7 +374,7 @@ const attackPieOption = reactive<EChartsOption>({
 })
 
 function updateAttackPie(dist: { name: string; value: number; color: string }[]) {
-  ;(attackPieOption.series as any[])[0].data = dist.map((d) => ({
+  ;(attackPieOption.series as echarts.SeriesOption[])[0].data = dist.map((d) => ({
     name: d.name,
     value: d.value,
     itemStyle: { color: d.color },
@@ -607,8 +614,8 @@ async function loadData() {
       // Fallback to full mock
       applyData(mockData())
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

@@ -11,6 +11,8 @@
 import { useTelemetryStore } from '@/stores/modules/telemetry'
 import { useAlarmsStore } from '@/stores/modules/alarms'
 import { useDevicesStore } from '@/stores/modules/devices'
+import type { WsMessage } from '@/hooks/useWebSocket'
+import type { AlarmEvent, ExternalDeviceView, MetricRecordView } from '@/types'
 
 let socket: WebSocket | null = null
 let reconnectTimer: number | null = null
@@ -23,9 +25,9 @@ function buildUrl(): string {
 }
 
 function dispatch(raw: string) {
-  let msg: any
+  let msg: WsMessage
   try {
-    msg = JSON.parse(raw)
+    msg = JSON.parse(raw) as WsMessage
   } catch {
     return
   }
@@ -43,17 +45,17 @@ function dispatch(raw: string) {
       telemetry.setConnected(false)
       break
     case 'telemetry':
-      telemetry.applySnapshot(msg.data)
+      telemetry.applySnapshot((msg.data as Record<string, unknown>) ?? {})
       break
     case 'alarm':
-      alarms.ingestRealtime(msg.data)
+      alarms.ingestRealtime(msg.data as AlarmEvent)
       break
     case 'device_status':
-      devices.applyStatus(msg.data)
+      devices.applyStatus(msg.data as Partial<ExternalDeviceView> & { id?: string })
       break
     case 'device_metrics':
       if (msg.device_id && Array.isArray(msg.points)) {
-        devices.applyMetrics(msg.device_id, msg.points)
+        devices.applyMetrics(msg.device_id, msg.points as MetricRecordView[])
       }
       break
     default:

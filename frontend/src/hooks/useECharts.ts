@@ -56,7 +56,7 @@ export function useECharts(
   const initChart = () => {
     if (!elRef.value || disposed) return
     try {
-      chart.value = echarts.init(elRef.value, resolveTheme() as any, { renderer })
+      chart.value = echarts.init(elRef.value, resolveTheme(), { renderer })
       // 仅在配置非空时初始化渲染 (避免空 {} 触发 ECharts 异常)
       if (option.value && Object.keys(option.value).length) {
         chart.value.setOption(option.value, { notMerge: true })

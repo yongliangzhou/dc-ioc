@@ -93,9 +93,9 @@ export const useTicketsStore = defineStore('tickets', () => {
       sla: alarm.lv === 'crit' ? '1h' : alarm.lv === 'warn' ? '4h' : '8h',
       description: `来源告警系统: ${alarm.sys}\n告警内容: ${alarm.desc}\n触发时间: ${alarm.ts ?? '—'}\n原始状态: ${alarm.state}`,
       source: 'alarm',
-      sourceAlarmId: (alarm as any).id,
+      sourceAlarmId: alarm.id,
     }
-    const alarmId = (alarm as any).id
+    const alarmId = alarm.id
     if (alarmId) {
       const t = await createTicketFromAlarm(alarmId, req)
       tickets.value.unshift(t)

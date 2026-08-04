@@ -79,6 +79,11 @@
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import type { Alarm } from '@/types'
+
+interface AlarmWithDevice extends Alarm {
+  deviceId?: string
+  device_id?: string
+}
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
 import Panel from '@/components/common/Panel.vue'
@@ -124,8 +129,6 @@ function mapStateStatus(s: string): string {
 }
 
 // ===== Source System Label & Color =====
-const SOURCE_MAP: Record<string, { label: string; cls: string }> = {}
-
 function matchSource(sys: string): string {
   const s = (sys || '').toLowerCase()
   if (s.includes('冷源') || s.includes('chiller') || s.includes('冷冻')) return 'chiller'
@@ -208,7 +211,7 @@ function getDeviceRoute(alarm: Alarm): { path: string; label: string } | null {
   const route = DEVICE_ROUTES[m]
   if (!route) return null
   // Append deviceId if available
-  const deviceId = (alarm as any).deviceId ?? (alarm as any).device_id ?? ''
+  const deviceId = (alarm as AlarmWithDevice).deviceId ?? (alarm as AlarmWithDevice).device_id ?? ''
   return {
     path: route.path + (deviceId ? `?device=${deviceId}` : ''),
     label: route.label,
@@ -221,7 +224,7 @@ function goDevice(alarm: Alarm) {
   // Use window.location or emit — let parent handle navigation
   emit('goDevice', {
     sys: alarm.sys,
-    deviceId: (alarm as any).deviceId ?? (alarm as any).device_id ?? '',
+    deviceId: (alarm as AlarmWithDevice).deviceId ?? (alarm as AlarmWithDevice).device_id ?? '',
   })
 }
 </script>

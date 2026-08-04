@@ -413,6 +413,8 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { getCrac, getCracTrends, mapCracRoomGroups } from '@/api/hvac'
 import { getActiveAlarms } from '@/api'
 import type { CracSummary, CracView, CracRoomGroupView, CracTrends } from '@/api/hvac'
+import type { Alarm } from '@/types'
+import type { LineSeriesOption } from 'echarts'
 import { CHART_COLORS } from '@/assets/echarts-theme'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
@@ -428,14 +430,21 @@ import { numVal, formatVal, formatTime } from '@/utils/format'
 // ===== State =====
 const cracData = ref<CracSummary | null>(null)
 const trends = ref<CracTrends | null>(null)
-const rawCrac = ref<any>(null)
+interface TrendPoint {
+  date?: string
+  value?: number
+  week?: string
+  [k: string]: unknown
+}
+
+const rawCrac = ref<CracSummary | null>(null)
 const loading = ref(false)
 const trendsLoading = ref(false)
 const lastUpdate = ref('')
 let timer: ReturnType<typeof setInterval> | null = null
 
 // ===== Alarm State =====
-const alarms = ref<any[]>([])
+const alarms = ref<Alarm[]>([])
 
 // ===== Supply vs Cabinet period =====
 const svcPeriod = ref('1h')
@@ -449,7 +458,7 @@ async function loadCrac() {
     ])
     cracData.value = summary
     // Room groups come from mapCracRoomGroups — pass the summary directly
-    rawCrac.value = summary as any
+    rawCrac.value = summary
     alarms.value = alarmResult.items || []
     lastUpdate.value = new Date().toLocaleTimeString('zh-CN')
   } catch (e) {
@@ -588,7 +597,7 @@ const dtiXData = computed<string[]>(() => {
 const dtiSeries = computed(() => {
   const r = trends.value?.deltaTIntegral
   if (!r?.rooms?.length) return []
-  const series: any[] = []
+  const series: LineSeriesOption[] = []
   for (const room of r.rooms) {
     for (const s of room.series) {
       series.push({
@@ -607,23 +616,23 @@ const fdpXData = computed(() => {
   const u = trends.value?.filterDpSlope?.units
   if (!u?.length) return ['--']
   const u0 = u[0]
-  return u0.raw?.map((p: any) => p.date) ?? ['--']
+  return u0.raw?.map((p: TrendPoint) => p.date ?? '') ?? ['--']
 })
 
 const fdpSeries = computed(() => {
   const units = trends.value?.filterDpSlope?.units ?? []
-  const series: any[] = []
+  const series: LineSeriesOption[] = []
   const palette = CHART_COLORS.palette as readonly string[]
   units.forEach((u, i) => {
     series.push({
       name: `${u.label} 原始值`,
-      data: (u.raw ?? []).map((p: any) => p.value),
+      data: (u.raw ?? []).map((p: TrendPoint) => p.value ?? 0),
       type: 'line',
       lineStyle: { color: palette[i % palette.length], width: 1.5 },
     })
     series.push({
       name: `${u.label} 斜率(右轴)`,
-      data: (u.slope ?? []).map((p: any) => p.value),
+      data: (u.slope ?? []).map((p: TrendPoint) => p.value ?? 0),
       type: 'line',
       yAxisIndex: 1,
       lineStyle: { color: palette[i % palette.length], width: 2, type: 'dashed' as const },
@@ -636,7 +645,7 @@ const fdpSeries = computed(() => {
 const shrXData = computed<string[]>(() => {
   const units = trends.value?.shrTrend?.units ?? []
   if (!units.length) return ['--']
-  return units[0].data?.map((p: any) => p.week) ?? ['--']
+  return units[0].data?.map((p: TrendPoint) => p.week ?? '') ?? ['--']
 })
 
 const shrSeries = computed(() => {
@@ -644,7 +653,7 @@ const shrSeries = computed(() => {
   const palette = CHART_COLORS.palette as readonly string[]
   return units.map((u, i) => ({
     name: `${u.label} (${u.roomName})`,
-    data: u.data.map((p: any) => p.value) as number[],
+    data: u.data.map((p: TrendPoint) => p.value ?? 0) as number[],
     type: 'line' as const,
     lineStyle: { color: palette[i % palette.length] },
     areaStyle: { opacity: 0.05 },
@@ -707,7 +716,7 @@ const fspXData = computed(() => {
 const fspSeries = computed(() => {
   const units = trends.value?.fanVsStaticPressure?.units ?? []
   const palette = CHART_COLORS.palette as readonly string[]
-  const series: any[] = []
+  const series: LineSeriesOption[] = []
   units.forEach((u, i) => {
     series.push({
       name: `${u.label} 风机转速`,
@@ -736,7 +745,7 @@ const vdtXData = computed(() => {
 const vdtSeries = computed(() => {
   const units = trends.value?.valveDeltaT?.units ?? []
   const palette = CHART_COLORS.palette as readonly string[]
-  const series: any[] = []
+  const series: LineSeriesOption[] = []
   units.forEach((u, i) => {
     series.push({
       name: `${u.label} 水阀`,
@@ -765,7 +774,7 @@ const shXData = computed(() => {
 const shSeries = computed(() => {
   const units = trends.value?.superheatTrend?.units ?? []
   const palette = CHART_COLORS.palette as readonly string[]
-  const series: any[] = []
+  const series: LineSeriesOption[] = []
   units.forEach((u, i) => {
     series.push({
       name: `${u.label} 吸气过热度`,

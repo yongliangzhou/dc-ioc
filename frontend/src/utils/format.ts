@@ -6,7 +6,7 @@
  *
  * 注意：
  * - `barCls` 不在此处收口：NetworkFirewalls 与 CapacityDashboard 两套
- *   返回值（res-*/crit-warn-ok）类名体系不同，保留各自局部实现。
+ *   返回值（res-/crit-warn-ok）类名体系不同，保留各自局部实现。
  * - ops 模块原 `fmt(s?: string)` 为"字符串时间格式化"，与数值版 `fmt`
  *   同名冲突，此处以 `fmtDateTime` 导出，调用点需相应改名。
  */
@@ -24,7 +24,7 @@ export function fmtInt(v: number | null | undefined): string {
 }
 
 /** 大数缩写：K / M。null -> '-' */
-export function fmtNum(v: number | null | undefined, digits = 2): string {
+export function fmtNum(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '-'
   if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + 'M'
   if (v >= 1_000) return (v / 1_000).toFixed(1) + 'K'

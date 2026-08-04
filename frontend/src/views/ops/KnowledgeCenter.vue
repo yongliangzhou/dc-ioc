@@ -84,20 +84,14 @@
     <div class="kb-pager" v-if="total > pageSize">
       <button
         :disabled="page <= 1"
-        @click="
-          page--
-          load()
-        "
+        @click="page = page - 1; load()"
       >
         {{ tl('上一页') }}
       </button>
       <span>{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
       <button
         :disabled="page * pageSize >= total"
-        @click="
-          page++
-          load()
-        "
+        @click="page++; load()"
       >
         {{ tl('下一页') }}
       </button>
@@ -204,6 +198,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { KnowledgeItem } from '@/types'
@@ -271,14 +266,14 @@ const typeLabel = (t: string) =>
       emergency: tl('应急'),
       case: tl('案例'),
       training: tl('培训'),
-    }) as any
+    })
   )[t] || t
 
 // ---- load ----
 async function load() {
   loading.value = true
   try {
-    const params: any = { page: page.value, page_size: pageSize }
+    const params: Record<string, unknown> = { page: page.value, page_size: pageSize }
     if (activeCat.value) params.category = activeCat.value
     if (searchQ.value) params.q = searchQ.value
     const r = await getKnowledgeItems(params)
@@ -366,8 +361,8 @@ async function saveItem() {
     }
     closeCreate()
     load()
-  } catch (e: any) {
-    toast.error(e?.detail || e?.response?.data?.detail || e?.message || tl('保存失败'))
+  } catch (e: unknown) {
+    toast.error((e as ErrorLike)?.detail || (e as ErrorLike)?.response?.data?.detail || (e as ErrorLike)?.message || tl('保存失败'))
   } finally {
     saving.value = false
   }
@@ -405,11 +400,11 @@ async function handleImport(e: Event) {
     load()
     loadCats()
     toast.success(tl('导入完成'))
-  } catch (e: any) {
+  } catch (e: unknown) {
     importMsg.value =
       tl('导入失败') +
       '，' +
-      (e?.detail || e?.response?.data?.detail || e?.message || tl('请检查文件格式'))
+      ((e as ErrorLike)?.detail || (e as ErrorLike)?.response?.data?.detail || (e as ErrorLike)?.message || tl('请检查文件格式'))
     importErr.value = true
   }
 }

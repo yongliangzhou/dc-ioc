@@ -182,7 +182,7 @@ import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getEquipment, getEquipmentMetrics, listEquipment } from '@/api'
+import { getEquipmentMetrics, listEquipment } from '@/api'
 import TrendChart, { type TrendMetric } from '@/components/charts/TrendChart.vue'
 import Panel from '@/components/common/Panel.vue'
 import type { Equipment, EquipmentMetrics, MetricHistoryPoint } from '@/types'

@@ -296,7 +296,7 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'submit-single', payload: ExternalDevice): void
   (e: 'submit-batch', payloads: ExternalDevice[]): void
-  (e: 'submit-edit', deviceId: string, payload: Record<string, any>): void
+  (e: 'submit-edit', deviceId: string, payload: Record<string, unknown>): void
 }>()
 
 const addMode = ref<'single' | 'batch'>('single')

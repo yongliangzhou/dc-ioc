@@ -45,8 +45,26 @@ interface DemoDeviceList {
 }
 
 const rnd = (a: number, b: number, f = 1) => +(a + Math.random() * (b - a)).toFixed(f)
-const pick = (arr: any[]) => arr[Math.floor(Math.random() * arr.length)]
+const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 const series = (n: number, a: number, b: number) => Array.from({ length: n }, () => rnd(a, b))
+
+// 状态/故障/保护项 (name + 状态或数值 + 严重级别)
+interface StatusItem {
+  name: string
+  state?: string
+  value?: string
+  level: string
+}
+
+// Mock 接口查询参数
+interface MockQuery {
+  domain?: string
+  protocol?: string
+  room?: string
+  page?: number | string
+  size?: number | string
+  [k: string]: unknown
+}
 
 /* 柴发并机机组 — 补齐进线/出线三相电参量、开关分合、故障与保护装置 */
 function buildGensetUnits() {
@@ -85,8 +103,8 @@ function buildGensetUnits() {
       rpm = 0,
       waterT = 0,
       oilP = 0
-    let faults: any[] = []
-    let prots: any[] = []
+    let faults: StatusItem[] = []
+    let prots: StatusItem[] = []
     if (running) {
       const load = rnd(62, 95, 0)
       const uBase = rnd(10.4, 10.6, 2)
@@ -2148,7 +2166,7 @@ function findReg(deviceId: string): MockRegDevice | null {
   return MOCK_REGISTERED.find((d) => d.device_id === deviceId) ?? null
 }
 
-function externalDevicesMock(params?: any): DeviceListResponse {
+function externalDevicesMock(params?: MockQuery): DeviceListResponse {
   let items = MOCK_REGISTERED.map(buildDeviceView)
   if (params?.domain) items = items.filter((i) => i.domain === params.domain)
   if (params?.protocol) items = items.filter((i) => i.protocol === params.protocol)
@@ -2164,7 +2182,7 @@ function externalDevicesMock(params?: any): DeviceListResponse {
 }
 
 /** v2 演示设备列表 (从已注册设备映射, 供 /api/demo/devices 兜底) */
-function demoDevicesMock(params?: any): DemoDeviceList {
+function demoDevicesMock(params?: MockQuery): DemoDeviceList {
   const base = externalDevicesMock(params)
   const items: DemoDeviceItem[] = base.items.map((d) => ({
     device_id: d.device_id,
@@ -2276,8 +2294,6 @@ function historyMock(deviceId: string, minutes = 30, limit = 300): MetricHistory
 }
 
 /* ================= 告警规则引擎 / 告警历史 (兜底) ================= */
-const isoDaysAgo = (d: number, h = 0) =>
-  new Date(Date.now() - d * 86400000 - h * 3600000).toISOString()
 
 const ALARM_RULES: AlarmRuleDef[] = [
   {
@@ -2538,7 +2554,7 @@ function genCabinets(): Cabinet[] {
 }
 const CABINETS: Cabinet[] = genCabinets()
 
-function cabinetsMock(params?: any): Paginated<Cabinet> {
+function cabinetsMock(params?: MockQuery): Paginated<Cabinet> {
   let items = CABINETS
   if (params?.room) items = items.filter((c) => c.room === params.room)
   const total = items.length
@@ -2551,7 +2567,7 @@ function cabinetsMock(params?: any): Paginated<Cabinet> {
 /** 机柜测点随机游走状态 (cabinet id → 当前值) */
 const cabWalk = new Map<number, { t: number; h: number; p: number }>()
 
-function cabinetMetricsMock(id: number, params?: any): CabinetMetrics {
+function cabinetMetricsMock(id: number, params?: MockQuery): CabinetMetrics {
   const cab = CABINETS.find((c) => c.id === id)
   const minutes = Number(params?.minutes ?? 60)
   const step = Number(params?.step_sec ?? 60)
@@ -2632,7 +2648,7 @@ function genEquipment(): Equipment[] {
 }
 const EQUIPMENT: Equipment[] = genEquipment()
 
-function equipmentMock(params?: any): Equipment[] {
+function equipmentMock(params?: MockQuery): Equipment[] {
   let items = EQUIPMENT
   if (params?.domain) items = items.filter((e) => e.domain === params.domain)
   if (params?.category) items = items.filter((e) => e.category === params.category)
@@ -2648,7 +2664,7 @@ function equipmentOneMock(id: number): Equipment | undefined {
 /** 设备测点随机游走状态 (equipment id → metric → 当前值) */
 const eqWalk = new Map<number, Record<string, number>>()
 
-function equipmentMetricsMock(id: number, params?: any): EquipmentMetrics {
+function equipmentMetricsMock(id: number, params?: MockQuery): EquipmentMetrics {
   const eq = EQUIPMENT.find((e) => e.id === id)
   const minutes = Number(params?.minutes ?? 60)
   const step = Number(params?.step_sec ?? 60)
@@ -2687,7 +2703,7 @@ function equipmentMetricsMock(id: number, params?: any): EquipmentMetrics {
  * - 业务域 GET (精确匹配) 返回旧版 DC.* 静态数据;
  * - 外部设备接入契约 (/api/external/*) 支持精确匹配与含设备 ID 的动态前缀匹配。
  */
-export function mockForUrl(url: string, cfg?: any): unknown | undefined {
+export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown | undefined {
   const table: Record<string, unknown> = {
     '/api/dashboard/overview': dashboardOverview(),
     '/api/hvac/chiller-plant': DC.chillerPlant,
@@ -2731,7 +2747,7 @@ export function mockForUrl(url: string, cfg?: any): unknown | undefined {
       }
       if (sub === 'realtime') return realtimeMock(deviceId)
       if (sub === 'history') {
-        const minutes = computeMinutes(params.start, params.end)
+        const minutes = computeMinutes(String(params.start ?? ''), String(params.end ?? ''))
         const limit = Number(params.limit ?? 300)
         return historyMock(deviceId, minutes, limit)
       }
@@ -2741,7 +2757,7 @@ export function mockForUrl(url: string, cfg?: any): unknown | undefined {
   // ---- 告警规则引擎 / 告警历史 ----
   if (url === '/api/alarm-rules') return alarmRulesMock()
   if (url === '/api/alarm-rules/state') return alarmEngineStateMock()
-  if (url === '/api/alarm-history') return alarmHistoryMock(cfg?.params)
+  if (url === '/api/alarm-history') return alarmHistoryMock(cfg?.params as AlarmHistoryQuery | undefined)
 
   // ---- 机柜 / 统一设备台账 ----
   if (url === '/api/cabinets') return cabinetsMock(cfg?.params)

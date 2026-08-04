@@ -214,7 +214,7 @@
     </Panel>
 
     <!-- Per-device detail cards -->
-    <Panel v-if="s && s.routerList.length" v-for="r in s.routerList" :key="r.id" :title="r.name">
+    <Panel v-for="r in routerCards" :key="r.id" :title="r.name">
       <template #ct>
         {{ r.name }}
         <span class="muted ml2 fw4 f11">{{ r.model }}</span>
@@ -285,7 +285,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import type { ErrorLike } from '@/utils/error'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps, utilCls, genHours } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
@@ -293,7 +294,7 @@ import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import Panel from '@/components/common/Panel.vue'
-import { getNetworkRoutersDetailed, type RouterView, type RouterProtocolView } from '@/api/monitor'
+import { getNetworkRoutersDetailed, type RouterView } from '@/api/monitor'
 const { t: tl } = useI18n()
 
 // ──────────────────────────────────────────
@@ -377,12 +378,11 @@ const s = reactive<PageState>({
   peakSessionRate: 0,
 })
 
+const routerCards = computed(() => s.routerList ?? [])
+
 // ──────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────
-function fmtPercent(v: number): string {
-  return v != null ? v.toFixed(1) + '%' : '-'
-}
 
 function genTimeData(n: number, base: number, amp: number, noise: number): number[] {
   const pts: number[] = []
@@ -901,8 +901,8 @@ async function loadData() {
         mock.peakSessionRate,
       )
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

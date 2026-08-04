@@ -184,6 +184,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -236,7 +237,7 @@ async function selectRoute(id: number) {
 async function refreshRecords() {
   try {
     records.value = await getInspectionRecords(selectedRouteId.value ?? undefined)
-  } catch (_) {
+  } catch {
     /* ignore */
   }
 }
@@ -245,7 +246,7 @@ async function openRecord(rec: RecordView) {
   detailRecord.value = rec
   try {
     items.value = await getInspectionItems(rec.id)
-  } catch (_) {
+  } catch {
     items.value = []
   }
 }
@@ -261,8 +262,8 @@ async function load() {
       selectedRouteName.value = r[0].name
       await refreshRecords()
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   }
 }
 

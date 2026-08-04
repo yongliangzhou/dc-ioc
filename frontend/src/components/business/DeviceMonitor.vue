@@ -160,7 +160,6 @@ const {
   connected: wsConnected,
   history: historyData,
   loadingHistory,
-  spark,
   val,
   unitOf,
   fetchRecentHistory,

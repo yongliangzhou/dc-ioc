@@ -40,7 +40,7 @@
             <rect x="60" y="170" width="480" height="40" class="corridor" />
             <text x="64" y="195" class="corr-label">主通道</text>
             <!-- 区域块 -->
-            <g v-for="(zone, zi) in zones" :key="zone.id">
+            <g v-for="zone in zones" :key="zone.id">
               <rect :x="zone.x" :y="zone.y" :width="zone.w" :height="zone.h" rx="6" class="zone" />
               <text :x="zone.x + 8" :y="zone.y + 18" class="zone-label">{{ zone.short }}</text>
             </g>
@@ -114,7 +114,7 @@
             <span class="tag" :class="lvCls(e.lv)">{{ lvText(e.lv) }}</span>
           </div>
         </div>
-      </section>
+      </Panel>
 
       <!-- 通行统计 -->
       <Panel>
@@ -128,10 +128,6 @@
           :height="220"
           :show-legend="false"
         />
-      </section>
-
-      <!-- 授权分级 -->
-      <s          />
       </Panel>
 
       <!-- 授权分级 -->

@@ -13,8 +13,8 @@ import router from '@/router'
 import { mockForUrl } from '@/api/mockData'
 
 // axios 拦截器内部 handlers (axios v1 稳定结构)
-const reqHandler = (request.interceptors.request as any).handlers[0]
-const resHandler = (request.interceptors.response as any).handlers[0]
+const reqHandler = (request.interceptors.request as unknown as { handlers: unknown[] }).handlers[0]
+const resHandler = (request.interceptors.response as unknown as { handlers: unknown[] }).handlers[0]
 
 beforeEach(() => {
   localStorage.clear()
@@ -49,7 +49,7 @@ describe('响应拦截器', () => {
     await expect(resHandler.rejected(err)).rejects.toEqual({ detail: 'unauthorized' })
     expect(localStorage.getItem('dc_ioc_token')).toBeNull()
     expect(localStorage.getItem('dc_ioc_user')).toBeNull()
-    expect((router as any).push).toHaveBeenCalledWith('/login')
+    expect((router as unknown as { push: (p: string) => void }).push).toHaveBeenCalledWith('/login')
   })
 
   it('后端不可达 (无 response) 的 GET 请求走本地 mock 兜底', async () => {

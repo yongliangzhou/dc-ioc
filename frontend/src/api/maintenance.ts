@@ -33,39 +33,49 @@ export interface MaintenanceStats {
   completedRecords: number
 }
 
+// 后端动态 JSON 的宽松原始记录类型 (字段为 unknown, 经由 Number()/String() 收窄)
+interface RawItem {
+  [k: string]: unknown
+}
+
+// 将 unknown 收窄为 RawItem 数组
+function asRawList(v: unknown): RawItem[] {
+  return Array.isArray(v) ? (v as RawItem[]) : []
+}
+
 // 后端 GET /api/ops/maintain 返回 { stats: {plan, done, overdue, thisWeek}, plans: [...], spares: [...] }
 // 后端 GET /api/ops/maintain/records 返回 { records: [...], total } (真实维保记录)
 export async function getMaintenancePlans(): Promise<PlanView[]> {
-  const resp: any = await request.get('/api/ops/maintain')
-  return (resp.plans ?? []).map((p: any) => ({
-    id: p.id,
-    code: p.code ?? '',
-    name: p.name ?? p.equip ?? '',
-    equipmentCode: p.equip ?? '',
-    description: p.vendor ?? null,
-    frequency: p.cycle ?? '',
-    nextDueDate: p.next ?? null,
-    status: p.state ?? '正常',
+  const resp = await request.get<unknown, RawItem>('/api/ops/maintain')
+  return asRawList(resp.plans).map((p) => ({
+    id: (p.id as number | string) ?? '',
+    code: String(p.code ?? ''),
+    name: String(p.name ?? p.equip ?? ''),
+    equipmentCode: String(p.equip ?? ''),
+    description: (p.vendor as string | null) ?? null,
+    frequency: String(p.cycle ?? ''),
+    nextDueDate: (p.next as string | null) ?? null,
+    status: String(p.state ?? '正常'),
     overdue: p.state === '逾期' ? 1 : 0,
   }))
 }
 
 export async function getMaintenanceRecords(planId?: number | string): Promise<RecordView[]> {
-  const resp: any = await request.get('/api/ops/maintain/records', {
+  const resp = await request.get<unknown, RawItem>('/api/ops/maintain/records', {
     params: planId != null ? { planId } : {},
   })
-  return resp.records ?? []
+  return (resp.records as RecordView[]) ?? []
 }
 
 export async function getMaintenanceStats(): Promise<MaintenanceStats> {
-  const resp: any = await request.get('/api/ops/maintain')
-  const s = resp.stats ?? {}
-  const plan = s.plan ?? 0
-  const done = s.done ?? 0
+  const resp = await request.get<unknown, RawItem>('/api/ops/maintain')
+  const s = (resp.stats as RawItem) ?? {}
+  const plan = Number(s.plan) || 0
+  const done = Number(s.done) || 0
   return {
     totalPlans: plan,
-    activePlans: plan - (s.overdue ?? 0),
-    overduePlans: s.overdue ?? 0,
+    activePlans: plan - (Number(s.overdue) || 0),
+    overduePlans: Number(s.overdue) || 0,
     totalRecords: done,
     completedRecords: done,
   }

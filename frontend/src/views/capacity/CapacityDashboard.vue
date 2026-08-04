@@ -126,6 +126,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -145,8 +146,8 @@ function barCls(v: number | null) {
 onMounted(async () => {
   try {
     data.value = await getCapacityOverview()
-  } catch (e: any) {
-    err.value = e?.message || String(e)
+  } catch (e: unknown) {
+    err.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

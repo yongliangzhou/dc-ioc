@@ -116,6 +116,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
@@ -183,7 +184,7 @@ async function load() {
       if (still) loadModalMetrics()
       else closeMetrics()
     }
-  } catch (e) {
+  } catch {
     /* 后端未就绪时静默 */
   } finally {
     loading.value = false
@@ -212,7 +213,7 @@ async function loadModalMetrics() {
   modalLoading.value = true
   try {
     modalMetrics.value = await getDeviceMetrics(modalDevice.value.device_id, 20)
-  } catch (e) {
+  } catch {
     modalMetrics.value = []
   } finally {
     modalLoading.value = false
@@ -251,14 +252,20 @@ const FIELD_LABELS: Record<string, string> = {
   description: '描述',
 }
 
-function parseValidationError(e: any): string {
-  const detail = e?.detail
+interface ValidationErr {
+  loc?: unknown[]
+  msg?: string
+  type?: string
+}
+
+function parseValidationError(e: unknown): string {
+  const detail = (e as ErrorLike)?.detail
   if (typeof detail === 'string' && detail.includes('token')) {
     return '采集器鉴权失败，请联系管理员配置 EXTERNAL_COLLECTOR_TOKEN'
   }
   if (Array.isArray(detail) && detail.length > 0) {
     return detail
-      .map((d: any) => {
+      .map((d: ValidationErr) => {
         const field = (d.loc?.slice(-1)[0] || '') as string
         const label = FIELD_LABELS[field] || field || '未知字段'
         const msgMap: Record<string, string> = {
@@ -273,7 +280,7 @@ function parseValidationError(e: any): string {
       .join('；')
   }
   if (typeof detail === 'string') return detail
-  if (typeof e?.message === 'string') return e.message
+  if (typeof (e as ErrorLike)?.message === 'string') return e.message
   return '注册失败，请检查网络连接或联系管理员'
 }
 
@@ -286,7 +293,7 @@ async function onSubmitSingle(payload: ExternalDevice) {
     const dup = res.status === 'duplicate'
     addResult.value = { ok: dup ? 0 : 1, dup: dup ? 1 : 0, fail: 0 }
     await load()
-  } catch (e: any) {
+  } catch (e: unknown) {
     addError.value = parseValidationError(e)
     addResult.value = { ok: 0, dup: 0, fail: 1 }
   } finally {
@@ -323,7 +330,7 @@ async function onSubmitBatch(payloads: ExternalDevice[]) {
       addError.value = failReasons.join('；') + (fail > 3 ? ` 等 ${fail} 条错误` : '')
     }
     await load()
-  } catch (e: any) {
+  } catch (e: unknown) {
     addError.value = parseValidationError(e)
     addResult.value = { ok: 0, dup: 0, fail: 1 }
   } finally {
@@ -331,7 +338,7 @@ async function onSubmitBatch(payloads: ExternalDevice[]) {
   }
 }
 
-async function onSubmitEdit(deviceId: string, payload: Record<string, any>) {
+async function onSubmitEdit(deviceId: string, payload: Record<string, unknown>) {
   editing.value = true
   editError.value = ''
   editOk.value = ''
@@ -339,7 +346,7 @@ async function onSubmitEdit(deviceId: string, payload: Record<string, any>) {
     await updateDevice(deviceId, payload)
     editOk.value = '设备信息已更新'
     await load()
-  } catch (e: any) {
+  } catch (e: unknown) {
     editError.value = parseValidationError(e)
   } finally {
     editing.value = false
@@ -369,7 +376,7 @@ async function doDelete() {
     await deleteDevice(deleteTarget.value.device_id)
     deleteConfirmOpen.value = false
     await load()
-  } catch (e: any) {
+  } catch (e: unknown) {
     deleteError.value = parseValidationError(e)
   } finally {
     deleting.value = false

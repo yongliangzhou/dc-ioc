@@ -239,8 +239,36 @@ export interface NetworkOverview {
 
 // ---- 后端原始返回结构 (dc_aggregator.network_overview) ----
 interface RawPort {
+  name?: string
+  alias?: string
   status: string
+  speed_mbps?: number
+  in_bps?: number
+  out_bps?: number
   in_util_pct?: number
+  out_util_pct?: number
+  in_errors?: number
+  out_errors?: number
+  in_discards?: number
+  tx_power_dbm?: number
+  rx_power_dbm?: number
+  optical_alarm?: unknown
+}
+
+interface RawTrunk {
+  id: string
+  members?: unknown[]
+  mode?: string
+  status?: string
+  util_pct?: number
+  traffic_bps?: number
+}
+
+interface RawStack {
+  topo?: unknown
+  members?: unknown[]
+  master?: unknown
+  status?: string
 }
 
 interface RawSwitch {
@@ -253,11 +281,82 @@ interface RawSwitch {
   status: string // online | offline
   cpu_pct: number
   mem_pct: number
+  temp_c?: number
   uptime_days: number
   total_ports: number
   up_ports: number
   down_ports: number
   ports: RawPort[]
+  trunks?: RawTrunk[]
+  stack?: RawStack | null
+}
+
+interface RawProtocol {
+  name?: string
+  peer_total?: number
+  neighbor_total?: number
+  area?: number
+  peer_up?: number
+  neighbor_up?: number
+  state?: string
+  routes?: number
+  desc?: string
+  flake?: number
+}
+
+interface RawRouter {
+  id: string
+  name: string
+  ip: string
+  model: string
+  role: string
+  location: string
+  status: string
+  cpu_pct: number
+  mem_pct: number
+  temp_c?: number
+  uptime_days: number
+  throughput_bps?: number
+  sessions?: number
+  bgp_state?: string
+  ospf_neighbors?: number
+  routes_total?: number
+  protocols?: RawProtocol[]
+}
+
+interface RawFirewall {
+  id: string
+  name: string
+  ip: string
+  model: string
+  location: string
+  status: string
+  cpu_pct: number
+  mem_pct: number
+  temp_c?: number
+  uptime_days: number
+  concurrent_sessions?: number
+  session_rate?: number
+  policy_total?: number
+  policy_hit_top?: Array<{ name?: string; hits?: number }>
+  throughput_bps?: number
+  threat_blocked?: number
+  vpn_tunnels?: number
+}
+
+interface RawWireless {
+  id: string
+  name: string
+  location: string
+  status: string
+  model: string
+  ip: string
+  radio_2g?: { status?: string; channel?: number; tx_power_dbm?: number; users?: number; util_pct?: number }
+  radio_5g?: { status?: string; channel?: number; tx_power_dbm?: number; users?: number; util_pct?: number }
+  users_total?: number
+  rx_rssi_dbm?: number
+  noise_floor_dbm?: number
+  uptime_days?: number
 }
 
 interface RawOverview {
@@ -272,6 +371,9 @@ interface RawOverview {
   avg_cpu_pct?: number
   avg_mem_pct?: number
   switches?: RawSwitch[]
+  routers?: RawRouter[]
+  firewalls?: RawFirewall[]
+  wireless?: RawWireless[]
   ping_targets?: Array<{
     target: string
     name?: string
@@ -442,7 +544,7 @@ export function getNetworkOverview(): Promise<NetworkOverview> {
 
 // ---- 详细视图 (子系统完整数据) ----
 function mapSwitchDetailed(raw: RawOverview): NetworkSwitchSummary {
-  const switches: SwitchView[] = (raw.switches ?? []).map((sw: any) => ({
+  const switches: SwitchView[] = (raw.switches ?? []).map((sw: RawSwitch) => ({
     id: sw.id,
     name: sw.name,
     ip: sw.ip,
@@ -457,10 +559,10 @@ function mapSwitchDetailed(raw: RawOverview): NetworkSwitchSummary {
     total_ports: Number(sw.total_ports) || 0,
     up_ports: Number(sw.up_ports) || 0,
     down_ports: Number(sw.down_ports) || 0,
-    ports: (sw.ports ?? []).map((p: any) => ({
-      name: p.name,
-      alias: p.alias,
-      status: p.status,
+    ports: (sw.ports ?? []).map((p) => ({
+      name: String(p.name ?? ''),
+      alias: String(p.alias ?? ''),
+      status: String(p.status ?? ''),
       speed_mbps: Number(p.speed_mbps) || 0,
       in_bps: Number(p.in_bps) || 0,
       out_bps: Number(p.out_bps) || 0,
@@ -469,25 +571,25 @@ function mapSwitchDetailed(raw: RawOverview): NetworkSwitchSummary {
       in_errors: Number(p.in_errors) || 0,
       out_errors: Number(p.out_errors) || 0,
       in_discards: Number(p.in_discards) || 0,
-      tx_power_dbm: p.tx_power_dbm,
-      rx_power_dbm: p.rx_power_dbm,
-      optical_alarm: p.optical_alarm,
+      tx_power_dbm: Number(p.tx_power_dbm) || 0,
+      rx_power_dbm: Number(p.rx_power_dbm) || 0,
+      optical_alarm: String(p.optical_alarm ?? ''),
     })),
-    trunks: (sw.trunks ?? []).map((t: any) => ({
-      id: t.id,
-      members: t.members ?? [],
-      mode: t.mode,
-      status: t.status,
+    trunks: (sw.trunks ?? []).map((t) => ({
+      id: String(t.id ?? ''),
+      members: (t.members as string[] | undefined) ?? [],
+      mode: String(t.mode ?? ''),
+      status: String(t.status ?? ''),
       util_pct: Number(t.util_pct) || 0,
       traffic_bps: Number(t.traffic_bps) || 0,
     })),
     stack: sw.stack
       ? {
           enabled: true,
-          topo: sw.stack.topo,
-          members: sw.stack.members,
-          master: sw.stack.master,
-          status: sw.stack.status,
+          topo: String(sw.stack.topo ?? ''),
+          members: Number(sw.stack.members) || 0,
+          master: String(sw.stack.master ?? ''),
+          status: String(sw.stack.status ?? ''),
         }
       : null,
   }))
@@ -504,25 +606,25 @@ function mapSwitchDetailed(raw: RawOverview): NetworkSwitchSummary {
     avgCpu: Number(raw.avg_cpu_pct) || 0,
     avgMem: Number(raw.avg_mem_pct) || 0,
     switches,
-    pingTargets: (raw.ping_targets ?? []).map((p: any) => ({
-      target: p.target,
-      name: p.name,
-      category: p.category,
+    pingTargets: (raw.ping_targets ?? []).map((p) => ({
+      target: String(p.target ?? ''),
+      name: String(p.name ?? ''),
+      category: String(p.category ?? ''),
       rtt_min_ms: Number(p.rtt_min_ms) || 0,
       rtt_avg_ms: Number(p.rtt_avg_ms) || 0,
       rtt_max_ms: Number(p.rtt_max_ms) || 0,
       loss_pct: Number(p.loss_pct) || 0,
       jitter_ms: Number(p.jitter_ms) || 0,
-      status: p.status,
+      status: String(p.status ?? ''),
     })),
     avgPingRttMs: Number(raw.avg_ping_rtt_ms) || 0,
     avgPingLossPct: Number(raw.avg_ping_loss_pct) || 0,
     worstPingTarget: String(raw.worst_ping_target ?? ''),
-    bwTopN: (raw.bw_topn ?? []).map((b: any) => ({
-      rank: Number(b.rank),
-      name: b.name,
-      device: b.device,
-      direction: b.direction,
+    bwTopN: (raw.bw_topn ?? []).map((b) => ({
+      rank: Number(b.rank) || 0,
+      name: String(b.name ?? ''),
+      device: String(b.device ?? ''),
+      direction: String(b.direction ?? ''),
       util_pct: Number(b.util_pct) || 0,
       traffic_bps: Number(b.traffic_bps) || 0,
       capacity_mbps: Number(b.capacity_mbps) || 0,
@@ -530,8 +632,8 @@ function mapSwitchDetailed(raw: RawOverview): NetworkSwitchSummary {
     })),
   }
 }
-function mapRouterDetailed(raw: any): NetworkRouterSummary {
-  const routers: RouterView[] = (raw.routers ?? []).map((r: any) => ({
+function mapRouterDetailed(raw: RawOverview): NetworkRouterSummary {
+  const routers: RouterView[] = (raw.routers ?? []).map((r: RawRouter) => ({
     id: r.id,
     name: r.name,
     ip: r.ip,
@@ -545,19 +647,19 @@ function mapRouterDetailed(raw: any): NetworkRouterSummary {
     uptime_days: Number(r.uptime_days) || 0,
     throughput_bps: Number(r.throughput_bps) || 0,
     sessions: Number(r.sessions) || 0,
-    bgp_state: r.bgp_state,
+    bgp_state: String(r.bgp_state ?? ''),
     ospf_neighbors: Number(r.ospf_neighbors) || 0,
     routes_total: Number(r.routes_total) || 0,
-    protocols: (r.protocols ?? []).map((p: any) => ({
-      name: p.name,
-      peer_total: p.peer_total,
-      neighbor_total: p.neighbor_total,
+    protocols: (r.protocols ?? []).map((p) => ({
+      name: String(p.name ?? ''),
+      peer_total: Number(p.peer_total) || 0,
+      neighbor_total: Number(p.neighbor_total) || 0,
       area: p.area,
-      peer_up: p.peer_up,
-      neighbor_up: p.neighbor_up,
-      state: p.state,
+      peer_up: Number(p.peer_up) || 0,
+      neighbor_up: Number(p.neighbor_up) || 0,
+      state: String(p.state ?? ''),
       routes: Number(p.routes) || 0,
-      desc: p.desc,
+      desc: String(p.desc ?? ''),
       flake: Number(p.flake) || 0,
     })),
   }))
@@ -574,8 +676,8 @@ function mapRouterDetailed(raw: any): NetworkRouterSummary {
     routesTotal: routers.reduce((s, r) => s + r.routes_total, 0),
   }
 }
-function mapFirewallDetailed(raw: any): NetworkFirewallSummary {
-  const firewalls: FirewallView[] = (raw.firewalls ?? []).map((f: any) => ({
+function mapFirewallDetailed(raw: RawOverview): NetworkFirewallSummary {
+  const firewalls: FirewallView[] = (raw.firewalls ?? []).map((f: RawFirewall) => ({
     id: f.id,
     name: f.name,
     ip: f.ip,
@@ -589,8 +691,8 @@ function mapFirewallDetailed(raw: any): NetworkFirewallSummary {
     concurrent_sessions: Number(f.concurrent_sessions) || 0,
     session_rate: Number(f.session_rate) || 0,
     policy_total: Number(f.policy_total) || 0,
-    policy_hit_top: (f.policy_hit_top ?? []).map((p: any) => ({
-      name: p.name,
+    policy_hit_top: (f.policy_hit_top ?? []).map((p) => ({
+      name: String(p.name ?? ''),
       hits: Number(p.hits) || 0,
     })),
     throughput_bps: Number(f.throughput_bps) || 0,
@@ -608,8 +710,8 @@ function mapFirewallDetailed(raw: any): NetworkFirewallSummary {
     vpnTunnels: firewalls.reduce((s, f) => s + f.vpn_tunnels, 0),
   }
 }
-function mapWirelessDetailed(raw: any): NetworkWirelessSummary {
-  const aps: WirelessView[] = (raw.wireless ?? []).map((w: any) => ({
+function mapWirelessDetailed(raw: RawOverview): NetworkWirelessSummary {
+  const aps: WirelessView[] = (raw.wireless ?? []).map((w: RawWireless) => ({
     id: w.id,
     name: w.name,
     location: w.location,
@@ -655,19 +757,19 @@ export function getNetworkSwitchesDetailed(): Promise<NetworkSwitchSummary> {
 }
 export function getNetworkRoutersDetailed(): Promise<NetworkRouterSummary> {
   return request
-    .get<unknown, any>('/api/network/overview')
-    .then((raw) => mapRouterDetailed(raw ?? {}))
+    .get<unknown, RawOverview>('/api/network/overview')
+    .then((raw) => mapRouterDetailed(raw ?? ({} as RawOverview)))
     .catch(() => mapRouterDetailed({}))
 }
 export function getNetworkFirewallsDetailed(): Promise<NetworkFirewallSummary> {
   return request
-    .get<unknown, any>('/api/network/overview')
-    .then((raw) => mapFirewallDetailed(raw ?? {}))
+    .get<unknown, RawOverview>('/api/network/overview')
+    .then((raw) => mapFirewallDetailed(raw ?? ({} as RawOverview)))
     .catch(() => mapFirewallDetailed({}))
 }
 export function getNetworkWirelessDetailed(): Promise<NetworkWirelessSummary> {
   return request
-    .get<unknown, any>('/api/network/overview')
-    .then((raw) => mapWirelessDetailed(raw ?? {}))
+    .get<unknown, RawOverview>('/api/network/overview')
+    .then((raw) => mapWirelessDetailed(raw ?? ({} as RawOverview)))
     .catch(() => mapWirelessDetailed({}))
 }

@@ -2,16 +2,24 @@ import { type App, createApp } from 'vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 import { extractError } from '@/hooks/useAsyncTask'
 
-let instance: any = null
+// ConfirmDialog 组件实例对外暴露的命令式方法
+interface ConfirmDialogInstance {
+  open: (opts: ConfirmOptions) => Promise<boolean>
+  setLoading: (v: boolean) => void
+  setError: (msg: string) => void
+  close: () => void
+}
+
+let instance: ConfirmDialogInstance | null = null
 
 /** 懒加载单例 ConfirmDialog 到 body */
-function ensureInstance(): Promise<any> {
+function ensureInstance(): Promise<ConfirmDialogInstance> {
   if (instance) return Promise.resolve(instance)
   return new Promise((resolve) => {
     const el = document.createElement('div')
     document.body.appendChild(el)
     const app: App = createApp(ConfirmDialog)
-    const comp = app.mount(el) as any
+    const comp = app.mount(el) as unknown as ConfirmDialogInstance
     instance = comp
     resolve(comp)
   })
@@ -48,7 +56,7 @@ export async function useConfirm(opts: ConfirmOptions): Promise<boolean> {
       await opts.onConfirm()
       comp.close()
       return true
-    } catch (e: any) {
+    } catch (e: unknown) {
       comp.setLoading(false)
       comp.setError(extractError(e))
       return false

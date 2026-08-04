@@ -132,6 +132,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { ref, reactive, nextTick } from 'vue'
@@ -216,9 +217,9 @@ async function send(q?: string) {
     } else {
       engineLabel.value = res.grounded ? '知识库检索生成' : `大模型 (${res.model})`
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     aiMsg.loading = false
-    aiMsg.text = '调用 AI 助手失败：' + (e?.message || '服务异常，请稍后重试。')
+    aiMsg.text = '调用 AI 助手失败：' + ((e as ErrorLike)?.message || '服务异常，请稍后重试。')
   } finally {
     sending.value = false
     await scroll()
@@ -238,7 +239,7 @@ async function runDiag() {
   diagLoading.value = true
   try {
     diag.value = await assistantStatus()
-  } catch (e: any) {
+  } catch (e: unknown) {
     diag.value = {
       configured: false,
       base_url: '-',
@@ -247,7 +248,7 @@ async function runDiag() {
       http_status: null,
       latency: null,
       model_available: null,
-      detail: '诊断失败：' + (e?.message || '无法连接后端'),
+      detail: '诊断失败：' + ((e as ErrorLike)?.message || '无法连接后端'),
     }
   } finally {
     diagLoading.value = false

@@ -20,19 +20,24 @@ export interface RiskStats {
   high: number
 }
 
+// 后端动态 JSON 的宽松原始记录类型 (字段为 unknown, 经由 Number()/String() 收窄)
+interface RawItem {
+  [k: string]: unknown
+}
+
 // 后端 GET /api/ops/risk 返回 { stats: {high, mid, low, closed}, matrix: [...] }
 export async function getRisks(): Promise<RiskView[]> {
-  const resp: any = await request.get('/api/ops/risk')
-  return resp.matrix ?? []
+  const resp = await request.get<unknown, RawItem>('/api/ops/risk')
+  return (resp.matrix as RiskView[]) ?? []
 }
 
 export async function getRiskStats(): Promise<RiskStats> {
-  const resp: any = await request.get('/api/ops/risk')
-  const s = resp.stats ?? {}
-  const high = s.high ?? 0
-  const mid = s.mid ?? 0
-  const low = s.low ?? 0
-  const closed = s.closed ?? 0
+  const resp = await request.get<unknown, RawItem>('/api/ops/risk')
+  const s = (resp.stats as RawItem) ?? {}
+  const high = Number(s.high) || 0
+  const mid = Number(s.mid) || 0
+  const low = Number(s.low) || 0
+  const closed = Number(s.closed) || 0
   const total = high + mid + low
   return {
     total,

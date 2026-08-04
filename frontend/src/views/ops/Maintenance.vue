@@ -122,6 +122,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -188,8 +189,8 @@ async function load() {
       selectedPlanName.value = p[0].name
       records.value = await getMaintenanceRecords(p[0].id)
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   }
 }
 onMounted(load)

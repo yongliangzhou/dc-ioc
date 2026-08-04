@@ -6,8 +6,14 @@
 FROM node:20-alpine AS dev
 WORKDIR /app
 
+# 使用国内镜像源 + 超时/重试，避免受限网络下 npm install 静默挂起
+ENV npm_config_registry=https://registry.npmmirror.com \
+    npm_config_fetch_timeout=120000 \
+    npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=10000 \
+    npm_config_fetch_retry_maxtimeout=60000
 COPY package.json package-lock.json* ./
-RUN npm ci || npm install
+RUN npm install --no-audit --no-fund || npm ci --no-audit --no-fund
 
 # 拷贝所有源文件 (config/ts/vite)；源码目录通过 volume 覆盖实现热更新
 COPY . .
@@ -21,8 +27,13 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 FROM node:20-alpine AS build
 WORKDIR /app
 
+ENV npm_config_registry=https://registry.npmmirror.com \
+    npm_config_fetch_timeout=120000 \
+    npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=10000 \
+    npm_config_fetch_retry_maxtimeout=60000
 COPY package.json package-lock.json* ./
-RUN npm ci || npm install
+RUN npm install --no-audit --no-fund || npm ci --no-audit --no-fund
 
 COPY . .
 RUN npm run build

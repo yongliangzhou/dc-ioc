@@ -105,6 +105,7 @@
   </div>
 </template>
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
@@ -139,8 +140,8 @@ async function load() {
       selName.value = p[0].name
       records.value = await getDrillRecords(p[0].id)
     }
-  } catch (ex: any) {
-    e.value = ex?.message || String(ex)
+  } catch (ex: unknown) {
+    e.value = (ex as ErrorLike)?.message || String(ex)
   }
 }
 onMounted(load)

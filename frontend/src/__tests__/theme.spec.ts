@@ -15,6 +15,7 @@ vi.mock('echarts', () => ({
 import { themeMode, toggleTheme, applyTheme } from '@/theme'
 import { chartVars, lineOption } from '@/components/charts/options'
 import BaseChart from '@/components/charts/BaseChart.vue'
+import type { EChartsOption } from 'echarts'
 
 beforeEach(() => {
   themeMode.value = 'dark'
@@ -40,9 +41,9 @@ describe('主题切换', () => {
   })
 
   it('lineOption 输出使用当前主题调色板', () => {
-    const darkOpt = lineOption(['a'], [{ name: 's', data: [1] }]) as any
+    const darkOpt = lineOption(['a'], [{ name: 's', data: [1] }]) as EChartsOption
     toggleTheme()
-    const lightOpt = lineOption(['a'], [{ name: 's', data: [1] }]) as any
+    const lightOpt = lineOption(['a'], [{ name: 's', data: [1] }]) as EChartsOption
     expect(darkOpt.color).not.toEqual(lightOpt.color)
     expect(darkOpt.backgroundColor).toBe('transparent')
   })

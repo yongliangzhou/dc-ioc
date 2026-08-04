@@ -44,6 +44,45 @@ export interface CabinetQuery {
 export const getCabinets = (params: CabinetQuery = {}) =>
   request.get<unknown, Paginated<Cabinet>>('/api/cabinets', { params })
 
+/** 设备分页查询参数 */
+export interface EquipmentQuery {
+  page?: number
+  size?: number
+  room?: string
+  status?: string
+  keyword?: string
+  [key: string]: unknown
+}
+
+/** 审计日志条目 */
+export interface AuditLogItem {
+  id: number | string
+  timestamp?: string
+  action?: string
+  user?: string
+  detail?: string
+  [key: string]: unknown
+}
+
+/** 审计日志查询参数 */
+export interface AuditLogQuery {
+  page?: number
+  size?: number
+  action?: string
+  user?: string
+  [key: string]: unknown
+}
+
+/** 工单中心查询参数 */
+export interface TicketQuery {
+  page?: number
+  size?: number
+  state?: string
+  system?: string
+  domain?: string
+  [key: string]: unknown
+}
+
 /** 机柜近 N 分钟温湿度/功耗曲线 */
 
 export interface EquipmentPageResult {
@@ -53,7 +92,7 @@ export interface EquipmentPageResult {
   page_size: number
 }
 
-export const listEquipment = (params: Record<string, any> = {}) =>
+export const listEquipment = (params: EquipmentQuery = {}) =>
   request.get<unknown, EquipmentPageResult>('/api/equipment', { params })
 
 export const getEquipment = (id: number) => request.get<unknown, Equipment>(`/api/equipment/${id}`)
@@ -107,8 +146,8 @@ export const toggleAlarmRule = (id: string, status: AlarmRuleStatus) =>
     status,
   })
 
-export const getAuditLogs = (params: Record<string, any> = {}) =>
-  request.get<unknown, { items: any[]; total: number; page: number; page_size: number }>(
+export const getAuditLogs = (params: AuditLogQuery = {}) =>
+  request.get<unknown, { items: AuditLogItem[]; total: number; page: number; page_size: number }>(
     '/api/audit-logs',
     { params },
   )
@@ -124,7 +163,10 @@ export const acknowledgeAlarm = (eventId: string, operator: string) =>
   })
 
 export const resolveAlarm = (eventId: string, operator: string, note?: string) =>
-  request.post<unknown, AlarmEvent>(`/api/alarms/${encodeURIComponent(eventId)}/resolve`, {})
+  request.post<unknown, AlarmEvent>(`/api/alarms/${encodeURIComponent(eventId)}/resolve`, {
+    operator,
+    note,
+  })
 
 /* ================= 外部设备接入数据契约 (采集器对接) ================= */
 /** 设备注册: POST /api/external/devices/register */
@@ -208,7 +250,7 @@ export const getDeviceHistory = (
     params,
   })
 
-export const getTickets = (params: Record<string, any> = {}) =>
+export const getTickets = (params: TicketQuery = {}) =>
   request.get<unknown, TicketCenter>('/api/ops/tickets', { params })
 
 export const createTicketFromAlarm = (alarmId: string, data: TicketCreateRequest) =>

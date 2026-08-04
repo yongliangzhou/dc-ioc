@@ -159,6 +159,6 @@ export function getTwinOverview(): Promise<TwinOverview> {
   return request.get<unknown, RawTwin>('/api/ops/twin').then(mapTwin)
 }
 
-export function getTwinTopology(modelId: number): Promise<TwinTopology> {
+export function getTwinTopology(): Promise<TwinTopology> {
   return request.get<unknown, RawTopology>('/api/ops/twin/topology').then(mapTopology)
 }

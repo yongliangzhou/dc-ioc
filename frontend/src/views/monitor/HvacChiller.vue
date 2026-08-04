@@ -858,13 +858,33 @@ import {
   type ChillerSummary,
   type ChillerGroupView,
   type ChillerTrends,
+  type PumpView,
 } from '@/api/hvac'
+
+interface AlarmLite {
+  level?: string
+  domain?: string
+  system?: string
+  source?: string
+  status?: string
+  timestamp?: string
+  message?: string
+  title?: string
+  summary?: string
+  [k: string]: unknown
+}
+
+interface PumpRow extends PumpView {
+  type: string
+  status: string
+  inP: number
+  outP: number
+}
 import { getActiveAlarms } from '@/api/index'
 import {
   KpiCard,
   StatusBadge,
   AlarmBadge,
-  ProgressGauge,
   GroupCard,
   TrendChart,
   DeviceTable,
@@ -981,17 +1001,18 @@ async function loadData() {
 async function loadAlarms() {
   try {
     const res = await getActiveAlarms()
-    const items = (res as any)?.items ?? []
-    activeAlarms.value = items
+    const items = res.items ?? []
+    const lite = items as AlarmLite[]
+    activeAlarms.value = lite
       .filter(
-        (a: any) =>
+        (a) =>
           (a.system === 'hvac' || a.domain === 'hvac' || a.source === '冷源系统') &&
           a.level &&
           a.level !== 'info' &&
           a.status !== 'acknowledged',
       )
       .slice(0, 10)
-      .map((a: any) => ({
+      .map((a) => ({
         level: a.level ?? 'warning',
         ts: a.timestamp ? new Date(a.timestamp).toLocaleTimeString('zh-CN') : '',
         msg: a.message ?? a.title ?? a.summary ?? '-',
@@ -1162,13 +1183,16 @@ function renderCopRla() {
   const r = activeRange.value
   const pts = trends.value.copRlaScatter?.[r]
   if (!pts?.length) return
-  const chIds = [...new Set(pts.map((p: any) => p.chiller))]
+  const chIds = [...new Set(pts.map((p) => p.chiller))]
   const pal = [C.cyan, C.orange, C.purple, C.green, C.blue, C.red, C.yellow]
   copChart.setOption(
     {
       tooltip: {
         trigger: 'item',
-        formatter: (p: any) => `${p.value[2]}<br/>RLA: ${p.value[0]}% | COP: ${p.value[1]}`,
+        formatter: (p: echarts.DefaultLabelFormatterCallbackParams) => {
+          const v = (Array.isArray(p.value) ? p.value : []) as unknown[]
+          return `${v[2]}<br/>RLA: ${v[0]}% | COP: ${v[1]}`
+        },
       },
       legend: { data: chIds, bottom: 0, textStyle: { color: '#94a3b8', fontSize: 11 } },
       grid: { left: 55, right: 20, top: 20, bottom: 35 },
@@ -1191,8 +1215,8 @@ function renderCopRla() {
         type: 'scatter',
         symbolSize: 8,
         data: pts
-          .filter((p: any) => p.chiller === ch)
-          .map((p: any) => [p.rla, p.cop, `${ch} @ ${fmtTime(p.ts, '24h')}`]),
+          .filter((p) => p.chiller === ch)
+          .map((p) => [p.rla, p.cop, `${ch} @ ${fmtTime(p.ts, '24h')}`]),
         itemStyle: { color: pal[i % pal.length], opacity: 0.8 },
       })),
     },
@@ -1236,8 +1260,10 @@ function renderPumpFreqFlow() {
     {
       tooltip: {
         trigger: 'item',
-        formatter: (p: any) =>
-          `${p.seriesName}<br/>频率: ${p.value[0]}Hz<br/>流量: ${p.value[1]}m³/h`,
+        formatter: (p: echarts.DefaultLabelFormatterCallbackParams) => {
+          const v = (Array.isArray(p.value) ? p.value : []) as unknown[]
+          return `${p.seriesName}<br/>频率: ${v[0]}Hz<br/>流量: ${v[1]}m³/h`
+        },
       },
       legend: {
         data: ['冷冻泵', '冷却泵'],
@@ -1264,7 +1290,7 @@ function renderPumpFreqFlow() {
           name: '冷冻泵',
           type: 'scatter',
           symbolSize: 7,
-          data: data.chwPump.map((p: any) => [p.hz, p.flow]),
+          data: data.chwPump.map((p) => [p.hz, p.flow]),
           itemStyle: { color: C.cyan, opacity: 0.7 },
         },
         {
@@ -1279,7 +1305,7 @@ function renderPumpFreqFlow() {
           name: '冷却泵',
           type: 'scatter',
           symbolSize: 7,
-          data: data.cwPump.map((p: any) => [p.hz, p.flow]),
+          data: data.cwPump.map((p) => [p.hz, p.flow]),
           itemStyle: { color: C.orange, opacity: 0.7 },
         },
         {
@@ -1344,7 +1370,7 @@ const pumpColumns = [
   { key: 'outP', label: '出口bar', width: '80px', align: 'right' as const },
 ]
 const allPumpRows = computed(() => {
-  const rows: any[] = []
+  const rows: PumpRow[] = []
   ;(chiller.value?.pumpsChw ?? []).forEach((p) =>
     rows.push({
       ...p,

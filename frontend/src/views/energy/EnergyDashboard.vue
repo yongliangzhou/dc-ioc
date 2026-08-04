@@ -59,6 +59,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -72,11 +73,6 @@ const { t: tl } = useI18n()
 const loading = ref(true)
 const err = ref('')
 const data = ref<EnergyOverview | null>(null)
-
-function fmtKwh(v: number | null) {
-  if (v == null) return '—'
-  return v >= 1000 ? (v / 1000).toFixed(1) + ' M' : v.toFixed(0)
-}
 
 const pueChartOption = computed<EChartsOption | null>(() => {
   if (!data.value?.weekTrend?.length) return null
@@ -109,8 +105,8 @@ const breakdownChartOption = computed<EChartsOption | null>(() => {
 onMounted(async () => {
   try {
     data.value = await getEnergyOverview()
-  } catch (e: any) {
-    err.value = e?.message || String(e)
+  } catch (e: unknown) {
+    err.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

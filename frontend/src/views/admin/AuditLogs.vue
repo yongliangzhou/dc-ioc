@@ -120,10 +120,7 @@
       <button
         class="btn-sm"
         :disabled="page <= 1"
-        @click="
-          page--
-          reload()
-        "
+        @click="page--; reload()"
       >
         {{ tl('上一页') }}
       </button>
@@ -164,9 +161,9 @@ import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
 const { t: tl } = useI18n()
 import { onMounted, reactive, ref } from 'vue'
-import { getAuditLogs } from '@/api'
+import { getAuditLogs, type AuditLogItem } from '@/api'
 
-const rows = ref<any[]>([])
+const rows = ref<AuditLogItem[]>([])
 const total = ref(0)
 const loading = ref(false)
 const page = ref(1)
@@ -194,7 +191,7 @@ async function reload() {
     rows.value = res?.items ?? []
     total.value = res?.total ?? 0
     totalPages.value = Math.max(1, Math.ceil(total.value / pageSize.value))
-  } catch (e) {
+  } catch {
     rows.value = []
   } finally {
     loading.value = false

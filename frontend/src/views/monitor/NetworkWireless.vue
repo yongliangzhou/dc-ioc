@@ -59,8 +59,8 @@
             <div class="band-meta muted">{{ tl('平均利用率') }} {{ b.util }}%</div>
           </div>
         </div>
-      </div>
-    </Panel>
+      </Panel>
+    </div>
 
     <!-- 2.4.3 / 2.4.4 KPI 卡片 -->
     <div v-if="s && s.aps.length" class="grid cols-4">
@@ -121,8 +121,7 @@
 
     <!-- Per-device detail cards -->
     <Panel
-      v-if="s && s.aps.length"
-      v-for="ap in s.aps"
+      v-for="ap in apCards"
       :key="ap.id"
       :title="ap.name"
     >
@@ -168,7 +167,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import type { ErrorLike } from '@/utils/error'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
@@ -178,7 +178,8 @@ import DeviceTable from '@/components/monitor/DeviceTable.vue'
 import HeatmapView from '@/components/monitor/HeatmapView.vue'
 import BaseChart from '@/components/charts/BaseChart.vue'
 import Panel from '@/components/common/Panel.vue'
-import { getNetworkWirelessDetailed, type NetworkWirelessSummary, type WirelessView, type RadioView } from '@/api/monitor'
+import { getNetworkWirelessDetailed, type NetworkWirelessSummary, type WirelessView } from '@/api/monitor'
+import type * as echarts from 'echarts'
 import type { EChartsOption } from '@/hooks/useECharts'
 
 const { t: tl } = useI18n()
@@ -257,6 +258,8 @@ const s = reactive<PageState>({
   apRows: [],
 })
 
+const apCards = computed(() => s.aps ?? [])
+
 // ──────────────────────────────────────────
 // Heatmap colors (signal gradient: weak→strong)
 // ──────────────────────────────────────────
@@ -267,7 +270,10 @@ const heatColors = ['#1e3a8a', '#1d4ed8', '#06b6d4', '#22c55e', '#eab308', '#f97
 // ──────────────────────────────────────────
 const clientPieOption = reactive<EChartsOption>({
   backgroundColor: 'transparent',
-  tooltip: { trigger: 'item', formatter: (p: any) => `${p.name}<br/>${fmtNum(p.value)} 台 (${p.percent}%)` },
+  tooltip: { trigger: 'item', formatter: (p) => {
+    const item = Array.isArray(p) ? p[0] : p
+    return `${item.name}<br/>${fmtNum(Number(item.value))} 台 (${item.percent}%)`
+  } },
   legend: { orient: 'vertical', right: '4%', top: 'center', textStyle: { color: '#94a3b8', fontSize: 11 }, itemWidth: 10, itemHeight: 10 },
   series: [{
     name: tl('终端类型'),
@@ -406,7 +412,6 @@ function mockData() {
   const heatmapData: HeatmapData = { xLabels: zones, yLabels: floors, values: heatValues }
 
   // ── Client type distribution ──
-  const totalClients = aps.reduce((a, ap) => a + ap.users_total, 0)
   let phone = 0, laptop = 0, iot = 0, other = 0
   aps.forEach((ap) => {
     phone += ap.client_types.phone
@@ -540,15 +545,15 @@ function fromApi(summary: NetworkWirelessSummary) {
 // Update charts
 // ──────────────────────────────────────────
 function updatePie(dist: { name: string; value: number; color: string }[]) {
-  ;(clientPieOption.series as any[])[0].data = dist
+  ;(clientPieOption.series as echarts.SeriesOption[])[0].data = dist
     .filter((d) => d.value > 0)
     .map((d) => ({ name: d.name, value: d.value, itemStyle: { color: d.color } }))
 }
 
 function updateChannel(data: { channel: string; util: number; interference: number }[]) {
-  ;(channelChartOption.xAxis as any).data = data.map((d) => d.channel)
-  ;(channelChartOption.series as any[])[0].data = data.map((d) => d.util)
-  ;(channelChartOption.series as any[])[1].data = data.map((d) => d.interference)
+  ;(channelChartOption.xAxis as { data?: unknown }).data = data.map((d) => d.channel)
+  ;(channelChartOption.series as echarts.SeriesOption[])[0].data = data.map((d) => d.util)
+  ;(channelChartOption.series as echarts.SeriesOption[])[1].data = data.map((d) => d.interference)
 }
 
 // ──────────────────────────────────────────
@@ -565,8 +570,8 @@ async function loadData() {
     } else {
       applyData(mockData())
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

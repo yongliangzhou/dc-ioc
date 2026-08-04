@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -79,8 +80,6 @@ import {
   getTwinTopology,
   type TwinOverview,
   type TwinTopology,
-  type TopoNode,
-  type TopoEdge,
 } from '@/api/twin'
 import type { TopologyGraph, TopologyNode, TopologyEdge } from '@/types'
 const { t: tl } = useI18n()
@@ -108,7 +107,7 @@ function toTopologyGraph(t: TwinTopology): TopologyGraph {
       loadPct: (n.load ?? 0) as number,
       redundancy: n.redundancy ?? '',
     })),
-    edges: t.edges.map((e, i): TopologyEdge => {
+    edges: t.edges.map((e): TopologyEdge => {
       const fromIdx = t.nodes.findIndex((n) => n.id === e.from)
       const toIdx = t.nodes.findIndex((n) => n.id === e.to)
       return {
@@ -127,9 +126,9 @@ const topoGraph = computed(() => (topo.value ? toTopologyGraph(topo.value) : nul
 async function selectModel(id: number) {
   activeModelId.value = id
   try {
-    topo.value = await getTwinTopology(id)
-  } catch (e: any) {
-    err.value = e?.message || String(e)
+    topo.value = await getTwinTopology()
+  } catch (e: unknown) {
+    err.value = (e as ErrorLike)?.message || String(e)
   }
 }
 
@@ -139,8 +138,8 @@ onMounted(async () => {
     if (overview.value?.models?.length) {
       await selectModel(overview.value.models[0].id)
     }
-  } catch (e: any) {
-    err.value = e?.message || String(e)
+  } catch (e: unknown) {
+    err.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

@@ -41,6 +41,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { ref, reactive } from 'vue'
@@ -69,8 +70,8 @@ async function handleLogin() {
   try {
     await authStore.login(form.username, form.password)
     router.replace('/overview')
-  } catch (e: any) {
-    error.value = e?.detail || e?.message || '登录失败'
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.detail || (e as ErrorLike)?.message || '登录失败'
   } finally {
     loading.value = false
   }
@@ -92,8 +93,8 @@ async function handleRegister() {
     })
     regError.value = '注册成功，请使用新账号登录'
     showRegister.value = false
-  } catch (e: any) {
-    regError.value = e?.detail || e?.message || '注册失败（可能未开放自助注册）'
+  } catch (e: unknown) {
+    regError.value = (e as ErrorLike)?.detail || (e as ErrorLike)?.message || '注册失败（可能未开放自助注册）'
   } finally {
     regLoading.value = false
   }

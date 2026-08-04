@@ -640,6 +640,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt } from '@/utils/format'
@@ -763,7 +764,6 @@ function wavePath(x: number, top: number, w: number): string {
   const seg = w / 2
   let d = `M ${x - w} ${top}`
   for (let i = 0; i < 4; i++) {
-    const sx = x - w + i * seg
     d += ` q ${seg / 4} ${-amp} ${seg / 2} 0 q ${seg / 4} ${amp} ${seg / 2} 0`
   }
   d += ` L ${x + w * 2} ${top + 60} L ${x - w} ${top + 60} Z`
@@ -842,7 +842,7 @@ const consumeTrend = reactive<{
     type: 'line' | 'bar'
     data: number[]
     color: string
-    areaStyle?: any
+    areaStyle?: Record<string, unknown>
     smooth?: boolean
   }[]
 }>({
@@ -1443,8 +1443,8 @@ async function loadData() {
       s.value = mockSummary()
     }
     rebuildTrend()
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

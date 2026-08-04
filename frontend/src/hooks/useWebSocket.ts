@@ -1,4 +1,4 @@
-import { ref, onBeforeUnmount, type Ref } from 'vue'
+import { ref, onBeforeUnmount } from 'vue'
 
 export interface WsMessage {
   type:
@@ -8,11 +8,13 @@ export interface WsMessage {
     | 'connected'
     | 'device_metrics'
     | 'subscribed'
-    | 'auth_ok'
-    | 'auth_error'
-  data?: any
+  | 'auth_ok'
+  | 'auth_error'
+  data?: unknown
   ts?: string
   client_id?: string
+  device_id?: string
+  points?: unknown[]
 }
 
 export function useWebSocket(onMessage?: (msg: WsMessage) => void) {

@@ -5,7 +5,7 @@ import { getDashboardOverview } from '@/api'
 export const useTelemetryStore = defineStore('telemetry', {
   state: () => ({
     /** 最近一次 KPI 快照 (来源: WS 广播 或 HTTP 初始拉取) */
-    snapshot: null as Record<string, any> | null,
+    snapshot: null as Record<string, unknown> | null,
     connected: false,
     lastUpdate: 0 as number,
   }),
@@ -19,7 +19,7 @@ export const useTelemetryStore = defineStore('telemetry', {
   },
   actions: {
     /** WS telemetry 广播推送 */
-    applySnapshot(data: Record<string, any>) {
+    applySnapshot(data: Record<string, unknown>) {
       if (!data) return
       this.snapshot = { ...(this.snapshot || {}), ...data }
       this.lastUpdate = Date.now()
@@ -28,7 +28,7 @@ export const useTelemetryStore = defineStore('telemetry', {
     async fetchInitial() {
       try {
         const ov = await getDashboardOverview()
-        if (ov) this.snapshot = { ...(this.snapshot || {}), ...(ov as Record<string, any>) }
+        if (ov) this.snapshot = { ...(this.snapshot || {}), ...(ov as unknown as Record<string, unknown>) }
       } catch {
         /* 后端不可达时静默 */
       }

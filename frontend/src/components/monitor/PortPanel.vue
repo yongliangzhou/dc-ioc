@@ -93,7 +93,7 @@ import { ref } from 'vue'
 import type { SwitchPortView } from '@/api/monitor'
 import { fmtBps, utilCls } from '@/utils/format'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     ports: SwitchPortView[]
     title?: string

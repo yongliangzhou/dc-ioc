@@ -446,10 +446,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getLiquidCooling } from '@/api/hvac'
 import { getActiveAlarms } from '@/api'
-import type { LiquidCoolingSummary } from '@/api/hvac'
+import type { LiquidCoolingSummary, ManifoldNodeView } from '@/api/hvac'
+import type { Alarm } from '@/types'
 import { CHART_COLORS } from '@/assets/echarts-theme'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
@@ -464,7 +465,7 @@ import { formatVal, statusRow, formatTime } from '@/utils/format'
 const data = ref<LiquidCoolingSummary | null>(null)
 const loading = ref(false)
 const lastUpdate = ref('')
-const alarms = ref<any[]>([])
+const alarms = ref<Alarm[]>([])
 let timer: ReturnType<typeof setInterval> | null = null
 
 const dataOk = computed(() => !!data.value)
@@ -490,7 +491,7 @@ async function loadAll() {
   try {
     const [summary, alarmResult] = await Promise.all([
       getLiquidCooling(),
-      getActiveAlarms().catch(() => ({ total: 0, items: [] })),
+      getActiveAlarms().catch(() => ({ total: 0, items: [] as Alarm[] })),
     ])
     data.value = summary
     alarms.value = alarmResult.items || []
@@ -628,7 +629,7 @@ const manifoldCols = [
   { key: 'branches', label: '阀门/支路', width: '90px' },
 ]
 
-function mapManRows(items: any[]) {
+function mapManRows(items: ManifoldNodeView[]) {
   return items.map((d) => ({
     id: d.id,
     zone: d.zone,

@@ -1,6 +1,12 @@
-import axios, { AxiosInstance } from 'axios'
+import axios, { AxiosError, AxiosInstance } from 'axios'
 import router from '@/router'
 import { mockForUrl } from './mockData'
+
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    _retry?: boolean
+  }
+}
 
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -20,7 +26,7 @@ request.interceptors.request.use((config) => {
 let isRefreshing = false
 let refreshQueue: Array<(token: string) => void> = []
 
-function tryLocalFallback(err: any): unknown {
+function tryLocalFallback(err: AxiosError): unknown {
   const cfg = err?.config
   if (!cfg || String(cfg.method).toLowerCase() !== 'get') return undefined
   const status = err?.response?.status
@@ -41,7 +47,7 @@ function tryLocalFallback(err: any): unknown {
 
 request.interceptors.response.use(
   (res) => res.data,
-  async (err) => {
+  async (err: AxiosError) => {
     const originalRequest = err?.config
 
     // 401 且未重试过 → 尝试刷新 token

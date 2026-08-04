@@ -548,6 +548,7 @@
 </template>
 
 <script setup lang="ts">
+import type { ErrorLike } from '@/utils/error'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt, breakerCls, pfCls, tempCls, loadCls, genHours } from '@/utils/format'
@@ -563,6 +564,10 @@ import {
 } from '@/api/power'
 import Panel from '@/components/common/Panel.vue'
 const { t: tl } = useI18n()
+
+/** 电量格式化：原始值以 Wh 计，折算为 kWh 并以千分位整数展示 */
+const fmtEnergy = (v: number | null | undefined): string =>
+  fmtInt(v == null ? null : v / 1000)
 
 // ──────────────────────────────────────────
 // SVG 一次图几何
@@ -1260,8 +1265,8 @@ async function loadData() {
     } else {
       s.value = mockSummary()
     }
-  } catch (e: any) {
-    error.value = e?.message || String(e)
+  } catch (e: unknown) {
+    error.value = (e as ErrorLike)?.message || String(e)
   } finally {
     loading.value = false
   }

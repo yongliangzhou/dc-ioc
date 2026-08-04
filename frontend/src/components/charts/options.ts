@@ -1,4 +1,5 @@
 import type { EChartsOption } from '@/hooks/useECharts'
+import type { DefaultLabelFormatterCallbackParams } from 'echarts'
 import { themeMode } from '@/theme'
 
 /* 主题调色板 (暗/亮) */
@@ -144,7 +145,7 @@ export function barOption(y: string[], data: number[], unit = '%'): EChartsOptio
   const { v, axis, tooltip } = baseParts()
   return {
     backgroundColor: 'transparent',
-    tooltip: { ...tooltip, trigger: 'item', formatter: (p: any) => `${p.name}: ${p.value}${unit}` },
+    tooltip: { ...tooltip, trigger: 'item', formatter: (p: DefaultLabelFormatterCallbackParams) => `${p.name}: ${p.value}${unit}` },
     grid: { left: 8, right: 30, top: 10, bottom: 4, containLabel: true },
     xAxis: { type: 'value', max: 100, ...axis, splitLine: { show: false } },
     yAxis: { type: 'category', data: y, ...axis },
@@ -155,7 +156,7 @@ export function barOption(y: string[], data: number[], unit = '%'): EChartsOptio
         barWidth: 10,
         itemStyle: {
           borderRadius: [0, 5, 5, 0],
-          color: (p: any) => (p.value > 85 ? '#ff4d5e' : p.value > 70 ? '#ffb020' : v.accent),
+          color: (p: DefaultLabelFormatterCallbackParams) => (Number(p.value) > 85 ? '#ff4d5e' : Number(p.value) > 70 ? '#ffb020' : v.accent),
         },
         label: {
           show: true,

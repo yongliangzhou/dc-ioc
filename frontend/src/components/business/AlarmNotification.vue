@@ -76,7 +76,7 @@ import AlarmCard from './AlarmCard.vue'
 const router = useRouter()
 const toast = useToast()
 const notifier = useAlarmNotifier()
-const { run: submitRun, loading: saving } = useAsyncTask(async () => {})
+const { loading: saving } = useAsyncTask(async () => {})
 
 const items = computed(() => notifier.items)
 const hasCrit = computed(() => items.value.some((i) => i.alarm.lv === 'crit'))
@@ -123,8 +123,9 @@ async function submitFeedback() {
     toast.success('已记录处理反馈并关闭告警')
     feedbackItem.value = null
     notifier.dismiss(it.id)
-  } catch (e: any) {
-    toast.error(e?.detail || e?.message || '提交失败')
+  } catch (e: unknown) {
+    const err = e as { detail?: string; message?: string }
+    toast.error(err.detail || err.message || '提交失败')
   }
 }
 

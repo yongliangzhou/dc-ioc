@@ -8,7 +8,7 @@ import './assets/styles/index.scss'
 import './theme' // 应用持久化主题 (data-theme)
 
 const app = createApp(App)
-;(window as any).__app = app
+;(window as unknown as { __app?: typeof app }).__app = app
 app.use(createPinia())
 app.use(router)
 app.use(i18n)

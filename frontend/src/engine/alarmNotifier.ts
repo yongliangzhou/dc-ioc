@@ -159,7 +159,8 @@ export function requestNotificationPermission() {
 function beep(level: Alarm['lv']) {
   if (!state.soundOn) return
   try {
-    const Ctx = (window.AudioContext || (window as any).webkitAudioContext) as typeof AudioContext
+    const Ctx = (window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext) as typeof AudioContext
     if (!Ctx) return
     if (!audioCtx) audioCtx = new Ctx()
     if (audioCtx.state === 'suspended') audioCtx.resume()
@@ -207,7 +208,7 @@ function pushBrowserNotification(item: AlarmNotificationItem) {
 export function notifyNew(alarm: Alarm, force = false) {
   const id = `an_${++seq}`
   // alarm 实际为后端 RtAlarm（含 id 字段），类型层面 Alarm 无 id，故用指纹兜底
-  const alarmId = (alarm as any).id ?? fingerprint(alarm)
+  const alarmId = (alarm as { id?: string }).id ?? fingerprint(alarm)
   const item: AlarmNotificationItem = {
     id,
     alarmId,
