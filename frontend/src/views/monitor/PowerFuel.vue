@@ -3,7 +3,9 @@
     <!-- Header -->
     <div class="view-head">
       <h1>{{ tl('燃油监控系统') }}</h1>
-      <span class="sub">{{ tl('储油罐液位 · 日用油箱 · 供回油泵 · 消耗趋势 · 续航预测 · 补给管理') }}</span>
+      <span class="sub">{{
+        tl('储油罐液位 · 日用油箱 · 供回油泵 · 消耗趋势 · 续航预测 · 补给管理')
+      }}</span>
     </div>
 
     <!-- Loading -->
@@ -12,45 +14,91 @@
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="card err-card">
+    <Panel v-else-if="error" class="err-card">
       <div class="err-title">{{ tl('加载失败') }}</div>
       <div class="err-detail">{{ error }}</div>
       <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </div>
+    </Panel>
 
     <template v-else-if="s">
       <!-- ======== KPI 总览 ======== -->
       <div class="grid cols-6">
-        <KpiCard :title="tl('储油总量')" :value="totalVolume" unit="L" :decimals="0" dot="var(--cyan)" size="sm"
-                 :detail="tl('总容量') + ' ' + fmtInt(totalCapacity) + ' L'" />
-        <KpiCard :title="tl('主油罐均位')" :value="avgMainLevel" unit="%" :decimals="1" size="sm"
-                 :bar-value="avgMainLevel" bar-color="var(--cyan)"
-                 :status="avgMainLevel < LOW_LEVEL ? 'danger' : (avgMainLevel < WARN_LEVEL ? 'warning' : 'normal')" />
-        <KpiCard :title="tl('日用箱均位')" :value="avgDayLevel" unit="%" :decimals="1" size="sm"
-                 :bar-value="avgDayLevel" bar-color="var(--violet)"
-                 :status="avgDayLevel < LOW_LEVEL ? 'danger' : (avgDayLevel < WARN_LEVEL ? 'warning' : 'normal')" />
-        <KpiCard :title="tl('运行油泵')" :value="pumpRunCount" :unit="'/' + (s.pumps?.length || 0)" :decimals="0" size="sm"
-                 :status="pumpFaultCount > 0 ? 'danger' : 'normal'" />
-        <KpiCard :title="tl('管道压力')" :value="s.pipeline?.pressure ?? 0" unit="MPa" :decimals="2" size="sm"
-                 :status="(s.pipeline?.pressure ?? 0) > 0.5 ? 'warning' : 'normal'"
-                 :detail="s.pipeline?.state || '-'" />
-        <KpiCard :title="tl('活跃告警')" :value="alarms.length" :unit="tl('项')" :decimals="0" size="sm"
-                 :status="criticalCount > 0 ? 'danger' : (alarms.length > 0 ? 'warning' : 'normal')" />
+        <KpiCard
+          :title="tl('储油总量')"
+          :value="totalVolume"
+          unit="L"
+          :decimals="0"
+          dot="var(--cyan)"
+          size="sm"
+          :detail="tl('总容量') + ' ' + fmtInt(totalCapacity) + ' L'"
+        />
+        <KpiCard
+          :title="tl('主油罐均位')"
+          :value="avgMainLevel"
+          unit="%"
+          :decimals="1"
+          size="sm"
+          :bar-value="avgMainLevel"
+          bar-color="var(--cyan)"
+          :status="
+            avgMainLevel < LOW_LEVEL ? 'danger' : avgMainLevel < WARN_LEVEL ? 'warning' : 'normal'
+          "
+        />
+        <KpiCard
+          :title="tl('日用箱均位')"
+          :value="avgDayLevel"
+          unit="%"
+          :decimals="1"
+          size="sm"
+          :bar-value="avgDayLevel"
+          bar-color="var(--violet)"
+          :status="
+            avgDayLevel < LOW_LEVEL ? 'danger' : avgDayLevel < WARN_LEVEL ? 'warning' : 'normal'
+          "
+        />
+        <KpiCard
+          :title="tl('运行油泵')"
+          :value="pumpRunCount"
+          :unit="'/' + (s.pumps?.length || 0)"
+          :decimals="0"
+          size="sm"
+          :status="pumpFaultCount > 0 ? 'danger' : 'normal'"
+        />
+        <KpiCard
+          :title="tl('管道压力')"
+          :value="s.pipeline?.pressure ?? 0"
+          unit="MPa"
+          :decimals="2"
+          size="sm"
+          :status="(s.pipeline?.pressure ?? 0) > 0.5 ? 'warning' : 'normal'"
+          :detail="s.pipeline?.state || '-'"
+        />
+        <KpiCard
+          :title="tl('活跃告警')"
+          :value="alarms.length"
+          :unit="tl('项')"
+          :decimals="0"
+          size="sm"
+          :status="criticalCount > 0 ? 'danger' : alarms.length > 0 ? 'warning' : 'normal'"
+        />
       </div>
 
       <!-- ======== 3.4.1 油罐示意图 (SVG + 液位动画) ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('储油系统示意图') }}</span>
+      <Panel title="储油系统示意图">
+        <template #extra>
           <div class="legend">
             <span class="lg"><i class="dot g"></i>{{ tl('正常液位') }}</span>
             <span class="lg"><i class="dot a"></i>{{ tl('低位预警') }}</span>
             <span class="lg"><i class="dot r"></i>{{ tl('低位报警/高位') }}</span>
             <span class="lg muted">{{ tl('点击油罐 / 油泵查看详情') }}</span>
           </div>
-        </div>
+        </template>
         <div class="schematic-wrap">
-          <svg :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="fuel-svg" preserveAspectRatio="xMidYMid meet">
+          <svg
+            :viewBox="`0 0 ${SVG_W} ${SVG_H}`"
+            class="fuel-svg"
+            preserveAspectRatio="xMidYMid meet"
+          >
             <defs>
               <!-- 液面波浪渐变 -->
               <linearGradient id="oilG" x1="0" y1="0" x2="0" y2="1">
@@ -74,60 +122,180 @@
             </defs>
 
             <!-- ── 主储油罐 ── -->
-            <g v-for="(t, ti) in mainTanks" :key="'m' + t.id" class="tank-node" @click="selectTank(t, 'main')">
+            <g
+              v-for="(t, ti) in mainTanks"
+              :key="'m' + t.id"
+              class="tank-node"
+              @click="selectTank(t, 'main')"
+            >
               <!-- 罐体 -->
-              <rect :x="mainX(ti)" :y="TANK_Y" :width="TANK_W" :height="TANK_H" rx="10" class="tank-shell" />
+              <rect
+                :x="mainX(ti)"
+                :y="TANK_Y"
+                :width="TANK_W"
+                :height="TANK_H"
+                rx="10"
+                class="tank-shell"
+              />
               <!-- 液体 (动画) -->
               <g :clip-path="`url(#clip-main-${ti})`">
-                <rect :x="mainX(ti)" :y="oilTop(t.level, TANK_Y, TANK_H)"
-                      :width="TANK_W" :height="oilH(t.level, TANK_H)"
-                      :fill="oilFill(t.level)" class="oil-body" />
+                <rect
+                  :x="mainX(ti)"
+                  :y="oilTop(t.level, TANK_Y, TANK_H)"
+                  :width="TANK_W"
+                  :height="oilH(t.level, TANK_H)"
+                  :fill="oilFill(t.level)"
+                  class="oil-body"
+                />
                 <!-- 波浪 -->
-                <path :d="wavePath(mainX(ti), oilTop(t.level, TANK_Y, TANK_H), TANK_W)"
-                      :fill="oilFill(t.level)" class="oil-wave" opacity="0.55" />
-                <path :d="wavePath(mainX(ti) - 20, oilTop(t.level, TANK_Y, TANK_H) + 3, TANK_W)"
-                      :fill="oilFill(t.level)" class="oil-wave slow" opacity="0.35" />
+                <path
+                  :d="wavePath(mainX(ti), oilTop(t.level, TANK_Y, TANK_H), TANK_W)"
+                  :fill="oilFill(t.level)"
+                  class="oil-wave"
+                  opacity="0.55"
+                />
+                <path
+                  :d="wavePath(mainX(ti) - 20, oilTop(t.level, TANK_Y, TANK_H) + 3, TANK_W)"
+                  :fill="oilFill(t.level)"
+                  class="oil-wave slow"
+                  opacity="0.35"
+                />
               </g>
               <!-- 刻度线 -->
               <g v-for="mk in [10, 30, 70, 90]" :key="'mk' + mk">
-                <line :x1="mainX(ti)" :y1="TANK_Y + TANK_H * (1 - mk / 100)"
-                      :x2="mainX(ti) + TANK_W" :y2="TANK_Y + TANK_H * (1 - mk / 100)" class="tick-line" />
-                <text :x="mainX(ti) + TANK_W + 4" :y="TANK_Y + TANK_H * (1 - mk / 100) + 3" class="tick-text">{{ mk }}</text>
+                <line
+                  :x1="mainX(ti)"
+                  :y1="TANK_Y + TANK_H * (1 - mk / 100)"
+                  :x2="mainX(ti) + TANK_W"
+                  :y2="TANK_Y + TANK_H * (1 - mk / 100)"
+                  class="tick-line"
+                />
+                <text
+                  :x="mainX(ti) + TANK_W + 4"
+                  :y="TANK_Y + TANK_H * (1 - mk / 100) + 3"
+                  class="tick-text"
+                >
+                  {{ mk }}
+                </text>
               </g>
               <!-- 数值 -->
-              <text :x="mainX(ti) + TANK_W / 2" :y="TANK_Y + TANK_H / 2 + 2" class="tank-pct" :class="levelTextCls(t.level)">{{ fmt(t.level, 1) }}%</text>
-              <text :x="mainX(ti) + TANK_W / 2" :y="TANK_Y + TANK_H / 2 + 18" class="tank-vol">{{ fmtInt(t.cap * t.level / 100) }} L</text>
+              <text
+                :x="mainX(ti) + TANK_W / 2"
+                :y="TANK_Y + TANK_H / 2 + 2"
+                class="tank-pct"
+                :class="levelTextCls(t.level)"
+              >
+                {{ fmt(t.level, 1) }}%
+              </text>
+              <text :x="mainX(ti) + TANK_W / 2" :y="TANK_Y + TANK_H / 2 + 18" class="tank-vol">
+                {{ fmtInt((t.cap * t.level) / 100) }} L
+              </text>
               <text :x="mainX(ti) + TANK_W / 2" :y="TANK_Y - 10" class="tank-id">{{ t.id }}</text>
               <!-- 出油管 → 供油泵 -->
-              <line :x1="mainX(ti) + TANK_W / 2" :y1="TANK_Y + TANK_H"
-                    :x2="mainX(ti) + TANK_W / 2" :y2="PIPE_Y" class="pipe" />
-              <line :x1="mainX(ti) + TANK_W / 2" :y1="PIPE_Y" :x2="PUMP_X" :y2="PIPE_Y" class="pipe" />
+              <line
+                :x1="mainX(ti) + TANK_W / 2"
+                :y1="TANK_Y + TANK_H"
+                :x2="mainX(ti) + TANK_W / 2"
+                :y2="PIPE_Y"
+                class="pipe"
+              />
+              <line
+                :x1="mainX(ti) + TANK_W / 2"
+                :y1="PIPE_Y"
+                :x2="PUMP_X"
+                :y2="PIPE_Y"
+                class="pipe"
+              />
             </g>
 
             <!-- ── 供油主管 + 泵 ── -->
-            <rect :x="PUMP_X - 40" :y="PIPE_Y - 16" width="80" height="32" rx="6" class="pump-box" @click="selectPump()" />
+            <rect
+              :x="PUMP_X - 40"
+              :y="PIPE_Y - 16"
+              width="80"
+              height="32"
+              rx="6"
+              class="pump-box"
+              @click="selectPump()"
+            />
             <text :x="PUMP_X" :y="PIPE_Y + 4" class="pump-text">{{ tl('供油泵组') }}</text>
             <line :x1="PUMP_X + 40" :y1="PIPE_Y" :x2="DAY_BUS_X" :y2="PIPE_Y" class="pipe active" />
-            <line :x1="DAY_BUS_X" :y1="PIPE_Y" :x2="DAY_BUS_X" :y2="DAY_Y - 26" class="pipe active" />
-            <text :x="PUMP_X + 100" :y="PIPE_Y - 8" class="pipe-label">{{ fmt(s.pipeline?.pressure ?? 0, 2) }} MPa</text>
+            <line
+              :x1="DAY_BUS_X"
+              :y1="PIPE_Y"
+              :x2="DAY_BUS_X"
+              :y2="DAY_Y - 26"
+              class="pipe active"
+            />
+            <text :x="PUMP_X + 100" :y="PIPE_Y - 8" class="pipe-label">
+              {{ fmt(s.pipeline?.pressure ?? 0, 2) }} MPa
+            </text>
 
             <!-- ── 日用油箱 ── -->
-            <g v-for="(d, di) in dayTanks" :key="'d' + d.id" class="tank-node" @click="selectTank(d, 'day')">
-              <line :x1="DAY_BUS_X" :y1="DAY_Y - 26" :x2="dayX(di) + DAY_W / 2" :y2="DAY_Y - 26" class="pipe active" />
-              <line :x1="dayX(di) + DAY_W / 2" :y1="DAY_Y - 26" :x2="dayX(di) + DAY_W / 2" :y2="DAY_Y" class="pipe active" />
-              <rect :x="dayX(di)" :y="DAY_Y" :width="DAY_W" :height="DAY_H" rx="6" class="tank-shell" />
+            <g
+              v-for="(d, di) in dayTanks"
+              :key="'d' + d.id"
+              class="tank-node"
+              @click="selectTank(d, 'day')"
+            >
+              <line
+                :x1="DAY_BUS_X"
+                :y1="DAY_Y - 26"
+                :x2="dayX(di) + DAY_W / 2"
+                :y2="DAY_Y - 26"
+                class="pipe active"
+              />
+              <line
+                :x1="dayX(di) + DAY_W / 2"
+                :y1="DAY_Y - 26"
+                :x2="dayX(di) + DAY_W / 2"
+                :y2="DAY_Y"
+                class="pipe active"
+              />
+              <rect
+                :x="dayX(di)"
+                :y="DAY_Y"
+                :width="DAY_W"
+                :height="DAY_H"
+                rx="6"
+                class="tank-shell"
+              />
               <g :clip-path="`url(#clip-day-${di})`">
-                <rect :x="dayX(di)" :y="oilTop(d.level, DAY_Y, DAY_H)"
-                      :width="DAY_W" :height="oilH(d.level, DAY_H)"
-                      :fill="oilFill(d.level)" class="oil-body" />
-                <path :d="wavePath(dayX(di), oilTop(d.level, DAY_Y, DAY_H), DAY_W)"
-                      :fill="oilFill(d.level)" class="oil-wave" opacity="0.5" />
+                <rect
+                  :x="dayX(di)"
+                  :y="oilTop(d.level, DAY_Y, DAY_H)"
+                  :width="DAY_W"
+                  :height="oilH(d.level, DAY_H)"
+                  :fill="oilFill(d.level)"
+                  class="oil-body"
+                />
+                <path
+                  :d="wavePath(dayX(di), oilTop(d.level, DAY_Y, DAY_H), DAY_W)"
+                  :fill="oilFill(d.level)"
+                  class="oil-wave"
+                  opacity="0.5"
+                />
               </g>
-              <text :x="dayX(di) + DAY_W / 2" :y="DAY_Y + DAY_H / 2 + 4" class="day-pct" :class="levelTextCls(d.level)">{{ fmt(d.level, 0) }}%</text>
+              <text
+                :x="dayX(di) + DAY_W / 2"
+                :y="DAY_Y + DAY_H / 2 + 4"
+                class="day-pct"
+                :class="levelTextCls(d.level)"
+              >
+                {{ fmt(d.level, 0) }}%
+              </text>
               <text :x="dayX(di) + DAY_W / 2" :y="DAY_Y - 6" class="day-id">{{ d.id }}</text>
               <!-- 至柴发机组 -->
-              <line :x1="dayX(di) + DAY_W / 2" :y1="DAY_Y + DAY_H" :x2="dayX(di) + DAY_W / 2" :y2="DAY_Y + DAY_H + 20" class="pipe" />
-              <text :x="dayX(di) + DAY_W / 2" :y="DAY_Y + DAY_H + 32" class="day-load">{{ tl('柴发') }}</text>
+              <line
+                :x1="dayX(di) + DAY_W / 2"
+                :y1="DAY_Y + DAY_H"
+                :x2="dayX(di) + DAY_W / 2"
+                :y2="DAY_Y + DAY_H + 20"
+                class="pipe"
+              />
+              <text :x="dayX(di) + DAY_W / 2" :y="DAY_Y + DAY_H + 32" class="day-load">
+                {{ tl('柴发') }}
+              </text>
             </g>
           </svg>
         </div>
@@ -148,17 +316,23 @@
             </div>
           </div>
         </transition>
-      </div>
+      </Panel>
 
       <!-- ======== 3.4.2 燃油消耗趋势 (日/周/月) ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('燃油消耗趋势') }}</span>
+      <Panel title="燃油消耗趋势">
+        <template #extra>
           <div class="range-tabs">
-            <button v-for="r in RANGES" :key="r.key" class="rt-btn" :class="{ on: rangeKey === r.key }"
-                    @click="switchRange(r.key)">{{ tl(r.label) }}</button>
+            <button
+              v-for="r in RANGES"
+              :key="r.key"
+              class="rt-btn"
+              :class="{ on: rangeKey === r.key }"
+              @click="switchRange(r.key)"
+            >
+              {{ tl(r.label) }}
+            </button>
           </div>
-        </div>
+        </template>
         <div class="grid cols-3 sub-grid">
           <div class="stat-box">
             <span class="sb-k">{{ tl('区间总消耗') }}</span>
@@ -166,94 +340,155 @@
           </div>
           <div class="stat-box">
             <span class="sb-k">{{ tl('平均消耗') }}</span>
-            <span class="sb-v mono">{{ fmtInt(rangeAvg) }} <small>L/{{ tl(rangeUnitLabel) }}</small></span>
+            <span class="sb-v mono"
+              >{{ fmtInt(rangeAvg) }} <small>L/{{ tl(rangeUnitLabel) }}</small></span
+            >
           </div>
           <div class="stat-box">
             <span class="sb-k">{{ tl('峰值消耗') }}</span>
             <span class="sb-v mono a-text">{{ fmtInt(rangePeak) }} <small>L</small></span>
           </div>
         </div>
-        <TrendChart :title="''" :x-axis-data="consumeTrend.labels" :series="consumeTrend.series" :height="260" />
-      </div>
+        <TrendChart
+          :title="''"
+          :x-axis-data="consumeTrend.labels"
+          :series="consumeTrend.series"
+          :height="260"
+        />
+      </Panel>
 
       <!-- ======== 3.4.3 低油量预警 + 3.4.4 续航预测 ======== -->
       <div class="grid cols-2">
         <!-- 低油量预警面板 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('低油量预警') }}</span>
+        <Panel title="低油量预警">
+          <template #extra>
             <AlarmBadge v-if="criticalCount" level="critical" :count="criticalCount" />
             <AlarmBadge v-else-if="warningCount" level="warning" :count="warningCount" />
             <span v-else class="pill g">{{ tl('全部正常') }}</span>
-          </div>
+          </template>
           <div class="warn-list">
             <div v-for="w in levelWarnings" :key="w.id" class="warn-row" :class="w.level">
               <span class="w-dot" :class="w.level"></span>
               <span class="w-id">{{ w.id }}</span>
-              <div class="w-bar"><i :style="{ width: Math.min(100, w.level_pct) + '%', background: barColorOf(w.level_pct) }"></i></div>
-              <span class="w-pct mono" :class="levelTextCls(w.level_pct)">{{ fmt(w.level_pct, 1) }}%</span>
+              <div class="w-bar">
+                <i
+                  :style="{
+                    width: Math.min(100, w.level_pct) + '%',
+                    background: barColorOf(w.level_pct),
+                  }"
+                ></i>
+              </div>
+              <span class="w-pct mono" :class="levelTextCls(w.level_pct)"
+                >{{ fmt(w.level_pct, 1) }}%</span
+              >
               <span class="w-msg">{{ w.message }}</span>
               <span class="w-th muted">{{ tl('阈值') }} {{ w.threshold }}%</span>
             </div>
-            <div v-if="!levelWarnings.length" class="empty-tip muted">{{ tl('所有油罐 / 油箱液位正常') }}</div>
+            <div v-if="!levelWarnings.length" class="empty-tip muted">
+              {{ tl('所有油罐 / 油箱液位正常') }}
+            </div>
           </div>
 
           <div class="thr-bar">
-            <span class="thr" ><i class="dot r"></i>{{ tl('低位报警') }} &lt; {{ LOW_LEVEL }}%</span>
-            <span class="thr"><i class="dot a"></i>{{ tl('低位预警') }} &lt; {{ WARN_LEVEL }}%</span>
-            <span class="thr"><i class="dot g"></i>{{ tl('正常') }} {{ WARN_LEVEL }}~{{ HIGH_LEVEL }}%</span>
-            <span class="thr"><i class="dot r"></i>{{ tl('高位溢流') }} &gt; {{ HIGH_LEVEL }}%</span>
+            <span class="thr"><i class="dot r"></i>{{ tl('低位报警') }} &lt; {{ LOW_LEVEL }}%</span>
+            <span class="thr"
+              ><i class="dot a"></i>{{ tl('低位预警') }} &lt; {{ WARN_LEVEL }}%</span
+            >
+            <span class="thr"
+              ><i class="dot g"></i>{{ tl('正常') }} {{ WARN_LEVEL }}~{{ HIGH_LEVEL }}%</span
+            >
+            <span class="thr"
+              ><i class="dot r"></i>{{ tl('高位溢流') }} &gt; {{ HIGH_LEVEL }}%</span
+            >
           </div>
-        </div>
+        </Panel>
 
         <!-- 续航时间预测 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('续航时间预测') }}</span>
-            <span class="pill" :class="enduranceHours >= 12 ? 'g' : 'a'">{{ tl('设计要求') }} ≥ 12h</span>
-          </div>
+        <Panel title="续航时间预测">
+          <template #extra>
+            <span class="pill" :class="enduranceHours >= 12 ? 'g' : 'a'"
+              >{{ tl('设计要求') }} ≥ 12h</span
+            >
+          </template>
           <div class="gauge-row">
             <div class="gauge-item">
-              <ProgressGauge :value="Math.min(100, enduranceHours / 24 * 100)" :max="100" size="lg"
-                             :label="tl('满载续航')" unit="h"
-                             :status="enduranceHours < 8 ? 'danger' : (enduranceHours < 12 ? 'warning' : 'normal')" />
-              <span class="gauge-num mono" :class="enduranceHours < 12 ? 'a-text' : 'g-text'">{{ fmt(enduranceHours, 1) }} h</span>
+              <ProgressGauge
+                :value="Math.min(100, (enduranceHours / 24) * 100)"
+                :max="100"
+                size="lg"
+                :label="tl('满载续航')"
+                unit="h"
+                :status="enduranceHours < 8 ? 'danger' : enduranceHours < 12 ? 'warning' : 'normal'"
+              />
+              <span class="gauge-num mono" :class="enduranceHours < 12 ? 'a-text' : 'g-text'"
+                >{{ fmt(enduranceHours, 1) }} h</span
+              >
               <span class="gauge-cap muted">{{ tl('满载') }} {{ fmtInt(FULL_LOAD_RATE) }} L/h</span>
             </div>
             <div class="gauge-item">
-              <ProgressGauge :value="Math.min(100, enduranceHalf / 48 * 100)" :max="100" size="lg"
-                             :label="tl('半载续航')" unit="h"
-                             :status="enduranceHalf < 24 ? 'warning' : 'normal'" />
+              <ProgressGauge
+                :value="Math.min(100, (enduranceHalf / 48) * 100)"
+                :max="100"
+                size="lg"
+                :label="tl('半载续航')"
+                unit="h"
+                :status="enduranceHalf < 24 ? 'warning' : 'normal'"
+              />
               <span class="gauge-num mono g-text">{{ fmt(enduranceHalf, 1) }} h</span>
-              <span class="gauge-cap muted">{{ tl('半载') }} {{ fmtInt(FULL_LOAD_RATE / 2) }} L/h</span>
+              <span class="gauge-cap muted"
+                >{{ tl('半载') }} {{ fmtInt(FULL_LOAD_RATE / 2) }} L/h</span
+              >
             </div>
             <div class="gauge-item">
-              <ProgressGauge :value="dayTankPct" :max="100" size="lg"
-                             :label="tl('日用箱续航')" unit="%"
-                             :status="dayTankHours < 4 ? 'danger' : (dayTankHours < 8 ? 'warning' : 'normal')" />
-              <span class="gauge-num mono" :class="dayTankHours < 8 ? 'a-text' : 'g-text'">{{ fmt(dayTankHours, 1) }} h</span>
+              <ProgressGauge
+                :value="dayTankPct"
+                :max="100"
+                size="lg"
+                :label="tl('日用箱续航')"
+                unit="%"
+                :status="dayTankHours < 4 ? 'danger' : dayTankHours < 8 ? 'warning' : 'normal'"
+              />
+              <span class="gauge-num mono" :class="dayTankHours < 8 ? 'a-text' : 'g-text'"
+                >{{ fmt(dayTankHours, 1) }} h</span
+              >
               <span class="gauge-cap muted">{{ tl('日用油箱独立供油') }}</span>
             </div>
           </div>
           <div class="pred-list">
-            <div class="pred-row"><span class="k">{{ tl('可用油量') }}</span><span class="v mono">{{ fmtInt(totalVolume) }} L</span></div>
-            <div class="pred-row"><span class="k">{{ tl('预计耗尽时刻') }}</span><span class="v mono">{{ exhaustTime }}</span></div>
-            <div class="pred-row"><span class="k">{{ tl('建议补油时刻') }}</span><span class="v mono a-text">{{ refuelTime }}</span></div>
-            <div class="pred-row"><span class="k">{{ tl('应急供油合同') }}</span><span class="v">{{ s.contract || '-' }}</span></div>
-            <div class="pred-row"><span class="k">{{ tl('管道伴热') }}</span><span class="v">{{ s.pipeline?.tracing || '-' }}</span></div>
+            <div class="pred-row">
+              <span class="k">{{ tl('可用油量') }}</span
+              ><span class="v mono">{{ fmtInt(totalVolume) }} L</span>
+            </div>
+            <div class="pred-row">
+              <span class="k">{{ tl('预计耗尽时刻') }}</span
+              ><span class="v mono">{{ exhaustTime }}</span>
+            </div>
+            <div class="pred-row">
+              <span class="k">{{ tl('建议补油时刻') }}</span
+              ><span class="v mono a-text">{{ refuelTime }}</span>
+            </div>
+            <div class="pred-row">
+              <span class="k">{{ tl('应急供油合同') }}</span
+              ><span class="v">{{ s.contract || '-' }}</span>
+            </div>
+            <div class="pred-row">
+              <span class="k">{{ tl('管道伴热') }}</span
+              ><span class="v">{{ s.pipeline?.tracing || '-' }}</span>
+            </div>
           </div>
-        </div>
+        </Panel>
       </div>
 
       <!-- ======== 油泵状态 + 阀门 / 保护 ======== -->
       <div class="grid cols-2">
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('供油泵 / 回油泵') }}</span>
-            <span class="pill" :class="pumpFaultCount === 0 ? 'g' : 'a'">{{ pumpRunCount }}/{{ s.pumps?.length || 0 }} {{ tl('运行') }}</span>
-          </div>
+        <Panel title="供油泵 / 回油泵">
+          <template #extra>
+            <span class="pill" :class="pumpFaultCount === 0 ? 'g' : 'a'"
+              >{{ pumpRunCount }}/{{ s.pumps?.length || 0 }} {{ tl('运行') }}</span
+            >
+          </template>
           <div class="pump-grid">
-            <div v-for="p in (s.pumps ?? [])" :key="p.id" class="pump-block">
+            <div v-for="p in s.pumps ?? []" :key="p.id" class="pump-block">
               <div class="pump-head">
                 <span class="d-status" :class="pumpDotCls(p.state)">●</span>
                 <span class="d-name">{{ p.id }}</span>
@@ -274,53 +509,82 @@
               </div>
             </div>
           </div>
-        </div>
+        </Panel>
 
         <!-- 油罐参数表 -->
-        <div class="card scroll-x">
-          <div class="card-head">
-            <span class="ct">{{ tl('油罐 / 油箱参数') }}</span>
-            <span class="pill g">{{ mainTanks.length + dayTanks.length }} {{ tl('个监测点') }}</span>
-          </div>
+        <Panel class="scroll-x" title="油罐 / 油箱参数">
+          <template #extra>
+            <span class="pill g"
+              >{{ mainTanks.length + dayTanks.length }} {{ tl('个监测点') }}</span
+            >
+          </template>
           <table class="mini-tbl">
             <thead>
               <tr>
-                <th>{{ tl('编号') }}</th><th>{{ tl('类型') }}</th><th>{{ tl('容量') }}(L)</th><th>{{ tl('液位') }}(%)</th>
-                <th>{{ tl('存油') }}(L)</th><th>{{ tl('油温') }}</th><th>{{ tl('渗漏') }}</th><th>{{ tl('阀门') }}</th>
+                <th>{{ tl('编号') }}</th>
+                <th>{{ tl('类型') }}</th>
+                <th>{{ tl('容量') }}(L)</th>
+                <th>{{ tl('液位') }}(%)</th>
+                <th>{{ tl('存油') }}(L)</th>
+                <th>{{ tl('油温') }}</th>
+                <th>{{ tl('渗漏') }}</th>
+                <th>{{ tl('阀门') }}</th>
               </tr>
             </thead>
             <tbody>
               <tr v-for="row in tankRows" :key="row.id" class="tank-row" @click="selectRow(row.id)">
                 <td class="d-name">{{ row.id }}</td>
-                <td><span class="tag" :class="row.type === '主油罐' ? 'b' : 'g'">{{ row.type }}</span></td>
+                <td>
+                  <span class="tag" :class="row.type === '主油罐' ? 'b' : 'g'">{{ row.type }}</span>
+                </td>
                 <td class="mono">{{ fmtInt(row.cap) }}</td>
                 <td class="mono" :class="levelTextCls(row.level)">{{ fmt(row.level, 1) }}</td>
                 <td class="mono">{{ fmtInt(row.volume) }}</td>
                 <td class="mono">{{ row.temp == null ? '-' : fmt(row.temp, 1) + '°C' }}</td>
-                <td><span class="tag" :class="row.leak === '正常' ? 'g' : 'r'">{{ row.leak }}</span></td>
-                <td><span class="tag" :class="row.valveOpen ? 'g' : 'b'">{{ row.valve }}</span></td>
+                <td>
+                  <span class="tag" :class="row.leak === '正常' ? 'g' : 'r'">{{ row.leak }}</span>
+                </td>
+                <td>
+                  <span class="tag" :class="row.valveOpen ? 'g' : 'b'">{{ row.valve }}</span>
+                </td>
               </tr>
             </tbody>
           </table>
-        </div>
+        </Panel>
       </div>
 
       <!-- ======== 3.4.5 补给记录表 ======== -->
-      <div class="card scroll-x">
-        <div class="card-head">
-          <span class="ct">{{ tl('燃油补给记录') }}</span>
+      <Panel class="scroll-x" title="燃油补给记录">
+        <template #extra>
           <div class="head-stats">
-            <span class="hs"><span class="k">{{ tl('近12次累计') }}</span><span class="v mono">{{ fmtInt(refuelTotal) }} L</span></span>
-            <span class="hs"><span class="k">{{ tl('上次补给') }}</span><span class="v mono">{{ refuelRecords[0]?.date || '-' }}</span></span>
-            <span class="hs"><span class="k">{{ tl('平均单次') }}</span><span class="v mono">{{ fmtInt(refuelAvg) }} L</span></span>
+            <span class="hs"
+              ><span class="k">{{ tl('近12次累计') }}</span
+              ><span class="v mono">{{ fmtInt(refuelTotal) }} L</span></span
+            >
+            <span class="hs"
+              ><span class="k">{{ tl('上次补给') }}</span
+              ><span class="v mono">{{ refuelRecords[0]?.date || '-' }}</span></span
+            >
+            <span class="hs"
+              ><span class="k">{{ tl('平均单次') }}</span
+              ><span class="v mono">{{ fmtInt(refuelAvg) }} L</span></span
+            >
           </div>
-        </div>
+        </template>
         <table>
           <thead>
             <tr>
-              <th>{{ tl('单号') }}</th><th>{{ tl('日期') }}</th><th>{{ tl('目标罐') }}</th><th>{{ tl('补给量') }}(L)</th>
-              <th>{{ tl('补给前') }}(%)</th><th>{{ tl('补给后') }}(%)</th><th>{{ tl('供应商') }}</th>
-              <th>{{ tl('油品') }}</th><th>{{ tl('化验') }}</th><th>{{ tl('操作人') }}</th><th>{{ tl('状态') }}</th>
+              <th>{{ tl('单号') }}</th>
+              <th>{{ tl('日期') }}</th>
+              <th>{{ tl('目标罐') }}</th>
+              <th>{{ tl('补给量') }}(L)</th>
+              <th>{{ tl('补给前') }}(%)</th>
+              <th>{{ tl('补给后') }}(%)</th>
+              <th>{{ tl('供应商') }}</th>
+              <th>{{ tl('油品') }}</th>
+              <th>{{ tl('化验') }}</th>
+              <th>{{ tl('操作人') }}</th>
+              <th>{{ tl('状态') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -333,24 +597,30 @@
               <td class="mono">{{ r.after }}</td>
               <td class="muted">{{ r.vendor }}</td>
               <td class="muted">{{ r.grade }}</td>
-              <td><span class="tag" :class="r.qc === '合格' ? 'g' : 'a'">{{ r.qc }}</span></td>
+              <td>
+                <span class="tag" :class="r.qc === '合格' ? 'g' : 'a'">{{ r.qc }}</span>
+              </td>
               <td class="muted">{{ r.operator }}</td>
-              <td><StatusBadge :status="r.status === '已完成' ? 'normal' : 'warning'" :text="r.status" /></td>
+              <td>
+                <StatusBadge
+                  :status="r.status === '已完成' ? 'normal' : 'warning'"
+                  :text="r.status"
+                />
+              </td>
             </tr>
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <!-- ======== 实时告警 ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('实时告警') }}</span>
+      <Panel title="实时告警">
+        <template #extra>
           <div class="badges">
             <AlarmBadge level="critical" :count="criticalCount" />
             <AlarmBadge level="warning" :count="warningCount" />
             <AlarmBadge level="info" :count="infoCount" />
           </div>
-        </div>
+        </template>
         <div class="alarm-list">
           <div v-for="(a, ai) in alarms" :key="ai" class="alarm-row" :class="a.level">
             <span class="a-ts mono">{{ a.time }}</span>
@@ -361,46 +631,10 @@
           </div>
           <div v-if="!alarms.length" class="empty-tip muted">{{ tl('当前无燃油系统告警') }}</div>
         </div>
-      </div>
+      </Panel>
 
-      <!-- ======== 知识库: 阈值 / 架构 ======== -->
-      <div class="grid cols-2" v-if="s.knowledge?.thresholds?.length || s.knowledge?.arch">
-        <div class="card" v-if="s.knowledge?.thresholds?.length">
-          <div class="card-head"><span class="ct">{{ tl('设计 / 告警阈值') }}</span></div>
-          <div class="kv-grid">
-            <div class="kv" v-for="k in s.knowledge.thresholds" :key="k.k">
-              <span class="k">{{ k.k }}</span>
-              <span class="v">{{ k.v }}</span>
-              <span v-if="k.note" class="note muted">{{ k.note }}</span>
-            </div>
-          </div>
-        </div>
-        <div class="card" v-if="s.knowledge?.arch">
-          <div class="card-head"><span class="ct">{{ tl('系统架构与组成') }}</span></div>
-          <p class="arch-desc muted">{{ s.knowledge.arch.design }}</p>
-          <div class="chips">
-            <span class="chip" v-for="c in (s.knowledge.arch.components ?? [])" :key="c">{{ c }}</span>
-          </div>
-          <p class="arch-desc muted" v-if="s.knowledge.arch.redundancy">{{ tl('冗余配置') }}：{{ s.knowledge.arch.redundancy }}</p>
-        </div>
-      </div>
-
-      <!-- ======== 知识库: 故障锁定 ======== -->
-      <div class="card scroll-x" v-if="s.knowledge?.faults?.length">
-        <div class="card-head"><span class="ct">{{ tl('故障锁定知识库') }}</span></div>
-        <table>
-          <thead><tr><th style="width:50px">{{ tl('序号') }}</th><th>{{ tl('故障') }}</th><th>{{ tl('锁定 / 影响') }}</th><th>{{ tl('处置动作') }}</th><th style="width:90px">{{ tl('复位') }}</th></tr></thead>
-          <tbody>
-            <tr v-for="f in s.knowledge.faults" :key="f.no">
-              <td class="mono">{{ f.no }}</td>
-              <td class="d-name">{{ f.fault }}</td>
-              <td class="muted">{{ f.lock }}</td>
-              <td class="muted">{{ f.action }}</td>
-              <td><span class="tag" :class="f.manualReset ? 'a' : 'g'">{{ f.manualReset ? tl('人工复位') : tl('自动') }}</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <!-- ======== 知识库 ======== -->
+      <KnowledgePanels :knowledge="s.knowledge" />
     </template>
   </div>
 </template>
@@ -408,22 +642,32 @@
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { KpiCard, SkeletonCard, AlarmBadge, TrendChart, ProgressGauge, StatusBadge } from '@/components/monitor'
+import { fmt, fmtInt } from '@/utils/format'
+import {
+  KpiCard,
+  SkeletonCard,
+  AlarmBadge,
+  TrendChart,
+  ProgressGauge,
+  StatusBadge,
+} from '@/components/monitor'
 import {
   getPowerFuelDetailed,
   type FuelSummary,
   type FuelMainTankView,
   type FuelDayTankView,
 } from '@/api/power'
+import Panel from '@/components/common/Panel.vue'
+import KnowledgePanels from '@/components/KnowledgePanels.vue'
 
 const { t: tl } = useI18n()
 
 // ──────────────────────────────────────────
 // 常量 / 布局
 // ──────────────────────────────────────────
-const LOW_LEVEL = 20      // 低位报警
-const WARN_LEVEL = 30     // 低位预警
-const HIGH_LEVEL = 90     // 高位溢流
+const LOW_LEVEL = 20 // 低位报警
+const WARN_LEVEL = 30 // 低位预警
+const HIGH_LEVEL = 90 // 高位溢流
 const FULL_LOAD_RATE = 660 // 满载耗油 L/h (3×1000kW 机组约 660 L/h)
 
 const SVG_W = 1000
@@ -481,7 +725,9 @@ const totalVolume = computed(() =>
 const avgMainLevel = computed(() => avgOf(mainTanks.value.map((t) => t.level)))
 const avgDayLevel = computed(() => avgOf(dayTanks.value.map((t) => t.level)))
 const pumpRunCount = computed(() => (s.value?.pumps ?? []).filter((p) => p.state === '运行').length)
-const pumpFaultCount = computed(() => (s.value?.pumps ?? []).filter((p) => p.state === '故障').length)
+const pumpFaultCount = computed(
+  () => (s.value?.pumps ?? []).filter((p) => p.state === '故障').length,
+)
 
 // ──────────────────────────────────────────
 // 3.4.1 SVG 液位
@@ -556,13 +802,28 @@ function selectPump() {
   const kvs: { k: string; v: string; cls?: string }[] = [
     { k: tl('油泵总数'), v: String(list.length) + ' ' + tl('台') },
     { k: tl('运行'), v: String(pumpRunCount.value) + ' ' + tl('台'), cls: 'g-text' },
-    { k: tl('故障'), v: String(pumpFaultCount.value) + ' ' + tl('台'), cls: pumpFaultCount.value ? 'r-text' : 'g-text' },
+    {
+      k: tl('故障'),
+      v: String(pumpFaultCount.value) + ' ' + tl('台'),
+      cls: pumpFaultCount.value ? 'r-text' : 'g-text',
+    },
     { k: tl('管道压力'), v: fmt(s.value?.pipeline?.pressure ?? 0, 2) + ' MPa' },
     { k: tl('管道状态'), v: s.value?.pipeline?.state || '-' },
     { k: tl('伴热'), v: s.value?.pipeline?.tracing || '-' },
   ]
-  list.forEach((p) => kvs.push({ k: p.id, v: `${p.state} / ${p.mode}`, cls: p.state === '运行' ? 'g-text' : (p.state === '故障' ? 'r-text' : '') }))
-  selectedNode.value = { code: 'PUMP', label: tl('供油泵组'), cls: pumpFaultCount.value ? 'r' : 'g', kvs }
+  list.forEach((p) =>
+    kvs.push({
+      k: p.id,
+      v: `${p.state} / ${p.mode}`,
+      cls: p.state === '运行' ? 'g-text' : p.state === '故障' ? 'r-text' : '',
+    }),
+  )
+  selectedNode.value = {
+    code: 'PUMP',
+    label: tl('供油泵组'),
+    cls: pumpFaultCount.value ? 'r' : 'g',
+    kvs,
+  }
 }
 function selectRow(id: string) {
   const m = mainTanks.value.find((t) => t.id === id)
@@ -576,7 +837,14 @@ function selectRow(id: string) {
 // ──────────────────────────────────────────
 const consumeTrend = reactive<{
   labels: string[]
-  series: { name: string; type: 'line' | 'bar'; data: number[]; color: string; areaStyle?: any; smooth?: boolean }[]
+  series: {
+    name: string
+    type: 'line' | 'bar'
+    data: number[]
+    color: string
+    areaStyle?: any
+    smooth?: boolean
+  }[]
 }>({
   labels: [],
   series: [],
@@ -654,11 +922,29 @@ const levelWarnings = computed<LevelWarning[]>(() => {
   const out: LevelWarning[] = []
   const push = (id: string, lv: number, isMain: boolean) => {
     if (lv < LOW_LEVEL) {
-      out.push({ id, level: 'critical', level_pct: lv, threshold: LOW_LEVEL, message: tl('液位低位报警，需立即补油') })
+      out.push({
+        id,
+        level: 'critical',
+        level_pct: lv,
+        threshold: LOW_LEVEL,
+        message: tl('液位低位报警，需立即补油'),
+      })
     } else if (lv < WARN_LEVEL) {
-      out.push({ id, level: 'warning', level_pct: lv, threshold: WARN_LEVEL, message: tl('液位低位预警，建议安排补给') })
+      out.push({
+        id,
+        level: 'warning',
+        level_pct: lv,
+        threshold: WARN_LEVEL,
+        message: tl('液位低位预警，建议安排补给'),
+      })
     } else if (lv > HIGH_LEVEL) {
-      out.push({ id, level: 'critical', level_pct: lv, threshold: HIGH_LEVEL, message: tl('液位高位，存在溢流风险') })
+      out.push({
+        id,
+        level: 'critical',
+        level_pct: lv,
+        threshold: HIGH_LEVEL,
+        message: tl('液位高位，存在溢流风险'),
+      })
     }
     void isMain
   }
@@ -680,7 +966,9 @@ const dayTankVolume = computed(() =>
   dayTanks.value.reduce((sum, t) => sum + ((t.cap || 0) * (t.level || 0)) / 100, 0),
 )
 const dayTankHours = computed(() => Number((dayTankVolume.value / FULL_LOAD_RATE).toFixed(1)))
-const dayTankPct = computed(() => Math.min(100, Number(((dayTankHours.value / 12) * 100).toFixed(1))))
+const dayTankPct = computed(() =>
+  Math.min(100, Number(((dayTankHours.value / 12) * 100).toFixed(1))),
+)
 const exhaustTime = computed(() => addHours(enduranceHours.value))
 const refuelTime = computed(() => addHours(Math.max(0, enduranceHours.value - 6)))
 
@@ -708,16 +996,28 @@ const tankRows = computed<TankRow[]>(() => {
   mainTanks.value.forEach((t) => {
     const v = (t.valves ?? [])[0]
     rows.push({
-      id: t.id, type: '主油罐', cap: t.cap, level: t.level,
-      volume: (t.cap * t.level) / 100, temp: t.t, leak: t.leak,
-      valve: v?.state ?? '-', valveOpen: (v?.state ?? '').includes('开'),
+      id: t.id,
+      type: '主油罐',
+      cap: t.cap,
+      level: t.level,
+      volume: (t.cap * t.level) / 100,
+      temp: t.t,
+      leak: t.leak,
+      valve: v?.state ?? '-',
+      valveOpen: (v?.state ?? '').includes('开'),
     })
   })
   dayTanks.value.forEach((t) => {
     rows.push({
-      id: t.id, type: '日用油箱', cap: t.cap, level: t.level,
-      volume: (t.cap * t.level) / 100, temp: null, leak: t.leak,
-      valve: t.valve?.state ?? '-', valveOpen: (t.valve?.state ?? '').includes('开'),
+      id: t.id,
+      type: '日用油箱',
+      cap: t.cap,
+      level: t.level,
+      volume: (t.cap * t.level) / 100,
+      temp: null,
+      leak: t.leak,
+      valve: t.valve?.state ?? '-',
+      valveOpen: (t.valve?.state ?? '').includes('开'),
     })
   })
   return rows
@@ -768,7 +1068,9 @@ const refuelRecords = computed<RefuelRecord[]>(() => {
 })
 const refuelTotal = computed(() => refuelRecords.value.reduce((a, r) => a + r.amount, 0))
 const refuelAvg = computed(() =>
-  refuelRecords.value.length ? Number((refuelTotal.value / refuelRecords.value.length).toFixed(0)) : 0,
+  refuelRecords.value.length
+    ? Number((refuelTotal.value / refuelRecords.value.length).toFixed(0))
+    : 0,
 )
 
 // ──────────────────────────────────────────
@@ -788,32 +1090,100 @@ const alarms = computed<AlarmItem[]>(() => {
   let idx = 1
 
   levelWarnings.value.forEach((w) => {
-    out.push({ level: w.level, time: ts(idx++), source: w.id, message: w.message, value: fmt(w.level_pct, 1) + '%' })
+    out.push({
+      level: w.level,
+      time: ts(idx++),
+      source: w.id,
+      message: w.message,
+      value: fmt(w.level_pct, 1) + '%',
+    })
   })
   ;[...mainTanks.value, ...dayTanks.value].forEach((t) => {
     if (t.leak && t.leak !== '正常') {
-      out.push({ level: 'critical', time: ts(idx++), source: t.id, message: tl('油罐渗漏检测异常'), value: t.leak })
+      out.push({
+        level: 'critical',
+        time: ts(idx++),
+        source: t.id,
+        message: tl('油罐渗漏检测异常'),
+        value: t.leak,
+      })
     }
     ;(t.protections ?? []).forEach((p) => {
-      if (p.state !== '正常') out.push({ level: sigLevel(p.level), time: ts(idx++), source: `${t.id}·${p.name}`, message: tl('保护装置动作'), value: p.state })
+      if (p.state !== '正常')
+        out.push({
+          level: sigLevel(p.level),
+          time: ts(idx++),
+          source: `${t.id}·${p.name}`,
+          message: tl('保护装置动作'),
+          value: p.state,
+        })
     })
   })
   mainTanks.value.forEach((t) => {
-    if (t.t != null && t.t > 40) out.push({ level: 'warning', time: ts(idx++), source: t.id, message: tl('油温偏高'), value: fmt(t.t, 1) + '°C' })
-    if (t.water && t.water !== '正常' && t.water !== '合格') out.push({ level: 'warning', time: ts(idx++), source: t.id, message: tl('油品含水量异常'), value: t.water })
+    if (t.t != null && t.t > 40)
+      out.push({
+        level: 'warning',
+        time: ts(idx++),
+        source: t.id,
+        message: tl('油温偏高'),
+        value: fmt(t.t, 1) + '°C',
+      })
+    if (t.water && t.water !== '正常' && t.water !== '合格')
+      out.push({
+        level: 'warning',
+        time: ts(idx++),
+        source: t.id,
+        message: tl('油品含水量异常'),
+        value: t.water,
+      })
   })
   ;(s.value?.pumps ?? []).forEach((p) => {
-    if (p.state === '故障') out.push({ level: 'critical', time: ts(idx++), source: p.id, message: tl('油泵故障停机'), value: p.state })
+    if (p.state === '故障')
+      out.push({
+        level: 'critical',
+        time: ts(idx++),
+        source: p.id,
+        message: tl('油泵故障停机'),
+        value: p.state,
+      })
     ;(p.alarms ?? []).forEach((a) => {
-      if (a.level === 'a' || a.level === 'r') out.push({ level: sigLevel(a.level), time: ts(idx++), source: `${p.id}·${a.name}`, message: tl('油泵运行告警'), value: a.value })
+      if (a.level === 'a' || a.level === 'r')
+        out.push({
+          level: sigLevel(a.level),
+          time: ts(idx++),
+          source: `${p.id}·${a.name}`,
+          message: tl('油泵运行告警'),
+          value: a.value,
+        })
     })
     ;(p.protections ?? []).forEach((pr) => {
-      if (pr.level === 'a' || pr.level === 'r') out.push({ level: sigLevel(pr.level), time: ts(idx++), source: `${p.id}·${pr.name}`, message: tl('油泵保护动作'), value: pr.state })
+      if (pr.level === 'a' || pr.level === 'r')
+        out.push({
+          level: sigLevel(pr.level),
+          time: ts(idx++),
+          source: `${p.id}·${pr.name}`,
+          message: tl('油泵保护动作'),
+          value: pr.state,
+        })
     })
   })
   const press = s.value?.pipeline?.pressure ?? 0
-  if (press > 0.5) out.push({ level: 'warning', time: ts(idx++), source: tl('供油管道'), message: tl('管道压力偏高'), value: fmt(press, 2) + ' MPa' })
-  if (enduranceHours.value < 12) out.push({ level: enduranceHours.value < 8 ? 'critical' : 'warning', time: ts(idx++), source: tl('续航预测'), message: tl('满载续航低于设计要求 12h'), value: fmt(enduranceHours.value, 1) + ' h' })
+  if (press > 0.5)
+    out.push({
+      level: 'warning',
+      time: ts(idx++),
+      source: tl('供油管道'),
+      message: tl('管道压力偏高'),
+      value: fmt(press, 2) + ' MPa',
+    })
+  if (enduranceHours.value < 12)
+    out.push({
+      level: enduranceHours.value < 8 ? 'critical' : 'warning',
+      time: ts(idx++),
+      source: tl('续航预测'),
+      message: tl('满载续航低于设计要求 12h'),
+      value: fmt(enduranceHours.value, 1) + ' h',
+    })
 
   return out.slice(0, 16)
 })
@@ -832,14 +1202,7 @@ function avgOf(list: number[]): number {
 function rnd(amp: number): number {
   return (Math.random() - 0.5) * amp
 }
-function fmt(v: number | undefined | null, dp = 2): string {
-  if (v == null || !Number.isFinite(v)) return '-'
-  return Number(v).toFixed(dp)
-}
-function fmtInt(v: number | undefined | null): string {
-  if (v == null || !Number.isFinite(v)) return '-'
-  return Math.round(v).toLocaleString()
-}
+
 function levelTextCls(level: number): string {
   if (level < LOW_LEVEL || level > HIGH_LEVEL) return 'r-text'
   if (level < WARN_LEVEL) return 'a-text'
@@ -894,17 +1257,42 @@ function levelText(level: string): string {
 // ──────────────────────────────────────────
 function mockSummary(): FuelSummary {
   const mkMain = (id: string, cap: number, level: number, t: number): FuelMainTankView => ({
-    id, cap, level, t, water: '正常', leak: '正常',
+    id,
+    cap,
+    level,
+    t,
+    water: '正常',
+    leak: '正常',
     valves: [
       { name: '出油阀', state: '开启', level: 'g' },
       { name: '进油阀', state: '闭合', level: 'b' },
       { name: '排污阀', state: '闭合', level: 'b' },
     ],
     switches: [
-      { name: 'LSHH', th: '高高位 90%', state: level > 90 ? '动作' : '正常', level: level > 90 ? 'r' : 'g' },
-      { name: 'LSH', th: '高位 85%', state: level > 85 ? '动作' : '正常', level: level > 85 ? 'a' : 'g' },
-      { name: 'LSL', th: '低位 30%', state: level < 30 ? '动作' : '正常', level: level < 30 ? 'a' : 'g' },
-      { name: 'LSLL', th: '低低位 20%', state: level < 20 ? '动作' : '正常', level: level < 20 ? 'r' : 'g' },
+      {
+        name: 'LSHH',
+        th: '高高位 90%',
+        state: level > 90 ? '动作' : '正常',
+        level: level > 90 ? 'r' : 'g',
+      },
+      {
+        name: 'LSH',
+        th: '高位 85%',
+        state: level > 85 ? '动作' : '正常',
+        level: level > 85 ? 'a' : 'g',
+      },
+      {
+        name: 'LSL',
+        th: '低位 30%',
+        state: level < 30 ? '动作' : '正常',
+        level: level < 30 ? 'a' : 'g',
+      },
+      {
+        name: 'LSLL',
+        th: '低低位 20%',
+        state: level < 20 ? '动作' : '正常',
+        level: level < 20 ? 'r' : 'g',
+      },
     ],
     protections: [
       { name: '渗漏检测', state: '正常', level: 'g' },
@@ -913,11 +1301,24 @@ function mockSummary(): FuelSummary {
     ],
   })
   const mkDay = (id: string, cap: number, level: number): FuelDayTankView => ({
-    id, cap, level, leak: '正常',
+    id,
+    cap,
+    level,
+    leak: '正常',
     valve: { name: '进油阀', state: level < 60 ? '开启' : '闭合', level: level < 60 ? 'g' : 'b' },
     switches: [
-      { name: 'LSH', th: '高位 90%', state: level > 90 ? '动作' : '正常', level: level > 90 ? 'a' : 'g' },
-      { name: 'LSL', th: '低位 30%', state: level < 30 ? '动作' : '正常', level: level < 30 ? 'a' : 'g' },
+      {
+        name: 'LSH',
+        th: '高位 90%',
+        state: level > 90 ? '动作' : '正常',
+        level: level > 90 ? 'a' : 'g',
+      },
+      {
+        name: 'LSL',
+        th: '低位 30%',
+        state: level < 30 ? '动作' : '正常',
+        level: level < 30 ? 'a' : 'g',
+      },
     ],
     protections: [
       { name: '溢流保护', state: '正常', level: 'g' },
@@ -928,9 +1329,30 @@ function mockSummary(): FuelSummary {
     mainTanks: [mkMain('T-01', 30000, 76.4, 26.8), mkMain('T-02', 30000, 28.6, 27.4)],
     dayTanks: [mkDay('DT-01', 1000, 82), mkDay('DT-02', 1000, 68), mkDay('DT-03', 1000, 45)],
     pumps: [
-      { id: 'P-01 供油泵', state: '运行', mode: '自动', alarms: [{ name: '过载', value: '正常', level: 'g' }], protections: [{ name: '干转保护', state: '正常', level: 'g' }, { name: '过流保护', state: '正常', level: 'g' }] },
-      { id: 'P-02 供油泵', state: '备用', mode: '自动', alarms: [{ name: '过载', value: '正常', level: 'g' }], protections: [{ name: '干转保护', state: '正常', level: 'g' }] },
-      { id: 'P-03 回油泵', state: '停机', mode: '手动', alarms: [{ name: '密封泄漏', value: '轻微', level: 'a' }], protections: [{ name: '过流保护', state: '正常', level: 'g' }] },
+      {
+        id: 'P-01 供油泵',
+        state: '运行',
+        mode: '自动',
+        alarms: [{ name: '过载', value: '正常', level: 'g' }],
+        protections: [
+          { name: '干转保护', state: '正常', level: 'g' },
+          { name: '过流保护', state: '正常', level: 'g' },
+        ],
+      },
+      {
+        id: 'P-02 供油泵',
+        state: '备用',
+        mode: '自动',
+        alarms: [{ name: '过载', value: '正常', level: 'g' }],
+        protections: [{ name: '干转保护', state: '正常', level: 'g' }],
+      },
+      {
+        id: 'P-03 回油泵',
+        state: '停机',
+        mode: '手动',
+        alarms: [{ name: '密封泄漏', value: '轻微', level: 'a' }],
+        protections: [{ name: '过流保护', state: '正常', level: 'g' }],
+      },
     ],
     endurance: 0,
     contract: '2 小时应急送油 (三方框架协议)',
@@ -945,17 +1367,57 @@ function mockSummary(): FuelSummary {
         { k: '日用油箱容量', v: '1000 L / 台', note: '独立供单台机组' },
       ],
       arch: {
-        components: ['室外储油罐 ×2', '日用油箱 ×3', '供油泵 ×2', '回油泵 ×1', '电动阀组', '液位四段开关', '渗漏检测绳', '燃油 PLC'],
-        design: '燃油监控 PLC 采集储油罐/日用油箱液位、阀门开合、油泵运行与保护信号，按液位阈值自动启停供油泵向日用油箱补油，异常时联锁停泵并上报动环告警。',
+        components: [
+          '室外储油罐 ×2',
+          '日用油箱 ×3',
+          '供油泵 ×2',
+          '回油泵 ×1',
+          '电动阀组',
+          '液位四段开关',
+          '渗漏检测绳',
+          '燃油 PLC',
+        ],
+        design:
+          '燃油监控 PLC 采集储油罐/日用油箱液位、阀门开合、油泵运行与保护信号，按液位阈值自动启停供油泵向日用油箱补油，异常时联锁停泵并上报动环告警。',
         redundancy: '供油泵 1 用 1 备自动切换，储油罐双罐互备，日用油箱一机一箱',
       },
       logic: [],
       faults: [
-        { no: 1, fault: '储油罐低低位 (<20%)', lock: '锁定供油泵启动，柴发限时运行', action: '启动应急送油合同，人工确认后复位', manualReset: true },
-        { no: 2, fault: '日用油箱高位溢流', lock: '联锁关闭进油阀并停供油泵', action: '检查液位开关与电动阀，排空至 85% 以下', manualReset: true },
-        { no: 3, fault: '油泵干转', lock: '立即停泵，切至备用泵', action: '检查吸油管路与滤网', manualReset: true },
-        { no: 4, fault: '管道压力超限 (>0.5MPa)', lock: '停泵保护', action: '检查阀门是否误闭合', manualReset: false },
-        { no: 5, fault: '渗漏检测报警', lock: '关闭对应罐出油阀', action: '现场确认渗漏点，切换至备用罐', manualReset: true },
+        {
+          no: 1,
+          fault: '储油罐低低位 (<20%)',
+          lock: '锁定供油泵启动，柴发限时运行',
+          action: '启动应急送油合同，人工确认后复位',
+          manualReset: true,
+        },
+        {
+          no: 2,
+          fault: '日用油箱高位溢流',
+          lock: '联锁关闭进油阀并停供油泵',
+          action: '检查液位开关与电动阀，排空至 85% 以下',
+          manualReset: true,
+        },
+        {
+          no: 3,
+          fault: '油泵干转',
+          lock: '立即停泵，切至备用泵',
+          action: '检查吸油管路与滤网',
+          manualReset: true,
+        },
+        {
+          no: 4,
+          fault: '管道压力超限 (>0.5MPa)',
+          lock: '停泵保护',
+          action: '检查阀门是否误闭合',
+          manualReset: false,
+        },
+        {
+          no: 5,
+          fault: '渗漏检测报警',
+          lock: '关闭对应罐出油阀',
+          action: '现场确认渗漏点，切换至备用罐',
+          manualReset: true,
+        },
       ],
     },
     total: 8,
@@ -999,191 +1461,703 @@ onUnmounted(() => {
 
 <style scoped>
 /* ── view-head ── */
-.view-head { margin-bottom: 16px; }
-.view-head h1 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary, #e5e7eb); margin: 0; }
-.view-head .sub { font-size: 0.75rem; color: var(--text-muted, #6b7280); margin-top: 2px; display: block; }
+.view-head {
+  margin-bottom: 16px;
+}
+.view-head h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary, #e5e7eb);
+  margin: 0;
+}
+.view-head .sub {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  margin-top: 2px;
+  display: block;
+}
 
 /* ── grid ── */
-.grid { display: grid; gap: 14px; margin-bottom: 14px; }
-.grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
-.grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
-.grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
-.sub-grid { margin-bottom: 10px; }
+.grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.grid.cols-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+.grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+.sub-grid {
+  margin-bottom: 10px;
+}
 
-/* ── card ── */
-.card { background: var(--bg-card, #1e293b); border: 1px solid var(--border, #334155); border-radius: 10px; padding: 16px; }
-.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
-.ct { font-size: 0.875rem; font-weight: 600; color: var(--text-primary, #e5e7eb); }
-.pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; font-size: 0.6875rem; font-weight: 600; }
-.pill.g { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
-.pill.a { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
-.badges { display: flex; gap: 6px; }
-.head-stats { display: flex; gap: 18px; }
-.hs { display: inline-flex; align-items: baseline; gap: 6px; font-size: 11px; }
-.hs .k { color: var(--text-muted, #94a3b8); }
-.hs .v { color: var(--text-primary, #e5e7eb); font-weight: 600; }
+.badges {
+  display: flex;
+  gap: 6px;
+}
+.head-stats {
+  display: flex;
+  gap: 18px;
+}
+.hs {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+}
+.hs .k {
+  color: var(--text-muted, #94a3b8);
+}
+.hs .v {
+  color: var(--text-primary, #e5e7eb);
+  font-weight: 600;
+}
 
 /* ── SVG 油罐 ── */
-.schematic-wrap { background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 8px; }
-.fuel-svg { width: 100%; height: auto; display: block; }
-.tank-node { cursor: pointer; }
-.tank-shell { fill: rgba(30, 41, 59, 0.65); stroke: #475569; stroke-width: 2; transition: filter 0.2s; }
-.tank-node:hover .tank-shell { filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6)); stroke: #22d3ee; }
-.oil-body { transition: y 0.8s ease, height 0.8s ease; }
-.oil-wave { animation: waveMove 4s linear infinite; }
-.oil-wave.slow { animation-duration: 7s; }
-@keyframes waveMove {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(110px); }
+.schematic-wrap {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 8px;
+  padding: 8px;
 }
-.tick-line { stroke: rgba(148, 163, 184, 0.25); stroke-width: 1; stroke-dasharray: 3 3; }
-.tick-text { fill: #64748b; font-size: 9px; }
-.tank-pct { font-size: 20px; font-weight: 800; text-anchor: middle; paint-order: stroke; stroke: rgba(15,23,42,0.85); stroke-width: 3px; }
-.tank-vol { fill: #cbd5e1; font-size: 11px; text-anchor: middle; paint-order: stroke; stroke: rgba(15,23,42,0.7); stroke-width: 3px; }
-.tank-id { fill: #e5e7eb; font-size: 13px; font-weight: 700; text-anchor: middle; }
-.day-pct { font-size: 14px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: rgba(15,23,42,0.85); stroke-width: 3px; }
-.day-id { fill: #cbd5e1; font-size: 11px; text-anchor: middle; }
-.day-load { fill: #64748b; font-size: 10px; text-anchor: middle; }
-.pipe { stroke: #475569; stroke-width: 3; stroke-linecap: round; }
-.pipe.active { stroke: #22d3ee; stroke-dasharray: 8 6; animation: flow 1.2s linear infinite; }
-@keyframes flow { to { stroke-dashoffset: -28; } }
-.pipe-label { fill: #22d3ee; font-size: 11px; text-anchor: middle; }
-.pump-box { fill: rgba(34, 211, 238, 0.14); stroke: #22d3ee; stroke-width: 1.5; cursor: pointer; }
-.pump-box:hover { filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.7)); }
-.pump-text { fill: #e5e7eb; font-size: 11px; font-weight: 600; text-anchor: middle; pointer-events: none; }
+.fuel-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.tank-node {
+  cursor: pointer;
+}
+.tank-shell {
+  fill: rgba(30, 41, 59, 0.65);
+  stroke: #475569;
+  stroke-width: 2;
+  transition: filter 0.2s;
+}
+.tank-node:hover .tank-shell {
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6));
+  stroke: #22d3ee;
+}
+.oil-body {
+  transition:
+    y 0.8s ease,
+    height 0.8s ease;
+}
+.oil-wave {
+  animation: waveMove 4s linear infinite;
+}
+.oil-wave.slow {
+  animation-duration: 7s;
+}
+@keyframes waveMove {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(110px);
+  }
+}
+.tick-line {
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+.tick-text {
+  fill: #64748b;
+  font-size: 9px;
+}
+.tank-pct {
+  font-size: 20px;
+  font-weight: 800;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(15, 23, 42, 0.85);
+  stroke-width: 3px;
+}
+.tank-vol {
+  fill: #cbd5e1;
+  font-size: 11px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(15, 23, 42, 0.7);
+  stroke-width: 3px;
+}
+.tank-id {
+  fill: #e5e7eb;
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.day-pct {
+  font-size: 14px;
+  font-weight: 700;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(15, 23, 42, 0.85);
+  stroke-width: 3px;
+}
+.day-id {
+  fill: #cbd5e1;
+  font-size: 11px;
+  text-anchor: middle;
+}
+.day-load {
+  fill: #64748b;
+  font-size: 10px;
+  text-anchor: middle;
+}
+.pipe {
+  stroke: #475569;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.pipe.active {
+  stroke: #22d3ee;
+  stroke-dasharray: 8 6;
+  animation: flow 1.2s linear infinite;
+}
+@keyframes flow {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+.pipe-label {
+  fill: #22d3ee;
+  font-size: 11px;
+  text-anchor: middle;
+}
+.pump-box {
+  fill: rgba(34, 211, 238, 0.14);
+  stroke: #22d3ee;
+  stroke-width: 1.5;
+  cursor: pointer;
+}
+.pump-box:hover {
+  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.7));
+}
+.pump-text {
+  fill: #e5e7eb;
+  font-size: 11px;
+  font-weight: 600;
+  text-anchor: middle;
+  pointer-events: none;
+}
 
 /* SVG 文本颜色 (fill 覆盖) */
-.g-text { color: #22c55e; fill: #22c55e; }
-.a-text { color: #f59e0b; fill: #f59e0b; }
-.r-text { color: #ef4444; fill: #ef4444; }
+.g-text {
+  color: #22c55e;
+  fill: #22c55e;
+}
+.a-text {
+  color: #f59e0b;
+  fill: #f59e0b;
+}
+.r-text {
+  color: #ef4444;
+  fill: #ef4444;
+}
 
 /* legend */
-.legend { display: flex; align-items: center; gap: 12px; font-size: 11px; flex-wrap: wrap; }
-.lg { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted, #94a3b8); }
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot.g { background: #22c55e; } .dot.a { background: #f59e0b; } .dot.r { background: #ef4444; } .dot.b { background: #3b82f6; }
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  flex-wrap: wrap;
+}
+.lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted, #94a3b8);
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.g {
+  background: #22c55e;
+}
+.dot.a {
+  background: #f59e0b;
+}
+.dot.r {
+  background: #ef4444;
+}
+.dot.b {
+  background: #3b82f6;
+}
 
 /* 节点详情 */
-.node-detail { margin-top: 12px; border: 1px solid var(--border, #334155); border-radius: 8px; padding: 12px 14px; background: rgba(30, 41, 59, 0.5); }
-.nd-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.nd-code { font-family: monospace; font-weight: 700; font-size: 13px; padding: 1px 8px; border-radius: 5px; }
-.nd-code.g { color: #22c55e; background: rgba(34,197,94,0.12); }
-.nd-code.r { color: #ef4444; background: rgba(239,68,68,0.12); }
-.nd-code.a { color: #f59e0b; background: rgba(245,158,11,0.12); }
-.nd-title { font-size: 13px; font-weight: 600; color: var(--text-primary, #e5e7eb); }
-.nd-close { margin-left: auto; background: none; border: none; color: var(--text-muted, #94a3b8); font-size: 18px; cursor: pointer; line-height: 1; }
-.nd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 6px 18px; }
-.nd-kv { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px dotted rgba(51,65,85,0.5); }
-.nd-k { font-size: 11px; color: var(--text-muted, #94a3b8); }
-.nd-v { font-size: 12px; color: var(--text-secondary, #94a3b8); font-weight: 500; }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.node-detail {
+  margin-top: 12px;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: rgba(30, 41, 59, 0.5);
+}
+.nd-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.nd-code {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 1px 8px;
+  border-radius: 5px;
+}
+.nd-code.g {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+.nd-code.r {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+.nd-code.a {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+.nd-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+}
+.nd-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+.nd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 6px 18px;
+}
+.nd-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dotted rgba(51, 65, 85, 0.5);
+}
+.nd-k {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+.nd-v {
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 500;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 
 /* ── 趋势区间切换 ── */
-.range-tabs { display: inline-flex; gap: 4px; background: rgba(15,23,42,0.6); padding: 3px; border-radius: 8px; }
-.rt-btn { border: none; background: transparent; color: var(--text-muted, #94a3b8); font-size: 11px; padding: 4px 12px; border-radius: 6px; cursor: pointer; }
-.rt-btn.on { background: rgba(34, 211, 238, 0.16); color: #22d3ee; font-weight: 600; }
-.stat-box { background: rgba(15,23,42,0.45); border: 1px solid var(--border, #334155); border-radius: 8px; padding: 10px 14px; display: flex; flex-direction: column; gap: 4px; }
-.sb-k { font-size: 11px; color: var(--text-muted, #94a3b8); }
-.sb-v { font-size: 18px; font-weight: 700; color: var(--text-primary, #e5e7eb); }
-.sb-v small { font-size: 11px; font-weight: 400; color: var(--text-muted, #94a3b8); margin-left: 2px; }
+.range-tabs {
+  display: inline-flex;
+  gap: 4px;
+  background: rgba(15, 23, 42, 0.6);
+  padding: 3px;
+  border-radius: 8px;
+}
+.rt-btn {
+  border: none;
+  background: transparent;
+  color: var(--text-muted, #94a3b8);
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.rt-btn.on {
+  background: rgba(34, 211, 238, 0.16);
+  color: #22d3ee;
+  font-weight: 600;
+}
+.stat-box {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sb-k {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+.sb-v {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary, #e5e7eb);
+}
+.sb-v small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted, #94a3b8);
+  margin-left: 2px;
+}
 
 /* ── 低油量预警 ── */
-.warn-list { display: flex; flex-direction: column; gap: 6px; }
-.warn-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; background: rgba(30,41,59,0.5); border-left: 3px solid transparent; }
-.warn-row.critical { border-left-color: #ef4444; }
-.warn-row.warning { border-left-color: #f59e0b; }
-.w-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
-.w-dot.critical { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.8); animation: pulse 1.4s infinite; }
-.w-dot.warning { background: #f59e0b; }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
-.w-id { font-size: 12px; font-weight: 600; color: var(--text-primary, #e5e7eb); min-width: 64px; }
-.w-bar { flex: 0 0 110px; height: 6px; border-radius: 3px; background: rgba(51,65,85,0.7); overflow: hidden; }
-.w-bar i { display: block; height: 100%; border-radius: 3px; transition: width 0.6s; }
-.w-pct { font-size: 12px; font-weight: 700; min-width: 50px; text-align: right; }
-.w-msg { flex: 1; font-size: 12px; color: var(--text-secondary, #94a3b8); }
-.w-th { font-size: 11px; }
-.thr-bar { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border, #334155); }
-.thr { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text-muted, #94a3b8); }
+.warn-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.warn-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.5);
+  border-left: 3px solid transparent;
+}
+.warn-row.critical {
+  border-left-color: #ef4444;
+}
+.warn-row.warning {
+  border-left-color: #f59e0b;
+}
+.w-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.w-dot.critical {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  animation: pulse 1.4s infinite;
+}
+.w-dot.warning {
+  background: #f59e0b;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.w-id {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+  min-width: 64px;
+}
+.w-bar {
+  flex: 0 0 110px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(51, 65, 85, 0.7);
+  overflow: hidden;
+}
+.w-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s;
+}
+.w-pct {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 50px;
+  text-align: right;
+}
+.w-msg {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+}
+.w-th {
+  font-size: 11px;
+}
+.thr-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #334155);
+}
+.thr {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
 
 /* ── 续航预测 ── */
-.gauge-row { display: flex; justify-content: space-around; gap: 12px; flex-wrap: wrap; }
-.gauge-item { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-.gauge-num { font-size: 14px; font-weight: 700; }
-.gauge-cap { font-size: 10px; }
-.pred-list { margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border, #334155); display: flex; flex-direction: column; gap: 2px; }
-.pred-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed rgba(51,65,85,0.5); }
-.pred-row .k { color: var(--text-muted, #94a3b8); }
-.pred-row .v { color: var(--text-secondary, #94a3b8); font-weight: 500; }
+.gauge-row {
+  display: flex;
+  justify-content: space-around;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.gauge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.gauge-num {
+  font-size: 14px;
+  font-weight: 700;
+}
+.gauge-cap {
+  font-size: 10px;
+}
+.pred-list {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border, #334155);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pred-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(51, 65, 85, 0.5);
+}
+.pred-row .k {
+  color: var(--text-muted, #94a3b8);
+}
+.pred-row .v {
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 500;
+}
 
 /* ── 油泵 ── */
-.pump-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.pump-block { border: 1px solid rgba(51,65,85,0.7); border-radius: 8px; padding: 10px 12px; background: rgba(15,23,42,0.4); }
-.pump-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-.pump-head .tag { margin-left: auto; }
-.pump-mode { font-size: 11px; }
-.d-status { font-size: 9px; }
-.d-status.g { color: #22c55e; } .d-status.r { color: #ef4444; } .d-status.a { color: #f59e0b; } .d-status.b { color: #3b82f6; }
-.sig-list { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
-.sig { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; padding: 2px 7px; border-radius: 4px; background: rgba(30,41,59,0.7); border: 1px solid rgba(51,65,85,0.7); }
-.sig-k { color: var(--text-muted, #94a3b8); }
-.sig-v { font-weight: 600; }
+.pump-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+.pump-block {
+  border: 1px solid rgba(51, 65, 85, 0.7);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(15, 23, 42, 0.4);
+}
+.pump-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.pump-head .tag {
+  margin-left: auto;
+}
+.pump-mode {
+  font-size: 11px;
+}
+.d-status {
+  font-size: 9px;
+}
+.d-status.g {
+  color: #22c55e;
+}
+.d-status.r {
+  color: #ef4444;
+}
+.d-status.a {
+  color: #f59e0b;
+}
+.d-status.b {
+  color: #3b82f6;
+}
+.sig-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 4px;
+}
+.sig {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(51, 65, 85, 0.7);
+}
+.sig-k {
+  color: var(--text-muted, #94a3b8);
+}
+.sig-v {
+  font-weight: 600;
+}
 
 /* ── table ── */
-.scroll-x { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-th { text-align: left; color: var(--text-muted, #6b7280); font-weight: 600; font-size: 10px; letter-spacing: .4px; padding: 7px 8px; border-bottom: 1px solid var(--border, #334155); white-space: nowrap; }
-td { padding: 6px 8px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); color: var(--text-secondary, #94a3b8); white-space: nowrap; }
-tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
-.tank-row { cursor: pointer; }
-.d-name { font-weight: 500; color: var(--text-primary, #e5e7eb); }
-.mono { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
-.muted { color: var(--text-muted, #6b7280); }
-.mini-tbl th, .mini-tbl td { font-size: 11px; padding: 5px 6px; }
+.scroll-x {
+  overflow-x: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+th {
+  text-align: left;
+  color: var(--text-muted, #6b7280);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border, #334155);
+  white-space: nowrap;
+}
+td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+}
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.tank-row {
+  cursor: pointer;
+}
+.d-name {
+  font-weight: 500;
+  color: var(--text-primary, #e5e7eb);
+}
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
 
-/* tag */
-.tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border, #334155); white-space: nowrap; }
-.tag.g { color: #22c55e; border-color: rgba(43,212,122,.4); background: rgba(43,212,122,.08); }
-.tag.a { color: #f59e0b; border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.08); }
-.tag.r { color: #ef4444; border-color: rgba(255,77,94,.4); background: rgba(255,77,94,.09); }
-.tag.b { color: #3b82f6; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.08); }
+.mini-tbl th,
+.mini-tbl td {
+  font-size: 11px;
+  padding: 5px 6px;
+}
 
 /* ── 告警 ── */
-.alarm-list { display: flex; flex-direction: column; gap: 6px; }
-.alarm-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; background: rgba(30,41,59,0.5); border-left: 3px solid transparent; }
-.alarm-row.critical { border-left-color: #ef4444; }
-.alarm-row.warning { border-left-color: #f59e0b; }
-.alarm-row.info { border-left-color: #3b82f6; }
-.a-ts { font-size: 11px; color: var(--text-muted, #94a3b8); }
-.a-src { font-size: 12px; font-weight: 600; color: var(--text-primary, #e5e7eb); min-width: 110px; }
-.a-msg { font-size: 12px; color: var(--text-secondary, #94a3b8); flex: 1; }
-.a-val { font-size: 11px; color: #f59e0b; }
-
-/* ── 知识库 ── */
-.kv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 18px; }
-.kv { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; border-bottom: 1px dashed rgba(51,65,85,0.5); }
-.kv .k { font-size: 11px; color: var(--text-muted, #94a3b8); }
-.kv .v { font-size: 13px; color: var(--text-primary, #e5e7eb); font-weight: 600; }
-.note { font-size: 10px; }
-.arch-desc { font-size: 12px; line-height: 1.7; margin: 0 0 10px; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font-size: 11px; padding: 2px 9px; border-radius: 12px; background: rgba(34,211,238,0.08); color: #22d3ee; border: 1px solid rgba(34,211,238,0.25); }
+.alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alarm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.5);
+  border-left: 3px solid transparent;
+}
+.alarm-row.critical {
+  border-left-color: #ef4444;
+}
+.alarm-row.warning {
+  border-left-color: #f59e0b;
+}
+.alarm-row.info {
+  border-left-color: #3b82f6;
+}
+.a-ts {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+.a-src {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+  min-width: 110px;
+}
+.a-msg {
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+  flex: 1;
+}
+.a-val {
+  font-size: 11px;
+  color: #f59e0b;
+}
 
 /* ── error/empty ── */
-.err-card { text-align: center; padding: 32px 16px; }
-.err-title { font-size: 1rem; font-weight: 700; color: #ef4444; margin-bottom: 8px; }
-.err-detail { font-size: 0.75rem; color: var(--text-muted, #6b7280); margin-bottom: 14px; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 6px; border: 1px solid var(--border, #334155); background: transparent; color: var(--text-primary, #e5e7eb); font-size: 0.75rem; cursor: pointer; }
-.btn:hover { background: rgba(255,255,255,0.05); }
-.empty-tip { text-align: center; padding: 20px; font-size: 12px; }
+.err-card {
+  text-align: center;
+  padding: 32px 16px;
+}
+.err-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ef4444;
+  margin-bottom: 8px;
+}
+.err-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  margin-bottom: 14px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #334155);
+  background: transparent;
+  color: var(--text-primary, #e5e7eb);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.empty-tip {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+}
 
 /* ── responsive ── */
 @media (max-width: 1280px) {
-  .grid.cols-6 { grid-template-columns: repeat(3, 1fr); }
-  .grid.cols-3 { grid-template-columns: 1fr; }
-  .grid.cols-2 { grid-template-columns: 1fr; }
+  .grid.cols-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .grid.cols-3 {
+    grid-template-columns: 1fr;
+  }
+  .grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 860px) {
-  .grid.cols-6 { grid-template-columns: repeat(2, 1fr); }
+  .grid.cols-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

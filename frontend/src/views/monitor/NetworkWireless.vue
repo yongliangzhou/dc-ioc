@@ -12,18 +12,17 @@
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="card err-card">
+    <Panel v-else-if="error" class="err-card">
       <div class="err-title">{{ tl('加载失败') }}</div>
       <div class="err-detail">{{ error }}</div>
       <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </div>
+    </Panel>
 
     <!-- 2.4.1 AP 分布热力图 (信号强度) -->
-    <div v-if="s && s.aps.length" class="card">
-      <div class="card-head">
-        <span class="ct">{{ tl('AP 信号强度热力图') }}</span>
+    <Panel v-if="s && s.aps.length" title="AP 信号强度热力图">
+      <template #extra>
         <span class="pill g">{{ tl('RSSI dBm') }}</span>
-      </div>
+      </template>
       <HeatmapView
         v-if="s.heatmapData"
         :data="s.heatmapData"
@@ -32,24 +31,20 @@
         unit="dBm"
         :height="300"
       />
-    </div>
+    </Panel>
 
     <!-- 2.4.3 终端统计面板：总数 + 类型分布饼图 -->
     <div v-if="s && s.aps.length" class="grid cols-2">
       <!-- 终端类型分布 -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('终端类型分布') }}</span>
+      <Panel title="终端类型分布">
+        <template #extra>
           <span class="pill g">{{ fmtNum(s.totalUsers) }} {{ tl('终端') }}</span>
-        </div>
+        </template>
         <BaseChart :option="clientPieOption" height="240px" />
-      </div>
+      </Panel>
 
       <!-- 射频频段分布 -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('射频频段分布') }}</span>
-        </div>
+      <Panel title="射频频段分布">
         <div class="band-grid">
           <div class="band-card" v-for="b in s.bandStats" :key="b.band">
             <div class="band-head">
@@ -65,7 +60,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </Panel>
 
     <!-- 2.4.3 / 2.4.4 KPI 卡片 -->
     <div v-if="s && s.aps.length" class="grid cols-4">
@@ -104,34 +99,39 @@
     </div>
 
     <!-- 2.4.4 信道干扰可视化 -->
-    <div v-if="s && s.aps.length" class="card">
-      <div class="card-head">
-        <span class="ct">{{ tl('信道利用率与干扰') }}</span>
+    <Panel v-if="s && s.aps.length" title="信道利用率与干扰">
+      <template #extra>
         <span class="pill a" v-if="s.highInterference > 0">{{ s.highInterference }} {{ tl('信道高干扰') }}</span>
         <span class="pill g" v-else>{{ tl('信道健康') }}</span>
-      </div>
+      </template>
       <BaseChart :option="channelChartOption" height="300px" />
-    </div>
+    </Panel>
 
     <!-- 2.4.2 AP 列表：DeviceTable -->
-    <div v-if="s && s.aps.length" class="card">
-      <div class="card-head">
-        <span class="ct">{{ tl('AP 列表') }}</span>
+    <Panel v-if="s && s.aps.length" title="AP 列表">
+      <template #extra>
         <span class="pill g">{{ s.aps.length }} {{ tl('台') }}</span>
-      </div>
+      </template>
       <DeviceTable
         :columns="apColumns"
         :rows="s.apRows"
         :count="s.aps.length"
       />
-    </div>
+    </Panel>
 
     <!-- Per-device detail cards -->
-    <div v-if="s && s.aps.length" v-for="ap in s.aps" :key="ap.id" class="card">
-      <div class="card-head">
-        <span class="ct">{{ ap.name }} <span class="muted ml2 fw4 f11">{{ ap.location }}</span></span>
+    <Panel
+      v-if="s && s.aps.length"
+      v-for="ap in s.aps"
+      :key="ap.id"
+      :title="ap.name"
+    >
+      <template #ct>
+        {{ ap.name }} <span class="muted ml2 fw4 f11">{{ ap.location }}</span>
+      </template>
+      <template #extra>
         <StatusBadge :status="ap.status === 'online' ? 'online' : 'offline'" />
-      </div>
+      </template>
 
       <div class="rt-meta-grid">
         <div class="rt-kv"><span class="rt-k">{{ tl('型号') }}</span><span class="rt-v mono">{{ ap.model }}</span></div>
@@ -158,24 +158,26 @@
           <div class="radio-bar"><span class="radio-fill" :class="r.radio.util_pct > 70 ? 'a' : 'g'" :style="{ width: Math.min(100, r.radio.util_pct) + '%' }" /></div>
         </div>
       </div>
-    </div>
+    </Panel>
 
     <!-- Empty state -->
-    <div v-if="s && !s.aps.length && !loading && !error" class="card empty-card">
+    <Panel v-if="s && !s.aps.length && !loading && !error" class="empty-card">
       <p class="muted">{{ tl('暂无无线数据') }}</p>
-    </div>
+    </Panel>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { fmtNum, fmtBps } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
 import DeviceTable from '@/components/monitor/DeviceTable.vue'
 import HeatmapView from '@/components/monitor/HeatmapView.vue'
 import BaseChart from '@/components/charts/BaseChart.vue'
+import Panel from '@/components/common/Panel.vue'
 import { getNetworkWirelessDetailed, type NetworkWirelessSummary, type WirelessView, type RadioView } from '@/api/monitor'
 import type { EChartsOption } from '@/hooks/useECharts'
 
@@ -318,20 +320,7 @@ const channelChartOption = reactive<EChartsOption>({
 // ──────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────
-function fmtNum(n: number): string {
-  if (n == null) return '-'
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
-  return n.toLocaleString()
-}
 
-function fmtBps(bps: number): string {
-  if (bps == null) return '-'
-  if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps'
-  if (bps >= 1e6) return (bps / 1e6).toFixed(1) + ' Mbps'
-  if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' Kbps'
-  return bps + ' bps'
-}
 
 // ──────────────────────────────────────────
 // Mock data
@@ -609,41 +598,7 @@ onMounted(() => {
 .grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
 .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 
-/* ── card ── */
-.card {
-  background: var(--bg-card, #1e293b);
-  border: 1px solid var(--border, #334155);
-  border-radius: 10px;
-  padding: 16px;
-  margin-bottom: 14px;
-}
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.ct {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
-}
-
-/* pill */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  border-radius: 99px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
-.pill.g { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
-.pill.a { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+/* pill 已由全局 .moni-card/.pill 体系提供 */
 
 /* ── band grid ── */
 .band-grid {
@@ -739,23 +694,11 @@ onMounted(() => {
 .radio-fill.g { background: linear-gradient(90deg, rgba(43, 212, 122, 0.5), rgba(43, 212, 122, 0.85)); }
 .radio-fill.a { background: linear-gradient(90deg, rgba(255, 176, 32, 0.5), rgba(255, 176, 32, 0.85)); }
 
-/* tag */
-.tag {
-  font-size: 0.625rem;
-  padding: 1px 7px;
-  border-radius: 20px;
-  border: 1px solid var(--border, #334155);
-  white-space: nowrap;
-}
-.tag.g { color: #22c55e; border-color: rgba(43, 212, 122, 0.4); background: rgba(43, 212, 122, 0.08); }
-.tag.r { color: #ef4444; border-color: rgba(255, 77, 94, 0.4); background: rgba(255, 77, 94, 0.09); }
-
 /* ── utility ── */
 .mono { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
 .fw4 { font-weight: 400; }
 .f11 { font-size: 0.6875rem; }
 .ml2 { margin-left: 4px; }
-.muted { color: var(--text-muted, #6b7280); }
 .a-text { color: #f59e0b; }
 .g-text { color: #22c55e; }
 

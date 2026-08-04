@@ -17,18 +17,61 @@
 
     <!-- ========== KPI Row 1 ========== -->
     <div class="kpi-row" v-if="cracData">
-      <KpiCard title="设备总数" :value="cracData.total" unit="台" :detail="`在线 ${cracData.online} · 待机 ${cracData.standby}`" dot="#06b6d4" />
-      <KpiCard title="运行/待机/故障" :value="`${cracData.online}/${cracData.standby}/${cracData.fault}`" valueClass="gk-cv-cyan" detail="在线/待机/故障" dot="#22c55e" />
-      <KpiCard title="漏水告警" :value="cracData.leakAlarm" unit="处" :subtitle="`共 ${cracData.leakTotal} 个监测点`" :status="cracData.leakAlarm > 0 ? 'danger' : 'normal'" dot="#ef4444" />
+      <KpiCard
+        title="设备总数"
+        :value="cracData.total"
+        unit="台"
+        :detail="`在线 ${cracData.online} · 待机 ${cracData.standby}`"
+        dot="#06b6d4"
+      />
+      <KpiCard
+        title="运行/待机/故障"
+        :value="`${cracData.online}/${cracData.standby}/${cracData.fault}`"
+        valueClass="gk-cv-cyan"
+        detail="在线/待机/故障"
+        dot="#22c55e"
+      />
+      <KpiCard
+        title="漏水告警"
+        :value="cracData.leakAlarm"
+        unit="处"
+        :subtitle="`共 ${cracData.leakTotal} 个监测点`"
+        :status="cracData.leakAlarm > 0 ? 'danger' : 'normal'"
+        dot="#ef4444"
+      />
       <KpiCard title="室外参照温度" :value="cracData.outdoorRef" unit="℃" dot="#f97316" />
     </div>
 
     <!-- ========== KPI Row 2 ========== -->
     <div class="kpi-row" v-if="cracData">
-      <KpiCard title="平均送风温度" :value="cracData.avgSupplyT" unit="℃" :decimals="1" dot="#06b6d4" />
-      <KpiCard title="平均回风温度" :value="cracData.avgReturnT" unit="℃" :decimals="1" dot="#f97316" />
-      <KpiCard title="平均供水温度" :value="cracData.avgSupplyWaterT" unit="℃" :decimals="1" dot="#3b82f6" />
-      <KpiCard title="平均室内外压差" :value="cracData.avgInOutDiff" unit="Pa" :decimals="1" dot="#8b5cf6" />
+      <KpiCard
+        title="平均送风温度"
+        :value="cracData.avgSupplyT"
+        unit="℃"
+        :decimals="1"
+        dot="#06b6d4"
+      />
+      <KpiCard
+        title="平均回风温度"
+        :value="cracData.avgReturnT"
+        unit="℃"
+        :decimals="1"
+        dot="#f97316"
+      />
+      <KpiCard
+        title="平均供水温度"
+        :value="cracData.avgSupplyWaterT"
+        unit="℃"
+        :decimals="1"
+        dot="#3b82f6"
+      />
+      <KpiCard
+        title="平均室内外压差"
+        :value="cracData.avgInOutDiff"
+        unit="Pa"
+        :decimals="1"
+        dot="#8b5cf6"
+      />
     </div>
 
     <!-- Loading -->
@@ -39,21 +82,17 @@
     <!-- ========== 设备全景列表 ========== -->
     <div class="section" v-if="cracData">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--cyan)"></span>
+        <span class="section-dot" style="background: var(--cyan)"></span>
         设备全景列表
         <span class="section-sum">{{ cracData.devices.length }} 台</span>
       </h3>
-      <DeviceTable
-        :columns="deviceColumns"
-        :rows="deviceRows"
-        :count="cracData.devices.length"
-      />
+      <DeviceTable :columns="deviceColumns" :rows="deviceRows" :count="cracData.devices.length" />
     </div>
 
     <!-- ========== 包间温度热力图 ========== -->
     <div class="section" v-if="roomHeatData.length">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--amber)"></span>
+        <span class="section-dot" style="background: var(--amber)"></span>
         包间温度热力图
       </h3>
       <HeatmapView
@@ -71,7 +110,7 @@
     <!-- ========== 包间设备归集 ========== -->
     <div class="section" v-if="roomGroups.length">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--green)"></span>
+        <span class="section-dot" style="background: var(--green)"></span>
         包间设备归集
         <span class="section-sum">{{ roomGroups.length }} 个包间</span>
       </h3>
@@ -80,20 +119,74 @@
         :key="rg.roomId"
         :title="rg.roomName"
         :subtitle="`运行 ${rg.cracRun}/${rg.cracN} · 状态 ${rg.status}`"
-        :dot-color="rg.status === '正常' ? 'var(--green)' : rg.status === '告警' ? 'var(--red)' : 'var(--amber)'"
+        :dot-color="
+          rg.status === '正常'
+            ? 'var(--green)'
+            : rg.status === '告警'
+              ? 'var(--red)'
+              : 'var(--amber)'
+        "
       >
         <!-- 环境传感器 -->
         <div class="rg-env">
           <h4 class="rg-subtitle">环境传感器</h4>
           <div class="rg-kpi-grid">
-            <KpiCard title="平均温度" :value="rg.envSensors.avgTemp" unit="℃" size="sm" dot="var(--cyan)" />
-            <KpiCard title="平均湿度" :value="rg.envSensors.avgRh" unit="%" size="sm" dot="var(--blue)" />
-            <KpiCard title="热通道温度" :value="rg.envSensors.hotAisleTemp" unit="℃" size="sm" dot="var(--red)" />
-            <KpiCard title="冷通道温度" :value="rg.envSensors.coldAisleTemp" unit="℃" size="sm" dot="var(--cyan)" />
-            <KpiCard title="热通道湿度" :value="rg.envSensors.hotAisleRh" unit="%" size="sm" dot="var(--orange)" />
-            <KpiCard title="冷通道湿度" :value="rg.envSensors.coldAisleRh" unit="%" size="sm" dot="var(--teal)" />
-            <KpiCard title="露点温度" :value="rg.envSensors.dewPoint" unit="℃" size="sm" dot="var(--purple)" />
-            <KpiCard title="室内外压差" :value="rg.envSensors.inOutDiff" unit="Pa" size="sm" dot="var(--amber)" />
+            <KpiCard
+              title="平均温度"
+              :value="rg.envSensors.avgTemp"
+              unit="℃"
+              size="sm"
+              dot="var(--cyan)"
+            />
+            <KpiCard
+              title="平均湿度"
+              :value="rg.envSensors.avgRh"
+              unit="%"
+              size="sm"
+              dot="var(--blue)"
+            />
+            <KpiCard
+              title="热通道温度"
+              :value="rg.envSensors.hotAisleTemp"
+              unit="℃"
+              size="sm"
+              dot="var(--red)"
+            />
+            <KpiCard
+              title="冷通道温度"
+              :value="rg.envSensors.coldAisleTemp"
+              unit="℃"
+              size="sm"
+              dot="var(--cyan)"
+            />
+            <KpiCard
+              title="热通道湿度"
+              :value="rg.envSensors.hotAisleRh"
+              unit="%"
+              size="sm"
+              dot="var(--orange)"
+            />
+            <KpiCard
+              title="冷通道湿度"
+              :value="rg.envSensors.coldAisleRh"
+              unit="%"
+              size="sm"
+              dot="var(--teal)"
+            />
+            <KpiCard
+              title="露点温度"
+              :value="rg.envSensors.dewPoint"
+              unit="℃"
+              size="sm"
+              dot="var(--purple)"
+            />
+            <KpiCard
+              title="室内外压差"
+              :value="rg.envSensors.inOutDiff"
+              unit="Pa"
+              size="sm"
+              dot="var(--amber)"
+            />
           </div>
         </div>
 
@@ -116,12 +209,16 @@
             <div v-if="rg.fau" class="rg-aux-card">
               <span class="rg-aux-label">新风机组</span>
               <StatusBadge :status="rg.fau.state" />
-              <span class="rg-aux-v">送风 {{ formatVal(rg.fau.supplyT) }}℃ / CO₂ {{ formatVal(rg.fau.co2) }}ppm</span>
+              <span class="rg-aux-v"
+                >送风 {{ formatVal(rg.fau.supplyT) }}℃ / CO₂ {{ formatVal(rg.fau.co2) }}ppm</span
+              >
             </div>
             <div v-if="rg.humidifier" class="rg-aux-card">
               <span class="rg-aux-label">恒湿机</span>
               <StatusBadge :status="rg.humidifier.state" />
-              <span class="rg-aux-v">RH {{ formatVal(rg.humidifier.rh) }}% / {{ rg.humidifier.mode }}</span>
+              <span class="rg-aux-v"
+                >RH {{ formatVal(rg.humidifier.rh) }}% / {{ rg.humidifier.mode }}</span
+              >
             </div>
           </div>
         </div>
@@ -130,7 +227,9 @@
         <div class="rg-leak" v-if="rg.leak">
           <span class="rg-leak-label">漏水检测 (Zone {{ rg.leak.zone }})</span>
           <StatusBadge :status="rg.leak.status" />
-          <span v-if="rg.leak.level !== '正常'" class="rg-leak-level">级别: {{ rg.leak.level }}</span>
+          <span v-if="rg.leak.level !== '正常'" class="rg-leak-level"
+            >级别: {{ rg.leak.level }}</span
+          >
         </div>
 
         <!-- 远程控制 -->
@@ -143,7 +242,7 @@
           :tempStep="0.5"
           tempUnit="℃"
           :showStartStop="false"
-          @tempChange="v => onRoomTempChange(rg.roomId, v)"
+          @tempChange="(v) => onRoomTempChange(rg.roomId, v)"
         />
       </GroupCard>
     </div>
@@ -151,21 +250,32 @@
     <!-- ========== 群控策略 ========== -->
     <div class="section" v-if="cracData?.ctrl">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--purple)"></span>
+        <span class="section-dot" style="background: var(--purple)"></span>
         群控策略
       </h3>
       <div class="ctrl-grid">
         <div class="ctrl-card">
           <span class="ctrl-name">恒湿机联控</span>
-          <span class="ctrl-desc">加湿启动 RH ≤ {{ cracData.ctrl.humId.rhLowOn }}% · 关闭 RH ≥ {{ cracData.ctrl.humId.rhHighOff }}%</span>
+          <span class="ctrl-desc"
+            >加湿启动 RH ≤ {{ cracData.ctrl.humId.rhLowOn }}% · 关闭 RH ≥
+            {{ cracData.ctrl.humId.rhHighOff }}%</span
+          >
         </div>
         <div class="ctrl-card">
           <span class="ctrl-name">正压送风</span>
-          <span class="ctrl-desc">{{ cracData.ctrl.positivePressure.min }}~{{ cracData.ctrl.positivePressure.max }} {{ cracData.ctrl.positivePressure.unit }} · {{ cracData.ctrl.positivePressure.desc }}</span>
+          <span class="ctrl-desc"
+            >{{ cracData.ctrl.positivePressure.min }}~{{ cracData.ctrl.positivePressure.max }}
+            {{ cracData.ctrl.positivePressure.unit }} ·
+            {{ cracData.ctrl.positivePressure.desc }}</span
+          >
         </div>
         <div class="ctrl-card">
           <span class="ctrl-name">二次泵策略</span>
-          <span class="ctrl-desc">压差目标 {{ cracData.ctrl.secPump.diffTarget }}{{ cracData.ctrl.secPump.diffUnit }} · 加泵 {{ cracData.ctrl.secPump.addHz }}Hz · 减泵 {{ cracData.ctrl.secPump.reduceHz }}Hz · {{ cracData.ctrl.secPump.desc }}</span>
+          <span class="ctrl-desc"
+            >压差目标 {{ cracData.ctrl.secPump.diffTarget }}{{ cracData.ctrl.secPump.diffUnit }} ·
+            加泵 {{ cracData.ctrl.secPump.addHz }}Hz · 减泵 {{ cracData.ctrl.secPump.reduceHz }}Hz ·
+            {{ cracData.ctrl.secPump.desc }}</span
+          >
         </div>
       </div>
     </div>
@@ -173,7 +283,7 @@
     <!-- ========== 趋势诊断 ========== -->
     <div class="section" v-if="trends">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--yellow)"></span>
+        <span class="section-dot" style="background: var(--yellow)"></span>
         趋势诊断分析
         <span class="section-sum">7 项指标</span>
       </h3>
@@ -215,7 +325,11 @@
       <div class="trend-item" v-if="activeSVC">
         <div class="trend-header">
           <span class="trend-name">{{ trends.supplyVsCabinet.title }}</span>
-          <select v-model="svcPeriod" class="trend-period" v-if="trends.supplyVsCabinet.periods?.length > 1">
+          <select
+            v-model="svcPeriod"
+            class="trend-period"
+            v-if="trends.supplyVsCabinet.periods?.length > 1"
+          >
             <option v-for="p in trends.supplyVsCabinet.periods" :key="p" :value="p">{{ p }}</option>
           </select>
         </div>
@@ -264,14 +378,17 @@
     <!-- ========== 活跃告警 ========== -->
     <div class="section" v-if="cracAlarms.length">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--red)"></span>
+        <span class="section-dot" style="background: var(--red)"></span>
         活跃告警
         <span class="section-sum danger">{{ cracAlarms.length }} 条</span>
       </h3>
       <div class="alarm-list">
         <div v-for="a in cracAlarms" :key="a.id" class="alarm-item">
           <AlarmBadge :level="a.level || 'warning'" />
-          <span class="alarm-msg">{{ a.message || a.title || a.description || '-' }} <em class="alarm-tag">[{{ a.source || a.domain || '-' }}]</em></span>
+          <span class="alarm-msg"
+            >{{ a.message || a.title || a.description || '-' }}
+            <em class="alarm-tag">[{{ a.source || a.domain || '-' }}]</em></span
+          >
           <span class="alarm-time">{{ formatTime(a.time || a.created_at) }}</span>
         </div>
       </div>
@@ -280,7 +397,9 @@
     <!-- ========== Footer Stats ========== -->
     <div class="page-footer" v-if="cracData">
       <span>总设备 {{ cracData.total }} 台</span>
-      <span>在线 {{ cracData.online }} · 待机 {{ cracData.standby }} · 故障 {{ cracData.fault }}</span>
+      <span
+        >在线 {{ cracData.online }} · 待机 {{ cracData.standby }} · 故障 {{ cracData.fault }}</span
+      >
       <span>新风机组 {{ cracData.freshAir?.length ?? 0 }} 台</span>
       <span>恒湿机 {{ cracData.humidifiers?.length ?? 0 }} 台</span>
       <span>功能房间 {{ cracData.funcRooms?.length ?? 0 }} 间</span>
@@ -304,6 +423,7 @@ import DeviceTable from '@/components/monitor/DeviceTable.vue'
 import HeatmapView from '@/components/monitor/HeatmapView.vue'
 import QuickControl from '@/components/monitor/QuickControl.vue'
 import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
+import { numVal, formatVal, formatTime } from '@/utils/format'
 
 // ===== State =====
 const cracData = ref<CracSummary | null>(null)
@@ -341,11 +461,17 @@ async function loadTrends() {
   trendsLoading.value = true
   try {
     trends.value = await getCracTrends()
-    if (Object.keys(trends.value || {}).length > 0 && trends.value?.supplyVsCabinet?.periods?.length) {
+    if (
+      Object.keys(trends.value || {}).length > 0 &&
+      trends.value?.supplyVsCabinet?.periods?.length
+    ) {
       svcPeriod.value = trends.value.supplyVsCabinet.periods[0]
     }
-  } catch { /* trends optional */ }
-  finally { trendsLoading.value = false }
+  } catch {
+    /* trends optional */
+  } finally {
+    trendsLoading.value = false
+  }
 }
 
 async function refresh() {
@@ -397,11 +523,6 @@ const cracUnitColumns = [
   { key: 'filter', label: '滤网', width: '60px' },
 ]
 
-function numVal(v: number | string): string {
-  if (v === '-' || v === undefined || v === null) return '-'
-  return String(Math.round(Number(v) * 10) / 10)
-}
-
 const deviceRows = computed(() => {
   if (!cracData.value) return []
   return cracData.value.devices.map((d: CracView) => ({
@@ -436,16 +557,10 @@ function mapCracRows(devices: CracView[]) {
   }))
 }
 
-function formatVal(v: number | string): string {
-  if (v === '-' || v === undefined || v === null) return '-'
-  if (typeof v === 'string') return v
-  return v % 1 === 0 ? String(v) : v.toFixed(1)
-}
-
 // ===== Heatmap =====
 const heatColors = ['#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444']
 const heatXLabels = ['平均温度', '热通道', '冷通道', '露点']
-const heatYLabels = computed(() => roomGroups.value.map(r => r.roomName))
+const heatYLabels = computed(() => roomGroups.value.map((r) => r.roomName))
 
 const roomHeatData = computed<[number, number, number][]>(() => {
   const data: [number, number, number][] = []
@@ -543,7 +658,9 @@ const activeSVC = computed(() => {
   return svc.rooms[0]
 })
 
-watch(svcPeriod, () => { /* reactive — recompute below */ })
+watch(svcPeriod, () => {
+  /* reactive — recompute below */
+})
 
 const svcXData = computed(() => {
   const room = activeSVC.value
@@ -558,9 +675,25 @@ const svcSeries = computed(() => {
   const period = room.periods[svcPeriod.value]
   if (!period) return []
   return [
-    { name: '送风温度', data: period.supplyTemp as number[], type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan } },
-    { name: '机柜进风温度', data: period.cabinetInletTemp as number[], type: 'line' as const, lineStyle: { color: CHART_COLORS.orange } },
-    { name: '温差 ΔT', data: period.deltaT as number[], type: 'bar' as const, yAxisIndex: 1, itemStyle: { color: CHART_COLORS.purple } },
+    {
+      name: '送风温度',
+      data: period.supplyTemp as number[],
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.cyan },
+    },
+    {
+      name: '机柜进风温度',
+      data: period.cabinetInletTemp as number[],
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.orange },
+    },
+    {
+      name: '温差 ΔT',
+      data: period.deltaT as number[],
+      type: 'bar' as const,
+      yAxisIndex: 1,
+      itemStyle: { color: CHART_COLORS.purple },
+    },
   ]
 })
 
@@ -652,20 +785,17 @@ const shSeries = computed(() => {
 
 // ===== Alarms =====
 const cracAlarms = computed(() => {
-  return alarms.value.filter(a => {
+  return alarms.value.filter((a) => {
     const t = `${a.source || ''}${a.domain || ''}${a.message || ''}${a.title || ''}`.toLowerCase()
-    return t.includes('crac') || t.includes('空调') || t.includes('精密') || t.includes('列间') || t.includes('hvac')
+    return (
+      t.includes('crac') ||
+      t.includes('空调') ||
+      t.includes('精密') ||
+      t.includes('列间') ||
+      t.includes('hvac')
+    )
   })
 })
-
-function formatTime(t: string | undefined): string {
-  if (!t) return '-'
-  try {
-    const d = new Date(t)
-    if (isNaN(d.getTime())) return t
-    return d.toLocaleTimeString('zh-CN')
-  } catch { return t }
-}
 
 // ===== QuickControl Handler =====
 function onRoomTempChange(roomId: string, value: number) {
@@ -689,22 +819,57 @@ function onRoomTempChange(roomId: string, value: number) {
   flex-wrap: wrap;
   gap: 8px;
 }
-.ph-left { display: flex; align-items: baseline; gap: 10px; }
-.ph-title { font-size: 18px; font-weight: 700; color: var(--txt); margin: 0; }
-.ph-sub { font-size: 12px; color: var(--txt3); }
-.ph-right { display: flex; align-items: center; gap: 10px; }
+.ph-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.ph-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--txt);
+  margin: 0;
+}
+.ph-sub {
+  font-size: 12px;
+  color: var(--txt3);
+}
+.ph-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .ph-badge {
-  padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
 }
-.ph-badge.ok { background: rgba(34,197,94,.12); color: var(--green); }
-.ph-badge.loading { background: rgba(148,163,184,.10); color: var(--txt3); }
-.ph-time { font-size: 11px; color: var(--txt3); }
+.ph-badge.ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--green);
+}
+.ph-badge.loading {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--txt3);
+}
+.ph-time {
+  font-size: 11px;
+  color: var(--txt3);
+}
 .ph-btn {
-  border: 1px solid var(--line); background: transparent; color: var(--txt);
-  font-size: 11px; padding: 4px 14px; border-radius: 5px; cursor: pointer;
-  transition: border-color .15s;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--txt);
+  font-size: 11px;
+  padding: 4px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.15s;
 }
-.ph-btn:hover { border-color: var(--cyan); }
+.ph-btn:hover {
+  border-color: var(--cyan);
+}
 
 /* KPI rows */
 .kpi-row {
@@ -713,94 +878,215 @@ function onRoomTempChange(roomId: string, value: number) {
   gap: 10px;
   margin-bottom: 10px;
 }
-@media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .kpi-row { grid-template-columns: 1fr; } }
+@media (max-width: 1200px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
 
-.gk-cv-cyan { color: var(--cyan); font-weight: 700; }
+.gk-cv-cyan {
+  color: var(--cyan);
+  font-weight: 700;
+}
 
 /* Skeleton */
 .skel-row {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 /* Sections */
-.section { margin-top: 14px; }
-.section-title {
-  font-size: 14px; font-weight: 700; color: var(--txt);
-  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+.section {
+  margin-top: 14px;
 }
-.section-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.section-sum { font-size: 11px; font-weight: 400; color: var(--txt3); margin-left: auto; }
-.section-sum.danger { color: var(--red); }
+
+.section-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.section-sum {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--txt3);
+  margin-left: auto;
+}
+.section-sum.danger {
+  color: var(--red);
+}
 
 /* Room Groups */
 .rg-subtitle {
-  font-size: 12px; font-weight: 600; color: var(--txt2);
-  margin: 10px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txt2);
+  margin: 10px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--line);
 }
-.rg-env { margin-bottom: 10px; }
+.rg-env {
+  margin-bottom: 10px;
+}
 .rg-kpi-grid {
-  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
 }
-@media (max-width: 900px) { .rg-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
-.rg-devices { margin-bottom: 10px; }
-.rg-aux { margin-bottom: 10px; }
-.rg-aux-grid { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 900px) {
+  .rg-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+.rg-devices {
+  margin-bottom: 10px;
+}
+.rg-aux {
+  margin-bottom: 10px;
+}
+.rg-aux-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .rg-aux-card {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
   background: var(--bg);
 }
-.rg-aux-label { font-size: 11px; color: var(--txt3); min-width: 55px; }
-.rg-aux-v { font-size: 11px; color: var(--txt); }
-.rg-leak {
-  display: flex; align-items: center; gap: 8px;
-  margin: 6px 0; font-size: 11px;
+.rg-aux-label {
+  font-size: 11px;
+  color: var(--txt3);
+  min-width: 55px;
 }
-.rg-leak-label { color: var(--txt3); }
-.rg-leak-level { color: var(--red); font-weight: 600; }
+.rg-aux-v {
+  font-size: 11px;
+  color: var(--txt);
+}
+.rg-leak {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  font-size: 11px;
+}
+.rg-leak-label {
+  color: var(--txt3);
+}
+.rg-leak-level {
+  color: var(--red);
+  font-weight: 600;
+}
 
 /* Control strategy */
-.ctrl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-@media (max-width: 900px) { .ctrl-grid { grid-template-columns: 1fr; } }
-.ctrl-card {
-  padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px;
-  background: var(--bg); display: flex; flex-direction: column; gap: 4px;
+.ctrl-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
-.ctrl-name { font-size: 13px; font-weight: 600; color: var(--txt); }
-.ctrl-desc { font-size: 11px; color: var(--txt2); line-height: 1.5; }
+@media (max-width: 900px) {
+  .ctrl-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.ctrl-card {
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ctrl-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+}
+.ctrl-desc {
+  font-size: 11px;
+  color: var(--txt2);
+  line-height: 1.5;
+}
 
 /* Trend items */
-.trend-item { margin-bottom: 10px; }
+.trend-item {
+  margin-bottom: 10px;
+}
 .trend-header {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 6px;
 }
-.trend-name { font-size: 13px; font-weight: 600; color: var(--txt); }
+.trend-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--txt);
+}
 .trend-period {
-  background: var(--bg); border: 1px solid var(--line); color: var(--txt);
-  font-size: 11px; padding: 3px 8px; border-radius: 4px; cursor: pointer;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--txt);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
 /* Alarms */
 .alarm-list {
-  display: flex; flex-direction: column; gap: 4px;
-  max-height: 240px; overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
 }
 .alarm-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 10px; border-radius: 5px; font-size: 11px;
-  background: rgba(239,68,68,.04); border: 1px solid rgba(239,68,68,.10);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.1);
 }
-.alarm-msg { color: var(--txt); flex: 1; }
-.alarm-tag { color: var(--txt3); font-style: normal; }
-.alarm-time { color: var(--txt3); white-space: nowrap; font-size: 10px; }
+.alarm-msg {
+  color: var(--txt);
+  flex: 1;
+}
+.alarm-tag {
+  color: var(--txt3);
+  font-style: normal;
+}
+.alarm-time {
+  color: var(--txt3);
+  white-space: nowrap;
+  font-size: 10px;
+}
 
 /* Footer */
 .page-footer {
-  margin-top: 16px; padding-top: 10px;
+  margin-top: 16px;
+  padding-top: 10px;
   border-top: 1px solid var(--line);
-  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-  font-size: 11px; color: var(--txt3);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--txt3);
 }
 </style>

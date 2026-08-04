@@ -24,14 +24,27 @@ const sizeClass = computed(() => `skeleton-${props.size}`)
 .sk-line {
   height: 12px;
   border-radius: 4px;
-  background: linear-gradient(90deg, var(--track) 25%, rgba(34, 227, 255, 0.06) 50%, var(--track) 75%);
+  background: linear-gradient(
+    90deg,
+    var(--track) 25%,
+    rgba(34, 227, 255, 0.06) 50%,
+    var(--track) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
-.w-40 { width: 40%; }
-.w-55 { width: 55%; }
-.w-70 { width: 70%; }
-.w-85 { width: 85%; }
+.w-40 {
+  width: 40%;
+}
+.w-55 {
+  width: 55%;
+}
+.w-70 {
+  width: 70%;
+}
+.w-85 {
+  width: 85%;
+}
 .sk-bar {
   height: 6px;
   border-radius: 3px;
@@ -39,10 +52,18 @@ const sizeClass = computed(() => `skeleton-${props.size}`)
   margin-top: 4px;
   width: 100%;
 }
-.skeleton-sm .sk-line { height: 10px; }
-.skeleton-lg .sk-line { height: 14px; }
+.skeleton-sm .sk-line {
+  height: 10px;
+}
+.skeleton-lg .sk-line {
+  height: 14px;
+}
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 </style>

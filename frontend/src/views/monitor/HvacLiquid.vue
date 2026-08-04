@@ -24,36 +24,96 @@
     <!-- ========== KPI Row 1: Global ========== -->
     <div class="kpi-row" v-if="data">
       <KpiCard title="系统模式" :value="data.systemMode" dot="#8b5cf6" />
-      <KpiCard title="室外温度" :value="data.outdoorT" unit="℃" :decimals="1" dot="#f97316" :subtitle="`RH ${data.outdoorRH}%`" />
-      <KpiCard title="总制冷能力" :value="data.totalCoolingCap" unit="kW" dot="#06b6d4"
+      <KpiCard
+        title="室外温度"
+        :value="data.outdoorT"
+        unit="℃"
+        :decimals="1"
+        dot="#f97316"
+        :subtitle="`RH ${data.outdoorRH}%`"
+      />
+      <KpiCard
+        title="总制冷能力"
+        :value="data.totalCoolingCap"
+        unit="kW"
+        dot="#06b6d4"
         :detail="`使用 ${data.coolingCapUsed} kW · 率 ${data.capRate}%`"
-        :barValue="data.capRate" barColor="linear-gradient(90deg, var(--cyan), var(--blue))" />
-      <KpiCard title="PUE 贡献" :value="data.pueContribution" :decimals="3" dot="#22c55e"
+        :barValue="data.capRate"
+        barColor="linear-gradient(90deg, var(--cyan), var(--blue))"
+      />
+      <KpiCard
+        title="PUE 贡献"
+        :value="data.pueContribution"
+        :decimals="3"
+        dot="#22c55e"
         :subtitle="`自然冷却 ${data.freeCoolingHours}h`"
-        :detail="`余热回收 ${data.heatRecoveryMW} MW`" />
+        :detail="`余热回收 ${data.heatRecoveryMW} MW`"
+      />
     </div>
 
     <!-- ========== KPI Row 2: 一次侧 ========== -->
     <div class="kpi-row" v-if="data">
-      <KpiCard title="一次侧供水温度" :value="data.primarySupplyTemp" unit="℃" :decimals="1" dot="#3b82f6" />
-      <KpiCard title="一次侧回水温度" :value="data.primaryReturnTemp" unit="℃" :decimals="1" dot="#f97316" />
-      <KpiCard title="一次侧流量" :value="data.primaryFlow" unit="m³/h" :decimals="1" dot="#06b6d4" />
-      <KpiCard title="一次侧压力" :value="data.primaryPressure" unit="bar" :decimals="1" dot="#8b5cf6" />
+      <KpiCard
+        title="一次侧供水温度"
+        :value="data.primarySupplyTemp"
+        unit="℃"
+        :decimals="1"
+        dot="#3b82f6"
+      />
+      <KpiCard
+        title="一次侧回水温度"
+        :value="data.primaryReturnTemp"
+        unit="℃"
+        :decimals="1"
+        dot="#f97316"
+      />
+      <KpiCard
+        title="一次侧流量"
+        :value="data.primaryFlow"
+        unit="m³/h"
+        :decimals="1"
+        dot="#06b6d4"
+      />
+      <KpiCard
+        title="一次侧压力"
+        :value="data.primaryPressure"
+        unit="bar"
+        :decimals="1"
+        dot="#8b5cf6"
+      />
     </div>
 
     <!-- ========== KPI Row 3: 二次侧 ========== -->
     <div class="kpi-row" v-if="data">
-      <KpiCard title="二次侧供水温度" :value="data.secSupplyTemp" unit="℃" :decimals="1" dot="#3b82f6" />
-      <KpiCard title="二次侧回水温度" :value="data.secReturnTemp" unit="℃" :decimals="1" dot="#f97316" />
+      <KpiCard
+        title="二次侧供水温度"
+        :value="data.secSupplyTemp"
+        unit="℃"
+        :decimals="1"
+        dot="#3b82f6"
+      />
+      <KpiCard
+        title="二次侧回水温度"
+        :value="data.secReturnTemp"
+        unit="℃"
+        :decimals="1"
+        dot="#f97316"
+      />
       <KpiCard title="二次侧流量" :value="data.secFlow" unit="m³/h" :decimals="1" dot="#06b6d4" />
-      <KpiCard title="温差 ΔT" :value="data.deltaT" unit="℃" :decimals="1" dot="#eab308"
-        :status="Math.abs(data.deltaT) > 8 ? 'warning' : 'normal'" />
+      <KpiCard
+        title="温差 ΔT"
+        :value="data.deltaT"
+        unit="℃"
+        :decimals="1"
+        dot="#eab308"
+        :status="Math.abs(data.deltaT) > 8 ? 'warning' : 'normal'"
+      />
     </div>
 
     <!-- ========== 一次侧 CDU ========== -->
     <div class="section" v-if="data?.primaryCDUs?.length">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--blue)"></span>
+        <span class="section-dot" style="background: var(--blue)"></span>
         一次侧 CDU
         <span class="section-sum">{{ data.primaryCDUs.length }} 台</span>
       </h3>
@@ -63,7 +123,7 @@
     <!-- ========== 二次侧 CDU ========== -->
     <div class="section" v-if="data?.secondaryCDUs?.length">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--cyan)"></span>
+        <span class="section-dot" style="background: var(--cyan)"></span>
         二次侧 CDU
         <span class="section-sum">{{ data.secondaryCDUs.length }} 台</span>
       </h3>
@@ -73,7 +133,7 @@
     <!-- ========== 冷板 GPU 节点 ========== -->
     <div class="section" v-if="data?.coldPlates?.length">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--red)"></span>
+        <span class="section-dot" style="background: var(--red)"></span>
         冷板 GPU 节点
         <span class="section-sum">{{ data.coldPlates.length }} 个</span>
       </h3>
@@ -81,10 +141,13 @@
     </div>
 
     <!-- ========== 分集水器 ========== -->
-    <div class="manifold-grid" v-if="data?.manifoldsSupply?.length || data?.manifoldsReturn?.length">
+    <div
+      class="manifold-grid"
+      v-if="data?.manifoldsSupply?.length || data?.manifoldsReturn?.length"
+    >
       <div class="manifold-half" v-if="data?.manifoldsSupply?.length">
         <h3 class="section-title">
-          <span class="section-dot" style="background:var(--blue)"></span>
+          <span class="section-dot" style="background: var(--blue)"></span>
           供水集管
           <span class="section-sum">{{ data.manifoldsSupply.length }} 节点</span>
         </h3>
@@ -92,7 +155,7 @@
       </div>
       <div class="manifold-half" v-if="data?.manifoldsReturn?.length">
         <h3 class="section-title">
-          <span class="section-dot" style="background:var(--orange)"></span>
+          <span class="section-dot" style="background: var(--orange)"></span>
           回水集管
           <span class="section-sum">{{ data.manifoldsReturn.length }} 节点</span>
         </h3>
@@ -103,7 +166,10 @@
     <!-- ========== 漏水检测 ========== -->
     <div class="section" v-if="data?.leakTotalSensors">
       <h3 class="section-title">
-        <span class="section-dot" :style="`background:${data.leakAlarmCount > 0 ? 'var(--red)' : 'var(--green)'}`"></span>
+        <span
+          class="section-dot"
+          :style="`background:${data.leakAlarmCount > 0 ? 'var(--red)' : 'var(--green)'}`"
+        ></span>
         漏水检测
         <span class="section-sum" :class="{ danger: data.leakAlarmCount > 0 }">
           {{ data.leakTotalSensors }} 个传感器 · 告警 {{ data.leakAlarmCount }}
@@ -126,30 +192,66 @@
     <!-- ========== 冷却液水质 ========== -->
     <div class="section" v-if="data?.coolantQuality">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--teal)"></span>
+        <span class="section-dot" style="background: var(--teal)"></span>
         冷却液水质
         <StatusBadge :status="data.coolantQuality.status" />
-        <span class="section-sum-s" v-if="data.coolantQuality.lastTested">上次检测: {{ data.coolantQuality.lastTested }}</span>
+        <span class="section-sum-s" v-if="data.coolantQuality.lastTested"
+          >上次检测: {{ data.coolantQuality.lastTested }}</span
+        >
       </h3>
       <div class="quality-grid">
-        <KpiCard title="电导率" :value="data.coolantQuality.conductivity" unit="μS/cm" size="sm" dot="var(--blue)" />
-        <KpiCard title="pH 值" :value="data.coolantQuality.ph" unit="pH" size="sm" :decimals="1" dot="var(--green)" />
-        <KpiCard title="缓蚀剂" :value="data.coolantQuality.corrosionInhibitor" unit="ppm" size="sm" dot="var(--cyan)" />
-        <KpiCard title="乙二醇浓度" :value="data.coolantQuality.glycolConcentration" unit="%" size="sm" dot="var(--purple)" />
-        <KpiCard title="颗粒计数" :value="data.coolantQuality.particleCount" unit="个/mL" size="sm" dot="var(--amber)" />
+        <KpiCard
+          title="电导率"
+          :value="data.coolantQuality.conductivity"
+          unit="μS/cm"
+          size="sm"
+          dot="var(--blue)"
+        />
+        <KpiCard
+          title="pH 值"
+          :value="data.coolantQuality.ph"
+          unit="pH"
+          size="sm"
+          :decimals="1"
+          dot="var(--green)"
+        />
+        <KpiCard
+          title="缓蚀剂"
+          :value="data.coolantQuality.corrosionInhibitor"
+          unit="ppm"
+          size="sm"
+          dot="var(--cyan)"
+        />
+        <KpiCard
+          title="乙二醇浓度"
+          :value="data.coolantQuality.glycolConcentration"
+          unit="%"
+          size="sm"
+          dot="var(--purple)"
+        />
+        <KpiCard
+          title="颗粒计数"
+          :value="data.coolantQuality.particleCount"
+          unit="个/mL"
+          size="sm"
+          dot="var(--amber)"
+        />
       </div>
     </div>
 
     <!-- ========== 排热系统 ========== -->
     <div class="section" v-if="hasRejection">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--orange)"></span>
+        <span class="section-dot" style="background: var(--orange)"></span>
         排热系统
-        <span class="section-sum">排热量 {{ data!.totalHeatRejected }} kW · 逼近温度 {{ data!.approachTemp }}℃</span>
+        <span class="section-sum"
+          >排热量 {{ data!.totalHeatRejected }} kW · 逼近温度 {{ data!.approachTemp }}℃</span
+        >
       </h3>
 
       <!-- 冷却塔风机 -->
-      <GroupCard v-if="data?.towerFans?.length"
+      <GroupCard
+        v-if="data?.towerFans?.length"
         :title="`冷却塔风机 · ${data.towerFans.length} 台`"
         :subtitle="`自然冷却${data.freeCoolingAvailable ? '可用' : '不可用'}`"
         dotColor="var(--orange)"
@@ -158,7 +260,8 @@
       </GroupCard>
 
       <!-- 干冷器 -->
-      <GroupCard v-if="data?.dryCoolers?.length"
+      <GroupCard
+        v-if="data?.dryCoolers?.length"
         :title="`干冷器 · ${data.dryCoolers.length} 台`"
         dotColor="var(--blue)"
       >
@@ -166,7 +269,8 @@
       </GroupCard>
 
       <!-- 排热水泵 -->
-      <GroupCard v-if="data?.rejectionPumps?.length"
+      <GroupCard
+        v-if="data?.rejectionPumps?.length"
         :title="`排热水泵 · ${data.rejectionPumps.length} 台`"
         dotColor="var(--cyan)"
       >
@@ -174,18 +278,58 @@
       </GroupCard>
 
       <!-- 余热回收 -->
-      <GroupCard v-if="data?.heatRecovery"
+      <GroupCard
+        v-if="data?.heatRecovery"
         :title="`余热回收 · ${data.heatRecovery.enabled ? '已启用' : '已停用'}`"
         :subtitle="`用途: ${data.heatRecovery.usageType}`"
         :dot-color="data.heatRecovery.enabled ? 'var(--green)' : 'var(--txt3)'"
       >
         <div class="hr-grid">
-          <KpiCard title="回收率" :value="data.heatRecovery.recoveryRate" unit="%" size="sm" dot="var(--green)" />
-          <KpiCard title="回收温度" :value="data.heatRecovery.recoveryTemp" unit="℃" size="sm" :decimals="1" dot="var(--orange)" />
-          <KpiCard title="回流温度" :value="data.heatRecovery.returnTemp" unit="℃" size="sm" :decimals="1" dot="var(--blue)" />
-          <KpiCard title="流量" :value="data.heatRecovery.flow" unit="m³/h" size="sm" :decimals="1" dot="var(--cyan)" />
-          <KpiCard title="年减排 CO₂" :value="data.heatRecovery.co2Reduction" unit="吨" size="sm" dot="var(--green)" />
-          <KpiCard title="年节能" :value="data.heatRecovery.annualSaving" unit="万元" size="sm" dot="var(--amber)" />
+          <KpiCard
+            title="回收率"
+            :value="data.heatRecovery.recoveryRate"
+            unit="%"
+            size="sm"
+            dot="var(--green)"
+          />
+          <KpiCard
+            title="回收温度"
+            :value="data.heatRecovery.recoveryTemp"
+            unit="℃"
+            size="sm"
+            :decimals="1"
+            dot="var(--orange)"
+          />
+          <KpiCard
+            title="回流温度"
+            :value="data.heatRecovery.returnTemp"
+            unit="℃"
+            size="sm"
+            :decimals="1"
+            dot="var(--blue)"
+          />
+          <KpiCard
+            title="流量"
+            :value="data.heatRecovery.flow"
+            unit="m³/h"
+            size="sm"
+            :decimals="1"
+            dot="var(--cyan)"
+          />
+          <KpiCard
+            title="年减排 CO₂"
+            :value="data.heatRecovery.co2Reduction"
+            unit="吨"
+            size="sm"
+            dot="var(--green)"
+          />
+          <KpiCard
+            title="年节能"
+            :value="data.heatRecovery.annualSaving"
+            unit="万元"
+            size="sm"
+            dot="var(--amber)"
+          />
         </div>
       </GroupCard>
     </div>
@@ -193,7 +337,7 @@
     <!-- ========== 群控策略 ========== -->
     <div class="section" v-if="data?.control">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--purple)"></span>
+        <span class="section-dot" style="background: var(--purple)"></span>
         群控策略
       </h3>
       <div class="ctrl-grid">
@@ -236,7 +380,7 @@
     <!-- ========== 趋势图 ========== -->
     <div class="section" v-if="hasTrends">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--yellow)"></span>
+        <span class="section-dot" style="background: var(--yellow)"></span>
         运行趋势 (48h)
       </h3>
       <div class="trend-grid">
@@ -274,14 +418,15 @@
     <!-- ========== 活跃告警 ========== -->
     <div class="section" v-if="liquidAlarms.length">
       <h3 class="section-title">
-        <span class="section-dot" style="background:var(--red)"></span>
+        <span class="section-dot" style="background: var(--red)"></span>
         活跃告警
         <span class="section-sum danger">{{ liquidAlarms.length }} 条</span>
       </h3>
       <div class="alarm-list">
         <div v-for="a in liquidAlarms" :key="a.id" class="alarm-item">
           <AlarmBadge :level="a.level || 'warning'" />
-          <span class="alarm-msg">{{ a.message || a.title || a.description || '-' }}
+          <span class="alarm-msg"
+            >{{ a.message || a.title || a.description || '-' }}
             <em class="alarm-tag">[{{ a.source || a.domain || '-' }}]</em>
           </span>
           <span class="alarm-time">{{ formatTime(a.time || a.created_at) }}</span>
@@ -313,6 +458,7 @@ import GroupCard from '@/components/monitor/GroupCard.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import DeviceTable from '@/components/monitor/DeviceTable.vue'
 import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
+import { formatVal, statusRow, formatTime } from '@/utils/format'
 
 // ===== State =====
 const data = ref<LiquidCoolingSummary | null>(null)
@@ -331,10 +477,12 @@ const hasTrends = computed(() => {
 
 const hasRejection = computed(() => {
   if (!data.value) return false
-  return (data.value.towerFans?.length ?? 0) > 0
-    || (data.value.dryCoolers?.length ?? 0) > 0
-    || (data.value.rejectionPumps?.length ?? 0) > 0
-    || !!data.value.heatRecovery
+  return (
+    (data.value.towerFans?.length ?? 0) > 0 ||
+    (data.value.dryCoolers?.length ?? 0) > 0 ||
+    (data.value.rejectionPumps?.length ?? 0) > 0 ||
+    !!data.value.heatRecovery
+  )
 })
 
 // ===== Data Loading =====
@@ -368,15 +516,6 @@ onUnmounted(() => {
 })
 
 // ===== Helpers =====
-function fv(v: number | string): string {
-  if (v === '-' || v === undefined || v === null) return '-'
-  if (typeof v === 'string') return v
-  return v % 1 === 0 ? String(v) : v.toFixed(1)
-}
-
-function statusRow(s: string): string {
-  return s === 'fault' || s === '告警' ? 'row-danger' : s === 'standby' || s === '待机' ? 'row-warning' : ''
-}
 
 // ===== 一次侧 CDU =====
 const primCduCols = [
@@ -398,21 +537,21 @@ const primCduCols = [
 
 const primCduRows = computed(() => {
   if (!data.value?.primaryCDUs) return []
-  return data.value.primaryCDUs.map(d => ({
+  return data.value.primaryCDUs.map((d) => ({
     name: d.name,
     state: d.state,
-    priInTemp: fv(d.priInTemp),
-    priOutTemp: fv(d.priOutTemp),
-    secInTemp: fv(d.secInTemp),
-    secOutTemp: fv(d.secOutTemp),
-    heatExEff: fv(d.heatExEff),
-    flowPri: fv(d.flowPri),
-    dpPri: fv(d.dpPri),
-    pumpSpeed: fv(d.pumpSpeed),
-    pumpKw: fv(d.pumpKw),
-    valve: fv(d.valve),
+    priInTemp: formatVal(d.priInTemp),
+    priOutTemp: formatVal(d.priOutTemp),
+    secInTemp: formatVal(d.secInTemp),
+    secOutTemp: formatVal(d.secOutTemp),
+    heatExEff: formatVal(d.heatExEff),
+    flowPri: formatVal(d.flowPri),
+    dpPri: formatVal(d.dpPri),
+    pumpSpeed: formatVal(d.pumpSpeed),
+    pumpKw: formatVal(d.pumpKw),
+    valve: formatVal(d.valve),
     leakStatus: d.leakStatus,
-    runHrs: fv(d.runHrs),
+    runHrs: formatVal(d.runHrs),
     _rowClass: statusRow(d.state),
   }))
 })
@@ -434,16 +573,16 @@ const secCduCols = [
 
 const secCduRows = computed(() => {
   if (!data.value?.secondaryCDUs) return []
-  return data.value.secondaryCDUs.map(d => ({
+  return data.value.secondaryCDUs.map((d) => ({
     name: d.name,
     rackGroup: d.rackGroup,
     state: d.state,
-    supplyTemp: fv(d.supplyTemp),
-    returnTemp: fv(d.returnTemp),
-    flow: fv(d.flow),
-    dp: fv(d.dp),
-    pumpSpeed: fv(d.pumpSpeed),
-    pumpKw: fv(d.pumpKw),
+    supplyTemp: formatVal(d.supplyTemp),
+    returnTemp: formatVal(d.returnTemp),
+    flow: formatVal(d.flow),
+    dp: formatVal(d.dp),
+    pumpSpeed: formatVal(d.pumpSpeed),
+    pumpKw: formatVal(d.pumpKw),
     leakStatus: d.leakStatus,
     coldPlateInfo: `${d.coldPlateOnline}/${d.coldPlateCount}`,
     _rowClass: statusRow(d.state),
@@ -465,16 +604,16 @@ const coldPlateCols = [
 
 const coldPlateRows = computed(() => {
   if (!data.value?.coldPlates) return []
-  return data.value.coldPlates.map(d => ({
+  return data.value.coldPlates.map((d) => ({
     rackId: d.rackId,
     nodeType: d.nodeType,
     state: d.state,
-    inletTemp: fv(d.inletTemp),
-    outletTemp: fv(d.outletTemp),
-    deltaT: fv((d.outletTemp as number) - (d.inletTemp as number)),
-    flow: fv(d.flow),
-    dp: fv(d.dp),
-    gpuTemp: d.gpuTemp?.length ? d.gpuTemp.map(t => `${t}℃`).join(' · ') : '-',
+    inletTemp: formatVal(d.inletTemp),
+    outletTemp: formatVal(d.outletTemp),
+    deltaT: formatVal((d.outletTemp as number) - (d.inletTemp as number)),
+    flow: formatVal(d.flow),
+    dp: formatVal(d.dp),
+    gpuTemp: d.gpuTemp?.length ? d.gpuTemp.map((t) => `${t}℃`).join(' · ') : '-',
     _rowClass: statusRow(d.state),
   }))
 })
@@ -490,18 +629,25 @@ const manifoldCols = [
 ]
 
 function mapManRows(items: any[]) {
-  return items.map(d => ({
+  return items.map((d) => ({
     id: d.id,
     zone: d.zone,
-    temp: fv(d.temp),
-    pressure: fv(d.pressure),
-    flow: fv(d.flow),
-    branches: d.valvesOpen != null ? `开 ${d.valvesOpen}/${d.branchCount ?? '-'}` : `${d.branchCount ?? '-'} 路`,
+    temp: formatVal(d.temp),
+    pressure: formatVal(d.pressure),
+    flow: formatVal(d.flow),
+    branches:
+      d.valvesOpen != null
+        ? `开 ${d.valvesOpen}/${d.branchCount ?? '-'}`
+        : `${d.branchCount ?? '-'} 路`,
   }))
 }
 
-const supplyManRows = computed(() => data.value?.manifoldsSupply ? mapManRows(data.value.manifoldsSupply) : [])
-const returnManRows = computed(() => data.value?.manifoldsReturn ? mapManRows(data.value.manifoldsReturn) : [])
+const supplyManRows = computed(() =>
+  data.value?.manifoldsSupply ? mapManRows(data.value.manifoldsSupply) : [],
+)
+const returnManRows = computed(() =>
+  data.value?.manifoldsReturn ? mapManRows(data.value.manifoldsReturn) : [],
+)
 
 // ===== 漏水检测 =====
 const leakRopeCols = [
@@ -514,12 +660,12 @@ const leakRopeCols = [
 
 const leakRopeRows = computed(() => {
   if (!data.value?.leakRope) return []
-  return data.value.leakRope.map(d => ({
+  return data.value.leakRope.map((d) => ({
     id: d.id,
     location: d.location,
     status: d.status,
-    length: fv(d.length),
-    coverage: fv(d.coverage),
+    length: formatVal(d.length),
+    coverage: formatVal(d.coverage),
     _rowClass: d.status !== '正常' ? 'row-danger' : '',
   }))
 })
@@ -533,7 +679,7 @@ const leakPointCols = [
 
 const leakPointRows = computed(() => {
   if (!data.value?.leakPoint) return []
-  return data.value.leakPoint.map(d => ({
+  return data.value.leakPoint.map((d) => ({
     id: d.id,
     zone: d.zone,
     count: d.count,
@@ -553,12 +699,12 @@ const towerFanCols = [
 
 const towerFanRows = computed(() => {
   if (!data.value?.towerFans) return []
-  return data.value.towerFans.map(d => ({
+  return data.value.towerFans.map((d) => ({
     id: d.id,
     state: d.state,
-    fanHz: fv(d.fanHz),
-    outletTemp: fv(d.outletTemp),
-    approach: fv(d.approach),
+    fanHz: formatVal(d.fanHz),
+    outletTemp: formatVal(d.outletTemp),
+    approach: formatVal(d.approach),
     _rowClass: statusRow(d.state),
   }))
 })
@@ -572,11 +718,11 @@ const dryCoolerCols = [
 
 const dryCoolerRows = computed(() => {
   if (!data.value?.dryCoolers) return []
-  return data.value.dryCoolers.map(d => ({
+  return data.value.dryCoolers.map((d) => ({
     id: d.id,
     state: d.state,
-    fanHz: fv(d.fanHz),
-    ambientT: fv(d.ambientT),
+    fanHz: formatVal(d.fanHz),
+    ambientT: formatVal(d.ambientT),
     _rowClass: statusRow(d.state),
   }))
 })
@@ -590,11 +736,11 @@ const rejPumpCols = [
 
 const rejPumpRows = computed(() => {
   if (!data.value?.rejectionPumps) return []
-  return data.value.rejectionPumps.map(d => ({
+  return data.value.rejectionPumps.map((d) => ({
     id: d.id,
     state: d.state,
-    hz: fv(d.hz),
-    kw: fv(d.kw),
+    hz: formatVal(d.hz),
+    kw: formatVal(d.kw),
     _rowClass: statusRow(d.state),
   }))
 })
@@ -606,7 +752,9 @@ const trendTimestamps = computed<string[]>(() => {
   const stamps: string[] = []
   for (let i = TREND_LEN - 1; i >= 0; i--) {
     const t = new Date(now.getTime() - i * 30 * 60_000)
-    stamps.push(`${t.getMonth() + 1}/${t.getDate()} ${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`)
+    stamps.push(
+      `${t.getMonth() + 1}/${t.getDate()} ${t.getHours().toString().padStart(2, '0')}:${t.getMinutes().toString().padStart(2, '0')}`,
+    )
   }
   return stamps
 })
@@ -621,31 +769,73 @@ function padArray(arr: number[] | undefined, len: number): number[] {
 const tempTrendSeries = computed(() => {
   if (!data.value) return []
   return [
-    { name: '一次供水', data: padArray(data.value.supplyTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.blue } },
-    { name: '二次供水', data: padArray(data.value.secSupplyTemp != null ? [data.value.secSupplyTemp] : [], TREND_LEN).map((_, i) => {
-      const s = data.value!.supplyTrend ?? []
-      return s.length > i ? s[i] - 2 : 0
-    }), type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan } },
-    { name: '一次回水', data: padArray(data.value.returnTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.orange } },
-    { name: '二次回水', data: padArray(data.value.secReturnTemp != null ? [data.value.secReturnTemp] : [], TREND_LEN).map((_, i) => {
-      const r = data.value!.returnTrend ?? []
-      return r.length > i ? r[i] + 1 : 0
-    }), type: 'line' as const, lineStyle: { color: CHART_COLORS.amber } },
+    {
+      name: '一次供水',
+      data: padArray(data.value.supplyTrend, TREND_LEN),
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.blue },
+    },
+    {
+      name: '二次供水',
+      data: padArray(
+        data.value.secSupplyTemp != null ? [data.value.secSupplyTemp] : [],
+        TREND_LEN,
+      ).map((_, i) => {
+        const s = data.value!.supplyTrend ?? []
+        return s.length > i ? s[i] - 2 : 0
+      }),
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.cyan },
+    },
+    {
+      name: '一次回水',
+      data: padArray(data.value.returnTrend, TREND_LEN),
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.orange },
+    },
+    {
+      name: '二次回水',
+      data: padArray(
+        data.value.secReturnTemp != null ? [data.value.secReturnTemp] : [],
+        TREND_LEN,
+      ).map((_, i) => {
+        const r = data.value!.returnTrend ?? []
+        return r.length > i ? r[i] + 1 : 0
+      }),
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.amber },
+    },
   ]
 })
 
 const flowTrendSeries = computed(() => {
   if (!data.value) return []
   return [
-    { name: '一次侧流量', data: padArray(data.value.flowTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.blue } },
-    { name: '二次侧流量', data: padArray(data.value.flowTrend, TREND_LEN).map(v => v * 0.85), type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan } },
+    {
+      name: '一次侧流量',
+      data: padArray(data.value.flowTrend, TREND_LEN),
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.blue },
+    },
+    {
+      name: '二次侧流量',
+      data: padArray(data.value.flowTrend, TREND_LEN).map((v) => v * 0.85),
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.cyan },
+    },
   ]
 })
 
 const dtTrendSeries = computed(() => {
   if (!data.value) return []
   return [
-    { name: '温差 ΔT', data: padArray(data.value.deltaTTrend, TREND_LEN), type: 'line' as const, lineStyle: { color: CHART_COLORS.yellow }, areaStyle: { opacity: 0.1, color: CHART_COLORS.yellow } },
+    {
+      name: '温差 ΔT',
+      data: padArray(data.value.deltaTTrend, TREND_LEN),
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.yellow },
+      areaStyle: { opacity: 0.1, color: CHART_COLORS.yellow },
+    },
   ]
 })
 
@@ -654,27 +844,39 @@ const capTrendSeries = computed(() => {
   const base = Array(TREND_LEN).fill(data.value.totalCoolingCap)
   const used = Array(TREND_LEN).fill(data.value.coolingCapUsed)
   return [
-    { name: '制冷能力(kW)', data: base, type: 'line' as const, lineStyle: { color: CHART_COLORS.cyan, width: 2 }, areaStyle: { opacity: 0.05, color: CHART_COLORS.cyan } },
-    { name: '实际使用(kW)', data: used, type: 'bar' as const, yAxisIndex: 1, itemStyle: { color: CHART_COLORS.purple }, barWidth: '60%' },
+    {
+      name: '制冷能力(kW)',
+      data: base,
+      type: 'line' as const,
+      lineStyle: { color: CHART_COLORS.cyan, width: 2 },
+      areaStyle: { opacity: 0.05, color: CHART_COLORS.cyan },
+    },
+    {
+      name: '实际使用(kW)',
+      data: used,
+      type: 'bar' as const,
+      yAxisIndex: 1,
+      itemStyle: { color: CHART_COLORS.purple },
+      barWidth: '60%',
+    },
   ]
 })
 
 // ===== 告警过滤 =====
 const liquidAlarms = computed(() => {
-  return alarms.value.filter(a => {
+  return alarms.value.filter((a) => {
     const t = `${a.source || ''}${a.domain || ''}${a.message || ''}${a.title || ''}`.toLowerCase()
-    return t.includes('liquid') || t.includes('液冷') || t.includes('cdu') || t.includes('冷板') || t.includes('leak') || t.includes('漏水') || t.includes('分集水')
+    return (
+      t.includes('liquid') ||
+      t.includes('液冷') ||
+      t.includes('cdu') ||
+      t.includes('冷板') ||
+      t.includes('leak') ||
+      t.includes('漏水') ||
+      t.includes('分集水')
+    )
   })
 })
-
-function formatTime(t: string | undefined): string {
-  if (!t) return '-'
-  try {
-    const d = new Date(t)
-    if (isNaN(d.getTime())) return t
-    return d.toLocaleTimeString('zh-CN')
-  } catch { return t }
-}
 </script>
 
 <style scoped>
@@ -684,76 +886,288 @@ function formatTime(t: string | undefined): string {
 }
 
 /* Header */
-.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
-.ph-left { display: flex; align-items: baseline; gap: 10px; }
-.ph-title { font-size: 18px; font-weight: 700; color: var(--txt); margin: 0; }
-.ph-sub { font-size: 12px; color: var(--txt3); }
-.ph-right { display: flex; align-items: center; gap: 10px; }
-.ph-badge { padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
-.ph-badge.ok { background: rgba(34,197,94,.12); color: var(--green); }
-.ph-badge.loading { background: rgba(148,163,184,.10); color: var(--txt3); }
-.ph-mode { font-size: 11px; color: var(--purple); background: rgba(139,92,246,.10); padding: 2px 8px; border-radius: 4px; }
-.ph-time { font-size: 11px; color: var(--txt3); }
-.ph-btn { border: 1px solid var(--line); background: transparent; color: var(--txt); font-size: 11px; padding: 4px 14px; border-radius: 5px; cursor: pointer; }
-.ph-btn:hover { border-color: var(--cyan); }
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ph-left {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.ph-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--txt);
+  margin: 0;
+}
+.ph-sub {
+  font-size: 12px;
+  color: var(--txt3);
+}
+.ph-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ph-badge {
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.ph-badge.ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: var(--green);
+}
+.ph-badge.loading {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--txt3);
+}
+.ph-mode {
+  font-size: 11px;
+  color: var(--purple);
+  background: rgba(139, 92, 246, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.ph-time {
+  font-size: 11px;
+  color: var(--txt3);
+}
+.ph-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--txt);
+  font-size: 11px;
+  padding: 4px 14px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.ph-btn:hover {
+  border-color: var(--cyan);
+}
 
 /* KPI rows */
-.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
-@media (max-width: 1200px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 640px) { .kpi-row { grid-template-columns: 1fr; } }
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+@media (max-width: 1200px) {
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .kpi-row {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Skeleton */
-.skel-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+.skel-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
 
 /* Sections */
-.section { margin-top: 14px; }
-.section-title { font-size: 14px; font-weight: 700; color: var(--txt); display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.section-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.section-sum { font-size: 11px; font-weight: 400; color: var(--txt3); margin-left: auto; }
-.section-sum.danger { color: var(--red); }
-.section-sum-s { font-size: 11px; color: var(--txt3); margin-left: auto; }
+.section {
+  margin-top: 14px;
+}
+
+.section-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.section-sum {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--txt3);
+  margin-left: auto;
+}
+.section-sum.danger {
+  color: var(--red);
+}
+.section-sum-s {
+  font-size: 11px;
+  color: var(--txt3);
+  margin-left: auto;
+}
 
 /* Manifolds */
-.manifold-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
-@media (max-width: 1000px) { .manifold-grid { grid-template-columns: 1fr; } }
+.manifold-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+@media (max-width: 1000px) {
+  .manifold-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Quality */
-.quality-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
-@media (max-width: 900px) { .quality-grid { grid-template-columns: repeat(3, 1fr); } }
-@media (max-width: 600px) { .quality-grid { grid-template-columns: repeat(2, 1fr); } }
+.quality-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
+@media (max-width: 900px) {
+  .quality-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .quality-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
 /* Leak */
-.leak-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-@media (max-width: 1000px) { .leak-grid { grid-template-columns: 1fr; } }
-.leak-block { margin-top: 4px; }
+.leak-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+@media (max-width: 1000px) {
+  .leak-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.leak-block {
+  margin-top: 4px;
+}
 
 /* Subtitle */
-.rg-subtitle { font-size: 12px; font-weight: 600; color: var(--txt2); margin: 8px 0 6px; }
+.rg-subtitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txt2);
+  margin: 8px 0 6px;
+}
 
 /* Control strategy */
-.ctrl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-@media (max-width: 900px) { .ctrl-grid { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 500px) { .ctrl-grid { grid-template-columns: 1fr; } }
-.ctrl-card { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); display: flex; flex-direction: column; gap: 4px; }
-.ctrl-name { font-size: 11px; color: var(--txt3); }
-.ctrl-val { font-size: 15px; font-weight: 700; color: var(--txt); }
-.ctrl-desc { margin-top: 10px; padding: 10px 14px; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font-size: 11px; color: var(--txt2); line-height: 1.6; }
+.ctrl-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+@media (max-width: 900px) {
+  .ctrl-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 500px) {
+  .ctrl-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.ctrl-card {
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ctrl-name {
+  font-size: 11px;
+  color: var(--txt3);
+}
+.ctrl-val {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--txt);
+}
+.ctrl-desc {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--txt2);
+  line-height: 1.6;
+}
 
 /* Heat recovery */
-.hr-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-@media (max-width: 700px) { .hr-grid { grid-template-columns: repeat(2, 1fr); } }
+.hr-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+@media (max-width: 700px) {
+  .hr-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
 /* Trends */
-.trend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-@media (max-width: 1000px) { .trend-grid { grid-template-columns: 1fr; } }
+.trend-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 1000px) {
+  .trend-grid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Alarms */
-.alarm-list { display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
-.alarm-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 5px; font-size: 11px; background: rgba(239,68,68,.04); border: 1px solid rgba(239,68,68,.10); }
-.alarm-msg { color: var(--txt); flex: 1; }
-.alarm-tag { color: var(--txt3); font-style: normal; }
-.alarm-time { color: var(--txt3); white-space: nowrap; font-size: 10px; }
+.alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.alarm-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 11px;
+  background: rgba(239, 68, 68, 0.04);
+  border: 1px solid rgba(239, 68, 68, 0.1);
+}
+.alarm-msg {
+  color: var(--txt);
+  flex: 1;
+}
+.alarm-tag {
+  color: var(--txt3);
+  font-style: normal;
+}
+.alarm-time {
+  color: var(--txt3);
+  white-space: nowrap;
+  font-size: 10px;
+}
 
 /* Footer */
-.page-footer { margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 20px; flex-wrap: wrap; font-size: 11px; color: var(--txt3); }
+.page-footer {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--txt3);
+}
 </style>

@@ -20,11 +20,7 @@
           {{ r.label }}
         </button>
         <!-- Metric selector -->
-        <button
-          v-if="metrics.length > 1"
-          class="tc-btn tc-sel"
-          @click="showPicker = !showPicker"
-        >
+        <button v-if="metrics.length > 1" class="tc-btn tc-sel" @click="showPicker = !showPicker">
           <SlidersHorizontal :size="14" />
         </button>
       </div>
@@ -104,7 +100,7 @@ const props = withDefaults(
     series: () => ({}),
     unitMap: () => ({}),
     loading: false,
-  }
+  },
 )
 
 const emit = defineEmits<{
@@ -126,7 +122,7 @@ const ranges = [
 ]
 
 const activeMetric = computed(() => {
-  return props.metrics.find(m => m.name === props.active) ?? props.metrics[0] ?? null
+  return props.metrics.find((m) => m.name === props.active) ?? props.metrics[0] ?? null
 })
 
 const selectedLabel = computed(() => activeMetric.value?.label ?? props.active ?? '趋势')
@@ -139,7 +135,7 @@ const pts = computed((): MetricHistoryPoint[] => {
 const hasData = computed(() => pts.value.length > 0)
 
 const xLabels = computed(() => {
-  return pts.value.map(p => {
+  return pts.value.map((p) => {
     const d = new Date(p.ts)
     if (currentRange.value === '24h' || currentRange.value === '6h') {
       return d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -148,7 +144,7 @@ const xLabels = computed(() => {
   })
 })
 
-const values = computed(() => pts.value.map(p => p.value))
+const values = computed(() => pts.value.map((p) => p.value))
 
 const chartOption = computed(() => {
   if (!hasData.value) return {}
@@ -159,8 +155,8 @@ const chartOption = computed(() => {
   ])
 })
 
-const minVal = computed(() => !values.value.length ? '—' : Math.min(...values.value).toFixed(2))
-const maxVal = computed(() => !values.value.length ? '—' : Math.max(...values.value).toFixed(2))
+const minVal = computed(() => (!values.value.length ? '—' : Math.min(...values.value).toFixed(2)))
+const maxVal = computed(() => (!values.value.length ? '—' : Math.max(...values.value).toFixed(2)))
 const avgVal = computed(() => {
   if (!values.value.length) return '—'
   return (values.value.reduce((a, b) => a + b, 0) / values.value.length).toFixed(2)
@@ -326,8 +322,12 @@ function switchRange(key: string): void {
   animation: tc-spin 1s linear infinite;
 }
 @keyframes tc-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .tc-footer {

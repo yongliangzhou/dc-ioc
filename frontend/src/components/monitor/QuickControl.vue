@@ -54,36 +54,39 @@
 </template>
 
 <script setup lang="ts">
-const props = withDefaults(defineProps<{
-  label?: string
+const props = withDefaults(
+  defineProps<{
+    label?: string
 
-  // 开关控制
-  showPower?: boolean
-  powerOn?: boolean
+    // 开关控制
+    showPower?: boolean
+    powerOn?: boolean
 
-  // 启停控制
-  showStartStop?: boolean
-  running?: boolean
+    // 启停控制
+    showStartStop?: boolean
+    running?: boolean
 
-  // 模式切换
-  modes?: string[]
-  activeMode?: string
+    // 模式切换
+    modes?: string[]
+    activeMode?: string
 
-  // 温度/参数设定
-  showTemp?: boolean
-  tempLabel?: string
-  tempValue?: number
-  tempMin?: number
-  tempMax?: number
-  tempStep?: number
-  tempUnit?: string
-}>(), {
-  label: '远程控制',
-  tempMin: 16,
-  tempMax: 32,
-  tempStep: 0.5,
-  tempUnit: '℃',
-})
+    // 温度/参数设定
+    showTemp?: boolean
+    tempLabel?: string
+    tempValue?: number
+    tempMin?: number
+    tempMax?: number
+    tempStep?: number
+    tempUnit?: string
+  }>(),
+  {
+    label: '远程控制',
+    tempMin: 16,
+    tempMax: 32,
+    tempStep: 0.5,
+    tempUnit: '℃',
+  },
+)
 
 const emit = defineEmits<{
   togglePower: []
@@ -106,11 +109,15 @@ function onTempChange(e: Event) {
   flex-wrap: wrap;
 }
 .qc-label {
-  font-size: 11px; color: var(--txt3);
+  font-size: 11px;
+  color: var(--txt3);
   margin-right: 4px;
 }
 .qc-actions {
-  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 .qc-btn {
   border: 1px solid var(--line);
@@ -121,11 +128,22 @@ function onTempChange(e: Event) {
   border-radius: 5px;
   cursor: pointer;
   transition: all 0.15s;
-  display: flex; align-items: center; gap: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.qc-btn:hover { border-color: var(--cyan); color: var(--cyan); }
-.qc-btn.on { background: rgba(239, 68, 68, 0.12); border-color: var(--red); color: var(--red); }
-.qc-icon { font-size: 14px; }
+.qc-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.qc-btn.on {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: var(--red);
+  color: var(--red);
+}
+.qc-icon {
+  font-size: 14px;
+}
 .qc-select {
   background: var(--bg);
   border: 1px solid var(--line);
@@ -136,10 +154,13 @@ function onTempChange(e: Event) {
   cursor: pointer;
 }
 .qc-slider {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 11px; color: var(--txt3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--txt3);
 }
-.qc-slider input[type="range"] {
+.qc-slider input[type='range'] {
   width: 60px;
   accent-color: var(--cyan);
 }

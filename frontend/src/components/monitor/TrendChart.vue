@@ -28,7 +28,14 @@ import * as echarts from 'echarts'
 import TimeRangePicker from './TimeRangePicker.vue'
 import SkeletonCard from './SkeletonCard.vue'
 import EmptyState from './EmptyState.vue'
-import { CHART_BASE, baseGrid, baseTooltip, baseLegend, baseXAxis, baseYAxis } from '@/assets/echarts-theme'
+import {
+  CHART_BASE,
+  baseGrid,
+  baseTooltip,
+  baseLegend,
+  baseXAxis,
+  baseYAxis,
+} from '@/assets/echarts-theme'
 
 export interface TrendSeries {
   name: string
@@ -46,23 +53,26 @@ export interface TrendSeries {
   silent?: boolean
 }
 
-const props = withDefaults(defineProps<{
-  title?: string
-  // 模式 A: 直接传 ECharts option
-  option?: echarts.EChartsOption | null
-  // 模式 B: xAxisData + series（组件内部构建 option）
-  xAxisData?: string[]
-  series?: TrendSeries[]
-  height?: number
-  showRangePicker?: boolean
-  loading?: boolean
-  emptyText?: string
-}>(), {
-  title: '',
-  showRangePicker: false,
-  loading: false,
-  emptyText: '暂无趋势数据',
-})
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    // 模式 A: 直接传 ECharts option
+    option?: echarts.EChartsOption | null
+    // 模式 B: xAxisData + series（组件内部构建 option）
+    xAxisData?: string[]
+    series?: TrendSeries[]
+    height?: number
+    showRangePicker?: boolean
+    loading?: boolean
+    emptyText?: string
+  }>(),
+  {
+    title: '',
+    showRangePicker: false,
+    loading: false,
+    emptyText: '暂无趋势数据',
+  },
+)
 
 const emit = defineEmits<{
   rangeChange: [key: string]
@@ -74,12 +84,12 @@ let resizeObserver: ResizeObserver | null = null
 let pendingRender = false
 const activeRange = ref('24h')
 
-const containerHeight = computed(() => props.height ? `${props.height}px` : '200px')
+const containerHeight = computed(() => (props.height ? `${props.height}px` : '200px'))
 
 const isEmpty = computed(() => {
   if (props.option) return false
   const seriesData = props.series ?? []
-  return seriesData.length === 0 || seriesData.every(s => !s.data || s.data.length === 0)
+  return seriesData.length === 0 || seriesData.every((s) => !s.data || s.data.length === 0)
 })
 
 // 从 xAxisData + series 构建 ECharts option
@@ -89,16 +99,27 @@ const builtOption = computed<echarts.EChartsOption>(() => {
   const s = props.series ?? []
   if (!xData.length || !s.length) return { series: [] }
 
-  const hasDualY = s.some(ser => ser.yAxisIndex === 1)
-  const yAxis: any[] = [{
-    ...baseYAxis(),
-    nameTextStyle: { color: CHART_BASE.textColor },
-  }]
+  const hasDualY = s.some((ser) => ser.yAxisIndex === 1)
+  const yAxis: any[] = [
+    {
+      ...baseYAxis(),
+      nameTextStyle: { color: CHART_BASE.textColor },
+    },
+  ]
   if (hasDualY) {
     yAxis.push({ ...baseYAxis(), nameTextStyle: { color: CHART_BASE.textColor } })
   }
 
-  const colors = [CHART_BASE.labelColor, '#22c55e', '#f97316', '#8b5cf6', '#ef4444', '#eab308', '#3b82f6', '#ec4899']
+  const colors = [
+    CHART_BASE.labelColor,
+    '#22c55e',
+    '#f97316',
+    '#8b5cf6',
+    '#ef4444',
+    '#eab308',
+    '#3b82f6',
+    '#ec4899',
+  ]
 
   const echartsSeries = s.map((ser, i) => {
     const c = ser.color ?? colors[i % colors.length]
@@ -135,9 +156,15 @@ const builtOption = computed<echarts.EChartsOption>(() => {
     }
 
     if (ser.areaStyle !== undefined) {
-      base.areaStyle = ser.areaStyle === true
-        ? { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: c }, { offset: 1, color: 'rgba(0,0,0,0)' }]) }
-        : ser.areaStyle
+      base.areaStyle =
+        ser.areaStyle === true
+          ? {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: c },
+                { offset: 1, color: 'rgba(0,0,0,0)' },
+              ]),
+            }
+          : ser.areaStyle
     }
 
     return base
@@ -203,10 +230,20 @@ function applyOption() {
   })
 }
 
-watch(() => props.option, () => applyOption(), { deep: true })
-watch(() => [props.xAxisData, props.series], () => applyOption(), { deep: true })
+watch(
+  () => props.option,
+  () => applyOption(),
+  { deep: true },
+)
+watch(
+  () => [props.xAxisData, props.series],
+  () => applyOption(),
+  { deep: true },
+)
 
-onMounted(() => { initChart() })
+onMounted(() => {
+  initChart()
+})
 
 onUnmounted(() => {
   resizeObserver?.disconnect()
@@ -216,7 +253,9 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.trend-chart { overflow: hidden; }
+.trend-chart {
+  overflow: hidden;
+}
 .tc-header {
   display: flex;
   align-items: center;
@@ -238,7 +277,8 @@ onUnmounted(() => {
   height: 100%;
   min-height: 200px;
 }
-.tc-loader, .tc-empty {
+.tc-loader,
+.tc-empty {
   position: absolute;
   inset: 0;
   display: flex;

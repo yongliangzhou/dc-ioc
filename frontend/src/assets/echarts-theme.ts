@@ -6,32 +6,39 @@ import * as echarts from 'echarts'
 
 // ---- 统一调色板 ----
 export const CHART_COLORS = {
-  cyan:   '#06b6d4',
-  blue:   '#3b82f6',
-  green:  '#22c55e',
+  cyan: '#06b6d4',
+  blue: '#3b82f6',
+  green: '#22c55e',
   orange: '#f97316',
-  red:    '#ef4444',
+  red: '#ef4444',
   purple: '#8b5cf6',
   yellow: '#eab308',
-  amber:  '#ffb020',
-  pink:   '#ec4899',
-  teal:   '#14b8a6',
+  amber: '#ffb020',
+  pink: '#ec4899',
+  teal: '#14b8a6',
   // 多系列图自动轮换
   palette: [
-    '#06b6d4', '#f97316', '#8b5cf6', '#22c55e',
-    '#3b82f6', '#ef4444', '#eab308', '#ec4899',
-    '#14b8a6', '#fb923c',
+    '#06b6d4',
+    '#f97316',
+    '#8b5cf6',
+    '#22c55e',
+    '#3b82f6',
+    '#ef4444',
+    '#eab308',
+    '#ec4899',
+    '#14b8a6',
+    '#fb923c',
   ],
 } as const
 
 // ---- 图表基础颜色 ----
 export const CHART_BASE = {
-  background:   'transparent',
-  textColor:    '#94a3b8',
-  labelColor:   '#64748b',
-  splitLine:    '#1e293b',
-  axisLine:     '#334155',
-  transparent:  'rgba(6,182,212,0.08)',
+  background: 'transparent',
+  textColor: '#94a3b8',
+  labelColor: '#64748b',
+  splitLine: '#1e293b',
+  axisLine: '#334155',
+  transparent: 'rgba(6,182,212,0.08)',
 }
 
 // ---- 基础 grid 配置 ----

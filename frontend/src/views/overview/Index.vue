@@ -31,7 +31,7 @@
           :value="fmtNum(dashboard.it_load_mw)"
           unit="MW"
           subtitle="设计容量 4.8 MW"
-          :barValue="(dashboard.it_load_mw || 0) / 4.8 * 100"
+          :barValue="((dashboard.it_load_mw || 0) / 4.8) * 100"
         />
       </div>
       <div class="kpi-cell">
@@ -140,7 +140,10 @@
             <svg viewBox="0 0 100 100" class="ring-svg">
               <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" stroke-width="8" />
               <circle
-                cx="50" cy="50" r="42" fill="none"
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
                 :stroke="d.ringColor"
                 stroke-width="8"
                 stroke-linecap="round"
@@ -148,7 +151,16 @@
                 stroke-dashoffset="0"
                 transform="rotate(-90 50 50)"
               />
-              <text x="50" y="52" text-anchor="middle" fill="#c8d6e5" font-size="16" font-weight="700">{{ d.ringRate }}%</text>
+              <text
+                x="50"
+                y="52"
+                text-anchor="middle"
+                fill="#c8d6e5"
+                font-size="16"
+                font-weight="700"
+              >
+                {{ d.ringRate }}%
+              </text>
             </svg>
           </div>
           <div class="domain-stats">
@@ -176,17 +188,27 @@
         </div>
         <div class="campus-name">{{ c.name }}</div>
         <div class="campus-kpi-list">
-          <div class="campus-kpi"><span>PUE</span><span class="v">{{ fmtNum(c.pue) }}</span></div>
-          <div class="campus-kpi"><span>在线率</span><span class="v">{{ fmtNum(c.online_rate) }}%</span></div>
-          <div class="campus-kpi"><span>IT负载</span><span class="v">{{ fmtNum(c.it_load_mw) }}MW</span></div>
-          <div class="campus-kpi"><span>告警</span><span class="v">{{ c.today_alarms ?? 0 }}</span></div>
+          <div class="campus-kpi">
+            <span>PUE</span><span class="v">{{ fmtNum(c.pue) }}</span>
+          </div>
+          <div class="campus-kpi">
+            <span>在线率</span><span class="v">{{ fmtNum(c.online_rate) }}%</span>
+          </div>
+          <div class="campus-kpi">
+            <span>IT负载</span><span class="v">{{ fmtNum(c.it_load_mw) }}MW</span>
+          </div>
+          <div class="campus-kpi">
+            <span>告警</span><span class="v">{{ c.today_alarms ?? 0 }}</span>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- ========== Section 5: 实时告警联动 ========== -->
     <div class="section-bar">
-      <h3 class="section-title">实时告警联动 <span class="alarm-count-badge">{{ activeAlarms.length }} 条活跃</span></h3>
+      <h3 class="section-title">
+        实时告警联动 <span class="alarm-count-badge">{{ activeAlarms.length }} 条活跃</span>
+      </h3>
     </div>
     <div class="alarm-feed">
       <div v-if="activeAlarms.length === 0" class="alarm-empty">当前无活跃告警</div>
@@ -240,12 +262,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
+import { fmtNum } from '@/utils/format'
 import { useRouter } from 'vue-router'
-import {
-  getDashboardOverview,
-  getActiveAlarms,
-  getCampusComparison,
-} from '@/api/index'
+import { getDashboardOverview, getActiveAlarms, getCampusComparison } from '@/api/index'
 import { getHvacOverview } from '@/api/hvac'
 import type { DashboardOverview, CampusComparisonResponse } from '@/types'
 import type { HvacOverview } from '@/api/hvac'
@@ -258,9 +277,18 @@ const router = useRouter()
 
 // ===== State =====
 const dashboard = reactive<DashboardOverview>({
-  total_devices: 0, online_devices: 0, online_rate: 0, today_alarms: 0,
-  pue: 0, wue: 0, it_load_mw: 0, total_load_mw: 0, cool_load_mw: 0,
-  availability: 0, free_cool_hours: 0, alarms: {} as any,
+  total_devices: 0,
+  online_devices: 0,
+  online_rate: 0,
+  today_alarms: 0,
+  pue: 0,
+  wue: 0,
+  it_load_mw: 0,
+  total_load_mw: 0,
+  cool_load_mw: 0,
+  availability: 0,
+  free_cool_hours: 0,
+  alarms: {} as any,
 } as any)
 const campuses = ref<any[]>([])
 const activeAlarms = ref<any[]>([])
@@ -283,28 +311,48 @@ const domainCards = computed(() => {
   const or = d.online_rate ?? 100
   return [
     {
-      key: 'hvac', title: '暖通系统', healthStatus: 'success' as const,
+      key: 'hvac',
+      title: '暖通系统',
+      healthStatus: 'success' as const,
       deviceStatus: or >= 95 ? ('success' as const) : ('warning' as const),
       alarmStatus: (d.alarms?.crit ?? 0) === 0 ? ('success' as const) : ('warning' as const),
-      onlineRate: Math.round(or), alarmCount: 3, ringRate: Math.round(or), ringColor: '#05b896',
+      onlineRate: Math.round(or),
+      alarmCount: 3,
+      ringRate: Math.round(or),
+      ringColor: '#05b896',
     },
     {
-      key: 'power', title: '电力系统', healthStatus: 'success' as const,
+      key: 'power',
+      title: '电力系统',
+      healthStatus: 'success' as const,
       deviceStatus: or >= 95 ? ('success' as const) : ('warning' as const),
       alarmStatus: (d.alarms?.warn ?? 0) <= 2 ? ('success' as const) : ('warning' as const),
-      onlineRate: Math.round(Math.max(or - 2, 0)), alarmCount: 1, ringRate: Math.round(Math.max(or - 1, 0)), ringColor: '#f39c12',
+      onlineRate: Math.round(Math.max(or - 2, 0)),
+      alarmCount: 1,
+      ringRate: Math.round(Math.max(or - 1, 0)),
+      ringColor: '#f39c12',
     },
     {
-      key: 'security', title: '安防消防', healthStatus: 'success' as const,
+      key: 'security',
+      title: '安防消防',
+      healthStatus: 'success' as const,
       deviceStatus: or >= 98 ? ('success' as const) : ('warning' as const),
       alarmStatus: 'success' as const,
-      onlineRate: Math.min(Math.round(or) + 1, 100), alarmCount: 0, ringRate: Math.min(Math.round(or) + 1, 100), ringColor: '#3498db',
+      onlineRate: Math.min(Math.round(or) + 1, 100),
+      alarmCount: 0,
+      ringRate: Math.min(Math.round(or) + 1, 100),
+      ringColor: '#3498db',
     },
     {
-      key: 'smartops', title: '数智运维', healthStatus: 'success' as const,
+      key: 'smartops',
+      title: '数智运维',
+      healthStatus: 'success' as const,
       deviceStatus: 'success' as const,
       alarmStatus: 'success' as const,
-      onlineRate: 100, alarmCount: 0, ringRate: 100, ringColor: '#9b59b6',
+      onlineRate: 100,
+      alarmCount: 0,
+      ringRate: 100,
+      ringColor: '#9b59b6',
     },
   ]
 })
@@ -322,7 +370,18 @@ const pueSparklineX = computed(() => {
 const pueSparklineSeries = computed(() => {
   const base = dashboard.pue || 1.25
   const data = Array.from({ length: 30 }, () => +(base + (Math.random() - 0.5) * 0.12).toFixed(3))
-  return [{ name: 'PUE', type: 'line' as const, data, color: '#05b896', smooth: true, areaStyle: { color: 'rgba(5,184,150,0.12)' }, symbol: 'none' as const, symbolSize: 0 }]
+  return [
+    {
+      name: 'PUE',
+      type: 'line' as const,
+      data,
+      color: '#05b896',
+      smooth: true,
+      areaStyle: { color: 'rgba(5,184,150,0.12)' },
+      symbol: 'none' as const,
+      symbolSize: 0,
+    },
+  ]
 })
 
 // ===== General trend mock (48H) =====
@@ -351,17 +410,63 @@ const trendDatasets = computed(() => {
 
   return {
     pueWue: [
-      { name: 'PUE', type: 'line' as const, data: gen(pueBase, 0.12, 48), color: '#05b896', smooth: true, yAxisIndex: 0 },
-      { name: 'WUE', type: 'line' as const, data: gen(wueBase, 0.2, 48), color: '#3498db', smooth: true, yAxisIndex: 1 },
+      {
+        name: 'PUE',
+        type: 'line' as const,
+        data: gen(pueBase, 0.12, 48),
+        color: '#05b896',
+        smooth: true,
+        yAxisIndex: 0,
+      },
+      {
+        name: 'WUE',
+        type: 'line' as const,
+        data: gen(wueBase, 0.2, 48),
+        color: '#3498db',
+        smooth: true,
+        yAxisIndex: 1,
+      },
     ],
     loads: [
-      { name: 'IT负荷', type: 'line' as const, data: gen(itBase, 0.4, 48), color: '#05b896', smooth: true },
-      { name: '总负荷', type: 'line' as const, data: gen(totalBase, 0.5, 48), color: '#f39c12', smooth: true },
-      { name: '制冷负荷', type: 'line' as const, data: gen(coolBase, 0.3, 48), color: '#3498db', smooth: true },
+      {
+        name: 'IT负荷',
+        type: 'line' as const,
+        data: gen(itBase, 0.4, 48),
+        color: '#05b896',
+        smooth: true,
+      },
+      {
+        name: '总负荷',
+        type: 'line' as const,
+        data: gen(totalBase, 0.5, 48),
+        color: '#f39c12',
+        smooth: true,
+      },
+      {
+        name: '制冷负荷',
+        type: 'line' as const,
+        data: gen(coolBase, 0.3, 48),
+        color: '#3498db',
+        smooth: true,
+      },
     ],
     online: [
-      { name: '在线率', type: 'line' as const, data: gen(onRateBase, 2, 48), color: '#05b896', smooth: true, yAxisIndex: 0 },
-      { name: '可用性', type: 'line' as const, data: gen(availBase, 0.02, 48), color: '#9b59b6', smooth: true, yAxisIndex: 1 },
+      {
+        name: '在线率',
+        type: 'line' as const,
+        data: gen(onRateBase, 2, 48),
+        color: '#05b896',
+        smooth: true,
+        yAxisIndex: 0,
+      },
+      {
+        name: '可用性',
+        type: 'line' as const,
+        data: gen(availBase, 0.02, 48),
+        color: '#9b59b6',
+        smooth: true,
+        yAxisIndex: 1,
+      },
     ],
   }
 })
@@ -381,25 +486,29 @@ const totalLoadTrend = computed(() => {
 
 const coolLoadPct = computed(() => {
   if (!dashboard.total_load_mw) return 0
-  return +((dashboard.cool_load_mw ?? 0) / dashboard.total_load_mw * 100).toFixed(1)
+  return +(((dashboard.cool_load_mw ?? 0) / dashboard.total_load_mw) * 100).toFixed(1)
 })
 
-const coolLoadStatus = computed(() => (coolLoadPct.value > 40 ? 'warning' : 'normal') as 'normal' | 'warning')
+const coolLoadStatus = computed(
+  () => (coolLoadPct.value > 40 ? 'warning' : 'normal') as 'normal' | 'warning',
+)
 
 // ===== Helpers =====
-function fmtNum(v: number | null | undefined, digits = 2): string {
-  if (v == null || Number.isNaN(v)) return '--'
-  return Number.isInteger(v) ? String(v) : v.toFixed(digits)
-}
 function formatAlarmTime(t: string | undefined): string {
   if (!t) return '--'
   try {
     const d = new Date(t)
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`
-  } catch { return t.slice(0, 10) }
+  } catch {
+    return t.slice(0, 10)
+  }
 }
-function goAlarms() { router.push('/ops/alarms') }
-function goMonitor(path: string) { router.push(path) }
+function goAlarms() {
+  router.push('/ops/alarms')
+}
+function goMonitor(path: string) {
+  router.push(path)
+}
 function selectCampus(c: any) {
   // Navigate to campus detail or highlight
   console.log('Selected campus:', c.name)
@@ -416,17 +525,25 @@ async function loadAll() {
   try {
     const raw = await getDashboardOverview()
     Object.assign(dashboard, raw)
-  } catch (e) { console.error('Dashboard load error:', e) }
+  } catch (e) {
+    console.error('Dashboard load error:', e)
+  }
 
   try {
     const list = await getActiveAlarms()
-    activeAlarms.value = Array.isArray((list as any)?.items) ? (list as any).items : (Array.isArray(list) ? list : [])
-  } catch { activeAlarms.value = [] }
+    activeAlarms.value = Array.isArray((list as any)?.items)
+      ? (list as any).items
+      : Array.isArray(list)
+        ? list
+        : []
+  } catch {
+    activeAlarms.value = []
+  }
 
   try {
     const hvac: HvacOverview = await getHvacOverview()
     if (hvac.chiller?.chillerGroups?.length) {
-      const cops = hvac.chiller.chillerGroups.map(g => g.chiller?.cop).filter(Boolean) as number[]
+      const cops = hvac.chiller.chillerGroups.map((g) => g.chiller?.cop).filter(Boolean) as number[]
       if (cops.length) {
         const avg = cops.reduce((a, b) => a + b, 0) / cops.length
         coolingStats.cop = avg.toFixed(2)
@@ -440,18 +557,33 @@ async function loadAll() {
         coolingStats.pueCTrend = +(Math.random() * 0.06 - 0.03).toFixed(3)
       }
     }
-  } catch { /* cooling stats unavailable */ }
+  } catch {
+    /* cooling stats unavailable */
+  }
 
   try {
-    const cmpRaw = await getCampusComparison().catch(() => ({ comparisons: [] } as unknown as CampusComparisonResponse))
+    const cmpRaw = await getCampusComparison().catch(
+      () => ({ comparisons: [] }) as unknown as CampusComparisonResponse,
+    )
     const cmpList = Array.isArray((cmpRaw as any)?.comparisons) ? (cmpRaw as any).comparisons : []
     if (cmpList.length) {
       campuses.value = cmpList
     } else {
       // fallback: try individual campus data
-      campuses.value = [{ name: '主校区', code: 'DC1', pue: dashboard.pue, online_rate: dashboard.online_rate, it_load_mw: dashboard.it_load_mw, today_alarms: dashboard.today_alarms }]
+      campuses.value = [
+        {
+          name: '主校区',
+          code: 'DC1',
+          pue: dashboard.pue,
+          online_rate: dashboard.online_rate,
+          it_load_mw: dashboard.it_load_mw,
+          today_alarms: dashboard.today_alarms,
+        },
+      ]
     }
-  } catch { campuses.value = [] }
+  } catch {
+    campuses.value = []
+  }
 
   refreshTime.value = new Date().toLocaleTimeString('zh-CN')
 }
@@ -461,7 +593,12 @@ onMounted(() => {
   loadAll()
   timer = setInterval(loadAll, 30_000)
 })
-onUnmounted(() => { if (timer) { clearInterval(timer); timer = undefined } })
+onUnmounted(() => {
+  if (timer) {
+    clearInterval(timer)
+    timer = undefined
+  }
+})
 </script>
 
 <style scoped>
@@ -565,7 +702,9 @@ onUnmounted(() => { if (timer) { clearInterval(timer); timer = undefined } })
   border-radius: 8px;
   padding: 10px 12px 6px;
   cursor: pointer;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 .cooling-entry:hover {
   border-color: #05b89666;
@@ -639,19 +778,32 @@ onUnmounted(() => { if (timer) { clearInterval(timer); timer = undefined } })
   cursor: pointer;
   transition: border-color 0.15s;
 }
-.campus-card:hover { border-color: #2a4a6a; }
-.campus-status { margin-bottom: 4px; }
+.campus-card:hover {
+  border-color: #2a4a6a;
+}
+.campus-status {
+  margin-bottom: 4px;
+}
 .campus-name {
   font-size: 14px;
   font-weight: 600;
   margin-bottom: 8px;
 }
-.campus-kpi-list { display: flex; flex-direction: column; gap: 4px; }
-.campus-kpi {
-  display: flex; justify-content: space-between;
-  font-size: 12px; color: #5a6a82;
+.campus-kpi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.campus-kpi .v { color: #c8d6e5; font-weight: 500; }
+.campus-kpi {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #5a6a82;
+}
+.campus-kpi .v {
+  color: #c8d6e5;
+  font-weight: 500;
+}
 
 /* ===== Alarm Feed ===== */
 .alarm-feed {
@@ -677,11 +829,28 @@ onUnmounted(() => { if (timer) { clearInterval(timer); timer = undefined } })
   font-size: 12px;
   transition: background 0.15s;
 }
-.alarm-row:last-child { border-bottom: none; }
-.alarm-row:hover { background: #111d2a; margin: 0 -14px; padding-left: 14px; padding-right: 14px; }
-.alarm-msg { flex: 1; }
-.alarm-time { color: #3a5068; white-space: nowrap; }
-.alarm-count-badge { font-size: 12px; font-weight: 400; color: #e74c3c; margin-left: 8px; }
+.alarm-row:last-child {
+  border-bottom: none;
+}
+.alarm-row:hover {
+  background: #111d2a;
+  margin: 0 -14px;
+  padding-left: 14px;
+  padding-right: 14px;
+}
+.alarm-msg {
+  flex: 1;
+}
+.alarm-time {
+  color: #3a5068;
+  white-space: nowrap;
+}
+.alarm-count-badge {
+  font-size: 12px;
+  font-weight: 400;
+  color: #e74c3c;
+  margin-left: 8px;
+}
 
 /* ===== Trends ===== */
 .trends-grid {
@@ -698,15 +867,31 @@ onUnmounted(() => { if (timer) { clearInterval(timer); timer = undefined } })
 
 /* ===== Responsive ===== */
 @media (max-width: 1200px) {
-  .kpi-row { grid-template-columns: repeat(3, 1fr); }
-  .cooling-entry-row { grid-template-columns: repeat(2, 1fr); }
-  .domain-health-row { grid-template-columns: repeat(2, 1fr); }
-  .trends-grid { grid-template-columns: repeat(2, 1fr); }
+  .kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .cooling-entry-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .domain-health-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .trends-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 @media (max-width: 768px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .cooling-entry-row { grid-template-columns: 1fr; }
-  .domain-health-row { grid-template-columns: 1fr; }
-  .trends-grid { grid-template-columns: 1fr; }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .cooling-entry-row {
+    grid-template-columns: 1fr;
+  }
+  .domain-health-row {
+    grid-template-columns: 1fr;
+  }
+  .trends-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

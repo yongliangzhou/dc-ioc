@@ -45,15 +45,14 @@
     </div>
 
     <!-- 2.1.1 SVG Spine-Leaf 拓扑图 -->
-    <div class="card" v-if="s && s.switches.length">
-      <div class="card-head">
-        <span class="ct">{{ tl('Spine-Leaf 网络拓扑') }}</span>
+    <Panel v-if="s && s.switches.length" title="Spine-Leaf 网络拓扑">
+      <template #extra>
         <div class="topo-legend">
           <span><i class="tl-dot" style="background:#22c55e"></i> {{ tl('正常') }}</span>
           <span><i class="tl-dot" style="background:#f59e0b"></i> {{ tl('高负载') }}</span>
           <span><i class="tl-dot" style="background:#ef4444"></i> {{ tl('拥塞/告警') }}</span>
         </div>
-      </div>
+      </template>
       <svg class="topo-svg" :viewBox="`0 0 ${svgW} ${svgH}`">
         <!-- spine switches -->
         <g v-for="(sp, si) in spineSwitches" :key="sp.id">
@@ -91,15 +90,14 @@
           :x1="lnk.x1" :y1="lnk.y1" :x2="lnk.x2" :y2="lnk.y2"
           :stroke="lnk.color" :stroke-width="lnk.sw" :opacity="lnk.op" />
       </svg>
-    </div>
+    </Panel>
 
     <!-- 2.1.6 链路健康面板 -->
-    <div class="card" v-if="s && s.switches.length">
-      <div class="card-head">
-        <span class="ct">{{ tl('链路聚合与冗余状态') }}</span>
+    <Panel v-if="s && s.switches.length" title="链路聚合与冗余状态">
+      <template #extra>
         <span class="pill g" v-if="healthyTrunks.length === allTrunks.length">{{ tl('全部链路正常') }}</span>
         <span class="pill a" v-else>{{ tl('异常') }}: {{ allTrunks.length - healthyTrunks.length }}/{{ allTrunks.length }}</span>
-      </div>
+      </template>
       <div class="trunk-grid" v-if="allTrunks.length">
         <div
           v-for="t in allTrunks"
@@ -125,15 +123,17 @@
         </div>
       </div>
       <div class="muted" v-else style="padding:20px 0;text-align:center">{{ tl('无链路聚合配置') }}</div>
-    </div>
+    </Panel>
 
     <!-- 设备逐台 (PortPanel + 端口流量表) -->
     <div class="sw-section" v-for="sw in s?.switches ?? []" :key="sw.id">
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ sw.name }} <span class="muted">{{ sw.model }}</span></span>
+      <Panel :title="sw.name">
+        <template #ct>
+          {{ sw.name }} <span class="muted">{{ sw.model }}</span>
+        </template>
+        <template #extra>
           <StatusBadge :status="sw.status === 'online' ? 'online' : 'offline'" />
-        </div>
+        </template>
 
         <div class="sw-meta-grid">
           <div class="sw-kv"><span class="sw-k">{{ tl('管理IP') }}</span><span class="sw-v mono">{{ sw.ip }}</span></div>
@@ -214,17 +214,16 @@
             </table>
           </div>
         </div>
-      </div>
+      </Panel>
     </div>
 
     <!-- 链路质量 Ping -->
-    <div class="card" v-if="s && s.pingTargets && s.pingTargets.length">
-      <div class="card-head">
-        <span class="ct">{{ tl('链路质量探测') }}</span>
+    <Panel v-if="s && s.pingTargets && s.pingTargets.length" title="链路质量探测">
+      <template #extra>
         <span class="pill" :class="s.avgPingLossPct >= 1 ? 'a' : 'g'">
           {{ tl('平均') }} {{ s.avgPingRttMs }}ms / {{ tl('丢包') }} {{ s.avgPingLossPct }}%
         </span>
-      </div>
+      </template>
       <div class="ping-grid">
         <div class="ping-block" v-for="p in (s.pingTargets ?? [])" :key="p.target">
           <div class="ping-head">
@@ -240,7 +239,7 @@
             <span class="muted">{{ tl('丢包') }}</span><span class="mono" :class="p.loss_pct > 1 ? 'a-text' : 'g-text'">{{ p.loss_pct }}%</span>
           </div>
         </div>
-      </div>
+      </Panel>
     </div>
 
     <!-- 负载状态 -->
@@ -256,10 +255,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { fmtBps, utilCls } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
 import PortPanel from '@/components/monitor/PortPanel.vue'
 import { getNetworkSwitchesDetailed, type NetworkSwitchSummary, type SwitchView, type SwitchPortView } from '@/api/monitor'
+import Panel from '@/components/common/Panel.vue'
 const { t: tl } = useI18n()
 
 const s = ref<NetworkSwitchSummary | null>(null)
@@ -348,13 +349,6 @@ const allTrunks = computed(() => {
 const healthyTrunks = computed(() => allTrunks.value.filter((t) => t.isHealthy))
 
 // ---- helpers ----
-function fmtBps(v: number): string {
-  if (!v) return '0'
-  if (v >= 1e9) return (v / 1e9).toFixed(2) + ' Gbps'
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + ' Mbps'
-  return (v / 1e3).toFixed(1) + ' Kbps'
-}
-function utilCls(v: number): string { return v > 85 ? 'a-text' : v > 60 ? 'a-text' : 'g-text' }
 function portRowCls(p: SwitchPortView): string {
   if (p.status !== 'up') return 'row-offline'
   if (p.optical_alarm && p.optical_alarm !== '正常') return 'row-alarm'
@@ -458,9 +452,7 @@ onMounted(load)
 .view-head h1 { font-size: 20px; font-weight: 700; color: var(--txt); margin: 0 0 4px; }
 .view-head .sub { font-size: 12px; color: var(--txt2); }
 .card { background: var(--bg1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; }
-.ct { font-weight: 600; font-size: 14px; }
-.muted { color: var(--txt2); }
+
 .mono { font-variant-numeric: tabular-nums; font-family: "SF Mono", Consolas, monospace; }
 .g-text { color: var(--green); }
 .a-text { color: var(--amber); }
@@ -472,9 +464,6 @@ onMounted(load)
 .flex { display: flex; } .center { align-items: center; } .scroll-x { overflow-x: auto; }
 
 /* pills & badges */
-.pill { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--bg2); color: var(--txt2); }
-.pill.g { background: rgba(34,197,94,0.12); color: var(--green); }
-.pill.a { background: rgba(245,158,11,0.12); color: var(--amber); }
 
 /* Spine-Leaf topology */
 .topo-legend { display: flex; gap: 16px; font-size: 10px; color: var(--txt3); }

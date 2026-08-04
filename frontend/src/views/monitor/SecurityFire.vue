@@ -24,7 +24,7 @@
 
     <div class="grid-main">
       <!-- 左：消防平面图 SVG -->
-      <section class="card plan-card">
+      <Panel class="plan-card">
         <div class="card-head">
           <span class="card-title">消防平面图</span>
           <div class="legend">
@@ -80,10 +80,10 @@
           </div>
           <div v-else class="z-info muted">点击平面图上的点位查看详情</div>
         </div>
-      </section>
+      </Panel>
 
       <!-- 右：报警主机状态面板 -->
-      <section class="card host-card">
+      <Panel class="host-card">
         <div class="card-head"><span class="card-title">报警主机状态</span><span class="card-sub">{{ s.hostState }}</span></div>
         <div class="host-grid">
           <div class="host-kv"><span class="k">主机状态</span><span class="v" :class="s.hostState.includes('正常') ? 'g' : 'a'">{{ s.hostState }}</span></div>
@@ -103,12 +103,12 @@
             </div>
           </div>
         </div>
-      </section>
+      </Panel>
     </div>
 
     <div class="grid-sub">
       <!-- 探测器状态统计 -->
-      <section class="card">
+      <Panel>
         <div class="card-head"><span class="card-title">探测器状态统计</span><span class="card-sub">{{ s.points }} 点</span></div>
         <div class="det-tabs">
           <button class="det-tab" :class="{ active: detFilter === 'all' }" @click="detFilter = 'all'">全部</button>
@@ -141,7 +141,7 @@
       </section>
 
       <!-- 消防联动设备状态 -->
-      <section class="card">
+      <Panel>
         <div class="card-head"><span class="card-title">消防联动设备</span><span class="card-sub">状态联动</span></div>
         <div class="link-grid">
           <div v-for="lk in linkageDevices" :key="lk.name" class="link-item" :class="lk.state">
@@ -159,10 +159,10 @@
           <div class="qf-row"><span class="k">最近演练</span><span class="v">{{ s.qieFei.lastDrill }}</span></div>
           <div class="qf-row"><span class="k">联动逻辑</span><span class="v">{{ s.qieFei.desc }}</span></div>
         </div>
-      </section>
+      </Panel>
 
       <!-- 火警/故障/监管告警列表 -->
-      <section class="card">
+      <Panel>
         <div class="card-head"><span class="card-title">火警 / 故障 / 监管</span><span class="card-sub">{{ s.events.length }} 条</span></div>
         <div class="evt-list">
           <div v-for="(e, i) in s.events" :key="i" class="evt-row" :class="lvCls(e.lv)">
@@ -172,45 +172,14 @@
           </div>
           <EmptyState v-if="!s.events.length" text="无告警" />
         </div>
-      </section>
+      </Panel>
     </div>
 
     <!-- 知识库 -->
-    <section class="card know" v-if="s.knowledge?.thresholds?.length || s.knowledge?.arch || s.knowledge?.logic?.length || s.knowledge?.faults?.length">
+    <Panel class="know">
       <div class="card-head"><span class="card-title">消防架构 · 逻辑 · 故障锁定</span></div>
-      <div class="know-grid">
-        <div v-if="s.knowledge.thresholds?.length" class="know-col">
-          <h4>设计 / 告警阈值</h4>
-          <ul><li v-for="t in s.knowledge.thresholds" :key="t.k"><b>{{ t.k }}</b>：{{ t.v }}<em v-if="t.note">（{{ t.note }}）</em></li></ul>
-        </div>
-        <div v-if="s.knowledge.arch" class="know-col">
-          <h4>架构组成</h4>
-          <ul><li v-for="c in s.knowledge.arch.components" :key="c">{{ c }}</li></ul>
-          <p>{{ s.knowledge.arch.design }}</p>
-          <p class="redundancy">冗余：{{ s.knowledge.arch.redundancy }}</p>
-        </div>
-        <div v-if="s.knowledge.logic?.length" class="know-col">
-          <h4>联动逻辑</h4>
-          <div v-for="l in s.knowledge.logic" :key="l.title" class="logic">
-            <b>{{ l.title }}</b>
-            <ol><li v-for="st in l.steps" :key="st.step" :class="{ ok: st.ok }">{{ st.text }}</li></ol>
-          </div>
-        </div>
-        <div v-if="s.knowledge.faults?.length" class="know-col">
-          <h4>故障锁定表</h4>
-          <table class="fault-tbl">
-            <thead><tr><th>故障</th><th>锁定</th><th>处理</th><th>复位</th></tr></thead>
-            <tbody>
-              <tr v-for="f in s.knowledge.faults" :key="f.no">
-                <td>{{ f.fault }}</td><td>{{ f.lock }}</td><td>{{ f.action }}</td>
-                <td><span class="tag" :class="f.manualReset ? 'crit' : 'ok'">{{ f.manualReset ? '需' : '否' }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <p class="knote" v-if="s.knowledge.note">{{ s.knowledge.note }}</p>
-    </section>
+      <SecurityKnowledge :knowledge="s.knowledge" logic-title="联动逻辑" />
+    </Panel>
   </div>
 </template>
 
@@ -218,6 +187,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RadioTower, ShieldCheck, Cloud, Lightbulb, Fan, Volume2, DoorOpen, ArrowDownToLine } from 'lucide-vue-next'
 import KpiCard from '@/components/monitor/KpiCard.vue'
+import Panel from '@/components/common/Panel.vue'
+import SecurityKnowledge from '@/components/SecurityKnowledge.vue'
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
 import EmptyState from '@/components/monitor/EmptyState.vue'
 import { getSecurityFireDetailed, type FireSummary, type FireDetectorView, type FireEventView } from '@/api/security'
@@ -401,11 +372,6 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .grid-main { display: grid; grid-template-columns: 2.2fr 1fr; gap: 14px; }
 .grid-sub { display: grid; grid-template-columns: 1.2fr 1fr 1.3fr; gap: 14px; }
-.card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.card-title { font-weight: 600; font-size: 14px; }
-.card-sub { font-size: 12px; color: var(--text-2); }
-
 /* 平面图 */
 .plan-card { min-height: 420px; }
 .legend { display: flex; gap: 10px; font-size: 11px; color: var(--text-2); flex-wrap: wrap; }
@@ -431,7 +397,7 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .pop-t { fill: #d23b3b; font-size: 11px; font-weight: 600; }
 .pop-d { fill: #7d93a8; font-size: 9px; }
 .z-info { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--bg-2); font-size: 12px; }
-.z-info.muted { color: var(--text-2); }
+
 .z-info-h { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
 .z-info-b { display: flex; flex-wrap: wrap; gap: 4px 16px; color: var(--text-2); }
 
@@ -491,23 +457,8 @@ onUnmounted(() => { if (timer) clearInterval(timer) })
 .evt-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
 .evt-ts { color: var(--text-2); } .evt-desc { flex: 1; color: var(--text-2); }
 
-/* 知识库 */
-.know-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.know-col h4 { margin: 0 0 6px; font-size: 13px; }
-.know-col ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--text-2); }
-.know-col p { font-size: 12px; color: var(--text-2); margin: 4px 0; }
-.redundancy { color: #3f9fcf; }
-.logic { margin-bottom: 8px; } .logic ol { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
-.logic li.ok::marker { content: '✓ '; }
-.fault-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.fault-tbl th, .fault-tbl td { border: 1px solid var(--border); padding: 3px 5px; text-align: left; }
-.tag { font-size: 11px; padding: 1px 5px; border-radius: 3px; }
-.tag.crit { background: #b4451f; color: #fff; } .tag.ok { background: #2f6f4f; color: #fff; }
-.knote { font-size: 12px; font-style: italic; color: var(--text-2); text-align: center; margin: 10px 0 0; }
-
 @media (max-width: 1100px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
   .grid-main, .grid-sub { grid-template-columns: 1fr; }
-  .know-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>

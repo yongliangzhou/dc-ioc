@@ -74,9 +74,15 @@ function mapCapacity(raw: RawCapacity): CapacityOverview {
 
   return {
     rooms,
-    overallPowerUtilization: powerDim ? (pctOf(powerDim.used, powerDim.total) ?? 0) : avg(rooms.map((r) => r.powerUtilization)),
-    overallCoolingUtilization: coolDim ? (pctOf(coolDim.used, coolDim.total) ?? 0) : avg(rooms.map((r) => r.coolingUtilization)),
-    overallSpaceUtilization: spaceDim ? (pctOf(spaceDim.used, spaceDim.total) ?? 0) : avg(rooms.map((r) => r.spaceUtilization)),
+    overallPowerUtilization: powerDim
+      ? (pctOf(powerDim.used, powerDim.total) ?? 0)
+      : avg(rooms.map((r) => r.powerUtilization)),
+    overallCoolingUtilization: coolDim
+      ? (pctOf(coolDim.used, coolDim.total) ?? 0)
+      : avg(rooms.map((r) => r.coolingUtilization)),
+    overallSpaceUtilization: spaceDim
+      ? (pctOf(spaceDim.used, spaceDim.total) ?? 0)
+      : avg(rooms.map((r) => r.spaceUtilization)),
     overallRackUtilization: avg(rooms.map((r) => r.rackUtilization)),
   }
 }

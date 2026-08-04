@@ -8,7 +8,9 @@
       <slot>
         <div v-for="(m, i) in metrics" :key="i" class="dc-metric">
           <span class="dc-m-label">{{ m.label }}</span>
-          <span class="dc-m-value" :class="m.status">{{ m.value }}<small v-if="m.unit">{{ m.unit }}</small></span>
+          <span class="dc-m-value" :class="m.status"
+            >{{ m.value }}<small v-if="m.unit">{{ m.unit }}</small></span
+          >
         </div>
       </slot>
     </div>
@@ -29,15 +31,18 @@ export interface DeviceMetric {
   status?: 'normal' | 'warning' | 'danger'
 }
 
-const props = withDefaults(defineProps<{
-  name: string
-  status?: string
-  metrics?: DeviceMetric[]
-  variant?: 'default' | 'compact'
-}>(), {
-  variant: 'default',
-  status: '',
-})
+const props = withDefaults(
+  defineProps<{
+    name: string
+    status?: string
+    metrics?: DeviceMetric[]
+    variant?: 'default' | 'compact'
+  }>(),
+  {
+    variant: 'default',
+    status: '',
+  },
+)
 
 const statusClass = computed(() => {
   const s = (props.status || '').toLowerCase()
@@ -48,7 +53,9 @@ const statusClass = computed(() => {
 </script>
 
 <style scoped>
-.device-card { min-width: 150px; }
+.device-card {
+  min-width: 150px;
+}
 
 .dc-head {
   display: flex;
@@ -88,8 +95,12 @@ const statusClass = computed(() => {
   font-weight: 400;
   margin-left: 2px;
 }
-.dc-m-value.danger { color: var(--red); }
-.dc-m-value.warning { color: var(--amber); }
+.dc-m-value.danger {
+  color: var(--red);
+}
+.dc-m-value.warning {
+  color: var(--amber);
+}
 
 .dc-actions {
   margin-top: 10px;

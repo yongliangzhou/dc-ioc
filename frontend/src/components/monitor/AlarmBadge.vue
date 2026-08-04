@@ -7,20 +7,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{
-  level: string   // critical / major / warning / info
-  count?: number
-}>(), {
-  count: 0,
-})
+const props = withDefaults(
+  defineProps<{
+    level: string // critical / major / warning / info
+    count?: number
+  }>(),
+  {
+    count: 0,
+  },
+)
 
 const LEVEL_MAP: Record<string, { cls: string; text: string }> = {
   critical: { cls: 'critical', text: '紧急' },
-  urgent:   { cls: 'critical', text: '紧急' },
-  major:    { cls: 'major', text: '严重' },
-  severe:   { cls: 'major', text: '严重' },
-  warning:  { cls: 'warning', text: '警告' },
-  info:     { cls: 'info', text: '提示' },
+  urgent: { cls: 'critical', text: '紧急' },
+  major: { cls: 'major', text: '严重' },
+  severe: { cls: 'major', text: '严重' },
+  warning: { cls: 'warning', text: '警告' },
+  info: { cls: 'info', text: '提示' },
 }
 
 const levelClass = computed(() => LEVEL_MAP[props.level?.toLowerCase()]?.cls ?? 'info')

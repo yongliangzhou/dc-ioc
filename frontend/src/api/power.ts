@@ -622,10 +622,12 @@ export interface BatterySummary {
 function normStatus(state: unknown): string {
   const s = String(state ?? '').trim()
   if (!s) return 'unknown'
-  if (s.includes('故障') || s.includes('检修') || s.includes('停机') || s.includes('失电')) return 'fault'
+  if (s.includes('故障') || s.includes('检修') || s.includes('停机') || s.includes('失电'))
+    return 'fault'
   if (s.includes('告警') || s.includes('异常') || s.includes('预警')) return 'warning'
   if (s.includes('待机') || s.includes('备用') || s.includes('热备')) return 'standby'
-  if (s.includes('运行') || s.includes('合闸') || s.includes('正常') || s.includes('在线')) return 'online'
+  if (s.includes('运行') || s.includes('合闸') || s.includes('正常') || s.includes('在线'))
+    return 'online'
   return 'standby'
 }
 
@@ -704,18 +706,30 @@ function mapHv(raw: RawItem): PowerSystemSummary {
       powerKw: num(d.p) != null ? Number((num(d.p)! * 1000).toFixed(0)) : null,
       powerFactor: num(d.pf),
     })),
-    ...toDevices(feeders, '10KV 开关站', 'F', (d) => ({
-      name: String(d.load ?? d.id ?? ''),
-      voltage: kv(d.ua),
-      current: num(d.i),
-      powerKw: num(d.p) != null ? Number((num(d.p)! * 1000).toFixed(0)) : null,
-      powerFactor: num(d.pf),
-    }), incomers.length),
-    ...toDevices(transformers, '变压器室', 'T', (d) => ({
-      voltage: kv(d.uHigh),
-      current: num(d.iHigh),
-      loadPercent: num(d.load),
-    }), incomers.length + feeders.length),
+    ...toDevices(
+      feeders,
+      '10KV 开关站',
+      'F',
+      (d) => ({
+        name: String(d.load ?? d.id ?? ''),
+        voltage: kv(d.ua),
+        current: num(d.i),
+        powerKw: num(d.p) != null ? Number((num(d.p)! * 1000).toFixed(0)) : null,
+        powerFactor: num(d.pf),
+      }),
+      incomers.length,
+    ),
+    ...toDevices(
+      transformers,
+      '变压器室',
+      'T',
+      (d) => ({
+        voltage: kv(d.uHigh),
+        current: num(d.iHigh),
+        loadPercent: num(d.load),
+      }),
+      incomers.length + feeders.length,
+    ),
   ]
   return summarize(devices)
 }
@@ -738,18 +752,30 @@ function mapHvDetailed(raw: RawItem): HvSummary {
       powerKw: num(d.p) != null ? Number((num(d.p)! * 1000).toFixed(0)) : null,
       powerFactor: num(d.pf),
     })),
-    ...toDevices(feeders as unknown as RawItem[], '10KV 开关站', 'F', (d) => ({
-      name: String(d.load ?? d.id ?? ''),
-      voltage: kv(d.ua),
-      current: num(d.i),
-      powerKw: num(d.p) != null ? Number((num(d.p)! * 1000).toFixed(0)) : null,
-      powerFactor: num(d.pf),
-    }), incomers.length),
-    ...toDevices(transformers as unknown as RawItem[], '变压器室', 'T', (d) => ({
-      voltage: kv(d.uHigh),
-      current: num(d.iHigh),
-      loadPercent: num(d.load),
-    }), incomers.length + feeders.length),
+    ...toDevices(
+      feeders as unknown as RawItem[],
+      '10KV 开关站',
+      'F',
+      (d) => ({
+        name: String(d.load ?? d.id ?? ''),
+        voltage: kv(d.ua),
+        current: num(d.i),
+        powerKw: num(d.p) != null ? Number((num(d.p)! * 1000).toFixed(0)) : null,
+        powerFactor: num(d.pf),
+      }),
+      incomers.length,
+    ),
+    ...toDevices(
+      transformers as unknown as RawItem[],
+      '变压器室',
+      'T',
+      (d) => ({
+        voltage: kv(d.uHigh),
+        current: num(d.iHigh),
+        loadPercent: num(d.load),
+      }),
+      incomers.length + feeders.length,
+    ),
   ]
 
   const online = devices.filter((d) => d.status === 'online').length
@@ -757,24 +783,59 @@ function mapHvDetailed(raw: RawItem): HvSummary {
   return {
     scheme: String(raw?.scheme ?? ''),
     incomers,
-    busTie: (raw?.busTie ?? { id: '', state: '', autoSwitch: '', mode: '', iRated: 0, i: 0 }) as HvBusTieView,
+    busTie: (raw?.busTie ?? {
+      id: '',
+      state: '',
+      autoSwitch: '',
+      mode: '',
+      iRated: 0,
+      i: 0,
+    }) as HvBusTieView,
     busSections: (raw?.busSections ?? []) as HvBusSectionView[],
     ats: (raw?.ats ?? { logic: '', lastTest: '', switchTime: '' }) as HvAtsView,
     feeders,
     transformers,
     dcPanel: (raw?.dcPanel ?? {
-      id: '', dcBus: 0, dcBusTarget: 0, batteryBank: 0, chargeI: 0, dischargeI: 0,
-      insulationR: 0, ripple: 0, state: '', alarms: [],
+      id: '',
+      dcBus: 0,
+      dcBusTarget: 0,
+      batteryBank: 0,
+      chargeI: 0,
+      dischargeI: 0,
+      insulationR: 0,
+      ripple: 0,
+      state: '',
+      alarms: [],
     }) as HvDcPanelView,
     switchgearEnv: (raw?.switchgearEnv ?? { rows: [], note: '' }) as HvSwitchgearEnvView,
     protectionRelays: (raw?.protectionRelays ?? []) as HvProtectionRelayView[],
     arcSuppression: (raw?.arcSuppression ?? {
-      mode: '', coilCurrent: 0, coilPosition: 0, neutralV: 0, earthCapacitance: 0,
-      residualCurrent: 0, state: '', groundingTx: { id: '', state: '', t: 0, i: 0 },
+      mode: '',
+      coilCurrent: 0,
+      coilPosition: 0,
+      neutralV: 0,
+      earthCapacitance: 0,
+      residualCurrent: 0,
+      state: '',
+      groundingTx: { id: '', state: '', t: 0, i: 0 },
     }) as HvArcSuppressionView,
     metering: (raw?.metering ?? {
-      incomer1: { energyTotal: 0, energyPeak: 0, energyValley: 0, energyFlat: 0, demand: 0, demandMax: 0 },
-      incomer2: { energyTotal: 0, energyPeak: 0, energyValley: 0, energyFlat: 0, demand: 0, demandMax: 0 },
+      incomer1: {
+        energyTotal: 0,
+        energyPeak: 0,
+        energyValley: 0,
+        energyFlat: 0,
+        demand: 0,
+        demandMax: 0,
+      },
+      incomer2: {
+        energyTotal: 0,
+        energyPeak: 0,
+        energyValley: 0,
+        energyFlat: 0,
+        demand: 0,
+        demandMax: 0,
+      },
     }) as HvMeteringView,
     quality: (raw?.quality ?? { thdU: 0, thdI: 0, unbalance: 0 }) as HvQualityView,
     knowledge: (raw?.knowledge ?? { thresholds: [] }) as HvKnowledgeView,
@@ -794,38 +855,62 @@ function mapLv(raw: RawItem): PowerSystemSummary {
   const hvdc = (raw?.hvdc as RawItem[]) ?? []
   const branches = (raw?.branches as RawItem[]) ?? []
   let off = 0
-  const t = toDevices(transformers, '变压器室', 'T', (d) => ({
-    voltage: num(d.u) != null ? Number((num(d.u)! * 1000).toFixed(0)) : null,
-    current: num(d.i),
-    powerKw: num(d.p),
-    loadPercent: num(d.load),
-    powerFactor: num(d.pf),
-  }), off)
+  const t = toDevices(
+    transformers,
+    '变压器室',
+    'T',
+    (d) => ({
+      voltage: num(d.u) != null ? Number((num(d.u)! * 1000).toFixed(0)) : null,
+      current: num(d.i),
+      powerKw: num(d.p),
+      loadPercent: num(d.load),
+      powerFactor: num(d.pf),
+    }),
+    off,
+  )
   off += t.length
-  const u = toDevices(ups, 'UPS 电力室', 'UPS', (d) => ({
-    voltage: num(d.uOut),
-    current: num(d.iOut),
-    powerKw: num(d.p),
-    loadPercent: num(d.load),
-    powerFactor: num(d.pf),
-  }), off)
+  const u = toDevices(
+    ups,
+    'UPS 电力室',
+    'UPS',
+    (d) => ({
+      voltage: num(d.uOut),
+      current: num(d.iOut),
+      powerKw: num(d.p),
+      loadPercent: num(d.load),
+      powerFactor: num(d.pf),
+    }),
+    off,
+  )
   off += u.length
-  const h = toDevices(hvdc, 'HVDC 电力室', 'HVDC', (d) => ({
-    voltage: num(d.u),
-    current: num(d.i),
-    powerKw: num(d.p),
-    loadPercent: num(d.load),
-    powerFactor: num(d.pf),
-  }), off)
+  const h = toDevices(
+    hvdc,
+    'HVDC 电力室',
+    'HVDC',
+    (d) => ({
+      voltage: num(d.u),
+      current: num(d.i),
+      powerKw: num(d.p),
+      loadPercent: num(d.load),
+      powerFactor: num(d.pf),
+    }),
+    off,
+  )
   off += h.length
-  const b = toDevices(branches, '低压配电室', 'LP', (d) => ({
-    status: normStatus(d.breaker),
-    voltage: num(d.u),
-    current: num(d.i),
-    powerKw: num(d.p),
-    loadPercent: num(d.loadPct),
-    powerFactor: num(d.pf),
-  }), off)
+  const b = toDevices(
+    branches,
+    '低压配电室',
+    'LP',
+    (d) => ({
+      status: normStatus(d.breaker),
+      voltage: num(d.u),
+      current: num(d.i),
+      powerKw: num(d.p),
+      loadPercent: num(d.loadPct),
+      powerFactor: num(d.pf),
+    }),
+    off,
+  )
   return summarize([...t, ...u, ...h, ...b])
 }
 
@@ -885,7 +970,12 @@ function mapGensetDetailed(raw: RawItem): GensetSummary {
     busState: String(raw?.busState ?? ''),
     autoMode: String(raw?.autoMode ?? ''),
     units,
-    lastTest: (raw?.lastTest ?? { date: '', type: '', result: '', duration: '' }) as GensetLastTestView,
+    lastTest: (raw?.lastTest ?? {
+      date: '',
+      type: '',
+      result: '',
+      duration: '',
+    }) as GensetLastTestView,
     parallelSteps: (raw?.parallelSteps ?? []) as string[],
     stepActive: Number(raw?.stepActive ?? 0),
     knowledge: (raw?.knowledge ?? { thresholds: [] }) as GensetKnowledgeView,
@@ -908,14 +998,26 @@ function mapFuel(raw: RawItem): PowerSystemSummary {
     fuelLevel: num(d.level),
     loadPercent: num(d.level),
   }))
-  const dt = toDevices(day, '日用油间', 'DT', (d) => ({
-    status: normStatus(d.leak === '正常' ? '运行' : d.leak),
-    fuelLevel: num(d.level),
-    loadPercent: num(d.level),
-  }), m.length)
-  const p = toDevices(pumps, '油泵房', 'P', (d) => ({
-    status: normStatus(d.state),
-  }), m.length + dt.length)
+  const dt = toDevices(
+    day,
+    '日用油间',
+    'DT',
+    (d) => ({
+      status: normStatus(d.leak === '正常' ? '运行' : d.leak),
+      fuelLevel: num(d.level),
+      loadPercent: num(d.level),
+    }),
+    m.length,
+  )
+  const p = toDevices(
+    pumps,
+    '油泵房',
+    'P',
+    (d) => ({
+      status: normStatus(d.state),
+    }),
+    m.length + dt.length,
+  )
   return summarize([...m, ...dt, ...p])
 }
 
@@ -972,7 +1074,14 @@ function mapBatteryDetailed(raw: RawItem): BatterySummary {
 // ---- API 调用 ----
 
 function emptySummary(): PowerSystemSummary {
-  return { total: 0, online: 0, avgLoadPercent: null, avgVoltage: null, avgCurrent: null, devices: [] }
+  return {
+    total: 0,
+    online: 0,
+    avgLoadPercent: null,
+    avgVoltage: null,
+    avgCurrent: null,
+    devices: [],
+  }
 }
 
 function fetchMapped(

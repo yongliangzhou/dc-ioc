@@ -37,7 +37,10 @@ export function createKnowledgeItem(data: Partial<KnowledgeItem>): Promise<Knowl
   return request.post('/api/ops/knowledge', data).then((r: any) => r)
 }
 
-export function updateKnowledgeItem(id: number, data: Partial<KnowledgeItem>): Promise<KnowledgeItem> {
+export function updateKnowledgeItem(
+  id: number,
+  data: Partial<KnowledgeItem>,
+): Promise<KnowledgeItem> {
   return request.put(`/api/ops/knowledge/${id}`, data).then((r: any) => r)
 }
 
@@ -48,8 +51,10 @@ export function deleteKnowledgeItem(id: number): Promise<void> {
 export function importKnowledge(file: File): Promise<{ imported: number; items: KnowledgeItem[] }> {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post('/api/ops/knowledge/import', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
-    timeout: 300000,
-  }).then((r: any) => r)
+  return request
+    .post('/api/ops/knowledge/import', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
+    })
+    .then((r: any) => r)
 }

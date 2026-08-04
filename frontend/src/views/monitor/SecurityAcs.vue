@@ -21,7 +21,7 @@
 
     <div class="grid-main">
       <!-- 左：门禁平面图 -->
-      <section class="card plan-card">
+      <Panel class="plan-card">
         <div class="card-head">
           <span class="card-title">门禁平面图</span>
           <div class="legend">
@@ -61,11 +61,11 @@
             </div>
           </div>
         </div>
-      </section>
+      </Panel>
 
       <!-- 右：远程控制 + 告警 -->
       <div class="side-col">
-        <section class="card">
+        <Panel>
           <div class="card-head"><span class="card-title">远程控制</span></div>
           <QuickControl
             label="门禁操作"
@@ -85,9 +85,9 @@
             </div>
             <span class="ctrl-state" :class="selectedPoint.state">{{ stateText(selectedPoint.state) }}</span>
           </div>
-        </section>
+        </Panel>
 
-        <section class="card alarm-card">
+        <Panel class="alarm-card">
           <div class="card-head"><span class="card-title">告警信息</span><span class="card-sub">{{ alarms.length }} 条</span></div>
           <div class="alarm-list">
             <div v-for="(a, i) in alarms" :key="i" class="alarm-row" :class="a.lv">
@@ -97,13 +97,13 @@
             </div>
             <EmptyState v-if="!alarms.length" text="无告警" />
           </div>
-        </section>
+        </Panel>
       </div>
     </div>
 
     <div class="grid-sub">
       <!-- 实时事件流 -->
-      <section class="card evt-card">
+      <Panel class="evt-card">
         <div class="card-head"><span class="card-title">实时事件流</span><span class="card-sub">{{ s.events.length }} 条</span></div>
         <div class="evt-stream">
           <div v-for="(e, i) in s.events" :key="i" class="evt-row">
@@ -117,7 +117,7 @@
       </section>
 
       <!-- 通行统计 -->
-      <section class="card">
+      <Panel>
         <div class="card-head"><span class="card-title">通行统计</span><span class="card-sub">各门禁点今日通行人次</span></div>
         <TrendChart
           title=""
@@ -131,7 +131,11 @@
       </section>
 
       <!-- 授权分级 -->
-      <section class="card">
+      <s          />
+      </Panel>
+
+      <!-- 授权分级 -->
+      <Panel>
         <div class="card-head"><span class="card-title">授权区域分级</span><span class="card-sub">{{ s.areas.length }} 级区 · {{ s.total }} 门</span></div>
         <div class="area-grid">
           <div class="area-block" v-for="a in s.areas" :key="a.id">
@@ -142,44 +146,14 @@
             <div class="area-auth"><span class="muted">认证方式</span><span class="auth-val">{{ a.auth }}</span></div>
           </div>
         </div>
-      </section>
+      </Panel>
     </div>
 
     <!-- 知识库 -->
-    <section class="card know" v-if="s.knowledge?.thresholds?.length || s.knowledge?.faults?.length">
+    <Panel class="know">
       <div class="card-head"><span class="card-title">门禁设计阈值 · 架构 · 故障锁定</span></div>
-      <div class="know-grid">
-        <div v-if="s.knowledge.thresholds?.length" class="know-col">
-          <h4>设计阈值</h4>
-          <ul><li v-for="t in s.knowledge.thresholds" :key="t.k"><b>{{ t.k }}</b>：{{ t.v }}<em v-if="t.note">（{{ t.note }}）</em></li></ul>
-        </div>
-        <div v-if="s.knowledge.arch" class="know-col">
-          <h4>架构组成</h4>
-          <p>{{ s.knowledge.arch.design }}</p>
-          <ul><li v-for="c in s.knowledge.arch.components" :key="c">{{ c }}</li></ul>
-          <p class="redundancy">冗余：{{ s.knowledge.arch.redundancy }}</p>
-        </div>
-        <div v-if="s.knowledge.logic?.length" class="know-col">
-          <h4>授权 / 联动逻辑</h4>
-          <div v-for="l in s.knowledge.logic" :key="l.title" class="logic">
-            <b>{{ l.title }}</b>
-            <ol><li v-for="st in l.steps" :key="st.step" :class="{ ok: st.ok }">{{ st.text }}</li></ol>
-          </div>
-        </div>
-        <div v-if="s.knowledge.faults?.length" class="know-col">
-          <h4>故障锁定表</h4>
-          <table class="fault-tbl">
-            <thead><tr><th>故障</th><th>锁定</th><th>处理</th><th>复位</th></tr></thead>
-            <tbody>
-              <tr v-for="f in s.knowledge.faults" :key="f.no">
-                <td>{{ f.fault }}</td><td>{{ f.lock }}</td><td>{{ f.action }}</td>
-                <td><span class="tag" :class="f.manualReset ? 'crit' : 'ok'">{{ f.manualReset ? '需' : '否' }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+      <SecurityKnowledge :knowledge="s.knowledge" logic-title="授权 / 联动逻辑" />
+    </Panel>
   </div>
 </template>
 
@@ -187,6 +161,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { DoorOpen, Activity, LogIn, ShieldAlert } from 'lucide-vue-next'
 import KpiCard from '@/components/monitor/KpiCard.vue'
+import Panel from '@/components/common/Panel.vue'
+import SecurityKnowledge from '@/components/SecurityKnowledge.vue'
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import QuickControl from '@/components/monitor/QuickControl.vue'
@@ -390,11 +366,6 @@ void DoorOpen; void Activity; void LogIn; void ShieldAlert
 .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 .grid-main { display: grid; grid-template-columns: 2.2fr 1fr; gap: 14px; }
 .grid-sub { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; }
-.card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.card-title { font-weight: 600; font-size: 14px; }
-.card-sub { font-size: 12px; color: var(--text-2); }
-
 /* 平面图 */
 .plan-card { min-height: 420px; }
 .legend { display: flex; gap: 12px; font-size: 11px; color: var(--text-2); }
@@ -443,7 +414,7 @@ void DoorOpen; void Activity; void LogIn; void ShieldAlert
 .evt-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
 .evt-time { color: var(--text-2); } .evt-door { color: var(--brand); font-weight: 500; min-width: 90px; }
 .evt-person { color: var(--text-1); min-width: 90px; } .evt-act { flex: 1; color: var(--text-2); }
-.tag { font-size: 10px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border); white-space: nowrap; }
+
 .tag.g { color: #2fae6b; border-color: rgba(43,212,122,.4); background: rgba(43,212,122,.08); }
 .tag.a { color: #d06a3a; border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.08); }
 .tag.r { color: #d23b3b; border-color: rgba(255,77,94,.4); background: rgba(255,77,94,.09); }
@@ -455,23 +426,10 @@ void DoorOpen; void Activity; void LogIn; void ShieldAlert
 .area-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .d-name { font-weight: 500; font-size: 13px; }
 .auth-val { font-size: 12px; font-weight: 600; color: #3f9fcf; }
-.muted { color: var(--text-2); font-size: 11px; }
-
-/* 知识库 */
-.know-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.know-col h4 { margin: 0 0 6px; font-size: 13px; }
-.know-col ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--text-2); }
-.know-col p { font-size: 12px; color: var(--text-2); margin: 4px 0; }
-.redundancy { color: #3f9fcf; }
-.logic { margin-bottom: 8px; } .logic ol { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
-.logic li.ok::marker { content: '✓ '; }
-.fault-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.fault-tbl th, .fault-tbl td { border: 1px solid var(--border); padding: 3px 5px; text-align: left; }
-.tag.crit { background: #b4451f; color: #fff; } .tag.ok { background: #2f6f4f; color: #fff; }
+.muted { font-size: 11px; }
 
 @media (max-width: 1100px) {
   .kpi-row { grid-template-columns: repeat(2, 1fr); }
   .grid-main, .grid-sub { grid-template-columns: 1fr; }
-  .know-grid { grid-template-columns: 1fr 1fr; }
 }
 </style>

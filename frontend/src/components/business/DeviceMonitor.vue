@@ -77,7 +77,15 @@ import { computed, ref, onMounted, onBeforeUnmount, type Component } from 'vue'
 import { useTelemetry } from '@/hooks/useTelemetry'
 import MetricCard from '@/components/common/MetricCard.vue'
 import TrendChart, { type TrendMetric } from '@/components/charts/TrendChart.vue'
-import { Activity, TrendingUp, Signal, CircuitBoard, CircleGauge, Zap, Thermometer } from 'lucide-vue-next'
+import {
+  Activity,
+  TrendingUp,
+  Signal,
+  CircuitBoard,
+  CircleGauge,
+  Zap,
+  Thermometer,
+} from 'lucide-vue-next'
 import type { ThingModelDef, ThingModelMetricDef, MetricHistoryPoint, MetricQuality } from '@/types'
 import { PALETTE } from '@/components/charts/options'
 
@@ -98,22 +106,29 @@ const props = withDefaults(
     category: '',
     protocol: '',
     kpiMetrics: () => [],
-  }
+  },
 )
 
 /* ---- ThingModel matching ---- */
 const thingModel = computed<ThingModelDef | null>(() => {
   if (props.category && props.thingModels.length) {
-    return props.thingModels.find(t => t.category === props.category) ?? null
+    return props.thingModels.find((t) => t.category === props.category) ?? null
   }
   const prefix = props.deviceId.split('-')[0]?.toLowerCase() ?? ''
   const map: Record<string, string> = {
-    ch: 'chiller', cr: 'crac', ct: 'cooling_tower', cp: 'chw_pump',
-    ba: 'battery', ge: 'genset', up: 'ups', fu: 'fuel_tank',
-    hv: 'hv_switch', lv: 'lv_switchgear',
+    ch: 'chiller',
+    cr: 'crac',
+    ct: 'cooling_tower',
+    cp: 'chw_pump',
+    ba: 'battery',
+    ge: 'genset',
+    up: 'ups',
+    fu: 'fuel_tank',
+    hv: 'hv_switch',
+    lv: 'lv_switchgear',
   }
   const cat = map[prefix.slice(0, 2)] ?? prefix
-  return props.thingModels.find(t => t.category === cat) ?? null
+  return props.thingModels.find((t) => t.category === cat) ?? null
 })
 
 const thingModelLabel = computed(() => {
@@ -138,7 +153,7 @@ const categoryIcon = computed<Component>(() => {
 })
 
 /* ---- Telemetry ---- */
-const metricNames = computed(() => metrics.value.map(m => m.metric_name))
+const metricNames = computed(() => metrics.value.map((m) => m.metric_name))
 const {
   realtime,
   online,
@@ -157,7 +172,9 @@ const {
    stale 阈值取自后端下发 (DEVICE_REPORT_INTERVAL_S × REALTIME_STALE_MULTIPLIER),
    原硬编码 15s 改为动态采纳, 采集器改上报周期后前端无需改代码。 */
 const now = ref(Date.now())
-let clock = window.setInterval(() => { now.value = Date.now() }, 1000)
+let clock = window.setInterval(() => {
+  now.value = Date.now()
+}, 1000)
 onBeforeUnmount(() => window.clearInterval(clock))
 
 /* ---- MetricCard data ---- */
@@ -197,7 +214,7 @@ const metricCards = computed<CardData[]>(() => {
     else if (q === 'uncertain') sev = 'warn'
     // 设备在线但该测点超过下发的 stale 阈值未更新 → 断流/卡住 (stale)
     const mts = rt?.ts ? new Date(rt.ts).getTime() : 0
-    const stale = online.value && mts > 0 && (now.value - mts) > metricStaleMs.value
+    const stale = online.value && mts > 0 && now.value - mts > metricStaleMs.value
     return {
       name: m.metric_name,
       label: labelOf(m.metric_name),
@@ -217,9 +234,9 @@ const metricCards = computed<CardData[]>(() => {
 const kpiCards = computed(() => {
   const kpi = props.kpiMetrics.length
     ? props.kpiMetrics
-    : metricCards.value.slice(0, 6).map(c => c.name)
+    : metricCards.value.slice(0, 6).map((c) => c.name)
   return kpi.map((name, i) => {
-    const card = metricCards.value.find(c => c.name === name)
+    const card = metricCards.value.find((c) => c.name === name)
     return (
       card ?? {
         name,
@@ -244,7 +261,7 @@ const activeMetric = ref('')
 const activeRange = ref('30m')
 
 const trendMetrics = computed<TrendMetric[]>(() => {
-  return metrics.value.map(m => ({
+  return metrics.value.map((m) => ({
     name: m.metric_name,
     label: labelOf(m.metric_name),
     unit: m.unit || unitOf(m.metric_name) || '',
@@ -277,7 +294,12 @@ function onRangeChange(range: string) {
 
 function triggerHistory() {
   const ranges: Record<string, number> = {
-    '5m': 5, '15m': 15, '30m': 30, '1h': 60, '6h': 360, '24h': 1440,
+    '5m': 5,
+    '15m': 15,
+    '30m': 30,
+    '1h': 60,
+    '6h': 360,
+    '24h': 1440,
   }
   const min = ranges[activeRange.value] ?? 30
   fetchRecentHistory(min, 500)
@@ -353,10 +375,5 @@ onMounted(() => {
 .dm-kpi-unit {
   font-size: 10px;
   color: var(--txt3);
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
 }
 </style>

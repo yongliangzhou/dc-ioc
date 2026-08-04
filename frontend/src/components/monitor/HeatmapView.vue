@@ -28,55 +28,64 @@ import * as echarts from 'echarts'
 import SkeletonCard from './SkeletonCard.vue'
 import EmptyState from './EmptyState.vue'
 
-const props = withDefaults(defineProps<{
-  title?: string
-  // Mode A: structured data
-  data?: { xLabels: string[]; yLabels: string[]; values: number[][] }
-  // Mode B: raw coordinates (will internal convert)
-  xAxisData?: string[]
-  yAxisData?: string[]
-  heatData?: [number, number, number][]
-  // Config
-  valueRange?: [number, number]
-  colors?: string[]
-  unit?: string
-  loading?: boolean
-  emptyText?: string
-}>(), {
-  colors: () => ['#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444'],
-  unit: '℃',
-  loading: false,
-  emptyText: '暂无数据',
-})
+const props = withDefaults(
+  defineProps<{
+    title?: string
+    // Mode A: structured data
+    data?: { xLabels: string[]; yLabels: string[]; values: number[][] }
+    // Mode B: raw coordinates (will internal convert)
+    xAxisData?: string[]
+    yAxisData?: string[]
+    heatData?: [number, number, number][]
+    // Config
+    valueRange?: [number, number]
+    colors?: string[]
+    unit?: string
+    loading?: boolean
+    emptyText?: string
+  }>(),
+  {
+    colors: () => ['#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444'],
+    unit: '℃',
+    loading: false,
+    emptyText: '暂无数据',
+  },
+)
 
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInst: echarts.ECharts | null = null
 let ro: ResizeObserver | null = null
 let pendingRender = false
 
-const gradientCSS = computed(() =>
-  `linear-gradient(90deg, ${(props.colors ?? ['#06b6d4', '#ef4444']).join(',')})`,
+const gradientCSS = computed(
+  () => `linear-gradient(90deg, ${(props.colors ?? ['#06b6d4', '#ef4444']).join(',')})`,
 )
 
-const valueRangeLabelLow = computed(() => props.valueRange ? String(props.valueRange[0]) : '低')
-const valueRangeLabelHigh = computed(() => props.valueRange ? String(props.valueRange[1]) : '高')
+const valueRangeLabelLow = computed(() => (props.valueRange ? String(props.valueRange[0]) : '低'))
+const valueRangeLabelHigh = computed(() => (props.valueRange ? String(props.valueRange[1]) : '高'))
 
 // Normalize data: accept both Mode A (data) and Mode B (xAxisData+yAxisData+heatData)
-const normData = computed<{ xLabels: string[]; yLabels: string[]; values: number[][] } | null>(() => {
-  if (props.data) return props.data
-  if (props.xAxisData && props.yAxisData && props.heatData && props.heatData.length > 0) {
-    const xL = [...new Set(props.heatData.map(d => d[0]))].sort((a, b) => a - b)
-    const yL = [...new Set(props.heatData.map(d => d[1]))].sort((a, b) => a - b)
-    const vals: number[][] = yL.map(() => new Array(xL.length).fill(0))
-    for (const [xi, yi, v] of props.heatData) {
-      const col = xL.indexOf(xi)
-      const row = yL.indexOf(yi)
-      if (row >= 0 && col >= 0) vals[row][col] = v
+const normData = computed<{ xLabels: string[]; yLabels: string[]; values: number[][] } | null>(
+  () => {
+    if (props.data) return props.data
+    if (props.xAxisData && props.yAxisData && props.heatData && props.heatData.length > 0) {
+      const xL = [...new Set(props.heatData.map((d) => d[0]))].sort((a, b) => a - b)
+      const yL = [...new Set(props.heatData.map((d) => d[1]))].sort((a, b) => a - b)
+      const vals: number[][] = yL.map(() => new Array(xL.length).fill(0))
+      for (const [xi, yi, v] of props.heatData) {
+        const col = xL.indexOf(xi)
+        const row = yL.indexOf(yi)
+        if (row >= 0 && col >= 0) vals[row][col] = v
+      }
+      return {
+        xLabels: xL.map((i) => String(props.xAxisData![i] ?? i)),
+        yLabels: yL.map((i) => String(props.yAxisData![i] ?? i)),
+        values: vals,
+      }
     }
-    return { xLabels: xL.map(i => String(props.xAxisData![i] ?? i)), yLabels: yL.map(i => String(props.yAxisData![i] ?? i)), values: vals }
-  }
-  return null
-})
+    return null
+  },
+)
 
 const isEmpty = computed(() => !normData.value)
 
@@ -91,14 +100,15 @@ function buildOption(): echarts.EChartsOption {
     }
   }
   const [vMin, vMax] = props.valueRange ?? [
-    Math.min(...heatData.map(h => h[2])),
-    Math.max(...heatData.map(h => h[2])),
+    Math.min(...heatData.map((h) => h[2])),
+    Math.max(...heatData.map((h) => h[2])),
   ]
 
   return {
     tooltip: {
       position: 'top',
-      formatter: (p: any) => `${yLabels[p.value[1]]}<br/>${xLabels[p.value[0]]}: <b>${p.value[2]}${props.unit}</b>`,
+      formatter: (p: any) =>
+        `${yLabels[p.value[1]]}<br/>${xLabels[p.value[0]]}: <b>${p.value[2]}${props.unit}</b>`,
     },
     grid: { left: 80, right: 80, top: 10, bottom: 10 },
     xAxis: {
@@ -125,13 +135,15 @@ function buildOption(): echarts.EChartsOption {
       text: [String(vMax), String(vMin)],
       textStyle: { color: '#94a3b8', fontSize: 10 },
     },
-    series: [{
-      name: props.title ?? 'Heatmap',
-      type: 'heatmap',
-      data: heatData,
-      label: { show: false },
-      emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } },
-    }],
+    series: [
+      {
+        name: props.title ?? 'Heatmap',
+        type: 'heatmap',
+        data: heatData,
+        label: { show: false },
+        emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } },
+      },
+    ],
   }
 }
 
@@ -174,12 +186,16 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.heatmap-view { overflow: hidden; }
+.heatmap-view {
+  overflow: hidden;
+}
 .hm-header {
   margin-bottom: 8px;
 }
 .hm-title {
-  font-size: 13px; font-weight: 700; color: var(--txt);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--txt);
 }
 .hm-body {
   position: relative;
@@ -188,7 +204,8 @@ onUnmounted(() => {
   width: 100%;
   height: 280px;
 }
-.hm-loader, .hm-empty {
+.hm-loader,
+.hm-empty {
   display: flex;
   align-items: center;
   justify-content: center;

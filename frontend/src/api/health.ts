@@ -36,7 +36,13 @@ interface RawEquip {
 }
 interface RawHealth {
   avgHealth?: number
-  byDomain?: { domain?: string; label?: string; avgHealth?: number; count?: number; grade?: string }[]
+  byDomain?: {
+    domain?: string
+    label?: string
+    avgHealth?: number
+    count?: number
+    grade?: string
+  }[]
   byEquipment?: RawEquip[]
   worst?: RawEquip[]
   summary?: { 优?: number; 良?: number; 中?: number; 差?: number }

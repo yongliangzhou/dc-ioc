@@ -20,22 +20,29 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-withDefaults(defineProps<{
-  title: string
-  subtitle?: string
-  dotColor?: string
-  defaultCollapsed?: boolean
-}>(), {
-  dotColor: 'var(--cyan)',
-  defaultCollapsed: false,
-})
+withDefaults(
+  defineProps<{
+    title: string
+    subtitle?: string
+    dotColor?: string
+    defaultCollapsed?: boolean
+  }>(),
+  {
+    dotColor: 'var(--cyan)',
+    defaultCollapsed: false,
+  },
+)
 
 const isCollapsed = ref(false) // start expanded by default; use defaultCollapsed if needed
-const toggle = () => { isCollapsed.value = !isCollapsed.value }
+const toggle = () => {
+  isCollapsed.value = !isCollapsed.value
+}
 </script>
 
 <style scoped>
-.group-card { margin-bottom: 10px; }
+.group-card {
+  margin-bottom: 10px;
+}
 
 .gc-header {
   display: flex;
@@ -50,19 +57,28 @@ const toggle = () => { isCollapsed.value = !isCollapsed.value }
   gap: 8px;
 }
 .gc-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 .gc-name {
-  font-size: 13px; font-weight: 700; color: var(--txt);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--txt);
 }
 .gc-sub {
-  font-size: 11px; color: var(--txt2);
+  font-size: 11px;
+  color: var(--txt2);
 }
 .gc-actions {
-  display: flex; align-items: center; gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .gc-toggle {
-  font-size: 11px; color: var(--txt3);
+  font-size: 11px;
+  color: var(--txt3);
 }
 .gc-body {
   margin-top: 12px;

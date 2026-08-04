@@ -1,8 +1,8 @@
-import { defineStore } from "pinia";
-import { getDashboardOverview } from "@/api";
+import { defineStore } from 'pinia'
+import { getDashboardOverview } from '@/api'
 
 /** 遥测 store: 持有驾驶舱 KPI 快照, WS 广播 (pue/wue/负载等) 实时并入。 */
-export const useTelemetryStore = defineStore("telemetry", {
+export const useTelemetryStore = defineStore('telemetry', {
   state: () => ({
     /** 最近一次 KPI 快照 (来源: WS 广播 或 HTTP 初始拉取) */
     snapshot: null as Record<string, any> | null,
@@ -20,21 +20,21 @@ export const useTelemetryStore = defineStore("telemetry", {
   actions: {
     /** WS telemetry 广播推送 */
     applySnapshot(data: Record<string, any>) {
-      if (!data) return;
-      this.snapshot = { ...(this.snapshot || {}), ...data };
-      this.lastUpdate = Date.now();
+      if (!data) return
+      this.snapshot = { ...(this.snapshot || {}), ...data }
+      this.lastUpdate = Date.now()
     },
     /** HTTP 初始种子 (WS 未连通前) */
     async fetchInitial() {
       try {
-        const ov = await getDashboardOverview();
-        if (ov) this.snapshot = { ...(this.snapshot || {}), ...(ov as Record<string, any>) };
+        const ov = await getDashboardOverview()
+        if (ov) this.snapshot = { ...(this.snapshot || {}), ...(ov as Record<string, any>) }
       } catch {
         /* 后端不可达时静默 */
       }
     },
     setConnected(v: boolean) {
-      this.connected = v;
+      this.connected = v
     },
   },
-});
+})

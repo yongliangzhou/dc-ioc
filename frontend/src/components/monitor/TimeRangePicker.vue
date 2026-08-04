@@ -21,17 +21,20 @@ export interface TimeRangeOption {
   label: string
 }
 
-withDefaults(defineProps<{
-  modelValue?: string
-  options?: TimeRangeOption[]
-}>(), {
-  modelValue: '24h',
-  options: () => [
-    { key: '24h', label: '24h' },
-    { key: '7d',  label: '7天' },
-    { key: '30d', label: '30天' },
-  ],
-})
+withDefaults(
+  defineProps<{
+    modelValue?: string
+    options?: TimeRangeOption[]
+  }>(),
+  {
+    modelValue: '24h',
+    options: () => [
+      { key: '24h', label: '24h' },
+      { key: '7d', label: '7天' },
+      { key: '30d', label: '30天' },
+    ],
+  },
+)
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -49,7 +52,10 @@ function onChange(key: string) {
   gap: 10px;
   flex-shrink: 0;
 }
-.trp-label { font-size: 11px; color: var(--txt3); }
+.trp-label {
+  font-size: 11px;
+  color: var(--txt3);
+}
 .trp-options {
   display: flex;
   gap: 4px;
@@ -68,7 +74,9 @@ function onChange(key: string) {
   transition: all 0.15s;
   line-height: 1.4;
 }
-.trp-btn:hover { color: var(--txt); }
+.trp-btn:hover {
+  color: var(--txt);
+}
 .trp-btn.active {
   background: var(--cyan);
   color: #070d1a;

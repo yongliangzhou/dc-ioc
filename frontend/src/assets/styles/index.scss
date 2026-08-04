@@ -96,6 +96,25 @@ a{text-decoration:none; color:inherit}
 .card .cv small{font-size:12px; color:var(--txt2); font-weight:500; margin-left:3px}
 .card .cbar{height:6px; border-radius:4px; background:var(--track); margin-top:10px; overflow:hidden}
 .card .cbar>i{display:block; height:100%; border-radius:4px; background:linear-gradient(90deg,var(--cyan),var(--blue))}
+/* moni 模块卡片（由 Power 系列抽取统一的 .card + .ct + .pill 样式，避免各文件重复定义） */
+.moni-card{background:var(--bg-card,#1e293b); border:1px solid var(--border,#334155); border-radius:10px; padding:16px; position:relative; overflow:hidden}
+.moni-card::after{content:""; position:absolute; inset:0 0 auto 0; height:1px; background:linear-gradient(90deg,transparent,rgba(34,227,255,.5),transparent)}
+.moni-card .card-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap; gap:8px}
+.moni-card .ct{font-size:0.875rem; font-weight:600; color:var(--text-primary,#e5e7eb)}
+/* 卡片头部标题（裸类，供 .moni-card 内部自定义标题区复用，避免各页面重复定义） */
+.card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px}
+.card-title{font-weight:600; font-size:14px}
+.card-sub{font-size:12px; color:var(--text-2)}
+.moni-card .pill,
+.pill{display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600; background:var(--bg2); color:var(--txt2)}
+.moni-card .pill.g,
+.pill.g{background:rgba(82,196,26,0.12); color:var(--green)}
+.moni-card .pill.a,
+.pill.a{background:rgba(250,173,20,0.12); color:var(--amber)}
+.moni-card .pill.b,
+.pill.b{background:rgba(59,130,246,0.12); color:var(--blue,#3b82f6)}
+.pill.pulse{animation:pillPulse 1.6s infinite}
+@keyframes pillPulse{0%,100%{opacity:1} 50%{opacity:.5}}
 .section-title{font-size:13px; font-weight:700; color:var(--cyan); margin:18px 0 10px; display:flex; align-items:center; gap:8px}
 .section-title::before{content:""; width:4px; height:14px; border-radius:2px; background:var(--cyan); box-shadow:var(--glow)}
 /* ---------- Status ---------- */
@@ -106,12 +125,14 @@ a{text-decoration:none; color:inherit}
 .dot.b{background:var(--blue)}
 .dot.o{background:#3a4a66}
 @keyframes blink{50%{opacity:.35}}
-.tag{display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px; border:1px solid var(--line); color:var(--txt2)}
+.tag{display:inline-block; font-size:10px; padding:2px 7px; border-radius:20px; border:1px solid var(--line); color:var(--txt2); white-space:nowrap}
 .tag.g{color:var(--green); border-color:rgba(43,212,122,.4); background:rgba(43,212,122,.08)}
 .tag.a{color:var(--amber); border-color:rgba(255,176,32,.4); background:rgba(255,176,32,.08)}
 .tag.r{color:var(--red); border-color:rgba(255,77,94,.4); background:rgba(255,77,94,.09)}
 .tag.b{color:var(--blue); border-color:rgba(59,130,246,.4); background:rgba(59,130,246,.08)}
 .tag.p{color:var(--purple); border-color:rgba(155,107,255,.4); background:rgba(155,107,255,.08)}
+.tag.crit{background:#b4451f; color:#fff; border-color:#b4451f; border-radius:3px; font-size:11px; padding:1px 5px}
+.tag.ok{background:#2f6f4f; color:#fff; border-color:#2f6f4f; border-radius:3px; font-size:11px; padding:1px 5px}
 /* ---------- Tables ---------- */
 table{width:100%; border-collapse:collapse; font-size:12px}
 th{text-align:left; color:var(--txt3); font-weight:600; font-size:10.5px; letter-spacing:.5px; padding:7px 8px; border-bottom:1px solid var(--line)}

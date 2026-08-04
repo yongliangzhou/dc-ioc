@@ -12,11 +12,11 @@
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="card err-card">
+    <Panel v-else-if="error" class="err-card">
       <div class="err-title">{{ tl('加载失败') }}</div>
       <div class="err-detail">{{ error }}</div>
       <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </div>
+    </Panel>
 
     <!-- 2.2.1 KpiCard × 4 -->
     <div v-if="s && s.routerList.length" class="grid cols-4">
@@ -58,7 +58,7 @@
     </div>
 
     <!-- 2.2.2 吞吐趋势 -->
-    <div v-if="s && s.routerList.length" class="card">
+    <Panel v-if="s && s.routerList.length" title="路由器吞吐趋势">
       <TrendChart
         :title="tl('路由器吞吐趋势')"
         :x-axis-data="s.throughputTrend.labels"
@@ -66,16 +66,15 @@
         :height="230"
         :show-range-picker="true"
       />
-    </div>
+    </Panel>
 
     <!-- 2.2.2 接口流量表格 -->
-    <div v-if="s && s.routerList.length" class="card">
-      <div class="card-head">
-        <span class="ct">{{ tl('接口流量详情') }}</span>
+    <Panel v-if="s && s.routerList.length" title="接口流量详情">
+      <template #extra>
         <span v-if="s.allInterfacesDown === 0" class="pill g">{{ tl('全部接口正常') }}</span>
         <span v-else class="pill a">{{ s.allInterfacesDown }} {{ tl('个接口异常') }}</span>
-      </div>
-      <div class="port-table scroll-x" style="max-height:320px;">
+      </template>
+      <div class="port-table scroll-x" style="max-height: 320px">
         <table>
           <thead>
             <tr>
@@ -100,12 +99,13 @@
               <td class="mono">{{ iface.device }}</td>
               <td class="mono">{{ iface.name }}</td>
               <td>
-                <StatusBadge
-                  :status="iface.status === 'up' ? 'online' : 'offline'"
-                  size="sm"
-                />
+                <StatusBadge :status="iface.status === 'up' ? 'online' : 'offline'" size="sm" />
               </td>
-              <td class="mono">{{ iface.speed >= 1000 ? (iface.speed / 1000).toFixed(0) + 'G' : iface.speed + 'M' }}</td>
+              <td class="mono">
+                {{
+                  iface.speed >= 1000 ? (iface.speed / 1000).toFixed(0) + 'G' : iface.speed + 'M'
+                }}
+              </td>
               <td class="mono">
                 <span :class="utilCls(iface.inUtil)">{{ iface.inUtil }}%</span>
               </td>
@@ -119,57 +119,54 @@
           </tbody>
         </table>
       </div>
-    </div>
+    </Panel>
 
     <!-- 2.2.4 会话统计仪表 -->
     <div v-if="s && s.routerList.length" class="grid cols-2">
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('并发连接数') }}</span>
-        </div>
+      <Panel title="并发连接数">
         <div class="session-gauge">
           <div class="gauge-value mono">{{ fmtNum(s.totalConcurrentSessions) }}</div>
           <div class="gauge-bar mt3">
             <div
               class="gauge-fill gauge-fill-cyan"
-              :style="{ width: Math.min(100, (s.totalConcurrentSessions / Math.max(1, s.maxConcurrentSessions)) * 100) + '%' }"
+              :style="{
+                width:
+                  Math.min(
+                    100,
+                    (s.totalConcurrentSessions / Math.max(1, s.maxConcurrentSessions)) * 100,
+                  ) + '%',
+              }"
             />
           </div>
           <div class="gauge-meta">
-            {{ tl('最大') }} {{ fmtNum(s.maxConcurrentSessions) }} &nbsp;·&nbsp;
-            {{ tl('使用率') }} {{ ((s.totalConcurrentSessions / Math.max(1, s.maxConcurrentSessions)) * 100).toFixed(1) }}%
+            {{ tl('最大') }} {{ fmtNum(s.maxConcurrentSessions) }} &nbsp;·&nbsp; {{ tl('使用率') }}
+            {{
+              ((s.totalConcurrentSessions / Math.max(1, s.maxConcurrentSessions)) * 100).toFixed(1)
+            }}%
           </div>
         </div>
-      </div>
+      </Panel>
 
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('新建会话速率') }}</span>
-        </div>
+      <Panel title="新建会话速率">
         <div class="session-gauge">
-          <div class="gauge-value mono">
-            {{ fmtNum(s.newSessionRate) }}<small>cps</small>
-          </div>
+          <div class="gauge-value mono">{{ fmtNum(s.newSessionRate) }}<small>cps</small></div>
           <div class="gauge-bar mt3">
             <div
               class="gauge-fill gauge-fill-blue"
               :style="{ width: Math.min(100, (s.newSessionRate / 500000) * 100) + '%' }"
             />
           </div>
-          <div class="gauge-meta">
-            {{ tl('峰值') }} {{ fmtNum(s.peakSessionRate) }} cps
-          </div>
+          <div class="gauge-meta">{{ tl('峰值') }} {{ fmtNum(s.peakSessionRate) }} cps</div>
         </div>
-      </div>
+      </Panel>
     </div>
 
     <!-- 2.2.3 路由协议状态面板 -->
-    <div v-if="s && s.routerList.length" class="card">
-      <div class="card-head">
-        <span class="ct">{{ tl('路由协议状态') }} (BGP / OSPF)</span>
+    <Panel v-if="s && s.routerList.length" title="路由协议状态 (BGP / OSPF)">
+      <template #extra>
         <span v-if="!s.hasAnyProtocolFlake" class="pill g">{{ tl('全部协议正常') }}</span>
         <span v-else class="pill a">{{ tl('检测到协议抖动') }}</span>
-      </div>
+      </template>
       <div class="proto-grid">
         <div
           v-for="(proto, pi) in s.allProtocols"
@@ -185,10 +182,7 @@
           <div class="proto-body">
             <div v-if="proto.peerUp != null" class="proto-kv">
               <span class="proto-k">{{ tl('BGP Peer') }}</span>
-              <span
-                class="proto-v"
-                :class="proto.peerUp === proto.peerTotal ? 'g-text' : 'a-text'"
-              >
+              <span class="proto-v" :class="proto.peerUp === proto.peerTotal ? 'g-text' : 'a-text'">
                 {{ proto.peerUp }}/{{ proto.peerTotal }} UP
               </span>
             </div>
@@ -217,22 +211,17 @@
           <div v-if="proto.desc" class="proto-desc muted">{{ proto.desc }}</div>
         </div>
       </div>
-    </div>
+    </Panel>
 
     <!-- Per-device detail cards -->
-    <div
-      v-if="s && s.routerList.length"
-      v-for="r in s.routerList"
-      :key="r.id"
-      class="card"
-    >
-      <div class="card-head">
-        <span class="ct">
-          {{ r.name }}
-          <span class="muted ml2 fw4 f11">{{ r.model }}</span>
-        </span>
+    <Panel v-if="s && s.routerList.length" v-for="r in s.routerList" :key="r.id" :title="r.name">
+      <template #ct>
+        {{ r.name }}
+        <span class="muted ml2 fw4 f11">{{ r.model }}</span>
+      </template>
+      <template #extra>
         <StatusBadge :status="r.status === 'online' ? 'online' : 'offline'" />
-      </div>
+      </template>
 
       <div class="rt-meta-grid">
         <div class="rt-kv">
@@ -286,22 +275,24 @@
           <span class="rt-v mono">{{ fmtNum(r.sessions) }}</span>
         </div>
       </div>
-    </div>
+    </Panel>
 
     <!-- Empty state -->
-    <div v-if="s && !s.routerList.length && !loading && !error" class="card empty-card">
+    <Panel v-if="s && !s.routerList.length && !loading && !error" class="empty-card">
       <p class="muted">{{ tl('暂无路由器数据') }}</p>
-    </div>
+    </Panel>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { fmtNum, fmtBps, utilCls, genHours } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import StatusBadge from '@/components/monitor/StatusBadge.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
+import Panel from '@/components/common/Panel.vue'
 import { getNetworkRoutersDetailed, type RouterView, type RouterProtocolView } from '@/api/monitor'
 const { t: tl } = useI18n()
 
@@ -389,52 +380,16 @@ const s = reactive<PageState>({
 // ──────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────
-function fmtNum(n: number): string {
-  if (n == null) return '-'
-  if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M'
-  if (n >= 1000) return (n / 1000).toFixed(1) + 'K'
-  return n.toLocaleString()
-}
-
-function fmtBps(bps: number): string {
-  if (bps == null) return '-'
-  if (bps >= 1e9) return (bps / 1e9).toFixed(2) + ' Gbps'
-  if (bps >= 1e6) return (bps / 1e6).toFixed(1) + ' Mbps'
-  if (bps >= 1e3) return (bps / 1e3).toFixed(1) + ' Kbps'
-  return bps + ' bps'
-}
-
-function utilCls(v: number): string {
-  if (v >= 85) return 'a-text'
-  if (v >= 60) return 'w-text'
-  return 'g-text'
-}
-
 function fmtPercent(v: number): string {
   return v != null ? v.toFixed(1) + '%' : '-'
-}
-
-// ──────────────────────────────────────────
-// Time-series generation
-// ──────────────────────────────────────────
-function genHours(n: number): string[] {
-  const now = new Date()
-  const hrs: string[] = []
-  for (let i = n - 1; i >= 0; i--) {
-    const t = new Date(now.getTime() - i * 3600 * 1000)
-    hrs.push(
-      t.getHours().toString().padStart(2, '0') + ':' +
-      t.getMinutes().toString().padStart(2, '0'),
-    )
-  }
-  return hrs
 }
 
 function genTimeData(n: number, base: number, amp: number, noise: number): number[] {
   const pts: number[] = []
   for (let i = 0; i < n; i++) {
     // Sine wave + drift + noise for realistic-looking data
-    const v = base + amp * Math.sin((i / n) * Math.PI * 3 + Math.random()) + (Math.random() - 0.5) * noise
+    const v =
+      base + amp * Math.sin((i / n) * Math.PI * 3 + Math.random()) + (Math.random() - 0.5) * noise
     pts.push(Math.max(0, Math.round(v)))
   }
   return pts
@@ -449,33 +404,66 @@ function mockData() {
   // ── Routers ──
   const routerList: RouterView[] = [
     {
-      id: 'rt-1', name: 'Core-R1', ip: '10.200.1.1', model: 'NE40E-X16',
-      role: 'BGP Border', location: 'DC-A 核心机房 A-03', status: 'online',
-      cpu_pct: 34, mem_pct: 48, temp_c: 47, uptime_days: 386,
-      throughput_bps: 82.4e9, sessions: 3200000,
-      bgp_state: 'Established', ospf_neighbors: 5, routes_total: 152400,
+      id: 'rt-1',
+      name: 'Core-R1',
+      ip: '10.200.1.1',
+      model: 'NE40E-X16',
+      role: 'BGP Border',
+      location: 'DC-A 核心机房 A-03',
+      status: 'online',
+      cpu_pct: 34,
+      mem_pct: 48,
+      temp_c: 47,
+      uptime_days: 386,
+      throughput_bps: 82.4e9,
+      sessions: 3200000,
+      bgp_state: 'Established',
+      ospf_neighbors: 5,
+      routes_total: 152400,
       protocols: [
         { name: 'BGP', state: 'Established', peer_total: 3, peer_up: 3, routes: 124000, desc: '' },
         { name: 'OSPF', state: 'Full', neighbor_total: 5, neighbor_up: 5, routes: 28400, desc: '' },
       ],
     },
     {
-      id: 'rt-2', name: 'Core-R2', ip: '10.200.1.2', model: 'NE40E-X8',
-      role: 'iBGP Core', location: 'DC-A 核心机房 A-04', status: 'online',
-      cpu_pct: 28, mem_pct: 42, temp_c: 44, uptime_days: 212,
-      throughput_bps: 67.1e9, sessions: 2800000,
-      bgp_state: 'Established', ospf_neighbors: 4, routes_total: 148900,
+      id: 'rt-2',
+      name: 'Core-R2',
+      ip: '10.200.1.2',
+      model: 'NE40E-X8',
+      role: 'iBGP Core',
+      location: 'DC-A 核心机房 A-04',
+      status: 'online',
+      cpu_pct: 28,
+      mem_pct: 42,
+      temp_c: 44,
+      uptime_days: 212,
+      throughput_bps: 67.1e9,
+      sessions: 2800000,
+      bgp_state: 'Established',
+      ospf_neighbors: 4,
+      routes_total: 148900,
       protocols: [
         { name: 'BGP', state: 'Established', peer_total: 2, peer_up: 2, routes: 121500, desc: '' },
         { name: 'OSPF', state: 'Full', neighbor_total: 4, neighbor_up: 4, routes: 27400, desc: '' },
       ],
     },
     {
-      id: 'rt-3', name: 'Edge-R1', ip: '10.200.1.3', model: 'AR3260',
-      role: 'eBGP Edge', location: 'DC-A 汇聚机房 B-12', status: 'online',
-      cpu_pct: 42, mem_pct: 55, temp_c: 51, uptime_days: 178,
-      throughput_bps: 48.6e9, sessions: 1800000,
-      bgp_state: 'Established', ospf_neighbors: 2, routes_total: 112800,
+      id: 'rt-3',
+      name: 'Edge-R1',
+      ip: '10.200.1.3',
+      model: 'AR3260',
+      role: 'eBGP Edge',
+      location: 'DC-A 汇聚机房 B-12',
+      status: 'online',
+      cpu_pct: 42,
+      mem_pct: 55,
+      temp_c: 51,
+      uptime_days: 178,
+      throughput_bps: 48.6e9,
+      sessions: 1800000,
+      bgp_state: 'Established',
+      ospf_neighbors: 2,
+      routes_total: 112800,
       protocols: [
         { name: 'BGP', state: 'Active', peer_total: 4, peer_up: 3, routes: 98000, desc: '' },
         { name: 'OSPF', state: 'Full', neighbor_total: 2, neighbor_up: 2, routes: 14800, desc: '' },
@@ -486,58 +474,288 @@ function mockData() {
   // ── Interfaces ──
   const allInterfaces: RouterIfView[] = [
     // Core-R1
-    { device: 'Core-R1', name: 'HundredGigE0/0/0', status: 'up', speed: 100000, inUtil: 42, outUtil: 38, trafficBps: 38.5e9, errors: 0, discards: 0 },
-    { device: 'Core-R1', name: 'HundredGigE0/0/1', status: 'up', speed: 100000, inUtil: 35, outUtil: 41, trafficBps: 36.2e9, errors: 0, discards: 0 },
-    { device: 'Core-R1', name: 'HundredGigE0/0/2', status: 'down', speed: 100000, inUtil: 0, outUtil: 0, trafficBps: 0, errors: 0, discards: 0 },
-    { device: 'Core-R1', name: 'TenGigE0/1/0', status: 'up', speed: 10000, inUtil: 55, outUtil: 60, trafficBps: 5.5e9, errors: 0, discards: 0 },
-    { device: 'Core-R1', name: 'TenGigE0/1/1', status: 'up', speed: 10000, inUtil: 28, outUtil: 22, trafficBps: 2.4e9, errors: 12, discards: 0 },
-    { device: 'Core-R1', name: 'Loopback0', status: 'up', speed: 0, inUtil: 0, outUtil: 0, trafficBps: 0, errors: 0, discards: 0 },
+    {
+      device: 'Core-R1',
+      name: 'HundredGigE0/0/0',
+      status: 'up',
+      speed: 100000,
+      inUtil: 42,
+      outUtil: 38,
+      trafficBps: 38.5e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Core-R1',
+      name: 'HundredGigE0/0/1',
+      status: 'up',
+      speed: 100000,
+      inUtil: 35,
+      outUtil: 41,
+      trafficBps: 36.2e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Core-R1',
+      name: 'HundredGigE0/0/2',
+      status: 'down',
+      speed: 100000,
+      inUtil: 0,
+      outUtil: 0,
+      trafficBps: 0,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Core-R1',
+      name: 'TenGigE0/1/0',
+      status: 'up',
+      speed: 10000,
+      inUtil: 55,
+      outUtil: 60,
+      trafficBps: 5.5e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Core-R1',
+      name: 'TenGigE0/1/1',
+      status: 'up',
+      speed: 10000,
+      inUtil: 28,
+      outUtil: 22,
+      trafficBps: 2.4e9,
+      errors: 12,
+      discards: 0,
+    },
+    {
+      device: 'Core-R1',
+      name: 'Loopback0',
+      status: 'up',
+      speed: 0,
+      inUtil: 0,
+      outUtil: 0,
+      trafficBps: 0,
+      errors: 0,
+      discards: 0,
+    },
     // Core-R2
-    { device: 'Core-R2', name: 'HundredGigE0/0/0', status: 'up', speed: 100000, inUtil: 38, outUtil: 35, trafficBps: 34.8e9, errors: 0, discards: 3 },
-    { device: 'Core-R2', name: 'HundredGigE0/0/1', status: 'up', speed: 100000, inUtil: 33, outUtil: 30, trafficBps: 30.1e9, errors: 0, discards: 0 },
-    { device: 'Core-R2', name: 'TenGigE0/1/0', status: 'up', speed: 10000, inUtil: 72, outUtil: 68, trafficBps: 6.8e9, errors: 0, discards: 0 },
-    { device: 'Core-R2', name: 'TenGigE0/1/1', status: 'up', speed: 10000, inUtil: 40, outUtil: 45, trafficBps: 4.0e9, errors: 0, discards: 0 },
-    { device: 'Core-R2', name: 'Loopback0', status: 'up', speed: 0, inUtil: 0, outUtil: 0, trafficBps: 0, errors: 0, discards: 0 },
+    {
+      device: 'Core-R2',
+      name: 'HundredGigE0/0/0',
+      status: 'up',
+      speed: 100000,
+      inUtil: 38,
+      outUtil: 35,
+      trafficBps: 34.8e9,
+      errors: 0,
+      discards: 3,
+    },
+    {
+      device: 'Core-R2',
+      name: 'HundredGigE0/0/1',
+      status: 'up',
+      speed: 100000,
+      inUtil: 33,
+      outUtil: 30,
+      trafficBps: 30.1e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Core-R2',
+      name: 'TenGigE0/1/0',
+      status: 'up',
+      speed: 10000,
+      inUtil: 72,
+      outUtil: 68,
+      trafficBps: 6.8e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Core-R2',
+      name: 'TenGigE0/1/1',
+      status: 'up',
+      speed: 10000,
+      inUtil: 40,
+      outUtil: 45,
+      trafficBps: 4.0e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Core-R2',
+      name: 'Loopback0',
+      status: 'up',
+      speed: 0,
+      inUtil: 0,
+      outUtil: 0,
+      trafficBps: 0,
+      errors: 0,
+      discards: 0,
+    },
     // Edge-R1
-    { device: 'Edge-R1', name: 'GigabitEthernet0/0/0', status: 'up', speed: 1000, inUtil: 85, outUtil: 78, trafficBps: 780e6, errors: 156, discards: 0 },
-    { device: 'Edge-R1', name: 'GigabitEthernet0/0/1', status: 'up', speed: 1000, inUtil: 42, outUtil: 55, trafficBps: 480e6, errors: 23, discards: 0 },
-    { device: 'Edge-R1', name: 'TenGigE0/1/0', status: 'up', speed: 10000, inUtil: 62, outUtil: 58, trafficBps: 5.8e9, errors: 0, discards: 0 },
-    { device: 'Edge-R1', name: 'TenGigE0/1/1', status: 'up', speed: 10000, inUtil: 48, outUtil: 52, trafficBps: 4.9e9, errors: 0, discards: 0 },
-    { device: 'Edge-R1', name: 'GigabitEthernet0/2/0', status: 'down', speed: 1000, inUtil: 0, outUtil: 0, trafficBps: 0, errors: 0, discards: 0 },
-    { device: 'Edge-R1', name: 'Loopback0', status: 'up', speed: 0, inUtil: 0, outUtil: 0, trafficBps: 0, errors: 0, discards: 0 },
+    {
+      device: 'Edge-R1',
+      name: 'GigabitEthernet0/0/0',
+      status: 'up',
+      speed: 1000,
+      inUtil: 85,
+      outUtil: 78,
+      trafficBps: 780e6,
+      errors: 156,
+      discards: 0,
+    },
+    {
+      device: 'Edge-R1',
+      name: 'GigabitEthernet0/0/1',
+      status: 'up',
+      speed: 1000,
+      inUtil: 42,
+      outUtil: 55,
+      trafficBps: 480e6,
+      errors: 23,
+      discards: 0,
+    },
+    {
+      device: 'Edge-R1',
+      name: 'TenGigE0/1/0',
+      status: 'up',
+      speed: 10000,
+      inUtil: 62,
+      outUtil: 58,
+      trafficBps: 5.8e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Edge-R1',
+      name: 'TenGigE0/1/1',
+      status: 'up',
+      speed: 10000,
+      inUtil: 48,
+      outUtil: 52,
+      trafficBps: 4.9e9,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Edge-R1',
+      name: 'GigabitEthernet0/2/0',
+      status: 'down',
+      speed: 1000,
+      inUtil: 0,
+      outUtil: 0,
+      trafficBps: 0,
+      errors: 0,
+      discards: 0,
+    },
+    {
+      device: 'Edge-R1',
+      name: 'Loopback0',
+      status: 'up',
+      speed: 0,
+      inUtil: 0,
+      outUtil: 0,
+      trafficBps: 0,
+      errors: 0,
+      discards: 0,
+    },
   ]
 
   // ── Protocol summary cards (1 per protocol per device) ──
   const allProtocols: ProtocolView[] = [
     {
-      device: 'Core-R1', name: 'BGP', type: 'bgp', state: 'Established',
-      stateClass: 'g-text', peerUp: 3, peerTotal: 3, neighborUp: null, neighborTotal: null,
-      area: null, routes: 124000, desc: 'eBGP to ISP-A + ISP-B, iBGP to Core-R2', flake: false,
+      device: 'Core-R1',
+      name: 'BGP',
+      type: 'bgp',
+      state: 'Established',
+      stateClass: 'g-text',
+      peerUp: 3,
+      peerTotal: 3,
+      neighborUp: null,
+      neighborTotal: null,
+      area: null,
+      routes: 124000,
+      desc: 'eBGP to ISP-A + ISP-B, iBGP to Core-R2',
+      flake: false,
     },
     {
-      device: 'Core-R1', name: 'OSPF', type: 'ospf', state: 'Full',
-      stateClass: 'g-text', peerUp: null, peerTotal: null, neighborUp: 5, neighborTotal: 5,
-      area: 'Backbone (0.0.0.0)', routes: 28400, desc: 'All adjacencies Full, no DR/BDR changes in 30d', flake: false,
+      device: 'Core-R1',
+      name: 'OSPF',
+      type: 'ospf',
+      state: 'Full',
+      stateClass: 'g-text',
+      peerUp: null,
+      peerTotal: null,
+      neighborUp: 5,
+      neighborTotal: 5,
+      area: 'Backbone (0.0.0.0)',
+      routes: 28400,
+      desc: 'All adjacencies Full, no DR/BDR changes in 30d',
+      flake: false,
     },
     {
-      device: 'Core-R2', name: 'BGP', type: 'bgp', state: 'Established',
-      stateClass: 'g-text', peerUp: 2, peerTotal: 2, neighborUp: null, neighborTotal: null,
-      area: null, routes: 121500, desc: 'iBGP to Core-R1, Route Reflector Client: Edge-R1', flake: false,
+      device: 'Core-R2',
+      name: 'BGP',
+      type: 'bgp',
+      state: 'Established',
+      stateClass: 'g-text',
+      peerUp: 2,
+      peerTotal: 2,
+      neighborUp: null,
+      neighborTotal: null,
+      area: null,
+      routes: 121500,
+      desc: 'iBGP to Core-R1, Route Reflector Client: Edge-R1',
+      flake: false,
     },
     {
-      device: 'Core-R2', name: 'OSPF', type: 'ospf', state: 'Full',
-      stateClass: 'g-text', peerUp: null, peerTotal: null, neighborUp: 4, neighborTotal: 4,
-      area: 'Backbone (0.0.0.0)', routes: 27400, desc: 'All adjacencies Full', flake: false,
+      device: 'Core-R2',
+      name: 'OSPF',
+      type: 'ospf',
+      state: 'Full',
+      stateClass: 'g-text',
+      peerUp: null,
+      peerTotal: null,
+      neighborUp: 4,
+      neighborTotal: 4,
+      area: 'Backbone (0.0.0.0)',
+      routes: 27400,
+      desc: 'All adjacencies Full',
+      flake: false,
     },
     {
-      device: 'Edge-R1', name: 'BGP', type: 'bgp', state: 'Active',
-      stateClass: 'a-text', peerUp: 3, peerTotal: 4, neighborUp: null, neighborTotal: null,
-      area: null, routes: 98000, desc: 'Peer 10.255.1.2 (ISP-C) in Active state, retry in 30s', flake: true,
+      device: 'Edge-R1',
+      name: 'BGP',
+      type: 'bgp',
+      state: 'Active',
+      stateClass: 'a-text',
+      peerUp: 3,
+      peerTotal: 4,
+      neighborUp: null,
+      neighborTotal: null,
+      area: null,
+      routes: 98000,
+      desc: 'Peer 10.255.1.2 (ISP-C) in Active state, retry in 30s',
+      flake: true,
     },
     {
-      device: 'Edge-R1', name: 'OSPF', type: 'ospf', state: 'Full',
-      stateClass: 'g-text', peerUp: null, peerTotal: null, neighborUp: 2, neighborTotal: 2,
-      area: 'NSSA (0.0.0.1)', routes: 14800, desc: 'NSSA area, ABR: Core-R1', flake: false,
+      device: 'Edge-R1',
+      name: 'OSPF',
+      type: 'ospf',
+      state: 'Full',
+      stateClass: 'g-text',
+      peerUp: null,
+      peerTotal: null,
+      neighborUp: 2,
+      neighborTotal: 2,
+      area: 'NSSA (0.0.0.1)',
+      routes: 14800,
+      desc: 'NSSA area, ABR: Core-R1',
+      flake: false,
     },
   ]
 
@@ -600,9 +818,15 @@ function applyData(
   s.throughputTrend = throughputTrend
   s.total = routerList.length
   s.online = routerList.filter((r) => r.status === 'online').length
-  s.avgCpu = routerList.length ? Math.round(routerList.reduce((a, r) => a + r.cpu_pct, 0) / routerList.length) : 0
-  s.avgMem = routerList.length ? Math.round(routerList.reduce((a, r) => a + r.mem_pct, 0) / routerList.length) : 0
-  s.avgTemp = routerList.length ? Math.round(routerList.reduce((a, r) => a + r.temp_c, 0) / routerList.length) : 0
+  s.avgCpu = routerList.length
+    ? Math.round(routerList.reduce((a, r) => a + r.cpu_pct, 0) / routerList.length)
+    : 0
+  s.avgMem = routerList.length
+    ? Math.round(routerList.reduce((a, r) => a + r.mem_pct, 0) / routerList.length)
+    : 0
+  s.avgTemp = routerList.length
+    ? Math.round(routerList.reduce((a, r) => a + r.temp_c, 0) / routerList.length)
+    : 0
   s.totalConcurrentSessions = totalConcurrentSessions
   s.maxConcurrentSessions = maxConcurrentSessions
   s.newSessionRate = newSessionRate
@@ -628,7 +852,7 @@ function buildProtocols(routerList: RouterView[]): ProtocolView[] {
         peerTotal: isBgp ? (p.peer_total ?? 0) : null,
         neighborUp: !isBgp ? (p.neighbor_up ?? 0) : null,
         neighborTotal: !isBgp ? (p.neighbor_total ?? 0) : null,
-        area: isBgp ? null : (p.area != null ? String(p.area) : 'Backbone (0.0.0.0)'),
+        area: isBgp ? null : p.area != null ? String(p.area) : 'Backbone (0.0.0.0)',
         routes: p.routes,
         desc: p.desc ?? null,
         flake: p.flake != null ? !!p.flake : !stateOk,
@@ -719,46 +943,12 @@ onMounted(() => {
   grid-template-columns: repeat(2, 1fr);
 }
 
-/* ── card ── */
-.card {
-  background: var(--bg-card, #1e293b);
-  border: 1px solid var(--border, #334155);
-  border-radius: 10px;
-  padding: 16px;
+/* pill（moni-card 全局已含 .card/.card-head/.ct，此处仅补堆叠间距） */
+.moni-card {
   margin-bottom: 14px;
 }
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.ct {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
-}
-
-/* pill */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 10px;
-  border-radius: 99px;
-  font-size: 0.6875rem;
-  font-weight: 600;
-  line-height: 1.5;
-}
-.pill.g {
-  background: rgba(34, 197, 94, 0.12);
-  color: #22c55e;
-}
-.pill.a {
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
+.moni-card:last-child {
+  margin-bottom: 0;
 }
 
 /* ── port table ── */
@@ -943,9 +1133,7 @@ onMounted(() => {
 .ml2 {
   margin-left: 4px;
 }
-.muted {
-  color: var(--text-muted, #6b7280);
-}
+
 .a-text {
   color: #f59e0b;
 }

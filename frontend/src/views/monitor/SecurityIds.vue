@@ -16,15 +16,37 @@
 
     <!-- 总览 KPI -->
     <div class="kpi-row">
-      <KpiCard title="周界防区" :value="s.perimeter.zones" unit="区" :sub="'布防 ' + s.perimeter.armed" />
-      <KpiCard title="周界布防率" :value="armRate" unit="%" :trend="s.perimeter.armed === s.perimeter.zones ? 1 : -1" :sub="s.perimeter.zones - s.perimeter.armed + ' 区未布防'" />
-      <KpiCard title="室内探测器" :value="s.indoor.ir + s.indoor.glass" unit="个" :sub="'红外 ' + s.indoor.ir + ' / 玻璃 ' + s.indoor.glass" />
-      <KpiCard title="周界告警" :value="s.perimeter.alarm" unit="起" :trend="s.perimeter.alarm ? -1 : 1" :sub="s.perimeter.alarm ? '需处置' : '正常'" />
+      <KpiCard
+        title="周界防区"
+        :value="s.perimeter.zones"
+        unit="区"
+        :sub="'布防 ' + s.perimeter.armed"
+      />
+      <KpiCard
+        title="周界布防率"
+        :value="armRate"
+        unit="%"
+        :trend="s.perimeter.armed === s.perimeter.zones ? 1 : -1"
+        :sub="s.perimeter.zones - s.perimeter.armed + ' 区未布防'"
+      />
+      <KpiCard
+        title="室内探测器"
+        :value="s.indoor.ir + s.indoor.glass"
+        unit="个"
+        :sub="'红外 ' + s.indoor.ir + ' / 玻璃 ' + s.indoor.glass"
+      />
+      <KpiCard
+        title="周界告警"
+        :value="s.perimeter.alarm"
+        unit="起"
+        :trend="s.perimeter.alarm ? -1 : 1"
+        :sub="s.perimeter.alarm ? '需处置' : '正常'"
+      />
     </div>
 
     <div class="grid-main">
       <!-- 左：周界示意图 SVG -->
-      <section class="card plan-card">
+      <Panel class="plan-card">
         <div class="card-head">
           <span class="card-title">周界示意图</span>
           <div class="legend">
@@ -42,10 +64,19 @@
             <text x="34" y="42" class="s-label">园区周界 · 防区布防</text>
             <!-- 周界防区点位（沿外框分布） -->
             <g v-for="z in zones" :key="z.id" @click.stop="selectZone(z)">
-              <line v-if="z.side==='top'||z.side==='bottom'||z.side==='left'||z.side==='right'" :x1="z.x1" :y1="z.y1" :x2="z.x2" :y2="z.y2" :class="'fence ' + z.state" />
+              <line
+                v-if="
+                  z.side === 'top' || z.side === 'bottom' || z.side === 'left' || z.side === 'right'
+                "
+                :x1="z.x1"
+                :y1="z.y1"
+                :x2="z.x2"
+                :y2="z.y2"
+                :class="'fence ' + z.state"
+              />
               <circle :cx="z.cx" :cy="z.cy" r="7" :class="'z-dot ' + z.state" />
               <text :x="z.cx" :y="z.cy + 18" class="z-name">{{ z.short }}</text>
-              <circle v-if="z.state==='alarm'" :cx="z.cx" :cy="z.cy" r="12" class="z-pulse" />
+              <circle v-if="z.state === 'alarm'" :cx="z.cx" :cy="z.cy" r="12" class="z-pulse" />
             </g>
             <!-- 报警时联动视频弹窗 -->
             <g v-if="linkageCam" class="pop">
@@ -56,7 +87,9 @@
             </g>
           </svg>
           <div v-if="selectedZone" class="z-info">
-            <div class="z-info-h"><span class="z-dot" :class="selectedZone.state"></span>{{ selectedZone.id }}</div>
+            <div class="z-info-h">
+              <span class="z-dot" :class="selectedZone.state"></span>{{ selectedZone.id }}
+            </div>
             <div class="z-info-b">
               <span>状态：{{ stateText(selectedZone.state) }}</span>
               <span>技术：{{ selectedZone.tech }}</span>
@@ -64,17 +97,34 @@
             </div>
           </div>
         </div>
-      </section>
+      </Panel>
 
       <!-- 右：探测器状态面板 -->
-      <section class="card det-card">
-        <div class="card-head"><span class="card-title">探测器状态</span><span class="card-sub">{{ detectors.length }} 路</span></div>
+      <Panel class="det-card">
+        <div class="card-head">
+          <span class="card-title">探测器状态</span
+          ><span class="card-sub">{{ detectors.length }} 路</span>
+        </div>
         <div class="det-tabs">
-          <button class="det-tab" :class="{active: detType==='all'}" @click="detType='all'">全部</button>
-          <button class="det-tab" :class="{active: detType==='ir'}" @click="detType='ir'">红外</button>
-          <button class="det-tab" :class="{active: detType==='vib'}" @click="detType='vib'">振动光纤</button>
-          <button class="det-tab" :class="{active: detType==='mic'}" @click="detType='mic'">微波</button>
-          <button class="det-tab" :class="{active: detType==='glass'}" @click="detType='glass'">玻璃破碎</button>
+          <button class="det-tab" :class="{ active: detType === 'all' }" @click="detType = 'all'">
+            全部
+          </button>
+          <button class="det-tab" :class="{ active: detType === 'ir' }" @click="detType = 'ir'">
+            红外
+          </button>
+          <button class="det-tab" :class="{ active: detType === 'vib' }" @click="detType = 'vib'">
+            振动光纤
+          </button>
+          <button class="det-tab" :class="{ active: detType === 'mic' }" @click="detType = 'mic'">
+            微波
+          </button>
+          <button
+            class="det-tab"
+            :class="{ active: detType === 'glass' }"
+            @click="detType = 'glass'"
+          >
+            玻璃破碎
+          </button>
         </div>
         <div class="det-list">
           <div v-for="d in filteredDet" :key="d.id" class="det-row" :class="d.state">
@@ -85,13 +135,16 @@
           </div>
           <EmptyState v-if="!filteredDet.length" text="无探测器" />
         </div>
-      </section>
+      </Panel>
     </div>
 
     <div class="grid-sub">
       <!-- 入侵告警列表 -->
-      <section class="card">
-        <div class="card-head"><span class="card-title">入侵告警列表</span><span class="card-sub">{{ s.events.length }} 条</span></div>
+      <Panel>
+        <div class="card-head">
+          <span class="card-title">入侵告警列表</span
+          ><span class="card-sub">{{ s.events.length }} 条</span>
+        </div>
         <div class="evt-list">
           <div v-for="(e, i) in s.events" :key="i" class="evt-row" :class="lvCls(e.lv)">
             <AlarmBadge :level="e.lv" />
@@ -101,24 +154,27 @@
           </div>
           <EmptyState v-if="!s.events.length" text="无告警" />
         </div>
-      </section>
+      </Panel>
 
       <!-- 布防/撤防时间线 -->
-      <section class="card">
-        <div class="card-head"><span class="card-title">布防 / 撤防时间线</span><span class="card-sub">{{ timeline.length }} 条</span></div>
+      <Panel>
+        <div class="card-head">
+          <span class="card-title">布防 / 撤防时间线</span
+          ><span class="card-sub">{{ timeline.length }} 条</span>
+        </div>
         <div class="timeline">
           <div v-for="(t, i) in timeline" :key="i" class="tl-row">
-            <span class="tl-dot" :class="t.action==='布防'?'g':'y'"></span>
+            <span class="tl-dot" :class="t.action === '布防' ? 'g' : 'y'"></span>
             <span class="tl-ts mono">{{ t.ts }}</span>
-            <span class="tl-act" :class="t.action==='布防'?'g':'y'">{{ t.action }}</span>
+            <span class="tl-act" :class="t.action === '布防' ? 'g' : 'y'">{{ t.action }}</span>
             <span class="tl-zone">{{ t.zone }}</span>
             <span class="tl-by">{{ t.by }}</span>
           </div>
         </div>
-      </section>
+      </Panel>
 
       <!-- 联动策略 + 知识库 -->
-      <section class="card">
+      <Panel>
         <div class="card-head"><span class="card-title">联动策略</span></div>
         <div class="linkage-box">
           <span class="lk-ico">⚡</span>
@@ -126,40 +182,21 @@
         </div>
         <div v-if="s.knowledge?.thresholds?.length" class="know-mini">
           <h4>设计阈值</h4>
-          <ul><li v-for="t in s.knowledge.thresholds" :key="t.k"><b>{{ t.k }}</b>：{{ t.v }}<em v-if="t.note">（{{ t.note }}）</em></li></ul>
+          <ul>
+            <li v-for="t in s.knowledge.thresholds" :key="t.k">
+              <b>{{ t.k }}</b
+              >：{{ t.v }}<em v-if="t.note">（{{ t.note }}）</em>
+            </li>
+          </ul>
         </div>
-      </section>
+      </Panel>
     </div>
 
     <!-- 知识库 -->
-    <section class="card know" v-if="s.knowledge?.arch || s.knowledge?.logic?.length || s.knowledge?.faults?.length">
+    <Panel class="know">
       <div class="card-head"><span class="card-title">防入侵架构 · 逻辑 · 故障锁定</span></div>
       <div class="know-grid">
-        <div v-if="s.knowledge.arch" class="know-col">
-          <h4>架构组成</h4>
-          <ul><li v-for="c in s.knowledge.arch.components" :key="c">{{ c }}</li></ul>
-          <p>{{ s.knowledge.arch.design }}</p>
-          <p class="redundancy">冗余：{{ s.knowledge.arch.redundancy }}</p>
-        </div>
-        <div v-if="s.knowledge.logic?.length" class="know-col">
-          <h4>检测 / 联动逻辑</h4>
-          <div v-for="l in s.knowledge.logic" :key="l.title" class="logic">
-            <b>{{ l.title }}</b>
-            <ol><li v-for="st in l.steps" :key="st.step" :class="{ ok: st.ok }">{{ st.text }}</li></ol>
-          </div>
-        </div>
-        <div v-if="s.knowledge.faults?.length" class="know-col">
-          <h4>故障锁定表</h4>
-          <table class="fault-tbl">
-            <thead><tr><th>故障</th><th>锁定</th><th>处理</th><th>复位</th></tr></thead>
-            <tbody>
-              <tr v-for="f in s.knowledge.faults" :key="f.no">
-                <td>{{ f.fault }}</td><td>{{ f.lock }}</td><td>{{ f.action }}</td>
-                <td><span class="tag" :class="f.manualReset ? 'crit' : 'ok'">{{ f.manualReset ? '需' : '否' }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <SecurityKnowledge :knowledge="s.knowledge" logic-title="检测 / 联动逻辑" />
         <div class="know-col">
           <h4>状态概览</h4>
           <ul>
@@ -170,7 +207,7 @@
           </ul>
         </div>
       </div>
-    </section>
+    </Panel>
   </div>
 </template>
 
@@ -178,22 +215,49 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Fence, Shield, ScanEye, AlertTriangle } from 'lucide-vue-next'
 import KpiCard from '@/components/monitor/KpiCard.vue'
+import Panel from '@/components/common/Panel.vue'
+import SecurityKnowledge from '@/components/SecurityKnowledge.vue'
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
 import EmptyState from '@/components/monitor/EmptyState.vue'
 import { getSecurityIdsDetailed } from '@/api/security'
 import type { IdsSummary, IdsEventView } from '@/api/security'
 
-interface Zone { id: string; short: string; side: string; state: 'armed' | 'alarm' | 'disarm'; tech: string; cx: number; cy: number; x1: number; y1: number; x2: number; y2: number; alarmDesc?: string }
-interface Det { id: string; name: string; zone: string; type: 'ir' | 'vib' | 'mic' | 'glass'; state: 'online' | 'alarm' | 'offline' }
+interface Zone {
+  id: string
+  short: string
+  side: string
+  state: 'armed' | 'alarm' | 'disarm'
+  tech: string
+  cx: number
+  cy: number
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  alarmDesc?: string
+}
+interface Det {
+  id: string
+  name: string
+  zone: string
+  type: 'ir' | 'vib' | 'mic' | 'glass'
+  state: 'online' | 'alarm' | 'offline'
+}
 
 const s = ref<IdsSummary>({
   perimeter: { type: '', zones: 0, armed: 0, alarm: 0 },
   indoor: { ir: 0, glass: 0, armed: '', state: '' },
-  linkage: '', events: [], knowledge: { thresholds: [] },
+  linkage: '',
+  events: [],
+  knowledge: { thresholds: [] },
 })
 const usingMock = ref(false)
 
-const armRate = computed(() => (s.value.perimeter.zones ? +((s.value.perimeter.armed / s.value.perimeter.zones) * 100).toFixed(1) : 0))
+const armRate = computed(() =>
+  s.value.perimeter.zones
+    ? +((s.value.perimeter.armed / s.value.perimeter.zones) * 100).toFixed(1)
+    : 0,
+)
 
 // 周界防区（沿外框分布 16 区）
 const zones = ref<Zone[]>([])
@@ -221,8 +285,12 @@ function buildZones(perimeter: IdsSummary['perimeter'], events: IdsEventView[]):
       side: p.side,
       state: 'armed',
       tech: techs[i % techs.length],
-      cx: p.x, cy: p.y,
-      x1: p.x, y1: p.y, x2: p.x, y2: p.y,
+      cx: p.x,
+      cy: p.y,
+      x1: p.x,
+      y1: p.y,
+      x2: p.x,
+      y2: p.y,
     })
   }
   // 报警防区来自事件
@@ -230,26 +298,55 @@ function buildZones(perimeter: IdsSummary['perimeter'], events: IdsEventView[]):
     const m = e.zone.match(/Z-(\d+)/)
     if (m) {
       const z = arr[parseInt(m[1], 10) - 1]
-      if (z && /报警|闯入|触网/.test(e.desc)) { z.state = 'alarm'; z.alarmDesc = e.desc }
+      if (z && /报警|闯入|触网/.test(e.desc)) {
+        z.state = 'alarm'
+        z.alarmDesc = e.desc
+      }
     }
   })
   return arr
 }
 
-function selectZone(z: Zone) { selectedZone.value = z }
+function selectZone(z: Zone) {
+  selectedZone.value = z
+}
 
 // 探测器（派生）
 const detectors = ref<Det[]>([])
 const detType = ref<'all' | 'ir' | 'vib' | 'mic' | 'glass'>('all')
-const filteredDet = computed(() => detType.value === 'all' ? detectors.value : detectors.value.filter((d) => d.type === detType.value))
+const filteredDet = computed(() =>
+  detType.value === 'all'
+    ? detectors.value
+    : detectors.value.filter((d) => d.type === detType.value),
+)
 
 function buildDetectors(indoor: IdsSummary['indoor'], events: IdsEventView[]): Det[] {
   const out: Det[] = []
-  for (let i = 1; i <= indoor.ir; i++) out.push({ id: `IR-${i}`, name: `被动红外 ${i}`, zone: `室内 R${Math.ceil(i / 14)}`, type: 'ir', state: 'online' })
-  for (let i = 1; i <= indoor.glass; i++) out.push({ id: `GB-${i}`, name: `玻璃破碎 ${i}`, zone: `窗口 W${Math.ceil(i / 8)}`, type: 'glass', state: 'online' })
+  for (let i = 1; i <= indoor.ir; i++)
+    out.push({
+      id: `IR-${i}`,
+      name: `被动红外 ${i}`,
+      zone: `室内 R${Math.ceil(i / 14)}`,
+      type: 'ir',
+      state: 'online',
+    })
+  for (let i = 1; i <= indoor.glass; i++)
+    out.push({
+      id: `GB-${i}`,
+      name: `玻璃破碎 ${i}`,
+      zone: `窗口 W${Math.ceil(i / 8)}`,
+      type: 'glass',
+      state: 'online',
+    })
   // 周界振动光纤/微波探测器（取自防区）
   zones.value.forEach((z, i) => {
-    out.push({ id: `VIB-${i + 1}`, name: `${z.tech} ${i + 1}`, zone: z.id, type: z.tech === '振动光纤' ? 'vib' : 'mic', state: z.state === 'alarm' ? 'alarm' : 'online' })
+    out.push({
+      id: `VIB-${i + 1}`,
+      name: `${z.tech} ${i + 1}`,
+      zone: z.id,
+      type: z.tech === '振动光纤' ? 'vib' : 'mic',
+      state: z.state === 'alarm' ? 'alarm' : 'online',
+    })
   })
   void events
   return out
@@ -277,13 +374,17 @@ function buildTimeline(): void {
 function stateText(st: string) {
   return { armed: '布防', alarm: '报警', disarm: '撤防', online: '在线', offline: '离线' }[st] || st
 }
-function lvCls(lv: string) { return lv === 'crit' || lv === 'r' ? 'crit' : lv === 'warn' || lv === 'a' ? 'warn' : 'info' }
+function lvCls(lv: string) {
+  return lv === 'crit' || lv === 'r' ? 'crit' : lv === 'warn' || lv === 'a' ? 'warn' : 'info'
+}
 
 async function load() {
   try {
     const data = await getSecurityIdsDetailed()
-    if (data && data.perimeter && data.perimeter.zones) { s.value = data; usingMock.value = false }
-    else throw new Error('empty')
+    if (data && data.perimeter && data.perimeter.zones) {
+      s.value = data
+      usingMock.value = false
+    } else throw new Error('empty')
   } catch {
     s.value = mockSummary()
     usingMock.value = true
@@ -293,7 +394,9 @@ async function load() {
     buildTimeline()
   }
 }
-function refresh() { load() }
+function refresh() {
+  load()
+}
 
 function mockSummary(): IdsSummary {
   return {
@@ -301,8 +404,18 @@ function mockSummary(): IdsSummary {
     indoor: { ir: 84, glass: 36, armed: '夜间自动布防', state: '白天撤防(重点区布防)' },
     linkage: '报警 → 联动摄像机预置位 + 声光 + IOC 弹窗',
     events: [
-      { ts: '02:14', zone: '周界 Z-07', desc: '振动光纤扰动, AI 判定树枝刮碰, 自动消警', lv: 'info' },
-      { ts: '昨日 23:40', zone: '周界 Z-03', desc: '电子围栏触网报警, 保安 3min 到场, 无异常', lv: 'warn' },
+      {
+        ts: '02:14',
+        zone: '周界 Z-07',
+        desc: '振动光纤扰动, AI 判定树枝刮碰, 自动消警',
+        lv: 'info',
+      },
+      {
+        ts: '昨日 23:40',
+        zone: '周界 Z-03',
+        desc: '电子围栏触网报警, 保安 3min 到场, 无异常',
+        lv: 'warn',
+      },
     ],
     knowledge: {
       thresholds: [
@@ -312,25 +425,62 @@ function mockSummary(): IdsSummary {
         { k: '玻璃破碎', v: '高频声纹识别' },
       ],
       arch: {
-        components: ['电子围栏主机', '振动光纤解调仪', '红外对射', '玻璃破碎探测器', '报警主机/平台'],
-        design: '多层纵深：周界(电子围栏+振动光纤) + 建筑周界(红外对射) + 室内(被动红外+玻璃破碎)。',
+        components: [
+          '电子围栏主机',
+          '振动光纤解调仪',
+          '红外对射',
+          '玻璃破碎探测器',
+          '报警主机/平台',
+        ],
+        design:
+          '多层纵深：周界(电子围栏+振动光纤) + 建筑周界(红外对射) + 室内(被动红外+玻璃破碎)。',
         redundancy: '双防区总线，报警主机双机热备，联动视频 N+1。',
       },
       logic: [
-        { title: '入侵检测', steps: [
-          { step: 1, text: '周界探测器触发 → 平台确认', ok: true },
-          { step: 2, text: 'AI 复核降误报 → 真实入侵升级告警', ok: true },
-        ] },
-        { title: '报警联动', steps: [
-          { step: 1, text: '联动摄像机预置位抓拍', ok: true },
-          { step: 2, text: '声光威慑 + IOC 弹窗 + 保安 APP', ok: true },
-        ] },
+        {
+          title: '入侵检测',
+          steps: [
+            { step: 1, text: '周界探测器触发 → 平台确认', ok: true },
+            { step: 2, text: 'AI 复核降误报 → 真实入侵升级告警', ok: true },
+          ],
+        },
+        {
+          title: '报警联动',
+          steps: [
+            { step: 1, text: '联动摄像机预置位抓拍', ok: true },
+            { step: 2, text: '声光威慑 + IOC 弹窗 + 保安 APP', ok: true },
+          ],
+        },
       ],
       faults: [
-        { no: 1, fault: '电子围栏断线', lock: '该防区失防+告警', action: '查终端杆/合金线', manualReset: false },
-        { no: 2, fault: '振动光纤误报', lock: '调灵敏度/AI 复核', action: '复核样本', manualReset: false },
-        { no: 3, fault: '红外对射被遮', lock: '告警+视频复核', action: '现场核查', manualReset: false },
-        { no: 4, fault: '报警主机离线', lock: '标记离线', action: '查供电/网络', manualReset: true },
+        {
+          no: 1,
+          fault: '电子围栏断线',
+          lock: '该防区失防+告警',
+          action: '查终端杆/合金线',
+          manualReset: false,
+        },
+        {
+          no: 2,
+          fault: '振动光纤误报',
+          lock: '调灵敏度/AI 复核',
+          action: '复核样本',
+          manualReset: false,
+        },
+        {
+          no: 3,
+          fault: '红外对射被遮',
+          lock: '告警+视频复核',
+          action: '现场核查',
+          manualReset: false,
+        },
+        {
+          no: 4,
+          fault: '报警主机离线',
+          lock: '标记离线',
+          action: '查供电/网络',
+          manualReset: true,
+        },
       ],
     },
   }
@@ -338,112 +488,430 @@ function mockSummary(): IdsSummary {
 
 const REFRESH_MS = 30000
 let timer: ReturnType<typeof setInterval> | null = null
-onMounted(() => { load(); timer = setInterval(load, REFRESH_MS) })
-onUnmounted(() => { if (timer) clearInterval(timer) })
+onMounted(() => {
+  load()
+  timer = setInterval(load, REFRESH_MS)
+})
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+})
 
-void Fence; void Shield; void ScanEye; void AlertTriangle
+void Fence
+void Shield
+void ScanEye
+void AlertTriangle
 </script>
 
 <style scoped>
-.page { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-.page-title { font-size: 20px; margin: 0; }
-.page-sub { margin: 2px 0 0; color: var(--text-2); font-size: 12px; }
-.head-actions { display: flex; align-items: center; gap: 10px; }
-.arm-badge { font-size: 12px; padding: 4px 10px; border-radius: 20px; }
-.arm-badge.g { background: rgba(47,174,107,.12); color: #2fae6b; }
-.arm-badge.a { background: rgba(208,106,58,.12); color: #d06a3a; }
-.btn { padding: 6px 14px; border: 1px solid var(--border); background: var(--bg-1); color: var(--text-1); border-radius: 6px; cursor: pointer; font-size: 13px; }
-.btn:hover { border-color: var(--brand); color: var(--brand); }
-.mock-flag-sm { font-size: 12px; color: #d06a3a; }
+.page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-title {
+  font-size: 20px;
+  margin: 0;
+}
+.page-sub {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.arm-badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+.arm-badge.g {
+  background: rgba(47, 174, 107, 0.12);
+  color: #2fae6b;
+}
+.arm-badge.a {
+  background: rgba(208, 106, 58, 0.12);
+  color: #d06a3a;
+}
+.btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-1);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.mock-flag-sm {
+  font-size: 12px;
+  color: #d06a3a;
+}
 
-.kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-.grid-main { display: grid; grid-template-columns: 2.2fr 1fr; gap: 14px; }
-.grid-sub { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 14px; }
-.card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.card-title { font-weight: 600; font-size: 14px; }
-.card-sub { font-size: 12px; color: var(--text-2); }
-
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+.grid-main {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 14px;
+}
+.grid-sub {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr;
+  gap: 14px;
+}
 /* 周界 SVG */
-.plan-card { min-height: 400px; }
-.legend { display: flex; gap: 12px; font-size: 11px; color: var(--text-2); }
-.lg { display: inline-flex; align-items: center; gap: 4px; }
-.lg-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
-.lg-dot.g { background: #2fae6b; } .lg-dot.r { background: #d23b3b; } .lg-dot.y { background: #d06a3a; }
-.plan-wrap { display: flex; flex-direction: column; gap: 10px; }
-.plan-svg { width: 100%; background: var(--bg-2); border-radius: 8px; }
-.site { fill: #0d141d; stroke: #243240; stroke-width: 1.5; }
-.building { fill: #14202c; stroke: #2a3d4d; }
-.s-label { fill: #7d93a8; font-size: 12px; font-weight: 600; }
-.b-label { fill: #8aa2b5; font-size: 11px; }
-.fence { stroke-width: 2; }
-.fence.armed { stroke: #2fae6b; }
-.fence.alarm { stroke: #d23b3b; stroke-dasharray: 4 3; }
-.fence.disarm { stroke: #d06a3a; stroke-dasharray: 2 4; }
-.z-dot { stroke: #0a0e14; stroke-width: 1.5; }
-.z-dot.armed { fill: #2fae6b; } .z-dot.alarm { fill: #d23b3b; } .z-dot.disarm { fill: #d06a3a; }
-.z-name { fill: #9fb3c5; font-size: 8px; text-anchor: middle; }
-.z-pulse { fill: none; stroke: #d23b3b; stroke-width: 1.5; animation: zpulse 1.4s ease-out infinite; }
-@keyframes zpulse { 0% { r: 8; opacity: .9; } 100% { r: 18; opacity: 0; } }
-.pop-bg { fill: #14202c; stroke: #3f9fcf; stroke-width: 1.5; }
-.pop-t { fill: #3f9fcf; font-size: 11px; font-weight: 600; }
-.pop-feed { fill: #0a0e14; stroke: #243240; }
-.pop-d { fill: #7d93a8; font-size: 9px; }
-.z-info { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--bg-2); }
-.z-info-h { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; margin-bottom: 4px; }
-.z-info-b { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12px; color: var(--text-2); }
+.plan-card {
+  min-height: 400px;
+}
+.legend {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--text-2);
+}
+.lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.lg-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.lg-dot.g {
+  background: #2fae6b;
+}
+.lg-dot.r {
+  background: #d23b3b;
+}
+.lg-dot.y {
+  background: #d06a3a;
+}
+.plan-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.plan-svg {
+  width: 100%;
+  background: var(--bg-2);
+  border-radius: 8px;
+}
+.site {
+  fill: #0d141d;
+  stroke: #243240;
+  stroke-width: 1.5;
+}
+.building {
+  fill: #14202c;
+  stroke: #2a3d4d;
+}
+.s-label {
+  fill: #7d93a8;
+  font-size: 12px;
+  font-weight: 600;
+}
+.b-label {
+  fill: #8aa2b5;
+  font-size: 11px;
+}
+.fence {
+  stroke-width: 2;
+}
+.fence.armed {
+  stroke: #2fae6b;
+}
+.fence.alarm {
+  stroke: #d23b3b;
+  stroke-dasharray: 4 3;
+}
+.fence.disarm {
+  stroke: #d06a3a;
+  stroke-dasharray: 2 4;
+}
+.z-dot {
+  stroke: #0a0e14;
+  stroke-width: 1.5;
+}
+.z-dot.armed {
+  fill: #2fae6b;
+}
+.z-dot.alarm {
+  fill: #d23b3b;
+}
+.z-dot.disarm {
+  fill: #d06a3a;
+}
+.z-name {
+  fill: #9fb3c5;
+  font-size: 8px;
+  text-anchor: middle;
+}
+.z-pulse {
+  fill: none;
+  stroke: #d23b3b;
+  stroke-width: 1.5;
+  animation: zpulse 1.4s ease-out infinite;
+}
+@keyframes zpulse {
+  0% {
+    r: 8;
+    opacity: 0.9;
+  }
+  100% {
+    r: 18;
+    opacity: 0;
+  }
+}
+.pop-bg {
+  fill: #14202c;
+  stroke: #3f9fcf;
+  stroke-width: 1.5;
+}
+.pop-t {
+  fill: #3f9fcf;
+  font-size: 11px;
+  font-weight: 600;
+}
+.pop-feed {
+  fill: #0a0e14;
+  stroke: #243240;
+}
+.pop-d {
+  fill: #7d93a8;
+  font-size: 9px;
+}
+.z-info {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: var(--bg-2);
+}
+.z-info-h {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.z-info-b {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 12px;
+  color: var(--text-2);
+}
 
 /* 探测器面板 */
-.det-card { display: flex; flex-direction: column; }
-.det-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
-.det-tab { font-size: 12px; padding: 3px 10px; border: 1px solid var(--border); background: var(--bg-1); color: var(--text-2); border-radius: 14px; cursor: pointer; }
-.det-tab.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-.det-list { overflow-y: auto; max-height: 360px; display: flex; flex-direction: column; gap: 2px; }
-.det-row { display: grid; grid-template-columns: 12px 1fr 80px 44px; align-items: center; gap: 6px; padding: 5px 6px; border-radius: 5px; font-size: 12px; }
-.det-row:hover { background: var(--bg-2); }
-.det-row.alarm { background: rgba(210,59,59,.1); }
-.d-dot { width: 8px; height: 8px; border-radius: 50%; }
-.d-dot.online { background: #2fae6b; } .d-dot.alarm { background: #d23b3b; } .d-dot.offline { background: #d06a3a; }
-.d-name { font-weight: 500; } .d-zone { color: var(--text-2); } .d-st { font-size: 11px; }
-.d-st.online { color: #2fae6b; } .d-st.alarm { color: #d23b3b; } .d-st.offline { color: #d06a3a; }
+.det-card {
+  display: flex;
+  flex-direction: column;
+}
+.det-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.det-tab {
+  font-size: 12px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-2);
+  border-radius: 14px;
+  cursor: pointer;
+}
+.det-tab.active {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+.det-list {
+  overflow-y: auto;
+  max-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.det-row {
+  display: grid;
+  grid-template-columns: 12px 1fr 80px 44px;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+.det-row:hover {
+  background: var(--bg-2);
+}
+.det-row.alarm {
+  background: rgba(210, 59, 59, 0.1);
+}
+.d-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.d-dot.online {
+  background: #2fae6b;
+}
+.d-dot.alarm {
+  background: #d23b3b;
+}
+.d-dot.offline {
+  background: #d06a3a;
+}
+.d-name {
+  font-weight: 500;
+}
+.d-zone {
+  color: var(--text-2);
+}
+.d-st {
+  font-size: 11px;
+}
+.d-st.online {
+  color: #2fae6b;
+}
+.d-st.alarm {
+  color: #d23b3b;
+}
+.d-st.offline {
+  color: #d06a3a;
+}
 
 /* 告警列表 */
-.evt-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
-.evt-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; border-bottom: 1px solid var(--border); }
-.evt-ts { color: var(--text-2); } .evt-zone { color: var(--brand); font-weight: 500; min-width: 84px; } .evt-desc { flex: 1; color: var(--text-2); }
+.evt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.evt-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.evt-ts {
+  color: var(--text-2);
+}
+.evt-zone {
+  color: var(--brand);
+  font-weight: 500;
+  min-width: 84px;
+}
+.evt-desc {
+  flex: 1;
+  color: var(--text-2);
+}
 
 /* 时间线 */
-.timeline { display: flex; flex-direction: column; gap: 8px; max-height: 260px; overflow-y: auto; }
-.tl-row { display: grid; grid-template-columns: 10px 70px 44px 1fr auto; align-items: center; gap: 6px; font-size: 12px; }
-.tl-dot { width: 9px; height: 9px; border-radius: 50%; }
-.tl-dot.g { background: #2fae6b; } .tl-dot.y { background: #d06a3a; }
-.tl-ts { color: var(--text-2); } .tl-act { font-weight: 600; } .tl-act.g { color: #2fae6b; } .tl-act.y { color: #d06a3a; }
-.tl-zone { color: var(--text-1); } .tl-by { color: var(--text-2); }
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.tl-row {
+  display: grid;
+  grid-template-columns: 10px 70px 44px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+.tl-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.tl-dot.g {
+  background: #2fae6b;
+}
+.tl-dot.y {
+  background: #d06a3a;
+}
+.tl-ts {
+  color: var(--text-2);
+}
+.tl-act {
+  font-weight: 600;
+}
+.tl-act.g {
+  color: #2fae6b;
+}
+.tl-act.y {
+  color: #d06a3a;
+}
+.tl-zone {
+  color: var(--text-1);
+}
+.tl-by {
+  color: var(--text-2);
+}
 
 /* 联动策略 */
-.linkage-box { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; color: var(--text-1); background: var(--bg-2); border-radius: 8px; padding: 10px; line-height: 1.6; }
-.lk-ico { font-size: 16px; }
-.know-mini { margin-top: 10px; }
-.know-mini h4 { font-size: 13px; margin: 0 0 6px; }
-.know-mini ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--text-2); }
-
-/* 知识库 */
-.know-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.know-col h4 { margin: 0 0 6px; font-size: 13px; }
-.know-col ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--text-2); }
-.know-col p { font-size: 12px; color: var(--text-2); margin: 4px 0; }
-.redundancy { color: #3f9fcf; }
-.logic { margin-bottom: 8px; } .logic ol { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
-.logic li.ok::marker { content: '✓ '; }
-.fault-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.fault-tbl th, .fault-tbl td { border: 1px solid var(--border); padding: 3px 5px; text-align: left; }
-.tag { font-size: 11px; padding: 1px 5px; border-radius: 3px; }
-.tag.crit { background: #b4451f; color: #fff; } .tag.ok { background: #2f6f4f; color: #fff; }
+.linkage-box {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--text-1);
+  background: var(--bg-2);
+  border-radius: 8px;
+  padding: 10px;
+  line-height: 1.6;
+}
+.lk-ico {
+  font-size: 16px;
+}
+.know-mini {
+  margin-top: 10px;
+}
+.know-mini h4 {
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+.know-mini ul {
+  margin: 0;
+  padding-left: 16px;
+  font-size: 12px;
+  color: var(--text-2);
+}
 
 @media (max-width: 1100px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .grid-main, .grid-sub { grid-template-columns: 1fr; }
-  .know-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-main,
+  .grid-sub {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

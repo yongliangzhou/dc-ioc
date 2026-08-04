@@ -1,9 +1,9 @@
 <template>
-  <section class="panel">
-    <header class="panel-head">
-      <div class="panel-title">
-        <component :is="iconComp" :size="16" class="panel-ico" />
-        <h3>{{ title }}</h3>
+  <section class="panel moni-card" :class="{ 'panel--head': hasHead }">
+    <header v-if="hasHead" class="panel-head card-head">
+      <div class="panel-ct ct">
+        <component :is="iconComp" v-if="iconComp" :size="16" class="panel-ico" />
+        <slot name="ct">{{ title }}</slot>
       </div>
       <div class="panel-extra"><slot name="extra" /></div>
     </header>
@@ -12,19 +12,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import type { Component } from "vue";
-import {
-  Activity,
-  Gauge,
-  Server,
-  Network,
-  Share2,
-  Building2,
-  BookOpen,
-} from "lucide-vue-next";
+import { computed, useSlots } from 'vue'
+import type { Component } from 'vue'
+import { Activity, Gauge, Server, Network, Share2, Building2, BookOpen } from 'lucide-vue-next'
 
-const props = defineProps<{ title: string; icon?: string }>();
+const props = defineProps<{ title?: string; icon?: string }>()
+const slots = useSlots()
 
 const ICONS: Record<string, Component> = {
   Activity,
@@ -34,42 +27,29 @@ const ICONS: Record<string, Component> = {
   Share2,
   Building2,
   BookOpen,
-};
-const iconComp = computed<Component>(() => ICONS[props.icon ?? ""] ?? Activity);
+}
+const iconComp = computed<Component | null>(() => ICONS[props.icon ?? ''] ?? null)
+// 有标题/图标或自定义头部插槽时才渲染头部
+const hasHead = computed(() => !!(props.title || props.icon || slots.ct || slots.extra))
 </script>
 
 <style scoped>
+/* 外观由全局 .moni-card 提供，这里只做布局/对齐补充 */
 .panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px 16px;
+  display: block;
 }
 .panel-head {
-  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.panel-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
 }
 .panel-ico {
   color: var(--cyan);
   flex: none;
+  margin-right: 6px;
 }
-.panel-title h3 {
-  font-size: 14px;
-  font-weight: 700;
-  margin: 0;
-  color: var(--txt);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.panel-ct {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
 }
 .panel-extra {
   display: inline-flex;
@@ -77,6 +57,7 @@ const iconComp = computed<Component>(() => ICONS[props.icon ?? ""] ?? Activity);
   gap: 8px;
   color: var(--txt2);
   flex: none;
+  margin-left: auto;
 }
 .panel-body {
   color: var(--txt);

@@ -9,7 +9,9 @@
         <button class="btn" :class="{ active: layout === 1 }" @click="setLayout(1)">单屏</button>
         <button class="btn" :class="{ active: layout === 4 }" @click="setLayout(4)">4 分屏</button>
         <button class="btn" :class="{ active: layout === 9 }" @click="setLayout(9)">9 分屏</button>
-        <button class="btn" :class="{ active: layout === 16 }" @click="setLayout(16)">16 分屏</button>
+        <button class="btn" :class="{ active: layout === 16 }" @click="setLayout(16)">
+          16 分屏
+        </button>
         <span class="divider"></span>
         <button class="btn" :class="{ active: patrolOn }" @click="togglePatrol">
           <Play v-if="!patrolOn" :size="14" />
@@ -22,16 +24,37 @@
 
     <!-- 总览 KPI -->
     <div class="kpi-row">
-      <KpiCard title="摄像机总数" :value="summary.total" unit="路" :sub="'在线 ' + summary.online" />
-      <KpiCard title="在线率" :value="onlineRate" unit="%" :trend="summary.offline === 0 ? 1 : -1" :sub="summary.offline + ' 路离线'" />
-      <KpiCard title="NVR 存储" :value="summary.nvr.storeDays" unit="天" :sub="'要求≥' + summary.nvr.required + '天'" />
-      <KpiCard title="今日事件" :value="summary.events.length" unit="条" :sub="aiEvents + ' 条 AI 联动'" />
+      <KpiCard
+        title="摄像机总数"
+        :value="summary.total"
+        unit="路"
+        :sub="'在线 ' + summary.online"
+      />
+      <KpiCard
+        title="在线率"
+        :value="onlineRate"
+        unit="%"
+        :trend="summary.offline === 0 ? 1 : -1"
+        :sub="summary.offline + ' 路离线'"
+      />
+      <KpiCard
+        title="NVR 存储"
+        :value="summary.nvr.storeDays"
+        unit="天"
+        :sub="'要求≥' + summary.nvr.required + '天'"
+      />
+      <KpiCard
+        title="今日事件"
+        :value="summary.events.length"
+        unit="条"
+        :sub="aiEvents + ' 条 AI 联动'"
+      />
       <KpiCard title="AI 算法" :value="summary.ai.length" unit="类" :sub="'布控中'" />
     </div>
 
     <div class="grid-main">
       <!-- 左：实时预览分屏 -->
-      <section class="card preview-card">
+      <Panel class="preview-card">
         <div class="card-head">
           <span class="card-title">实时预览</span>
           <span class="card-sub">{{ layout }} 分屏 · {{ visibleCams.length }} 路在线窗口</span>
@@ -54,7 +77,8 @@
               <div class="pv-bar">
                 <span class="pv-name">{{ cam.name }}</span>
                 <span class="pv-meta">
-                  <span class="dot" :class="cam.status"></span>{{ cam.status === 'offline' ? '离线' : '在线' }}
+                  <span class="dot" :class="cam.status"></span
+                  >{{ cam.status === 'offline' ? '离线' : '在线' }}
                   <span class="pv-bit">· {{ cam.bitrate }}</span>
                 </span>
               </div>
@@ -65,12 +89,13 @@
           </div>
         </div>
         <div v-if="patrolOn" class="patrol-bar">
-          <span class="rec-dot"></span> 大屏轮巡进行中：每 {{ patrolSec }}s 切换一组 · 已轮巡 {{ patrolRound }} 轮
+          <span class="rec-dot"></span> 大屏轮巡进行中：每 {{ patrolSec }}s 切换一组 · 已轮巡
+          {{ patrolRound }} 轮
         </div>
-      </section>
+      </Panel>
 
       <!-- 右：摄像头列表 -->
-      <section class="card camlist-card">
+      <Panel class="camlist-card">
         <div class="card-head">
           <span class="card-title">摄像头列表</span>
           <div class="list-filter">
@@ -90,7 +115,10 @@
             v-for="cam in filteredCams"
             :key="cam.id"
             class="cam-row"
-            :class="{ sel: selectedCam && selectedCam.id === cam.id, off: cam.status === 'offline' }"
+            :class="{
+              sel: selectedCam && selectedCam.id === cam.id,
+              off: cam.status === 'offline',
+            }"
             @click="focusCam(cam)"
           >
             <span class="c-dot" :class="cam.status"></span>
@@ -98,32 +126,45 @@
             <span class="c-zone">{{ cam.zone }}</span>
             <span class="c-ip">{{ cam.ip }}</span>
             <span class="c-bit">{{ cam.bitrate }}</span>
-            <span class="c-st" :class="cam.status">{{ cam.status === 'offline' ? '离线' : '在线' }}</span>
+            <span class="c-st" :class="cam.status">{{
+              cam.status === 'offline' ? '离线' : '在线'
+            }}</span>
           </div>
           <EmptyState v-if="!filteredCams.length" text="无匹配摄像头" />
         </div>
-      </section>
+      </Panel>
     </div>
 
     <div class="grid-sub">
       <!-- 分区覆盖 -->
-      <section class="card">
-        <div class="card-head"><span class="card-title">分区覆盖</span><span class="card-sub">分区 / 摄像机数 / 离线</span></div>
+      <Panel>
+        <div class="card-head">
+          <span class="card-title">分区覆盖</span
+          ><span class="card-sub">分区 / 摄像机数 / 离线</span>
+        </div>
         <div class="zone-bars">
           <div v-for="z in summary.zones" :key="z.id" class="zone-row">
             <span class="z-name">{{ z.id }}</span>
             <div class="z-track">
               <div class="z-fill" :style="{ width: pct(z.cams, maxZone) + '%' }"></div>
-              <div v-if="z.offline" class="z-off" :style="{ width: pct(z.offline, maxZone) + '%' }"></div>
+              <div
+                v-if="z.offline"
+                class="z-off"
+                :style="{ width: pct(z.offline, maxZone) + '%' }"
+              ></div>
             </div>
-            <span class="z-num">{{ z.cams }}<em v-if="z.offline" class="z-off-n"> · {{ z.offline }} 离线</em></span>
+            <span class="z-num"
+              >{{ z.cams }}<em v-if="z.offline" class="z-off-n"> · {{ z.offline }} 离线</em></span
+            >
           </div>
         </div>
-      </section>
+      </Panel>
 
       <!-- AI 布控 -->
-      <section class="card">
-        <div class="card-head"><span class="card-title">AI 智能布控</span><span class="card-sub">算法 / 联动</span></div>
+      <Panel>
+        <div class="card-head">
+          <span class="card-title">AI 智能布控</span><span class="card-sub">算法 / 联动</span>
+        </div>
         <ul class="ai-list">
           <li v-for="a in summary.ai" :key="a"><Cpu :size="14" />{{ a }}</li>
         </ul>
@@ -132,11 +173,14 @@
           <span>设备 {{ summary.nvr.ok }}/{{ summary.nvr.total }} 正常</span>
           <span>存储 {{ summary.nvr.storeDays }} 天 / 要求 ≥ {{ summary.nvr.required }} 天</span>
         </div>
-      </section>
+      </Panel>
 
       <!-- 事件联动 -->
-      <section class="card">
-        <div class="card-head"><span class="card-title">视频事件联动</span><span class="card-sub">{{ summary.events.length }} 条</span></div>
+      <Panel>
+        <div class="card-head">
+          <span class="card-title">视频事件联动</span
+          ><span class="card-sub">{{ summary.events.length }} 条</span>
+        </div>
         <div class="evt-list">
           <div v-for="(e, i) in summary.events" :key="i" class="evt-row">
             <AlarmBadge :level="e.lv" />
@@ -146,44 +190,18 @@
           </div>
           <EmptyState v-if="!summary.events.length" text="暂无事件" />
         </div>
-      </section>
+      </Panel>
     </div>
 
     <!-- 知识库 -->
-    <section class="card know">
+    <Panel class="know">
       <div class="card-head"><span class="card-title">监控设计阈值 · 架构 · 故障锁定</span></div>
-      <div class="know-grid">
-        <div v-if="summary.knowledge.thresholds?.length" class="know-col">
-          <h4>设计阈值</h4>
-          <ul><li v-for="t in summary.knowledge.thresholds" :key="t.k"><b>{{ t.k }}</b>：{{ t.v }}<em v-if="t.note">（{{ t.note }}）</em></li></ul>
-        </div>
-        <div v-if="summary.knowledge.arch" class="know-col">
-          <h4>架构组成</h4>
-          <p>{{ summary.knowledge.arch.design }}</p>
-          <ul><li v-for="c in summary.knowledge.arch.components" :key="c">{{ c }}</li></ul>
-          <p class="redundancy">冗余：{{ summary.knowledge.arch.redundancy }}</p>
-        </div>
-        <div v-if="summary.knowledge.logic?.length" class="know-col">
-          <h4>录像 / 轮巡逻辑</h4>
-          <div v-for="l in summary.knowledge.logic" :key="l.title" class="logic">
-            <b>{{ l.title }}</b>
-            <ol><li v-for="s in l.steps" :key="s.step" :class="{ ok: s.ok }">{{ s.text }}</li></ol>
-          </div>
-        </div>
-        <div v-if="summary.knowledge.faults?.length" class="know-col">
-          <h4>故障锁定表</h4>
-          <table class="fault-tbl">
-            <thead><tr><th>故障</th><th>锁定</th><th>处理</th><th>人工复位</th></tr></thead>
-            <tbody>
-              <tr v-for="f in summary.knowledge.faults" :key="f.no">
-                <td>{{ f.fault }}</td><td>{{ f.lock }}</td><td>{{ f.action }}</td>
-                <td><span class="tag" :class="f.manualReset ? 'crit' : 'ok'">{{ f.manualReset ? '需' : '否' }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </section>
+      <SecurityKnowledge
+        :knowledge="summary.knowledge"
+        logic-title="录像 / 轮巡逻辑"
+        reset-header="人工复位"
+      />
+    </Panel>
 
     <p v-if="usingMock" class="mock-flag">⚠ 当前为本地模拟数据（后端未返回或未运行）</p>
   </div>
@@ -193,6 +211,8 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Camera, Activity, Database, Bell, Cpu, Cctv, VideoOff, Play, Pause } from 'lucide-vue-next'
 import KpiCard from '@/components/monitor/KpiCard.vue'
+import Panel from '@/components/common/Panel.vue'
+import SecurityKnowledge from '@/components/SecurityKnowledge.vue'
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
 import EmptyState from '@/components/monitor/EmptyState.vue'
 import { getSecurityCctvDetailed } from '@/api/security'
@@ -210,9 +230,14 @@ interface CamView {
 }
 
 const summary = ref<CctvSummary>({
-  total: 0, online: 0, offline: 0,
+  total: 0,
+  online: 0,
+  offline: 0,
   nvr: { total: 0, ok: 0, storeDays: 0, required: 0 },
-  zones: [], ai: [], events: [], knowledge: { thresholds: [] },
+  zones: [],
+  ai: [],
+  events: [],
+  knowledge: { thresholds: [] },
 })
 const usingMock = ref(false)
 const loading = ref(false)
@@ -252,25 +277,40 @@ function deriveCams(zones: CctvZoneView[]): CamView[] {
 
 function zonePrefix(zone: string): string {
   const map: Record<string, string> = {
-    '园区周界': 'P', '大堂/门厅': 'L', '走廊/通道': 'C', '机房包间': 'R', '动力机房': 'D', '柴发/油罐区': 'F',
+    园区周界: 'P',
+    '大堂/门厅': 'L',
+    '走廊/通道': 'C',
+    机房包间: 'R',
+    动力机房: 'D',
+    '柴发/油罐区': 'F',
   }
   if (map[zone]) return map[zone]
-  return zone.replace(/[^\w一-龥]/g, '').slice(0, 2).toUpperCase()
+  return zone
+    .replace(/[^\w一-龥]/g, '')
+    .slice(0, 2)
+    .toUpperCase()
 }
 
-const onlineRate = computed(() => summary.value.total ? +((summary.value.online / summary.value.total) * 100).toFixed(1) : 0)
-const aiEvents = computed(() => summary.value.events.filter((e) => /AI|联动|复核/.test(e.desc)).length)
+const onlineRate = computed(() =>
+  summary.value.total ? +((summary.value.online / summary.value.total) * 100).toFixed(1) : 0,
+)
+const aiEvents = computed(
+  () => summary.value.events.filter((e) => /AI|联动|复核/.test(e.desc)).length,
+)
 const maxZone = computed(() => Math.max(1, ...summary.value.zones.map((z) => z.cams)))
-function pct(v: number, max: number) { return Math.min(100, (v / max) * 100) }
+function pct(v: number, max: number) {
+  return Math.min(100, (v / max) * 100)
+}
 
 // 摄像头列表过滤
 const filterZone = ref('')
 const filterStatus = ref('')
 const selectedCam = ref<CamView | null>(null)
 const filteredCams = computed(() =>
-  cams.value.filter((c) =>
-    (!filterZone.value || c.zone === filterZone.value) &&
-    (!filterStatus.value || c.status === filterStatus.value),
+  cams.value.filter(
+    (c) =>
+      (!filterZone.value || c.zone === filterZone.value) &&
+      (!filterStatus.value || c.status === filterStatus.value),
   ),
 )
 
@@ -286,7 +326,10 @@ const gridCams = computed<CamView[]>(() => {
   return arr
 })
 const visibleCams = computed(() => gridCams.value)
-function setLayout(n: number) { layout.value = n; startIdx.value = 0 }
+function setLayout(n: number) {
+  layout.value = n
+  startIdx.value = 0
+}
 function focusCam(cam: CamView | null) {
   if (!cam) return
   selectedCam.value = cam
@@ -310,10 +353,13 @@ function togglePatrol() {
       patrolRound.value++
     }, patrolSec.value * 1000)
   } else if (patrolTimer) {
-    clearInterval(patrolTimer); patrolTimer = null
+    clearInterval(patrolTimer)
+    patrolTimer = null
   }
 }
-watch(layout, () => { startIdx.value = 0 })
+watch(layout, () => {
+  startIdx.value = 0
+})
 
 async function load() {
   loading.value = true
@@ -336,12 +382,17 @@ async function load() {
 
 function mockSummary(): CctvSummary {
   return {
-    total: 486, online: 482, offline: 4,
+    total: 486,
+    online: 482,
+    offline: 4,
     nvr: { total: 12, ok: 12, storeDays: 92, required: 90 },
     zones: [
-      { id: '园区周界', cams: 64, offline: 0 }, { id: '大堂/门厅', cams: 22, offline: 0 },
-      { id: '走廊/通道', cams: 118, offline: 1 }, { id: '机房包间', cams: 192, offline: 2 },
-      { id: '动力机房', cams: 58, offline: 1 }, { id: '柴发/油罐区', cams: 32, offline: 0 },
+      { id: '园区周界', cams: 64, offline: 0 },
+      { id: '大堂/门厅', cams: 22, offline: 0 },
+      { id: '走廊/通道', cams: 118, offline: 1 },
+      { id: '机房包间', cams: 192, offline: 2 },
+      { id: '动力机房', cams: 58, offline: 1 },
+      { id: '柴发/油罐区', cams: 32, offline: 0 },
     ],
     ai: ['周界入侵检测', '人员徘徊识别', '未戴安全帽识别', '离岗检测'],
     events: [
@@ -363,25 +414,64 @@ function mockSummary(): CctvSummary {
         redundancy: 'NVR N+1 热备，核心交换机双机，存储 RAID6 + 异地备份。',
       },
       logic: [
-        { title: '实时预览', steps: [
-          { step: 1, text: '选择摄像机 → 平台取流(GB28181/RTSP)', ok: true },
-          { step: 2, text: '解码上墙 / WebRTC 低延迟预览', ok: true },
-        ] },
-        { title: '大屏轮巡', steps: [
-          { step: 1, text: '编辑轮巡组(≤16 路)', ok: true },
-          { step: 2, text: '设定驻留时间(默认 5s)自动切换', ok: true },
-        ] },
-        { title: 'AI 联动', steps: [
-          { step: 1, text: '算法识别 → 打标 + 截图', ok: true },
-          { step: 2, text: '联动预置位 / 弹窗 / 推送 IOC', ok: true },
-        ] },
+        {
+          title: '实时预览',
+          steps: [
+            { step: 1, text: '选择摄像机 → 平台取流(GB28181/RTSP)', ok: true },
+            { step: 2, text: '解码上墙 / WebRTC 低延迟预览', ok: true },
+          ],
+        },
+        {
+          title: '大屏轮巡',
+          steps: [
+            { step: 1, text: '编辑轮巡组(≤16 路)', ok: true },
+            { step: 2, text: '设定驻留时间(默认 5s)自动切换', ok: true },
+          ],
+        },
+        {
+          title: 'AI 联动',
+          steps: [
+            { step: 1, text: '算法识别 → 打标 + 截图', ok: true },
+            { step: 2, text: '联动预置位 / 弹窗 / 推送 IOC', ok: true },
+          ],
+        },
       ],
       faults: [
-        { no: 1, fault: '视频丢失', lock: '标记离线 + 告警', action: '查供电/网络/光纤', manualReset: false },
-        { no: 2, fault: '画面卡顿', lock: '降码流/切换线路', action: '查带宽/交换机', manualReset: false },
-        { no: 3, fault: '时间不同步', lock: '强制 NTP 校时', action: '校时服务器', manualReset: false },
-        { no: 4, fault: '存储写满', lock: '覆盖最旧 + 告警', action: '扩容/清理', manualReset: true },
-        { no: 5, fault: 'AI 误报频发', lock: '调阈值/模型', action: '复核样本', manualReset: false },
+        {
+          no: 1,
+          fault: '视频丢失',
+          lock: '标记离线 + 告警',
+          action: '查供电/网络/光纤',
+          manualReset: false,
+        },
+        {
+          no: 2,
+          fault: '画面卡顿',
+          lock: '降码流/切换线路',
+          action: '查带宽/交换机',
+          manualReset: false,
+        },
+        {
+          no: 3,
+          fault: '时间不同步',
+          lock: '强制 NTP 校时',
+          action: '校时服务器',
+          manualReset: false,
+        },
+        {
+          no: 4,
+          fault: '存储写满',
+          lock: '覆盖最旧 + 告警',
+          action: '扩容/清理',
+          manualReset: true,
+        },
+        {
+          no: 5,
+          fault: 'AI 误报频发',
+          lock: '调阈值/模型',
+          action: '复核样本',
+          manualReset: false,
+        },
       ],
     },
   }
@@ -389,111 +479,436 @@ function mockSummary(): CctvSummary {
 
 const REFRESH_MS = 30000
 let timer: ReturnType<typeof setInterval> | null = null
-onMounted(() => { load(); timer = setInterval(load, REFRESH_MS) })
-onUnmounted(() => { if (timer) clearInterval(timer); if (patrolTimer) clearInterval(patrolTimer) })
+onMounted(() => {
+  load()
+  timer = setInterval(load, REFRESH_MS)
+})
+onUnmounted(() => {
+  if (timer) clearInterval(timer)
+  if (patrolTimer) clearInterval(patrolTimer)
+})
 
-void Camera; void Activity; void Database; void Bell
+void Camera
+void Activity
+void Database
+void Bell
 </script>
 
 <style scoped>
-.page { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-.page-title { font-size: 20px; margin: 0; }
-.page-sub { margin: 2px 0 0; color: var(--text-2); font-size: 12px; }
-.head-actions { display: flex; align-items: center; gap: 8px; }
-.btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border: 1px solid var(--border); background: var(--bg-1); color: var(--text-1); border-radius: 6px; cursor: pointer; font-size: 13px; }
-.btn.active { background: var(--brand); color: #fff; border-color: var(--brand); }
-.divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
-.patrol-tip { font-size: 12px; color: var(--brand); }
-.kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-.grid-main { display: grid; grid-template-columns: 2.2fr 1fr; gap: 14px; }
-.grid-sub { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-.card { background: var(--bg-1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
-.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-.card-title { font-weight: 600; font-size: 14px; }
-.card-sub { font-size: 12px; color: var(--text-2); }
-
+.page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.page-title {
+  font-size: 20px;
+  margin: 0;
+}
+.page-sub {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: 12px;
+}
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-1);
+  color: var(--text-1);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn.active {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+.divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  margin: 0 4px;
+}
+.patrol-tip {
+  font-size: 12px;
+  color: var(--brand);
+}
+.kpi-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.grid-main {
+  display: grid;
+  grid-template-columns: 2.2fr 1fr;
+  gap: 14px;
+}
+.grid-sub {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
 /* 预览分屏 */
-.preview-card { min-height: 420px; }
-.preview-grid { display: grid; gap: 6px; }
-.preview-grid.g1 { grid-template-columns: 1fr; }
-.preview-grid.g4 { grid-template-columns: 1fr 1fr; }
-.preview-grid.g9 { grid-template-columns: repeat(3, 1fr); }
-.preview-grid.g16 { grid-template-columns: repeat(4, 1fr); }
-.pv-cell { position: relative; aspect-ratio: 16/9; background: #0a0e14; border: 1px solid #1c2530; border-radius: 6px; overflow: hidden; cursor: pointer; display: flex; align-items: flex-end; }
-.pv-cell.off { background: #15110f; border-color: #3a2418; }
-.pv-cell.alarm { border-color: #b4451f; box-shadow: 0 0 0 1px #b4451f inset; }
-.pv-feedsim { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
-.sim-ico { color: #2f6f4f; opacity: .8; }
-.sim-ico.off { color: #6b3a2a; }
-.sim-grid { position: absolute; inset: 0; background-image: linear-gradient(#15202c 1px, transparent 1px), linear-gradient(90deg, #15202c 1px, transparent 1px); background-size: 28px 28px; opacity: .5; }
-.sim-scan { position: absolute; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #2f6f4f, transparent); animation: scan 3.2s linear infinite; }
-@keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
-.pv-bar { position: relative; z-index: 2; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 4px 6px; background: linear-gradient(transparent, rgba(0,0,0,.7)); font-size: 11px; color: #cfe; }
-.pv-name { font-weight: 600; }
-.pv-meta { display: inline-flex; align-items: center; gap: 3px; color: #9fb; }
-.pv-bit { color: #7a8; }
-.dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
-.dot.online { background: #2fae6b; } .dot.offline { background: #d06a3a; }
-.pv-alarm { position: absolute; top: 6px; left: 6px; z-index: 3; background: #b4451f; color: #fff; font-size: 10px; padding: 1px 5px; border-radius: 3px; }
-.pv-idx { position: absolute; top: 6px; right: 6px; z-index: 3; color: #456; font-size: 10px; }
-.pv-empty { margin: auto; color: #345; }
-.patrol-bar { margin-top: 10px; display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
-.rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #d23; animation: blink 1s steps(2) infinite; }
-@keyframes blink { 50% { opacity: .2; } }
+.preview-card {
+  min-height: 420px;
+}
+.preview-grid {
+  display: grid;
+  gap: 6px;
+}
+.preview-grid.g1 {
+  grid-template-columns: 1fr;
+}
+.preview-grid.g4 {
+  grid-template-columns: 1fr 1fr;
+}
+.preview-grid.g9 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.preview-grid.g16 {
+  grid-template-columns: repeat(4, 1fr);
+}
+.pv-cell {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #0a0e14;
+  border: 1px solid #1c2530;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-end;
+}
+.pv-cell.off {
+  background: #15110f;
+  border-color: #3a2418;
+}
+.pv-cell.alarm {
+  border-color: #b4451f;
+  box-shadow: 0 0 0 1px #b4451f inset;
+}
+.pv-feedsim {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sim-ico {
+  color: #2f6f4f;
+  opacity: 0.8;
+}
+.sim-ico.off {
+  color: #6b3a2a;
+}
+.sim-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(#15202c 1px, transparent 1px),
+    linear-gradient(90deg, #15202c 1px, transparent 1px);
+  background-size: 28px 28px;
+  opacity: 0.5;
+}
+.sim-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #2f6f4f, transparent);
+  animation: scan 3.2s linear infinite;
+}
+@keyframes scan {
+  0% {
+    top: 0;
+  }
+  100% {
+    top: 100%;
+  }
+}
+.pv-bar {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  font-size: 11px;
+  color: #cfe;
+}
+.pv-name {
+  font-weight: 600;
+}
+.pv-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #9fb;
+}
+.pv-bit {
+  color: #7a8;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.online {
+  background: #2fae6b;
+}
+.dot.offline {
+  background: #d06a3a;
+}
+.pv-alarm {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
+  background: #b4451f;
+  color: #fff;
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.pv-idx {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 3;
+  color: #456;
+  font-size: 10px;
+}
+.pv-empty {
+  margin: auto;
+  color: #345;
+}
+.patrol-bar {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.rec-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d23;
+  animation: blink 1s steps(2) infinite;
+}
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
 
 /* 摄像头列表 */
-.camlist-card { display: flex; flex-direction: column; }
-.list-filter { display: flex; gap: 6px; }
-.sel { background: var(--bg-2); border: 1px solid var(--border); color: var(--text-1); border-radius: 5px; padding: 3px 6px; font-size: 12px; }
-.camlist { overflow-y: auto; max-height: 420px; display: flex; flex-direction: column; gap: 2px; }
-.cam-row { display: grid; grid-template-columns: 14px 1fr 70px 96px 56px 40px; align-items: center; gap: 4px; padding: 5px 6px; border-radius: 5px; cursor: pointer; font-size: 12px; }
-.cam-row:hover { background: var(--bg-2); }
-.cam-row.sel { background: var(--brand-weak); outline: 1px solid var(--brand); }
-.cam-row.off { opacity: .6; }
-.c-dot { width: 8px; height: 8px; border-radius: 50%; }
-.c-dot.online { background: #2fae6b; } .c-dot.offline { background: #d06a3a; }
-.c-name { font-weight: 600; }
-.c-zone, .c-ip, .c-bit { color: var(--text-2); }
-.c-st { font-size: 11px; } .c-st.online { color: #2fae6b; } .c-st.offline { color: #d06a3a; }
+.camlist-card {
+  display: flex;
+  flex-direction: column;
+}
+.list-filter {
+  display: flex;
+  gap: 6px;
+}
+.sel {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  border-radius: 5px;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+.camlist {
+  overflow-y: auto;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cam-row {
+  display: grid;
+  grid-template-columns: 14px 1fr 70px 96px 56px 40px;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.cam-row:hover {
+  background: var(--bg-2);
+}
+.cam-row.sel {
+  background: var(--brand-weak);
+  outline: 1px solid var(--brand);
+}
+.cam-row.off {
+  opacity: 0.6;
+}
+.c-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.c-dot.online {
+  background: #2fae6b;
+}
+.c-dot.offline {
+  background: #d06a3a;
+}
+.c-name {
+  font-weight: 600;
+}
+.c-zone,
+.c-ip,
+.c-bit {
+  color: var(--text-2);
+}
+.c-st {
+  font-size: 11px;
+}
+.c-st.online {
+  color: #2fae6b;
+}
+.c-st.offline {
+  color: #d06a3a;
+}
 
 /* 分区覆盖 */
-.zone-bars { display: flex; flex-direction: column; gap: 8px; }
-.zone-row { display: grid; grid-template-columns: 90px 1fr 80px; align-items: center; gap: 8px; font-size: 12px; }
-.z-name { color: var(--text-2); }
-.z-track { position: relative; height: 14px; background: var(--bg-2); border-radius: 7px; overflow: hidden; }
-.z-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #2f6f9f, #3f8fbf); border-radius: 7px; }
-.z-off { position: absolute; left: 0; top: 0; bottom: 0; background: #d06a3a; opacity: .9; }
-.z-num { text-align: right; } .z-off-n { color: #d06a3a; font-style: normal; }
+.zone-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.zone-row {
+  display: grid;
+  grid-template-columns: 90px 1fr 80px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.z-name {
+  color: var(--text-2);
+}
+.z-track {
+  position: relative;
+  height: 14px;
+  background: var(--bg-2);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.z-fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #2f6f9f, #3f8fbf);
+  border-radius: 7px;
+}
+.z-off {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: #d06a3a;
+  opacity: 0.9;
+}
+.z-num {
+  text-align: right;
+}
+.z-off-n {
+  color: #d06a3a;
+  font-style: normal;
+}
 
 /* AI */
-.ai-list { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
-.ai-list li { display: flex; align-items: center; gap: 6px; color: var(--text-1); }
-.nvr-box { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--text-2); border-top: 1px dashed var(--border); padding-top: 8px; }
-.nvr-t { color: var(--text-1); font-weight: 600; }
+.ai-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.ai-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-1);
+}
+.nvr-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--text-2);
+  border-top: 1px dashed var(--border);
+  padding-top: 8px;
+}
+.nvr-t {
+  color: var(--text-1);
+  font-weight: 600;
+}
 
 /* 事件 */
-.evt-list { display: flex; flex-direction: column; gap: 6px; max-height: 220px; overflow-y: auto; }
-.evt-row { display: grid; grid-template-columns: auto 52px 80px 1fr; gap: 6px; align-items: center; font-size: 12px; }
-.e-ts { color: var(--text-2); } .e-zone { color: var(--brand); } .e-desc { color: var(--text-1); }
+.evt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.evt-row {
+  display: grid;
+  grid-template-columns: auto 52px 80px 1fr;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+}
+.e-ts {
+  color: var(--text-2);
+}
+.e-zone {
+  color: var(--brand);
+}
+.e-desc {
+  color: var(--text-1);
+}
 
-/* 知识库 */
-.know-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.know-col h4 { margin: 0 0 6px; font-size: 13px; }
-.know-col ul { margin: 0; padding-left: 16px; font-size: 12px; color: var(--text-2); }
-.know-col p { font-size: 12px; color: var(--text-2); margin: 4px 0; }
-.redundancy { color: var(--brand); }
-.logic { margin-bottom: 8px; }
-.logic ol { margin: 4px 0 0; padding-left: 18px; font-size: 12px; color: var(--text-2); }
-.logic li.ok::marker { content: '✓ '; }
-.fault-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-.fault-tbl th, .fault-tbl td { border: 1px solid var(--border); padding: 3px 5px; text-align: left; }
-.tag { font-size: 11px; padding: 1px 5px; border-radius: 3px; }
-.tag.crit { background: #b4451f; color: #fff; } .tag.ok { background: #2f6f4f; color: #fff; }
-.mock-flag { font-size: 12px; color: #d06a3a; margin: 0; }
+.mock-flag {
+  font-size: 12px;
+  color: #d06a3a;
+  margin: 0;
+}
 @media (max-width: 1100px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .grid-main, .grid-sub { grid-template-columns: 1fr; }
-  .know-grid { grid-template-columns: 1fr 1fr; }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .grid-main,
+  .grid-sub {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

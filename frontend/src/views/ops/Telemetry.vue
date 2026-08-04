@@ -2,27 +2,41 @@
   <div>
     <div class="view-head">
       <h1>{{ tl('运维作业') }} {{ tl('·') }} {{ tl('设备遥测') }}</h1>
-      <span class="sub">{{ tl('物模型驱动') }} {{ tl('·') }} WebSocket {{ tl('实时') }} + HTTP {{ tl('轮询降级') }}</span>
-      <span class="pill" :class="selected ? 'g' : ''">{{ selected ? '监控中' : '请选择设备' }}</span>
+      <span class="sub"
+        >{{ tl('物模型驱动') }} {{ tl('·') }} WebSocket {{ tl('实时') }} + HTTP
+        {{ tl('轮询降级') }}</span
+      >
+      <span class="pill" :class="selected ? 'g' : ''">{{
+        selected ? '监控中' : '请选择设备'
+      }}</span>
     </div>
 
     <!-- 设备选择面板 -->
-    <div class="card" style="margin-bottom:14px">
-      <div class="flex gap8 wrap" style="align-items:center">
-        <span class="section-title-inline" style="margin:0">{{ tl('设备选择') }}</span>
-        <input v-model.trim="search" class="ipt" :placeholder="tl('搜索设备 ID / 名称 / IP…')" style="width:240px" @input="onSearch" />
-        <select v-model="filterCategory" class="ipt" style="width:120px" @change="onSearch">
+    <Panel style="margin-bottom: 14px">
+      <div class="flex gap8 wrap" style="align-items: center">
+        <span class="section-title-inline" style="margin: 0">{{ tl('设备选择') }}</span>
+        <input
+          v-model.trim="search"
+          class="ipt"
+          :placeholder="tl('搜索设备 ID / 名称 / IP…')"
+          style="width: 240px"
+          @input="onSearch"
+        />
+        <select v-model="filterCategory" class="ipt" style="width: 120px" @change="onSearch">
           <option value="">{{ tl('全部类别') }}</option>
           <option v-for="c in categories" :key="c" :value="c">{{ c }}</option>
         </select>
-        <select v-model="filterProtocol" class="ipt" style="width:120px" @change="onSearch">
+        <select v-model="filterProtocol" class="ipt" style="width: 120px" @change="onSearch">
           <option value="">{{ tl('全部协议') }}</option>
           <option v-for="p in protocols" :key="p" :value="p">{{ p }}</option>
         </select>
         <button class="btn-sm" @click="refresh">{{ tl('刷新列表') }}</button>
-        <span class="muted" style="margin-left:auto;font-size:11px">{{ filtered.length }} {{ tl('台设备') }} {{ tl('·') }} {{ onlineCount }} {{ tl('在线') }}</span>
+        <span class="muted" style="margin-left: auto; font-size: 11px"
+          >{{ filtered.length }} {{ tl('台设备') }} {{ tl('·') }} {{ onlineCount }}
+          {{ tl('在线') }}</span
+        >
       </div>
-    </div>
+    </Panel>
 
     <!-- 设备卡片网格 -->
     <div class="grid cols-6" v-if="filtered.length">
@@ -44,23 +58,25 @@
         </div>
         <div class="dc-stats">
           <span>{{ d.metric_count }} {{ tl('测点') }}</span>
-          <span class="mono muted" style="font-size:10px">{{ d.ip }}</span>
+          <span class="mono muted" style="font-size: 10px">{{ d.ip }}</span>
         </div>
       </div>
     </div>
-    <div v-else class="card muted" style="text-align:center;padding:22px">
+    <Panel v-else class="muted" style="text-align: center; padding: 22px">
       {{ loading ? '加载中…' : '暂无已注册设备' }}
-    </div>
+    </Panel>
 
     <!-- 分页 -->
-    <div v-if="totalPages > 1" class="flex center gap8" style="margin:10px 0">
+    <div v-if="totalPages > 1" class="flex center gap8" style="margin: 10px 0">
       <button class="btn-sm" :disabled="page <= 1" @click="page--">{{ tl('上一页') }}</button>
-      <span class="muted" style="font-size:11px">{{ page }} / {{ totalPages }}</span>
-      <button class="btn-sm" :disabled="page >= totalPages" @click="page++">{{ tl('下一页') }}</button>
+      <span class="muted" style="font-size: 11px">{{ page }} / {{ totalPages }}</span>
+      <button class="btn-sm" :disabled="page >= totalPages" @click="page++">
+        {{ tl('下一页') }}
+      </button>
     </div>
 
     <!-- DeviceMonitor -->
-    <div v-if="selected && deviceThingModels.length" style="margin-top:14px">
+    <div v-if="selected && deviceThingModels.length" style="margin-top: 14px">
       <DeviceMonitor
         :device-id="selected.device_id"
         :device-name="selected.name || selected.device_id"
@@ -71,18 +87,24 @@
         :kpi-metrics="kpiMetricNames"
       />
     </div>
-    <div v-else-if="selected && !deviceThingModels.length" class="card muted" style="text-align:center;padding:22px;margin-top:14px">
+    <Panel
+      v-else-if="selected && !deviceThingModels.length"
+      class="muted"
+      style="text-align: center; padding: 22px; margin-top: 14px"
+    >
       {{ tl('该设备未匹配到物模型') }}，{{ tl('或物模型加载失败') }}。
-    </div>
+    </Panel>
   </div>
 </template>
 
-<script setup lang="ts">import { useI18n } from "vue-i18n";
-const { t: tl } = useI18n();
+<script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+const { t: tl } = useI18n()
 
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getExternalDevices, getThingModels } from '@/api'
 import DeviceMonitor from '@/components/business/DeviceMonitor.vue'
+import Panel from '@/components/common/Panel.vue'
 import { THING_MODELS, type ThingModel } from '@/constants/thingModels'
 import type { DeviceListResponse, ExternalDeviceView, ThingModelDef } from '@/types'
 /* ---- 设备列表 ---- */
@@ -99,17 +121,18 @@ const filtered = computed(() => {
   let items = [...list.value.items]
   if (search.value) {
     const q = search.value.toLowerCase()
-    items = items.filter(d =>
-      d.device_id.toLowerCase().includes(q) ||
-      (d.name || '').toLowerCase().includes(q) ||
-      d.ip.includes(q)
+    items = items.filter(
+      (d) =>
+        d.device_id.toLowerCase().includes(q) ||
+        (d.name || '').toLowerCase().includes(q) ||
+        d.ip.includes(q),
     )
   }
   if (filterCategory.value) {
-    items = items.filter(d => d.category === filterCategory.value)
+    items = items.filter((d) => d.category === filterCategory.value)
   }
   if (filterProtocol.value) {
-    items = items.filter(d => d.protocol === filterProtocol.value)
+    items = items.filter((d) => d.protocol === filterProtocol.value)
   }
   return items
 })
@@ -121,10 +144,16 @@ const paginatedDevices = computed(() => {
 })
 
 const onlineCount = computed(() => list.value?.online ?? 0)
-const categories = computed(() => [...new Set((list.value?.items ?? []).map(d => d.category).filter(Boolean) as string[])])
-const protocols = computed(() => [...new Set((list.value?.items ?? []).map(d => d.protocol).filter(Boolean) as string[])])
+const categories = computed(() => [
+  ...new Set((list.value?.items ?? []).map((d) => d.category).filter(Boolean) as string[]),
+])
+const protocols = computed(() => [
+  ...new Set((list.value?.items ?? []).map((d) => d.protocol).filter(Boolean) as string[]),
+])
 
-function onSearch() { page.value = 1 }
+function onSearch() {
+  page.value = 1
+}
 
 /* ---- 选中设备 ---- */
 const selected = ref<ExternalDeviceView | null>(null)
@@ -138,12 +167,12 @@ const backendThingModels = ref<ThingModelDef[]>([])
 
 // 将前端 THING_MODELS 转为 DeviceMonitor 期望的 ThingModelDef 格式
 function convertFrontendModels(models: ThingModel[]): ThingModelDef[] {
-  return models.map(m => ({
+  return models.map((m) => ({
     category: m.category,
     category_label: m.name,
     domain: m.domain,
     protocol: m.protocol,
-    metrics: m.metrics.map(mt => ({
+    metrics: m.metrics.map((mt) => ({
       metric_name: mt.name,
       unit: mt.unit,
       description: mt.desc,
@@ -157,14 +186,12 @@ const deviceThingModels = computed<ThingModelDef[]>(() => {
   if (!selected.value) return []
   // 后端 API 返回的物模型优先 (真实数据源, 更准确)
   if (backendThingModels.value.length) {
-    const matched = backendThingModels.value.filter(t =>
-      t.category === selected.value!.category
-    )
+    const matched = backendThingModels.value.filter((t) => t.category === selected.value!.category)
     if (matched.length) return matched
   }
   // 降级到前端常量物模型
   const cat = selected.value.category || ''
-  return frontendThingModels.value.filter(t => t.category === cat)
+  return frontendThingModels.value.filter((t) => t.category === cat)
 })
 
 // 测点中文标签映射 (metric_name → Label)
@@ -174,10 +201,14 @@ const metricLabelMap = computed<Record<string, string>>(() => {
   const map: Record<string, string> = {}
   // 通用名兜底 (与具体物模型无关)
   const common: Record<string, string> = {
-    supply_temp: '送水温度', return_temp: '回水温度',
-    inlet_temp: '进风温度', outlet_temp: '出风温度',
-    humidity: '湿度', power_kw: '功耗',
-    cpu_usage: 'CPU 使用率', temp: '温度',
+    supply_temp: '送水温度',
+    return_temp: '回水温度',
+    inlet_temp: '进风温度',
+    outlet_temp: '出风温度',
+    humidity: '湿度',
+    power_kw: '功耗',
+    cpu_usage: 'CPU 使用率',
+    temp: '温度',
   }
   Object.assign(map, common)
   // 物模型描述优先 (后端 API 或前端常量, deviceThingModels 已优先后端)
@@ -199,7 +230,7 @@ const metricLabelMap = computed<Record<string, string>>(() => {
 const kpiMetricNames = computed(() => {
   const models = deviceThingModels.value
   if (!models.length) return []
-  return models[0].metrics.slice(0, 4).map(m => m.metric_name)
+  return models[0].metrics.slice(0, 4).map((m) => m.metric_name)
 })
 
 /* ---- 数据加载 ---- */
@@ -207,14 +238,19 @@ async function refresh() {
   loading.value = true
   try {
     list.value = await getExternalDevices()
-  } catch { /* 静默 */ }
-  finally { loading.value = false }
+  } catch {
+    /* 静默 */
+  } finally {
+    loading.value = false
+  }
 }
 
 async function loadThingModels() {
   try {
     backendThingModels.value = await getThingModels()
-  } catch { /* 后端不可用时使用前端常量 */ }
+  } catch {
+    /* 后端不可用时使用前端常量 */
+  }
 }
 
 watch(search, onSearch)
@@ -240,8 +276,13 @@ onBeforeUnmount(() => clearInterval(timer))
   font-size: 12px;
   outline: none;
 }
-.ipt:focus { border-color: var(--cyan); }
-select.ipt { appearance: none; cursor: pointer; }
+.ipt:focus {
+  border-color: var(--cyan);
+}
+select.ipt {
+  appearance: none;
+  cursor: pointer;
+}
 
 .section-title-inline {
   font-size: 12.5px;
@@ -260,20 +301,20 @@ select.ipt { appearance: none; cursor: pointer; }
   border-radius: 10px;
   padding: 12px 14px;
   cursor: pointer;
-  transition: all .2s;
+  transition: all 0.2s;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 .dev-card:hover {
-  border-color: rgba(34,227,255,.35);
+  border-color: rgba(34, 227, 255, 0.35);
   box-shadow: var(--glow);
   transform: translateY(-1px);
 }
 .dev-card.active {
   border-color: var(--cyan);
-  background: linear-gradient(180deg, rgba(34,227,255,.1), var(--panel));
-  box-shadow: 0 0 16px rgba(34,227,255,.15);
+  background: linear-gradient(180deg, rgba(34, 227, 255, 0.1), var(--panel));
+  box-shadow: 0 0 16px rgba(34, 227, 255, 0.15);
 }
 .dc-head {
   display: flex;

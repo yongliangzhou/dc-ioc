@@ -6,13 +6,16 @@
 </template>
 
 <script setup lang="ts">
-withDefaults(defineProps<{
-  text?: string
-  icon?: string
-}>(), {
-  text: '暂无数据',
-  icon: '📊',
-})
+withDefaults(
+  defineProps<{
+    text?: string
+    icon?: string
+  }>(),
+  {
+    text: '暂无数据',
+    icon: '📊',
+  },
+)
 </script>
 
 <style scoped>

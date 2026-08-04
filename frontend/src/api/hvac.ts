@@ -25,8 +25,8 @@ export interface PumpView {
   hz: number
   kw: number
   flow: number
-  inPressure: number   // 入口压力 bar
-  outPressure: number  // 出口压力 bar
+  inPressure: number // 入口压力 bar
+  outPressure: number // 出口压力 bar
 }
 
 export interface TowerView {
@@ -126,9 +126,9 @@ export interface ChillerSummary {
   // 各子系统
   chillers: ChillerPlantView[]
   towers: TowerView[]
-  pumpsChw: PumpView[]       // 一次冷冻水泵
-  pumpsCw: PumpView[]        // 冷却水泵
-  pumpsSec: PumpView[]       // 二次冷冻水泵
+  pumpsChw: PumpView[] // 一次冷冻水泵
+  pumpsCw: PumpView[] // 冷却水泵
+  pumpsSec: PumpView[] // 二次冷冻水泵
   hexs: HexView[]
   valves: ValveView[]
   storageTank: StorageTankView
@@ -149,22 +149,22 @@ export interface CracView {
   status: string
 
   // 送回风温度
-  supplyT: number | string   // 送风温度 °C
-  returnT: number | string   // 回风温度 °C
-  supplyRh: number | string  // 送风湿度 %
-  returnRh: number | string  // 回风湿度 %
+  supplyT: number | string // 送风温度 °C
+  returnT: number | string // 回风温度 °C
+  supplyRh: number | string // 送风湿度 %
+  returnRh: number | string // 回风湿度 %
 
   // 供回水水温
   chilledWaterT: number | string
   returnWaterT: number | string
 
   // 运行参数
-  fanSpeed: number           // 风机 %
-  valve: number              // 风阀开度 %
-  waterValve: number         // 水阀开度 %
-  power: number              // 功率 kW
-  dp: number | string          // 压差 Pa
-  filter: string             // 滤网状态
+  fanSpeed: number // 风机 %
+  valve: number // 风阀开度 %
+  waterValve: number // 水阀开度 %
+  power: number // 功率 kW
+  dp: number | string // 压差 Pa
+  filter: string // 滤网状态
 
   // 控制点位
   fanEnable: boolean
@@ -191,12 +191,12 @@ export interface RoomView {
   name: string
   avgTemp: number
   avgRh: number
-  hotAisle: number        // 热通道温度
-  hotRh: number           // 热通道湿度
-  coldAisle: number       // 冷通道温度
-  coldRh: number          // 冷通道湿度
-  inOutDiff: number       // 室内外压差
-  dewPoint: number        // 露点
+  hotAisle: number // 热通道温度
+  hotRh: number // 热通道湿度
+  coldAisle: number // 冷通道温度
+  coldRh: number // 冷通道湿度
+  inOutDiff: number // 室内外压差
+  dewPoint: number // 露点
   cracRun: number
   cracN: number
   state: string
@@ -221,7 +221,7 @@ export interface FreshAirView {
   supplyT: number | string
   rh: number | string
   co2: number | string
-  filterDp: number        // 过滤器压差
+  filterDp: number // 过滤器压差
 }
 
 // ---- 恒湿机 ----
@@ -244,7 +244,16 @@ export interface FuncRoomView {
 export interface CracCtrlView {
   humId: { rhLowOn: number; rhHighOff: number; desc: string }
   positivePressure: { min: number; max: number; unit: string; desc: string }
-  secPump: { diffTarget: number; diffUnit: string; addHz: number; addDelayMin: number; reduceHz: number; reduceDelayMin: number; minRun: number; desc: string }
+  secPump: {
+    diffTarget: number
+    diffUnit: string
+    addHz: number
+    addDelayMin: number
+    reduceHz: number
+    reduceDelayMin: number
+    minRun: number
+    desc: string
+  }
 }
 
 export interface CracSummary {
@@ -253,14 +262,14 @@ export interface CracSummary {
   online: number
   standby: number
   fault: number
-  outdoorRef: number       // 室外参考温度
+  outdoorRef: number // 室外参考温度
 
   // 均值指标
   avgSupplyT: number
   avgReturnT: number
   avgSupplyWaterT: number
   avgReturnWaterT: number
-  avgInOutDiff: number     // 平均室内外压差
+  avgInOutDiff: number // 平均室内外压差
 
   // 漏水
   leakAlarm: number
@@ -518,9 +527,15 @@ function mapChiller(raw: any): ChillerSummary {
     healthScore: null,
   }))
   const chillerOnline = devices.filter((d) => d.status === 'online').length
-  const avgLoad = devices.length ? devices.reduce((s, d) => s + d.loadPercent, 0) / devices.length : 0
-  const avgIn = devices.length ? devices.reduce((s, d) => s + d.temperatureIn, 0) / devices.length : 0
-  const avgOut = devices.length ? devices.reduce((s, d) => s + d.temperatureOut, 0) / devices.length : 0
+  const avgLoad = devices.length
+    ? devices.reduce((s, d) => s + d.loadPercent, 0) / devices.length
+    : 0
+  const avgIn = devices.length
+    ? devices.reduce((s, d) => s + d.temperatureIn, 0) / devices.length
+    : 0
+  const avgOut = devices.length
+    ? devices.reduce((s, d) => s + d.temperatureOut, 0) / devices.length
+    : 0
 
   // 泵组映射
   const mapPump = (p: any): PumpView => ({
@@ -795,16 +810,39 @@ function mapCrac(raw: any): CracSummary {
   const ctrl: CracCtrlView = {
     humId: ctrlRaw.humId ?? { rhLowOn: 30, rhHighOff: 65, desc: '' },
     positivePressure: ctrlRaw.positivePressure ?? { min: 5, max: 10, unit: 'Pa', desc: '' },
-    secPump: ctrlRaw.secPump ?? { diffTarget: 0.1, diffUnit: 'MPa', addHz: 50, addDelayMin: 5, reduceHz: 35, reduceDelayMin: 5, minRun: 1, desc: '' },
+    secPump: ctrlRaw.secPump ?? {
+      diffTarget: 0.1,
+      diffUnit: 'MPa',
+      addHz: 50,
+      addDelayMin: 5,
+      reduceHz: 35,
+      reduceDelayMin: 5,
+      minRun: 1,
+      desc: '',
+    },
   }
 
   const s = raw?.summary ?? {}
 
   // backward compat: compute old dashboard fields from device list
-  const dashAvgSupply = devices.length ? devices.filter(d => typeof d.supplyT === 'number').reduce((sum, d) => sum + Number(d.supplyT), 0) / devices.length : 0
-  const dashAvgReturn = devices.length ? devices.filter(d => typeof d.returnT === 'number').reduce((sum, d) => sum + Number(d.returnT), 0) / devices.length : 0
-  const dashAvgRh = devices.length ? devices.filter(d => typeof d.supplyRh === 'number').reduce((sum, d) => sum + Number(d.supplyRh), 0) / devices.length : 0
-  const dashAvgFan = devices.length ? devices.reduce((sum, d) => sum + d.fanSpeed, 0) / devices.length : 0
+  const dashAvgSupply = devices.length
+    ? devices
+        .filter((d) => typeof d.supplyT === 'number')
+        .reduce((sum, d) => sum + Number(d.supplyT), 0) / devices.length
+    : 0
+  const dashAvgReturn = devices.length
+    ? devices
+        .filter((d) => typeof d.returnT === 'number')
+        .reduce((sum, d) => sum + Number(d.returnT), 0) / devices.length
+    : 0
+  const dashAvgRh = devices.length
+    ? devices
+        .filter((d) => typeof d.supplyRh === 'number')
+        .reduce((sum, d) => sum + Number(d.supplyRh), 0) / devices.length
+    : 0
+  const dashAvgFan = devices.length
+    ? devices.reduce((sum, d) => sum + d.fanSpeed, 0) / devices.length
+    : 0
 
   return {
     total: Number(s.total) || devices.length,
@@ -851,30 +889,46 @@ function mapLiquid(raw: any): LiquidCoolingSummary {
   }))
   const online = devices.filter((d) => d.status === 'online').length
   const avgFlow = devices.length ? devices.reduce((s, d) => s + d.flowRate, 0) / devices.length : 0
-  const avgCdi = devices.length ? devices.reduce((s, d) => s + d.cdiTemperature, 0) / devices.length : 0
-  const avgCdo = devices.length ? devices.reduce((s, d) => s + d.cdoTemperature, 0) / devices.length : 0
+  const avgCdi = devices.length
+    ? devices.reduce((s, d) => s + d.cdiTemperature, 0) / devices.length
+    : 0
+  const avgCdo = devices.length
+    ? devices.reduce((s, d) => s + d.cdoTemperature, 0) / devices.length
+    : 0
 
   // 一次侧 CDU
   const primaryCDUs: LiquidCDUView[] = (raw?.primaryCDUs ?? []).map((d: any) => ({
-    id: d.id ?? '', name: d.name ?? '', state: d.state ?? '',
+    id: d.id ?? '',
+    name: d.name ?? '',
+    state: d.state ?? '',
     heatExEff: Number(d.heatExEff) || 0,
-    priInTemp: Number(d.priInTemp) || 0, priOutTemp: Number(d.priOutTemp) || 0,
-    secInTemp: Number(d.secInTemp) || 0, secOutTemp: Number(d.secOutTemp) || 0,
-    flowPri: Number(d.flowPri) || 0, flowSec: Number(d.flowSec) || 0,
-    dpPri: Number(d.dpPri) || 0, dpSec: Number(d.dpSec) || 0,
-    pumpSpeed: Number(d.pumpSpeed) || 0, pumpKw: Number(d.pumpKw) || 0,
+    priInTemp: Number(d.priInTemp) || 0,
+    priOutTemp: Number(d.priOutTemp) || 0,
+    secInTemp: Number(d.secInTemp) || 0,
+    secOutTemp: Number(d.secOutTemp) || 0,
+    flowPri: Number(d.flowPri) || 0,
+    flowSec: Number(d.flowSec) || 0,
+    dpPri: Number(d.dpPri) || 0,
+    dpSec: Number(d.dpSec) || 0,
+    pumpSpeed: Number(d.pumpSpeed) || 0,
+    pumpKw: Number(d.pumpKw) || 0,
     valve: Number(d.valve) || 0,
-    leakStatus: d.leakStatus ?? '正常', runHrs: Number(d.runHrs) || 0,
+    leakStatus: d.leakStatus ?? '正常',
+    runHrs: Number(d.runHrs) || 0,
   }))
 
   // 二次侧 CDU
   const secondaryCDUs: LiquidSecCDUView[] = (raw?.secondaryCDUs ?? []).map((d: any) => ({
-    id: d.id ?? '', name: d.name ?? '', rackGroup: d.rackGroup ?? '',
+    id: d.id ?? '',
+    name: d.name ?? '',
+    rackGroup: d.rackGroup ?? '',
     state: d.state ?? '',
     supplyTemp: d.supplyTemp === '-' ? '-' : Number(d.supplyTemp) || 0,
     returnTemp: d.returnTemp === '-' ? '-' : Number(d.returnTemp) || 0,
-    flow: Number(d.flow) || 0, dp: Number(d.dp) || 0,
-    pumpSpeed: Number(d.pumpSpeed) || 0, pumpKw: Number(d.pumpKw) || 0,
+    flow: Number(d.flow) || 0,
+    dp: Number(d.dp) || 0,
+    pumpSpeed: Number(d.pumpSpeed) || 0,
+    pumpKw: Number(d.pumpKw) || 0,
     leakStatus: d.leakStatus ?? '正常',
     coldPlateCount: Number(d.coldPlateCount) || 0,
     coldPlateOnline: Number(d.coldPlateOnline) || 0,
@@ -882,60 +936,84 @@ function mapLiquid(raw: any): LiquidCoolingSummary {
 
   // 冷板 GPU 温度
   const coldPlates: ColdPlateGPUView[] = (raw?.coldPlateMonitoring ?? []).map((p: any) => ({
-    rackId: p.rackId ?? '', nodeType: p.nodeType ?? '',
-    inletTemp: Number(p.inletTemp) || 0, outletTemp: Number(p.outletTemp) || 0,
-    flow: Number(p.flow) || 0, dp: Number(p.dp) || 0,
+    rackId: p.rackId ?? '',
+    nodeType: p.nodeType ?? '',
+    inletTemp: Number(p.inletTemp) || 0,
+    outletTemp: Number(p.outletTemp) || 0,
+    flow: Number(p.flow) || 0,
+    dp: Number(p.dp) || 0,
     gpuTemp: (p.gpuTemp ?? []).map((t: any) => Number(t) || 0),
     state: p.state ?? '正常',
   }))
 
   // 分集液管路
   const manifoldsSupply: ManifoldNodeView[] = (raw?.manifolds?.supply ?? []).map((m: any) => ({
-    id: m.id ?? '', zone: m.zone ?? '',
-    temp: Number(m.temp) || 0, pressure: Number(m.pressure) || 0,
-    flow: Number(m.flow) || 0, valvesOpen: m.valvesOpen, branchCount: m.branchCount,
+    id: m.id ?? '',
+    zone: m.zone ?? '',
+    temp: Number(m.temp) || 0,
+    pressure: Number(m.pressure) || 0,
+    flow: Number(m.flow) || 0,
+    valvesOpen: m.valvesOpen,
+    branchCount: m.branchCount,
   }))
   const manifoldsReturn: ManifoldNodeView[] = (raw?.manifolds?.return ?? []).map((m: any) => ({
-    id: m.id ?? '', zone: m.zone ?? '',
-    temp: Number(m.temp) || 0, pressure: Number(m.pressure) || 0,
+    id: m.id ?? '',
+    zone: m.zone ?? '',
+    temp: Number(m.temp) || 0,
+    pressure: Number(m.pressure) || 0,
     flow: Number(m.flow) || 0,
   }))
 
   // 漏液检测
   const ld = raw?.leakDetection ?? {}
   const leakRope: LeakRopeView[] = (ld.ropeLeak ?? []).map((lr: any) => ({
-    id: lr.id ?? '', location: lr.location ?? '', status: lr.status ?? '正常',
-    length: Number(lr.length) || 0, coverage: Number(lr.coverage) || 0,
+    id: lr.id ?? '',
+    location: lr.location ?? '',
+    status: lr.status ?? '正常',
+    length: Number(lr.length) || 0,
+    coverage: Number(lr.coverage) || 0,
   }))
   const leakPoint: LeakPointView[] = (ld.pointLeak ?? []).map((lp: any) => ({
-    id: lp.id ?? '', zone: lp.zone ?? '',
-    count: Number(lp.count) || 0, alarmCount: Number(lp.alarmCount) || 0,
+    id: lp.id ?? '',
+    zone: lp.zone ?? '',
+    count: Number(lp.count) || 0,
+    alarmCount: Number(lp.alarmCount) || 0,
   }))
 
   // 冷却液品质
   const cq = raw?.coolantQuality ?? {}
   const coolantQuality: CoolantQualityView = {
-    type: cq.type ?? '', conductivity: Number(cq.conductivity) || 0,
-    ph: Number(cq.ph) || 0, corrosionInhibitor: Number(cq.corrosionInhibitor) || 0,
+    type: cq.type ?? '',
+    conductivity: Number(cq.conductivity) || 0,
+    ph: Number(cq.ph) || 0,
+    corrosionInhibitor: Number(cq.corrosionInhibitor) || 0,
     glycolConcentration: Number(cq.glycolConcentration) || 0,
     particleCount: Number(cq.particleCount) || 0,
-    lastTested: cq.lastTested ?? '', nextTest: cq.nextTest ?? '',
+    lastTested: cq.lastTested ?? '',
+    nextTest: cq.nextTest ?? '',
     status: cq.status ?? '正常',
   }
 
   // 热排放
   const hr = raw?.heatRejection ?? {}
   const towerFans: RejectionTowerView[] = (hr.towerFans ?? []).map((f: any) => ({
-    id: f.id ?? '', state: f.state ?? '', fanHz: Number(f.fanHz) || 0,
+    id: f.id ?? '',
+    state: f.state ?? '',
+    fanHz: Number(f.fanHz) || 0,
     outletTemp: f.outletTemp === '-' ? '-' : Number(f.outletTemp) || 0,
     approach: f.approach === '-' ? '-' : Number(f.approach) || 0,
   }))
   const dryCoolers: DryCoolerView[] = (hr.dryCoolers ?? []).map((dc: any) => ({
-    id: dc.id ?? '', state: dc.state ?? '', fanHz: Number(dc.fanHz) || 0,
+    id: dc.id ?? '',
+    state: dc.state ?? '',
+    fanHz: Number(dc.fanHz) || 0,
     ambientT: Number(dc.ambientT) || 0,
   }))
   const rejectionPumps: RejectionPumpView[] = (hr.rejectionPumps ?? []).map((rp: any) => ({
-    id: rp.id ?? '', state: rp.state ?? '', hz: Number(rp.hz) || 0, kw: Number(rp.kw) || 0,
+    id: rp.id ?? '',
+    state: rp.state ?? '',
+    hz: Number(rp.hz) || 0,
+    kw: Number(rp.kw) || 0,
   }))
 
   // 余热回收
@@ -1066,9 +1144,34 @@ export function getLiquidCooling(): Promise<LiquidCoolingSummary> {
 // ============================================================
 
 export interface ChillerGroupView {
-  chiller: { id: string; state: string; load: number; cop: number; evapT: number | string; condT: number | string; current: number; runHrs: number }
-  chwPump: { id: string; state: string; hz: number; kw: number; flow: number; inP: number; outP: number } | null
-  cwPump: { id: string; state: string; hz: number; kw: number; flow: number; inP: number; outP: number } | null
+  chiller: {
+    id: string
+    state: string
+    load: number
+    cop: number
+    evapT: number | string
+    condT: number | string
+    current: number
+    runHrs: number
+  }
+  chwPump: {
+    id: string
+    state: string
+    hz: number
+    kw: number
+    flow: number
+    inP: number
+    outP: number
+  } | null
+  cwPump: {
+    id: string
+    state: string
+    hz: number
+    kw: number
+    flow: number
+    inP: number
+    outP: number
+  } | null
   tankConnected: boolean
   tankFlow: number
 }
@@ -1102,7 +1205,7 @@ export interface PumpFreqFlowItem {
 export interface TankGradientItem {
   timestamps: string[]
   levels: string[]
-  data: number[][]  // [level][time]
+  data: number[][] // [level][time]
 }
 
 export interface CoolingFreecoolingMonthly {
@@ -1147,7 +1250,7 @@ export interface CracEnvSensors {
   coldAisleRh: number
   dewPoint: number
   inOutDiff: number
-  supplyStaticPressure: number  // Pa 架空地板下静压
+  supplyStaticPressure: number // Pa 架空地板下静压
 }
 
 export interface CracRoomGroupView {
@@ -1184,21 +1287,25 @@ export function mapCracRoomGroups(raw: any): CracRoomGroupView[] {
     },
     roomCracs: (g.roomCracs ?? []).map(mapCracView),
     inRowCracs: (g.inRowCracs ?? []).map(mapCracView),
-    fau: g.fau ? {
-      id: g.fau.id ?? '',
-      state: g.fau.state ?? '',
-      supplyT: g.fau.supplyT === '-' ? '-' : Number(g.fau.supplyT) || 0,
-      rh: g.fau.rh === '-' ? '-' : Number(g.fau.rh) || 0,
-      co2: g.fau.co2 === '-' ? '-' : Number(g.fau.co2) || 0,
-      filterDp: Number(g.fau.filterDp) || 0,
-    } : null,
-    humidifier: g.humidifier ? {
-      id: g.humidifier.id ?? '',
-      name: g.humidifier.name ?? '',
-      state: g.humidifier.state ?? '',
-      rh: g.humidifier.rh === '-' ? '-' : Number(g.humidifier.rh) || 0,
-      mode: g.humidifier.mode ?? '',
-    } : null,
+    fau: g.fau
+      ? {
+          id: g.fau.id ?? '',
+          state: g.fau.state ?? '',
+          supplyT: g.fau.supplyT === '-' ? '-' : Number(g.fau.supplyT) || 0,
+          rh: g.fau.rh === '-' ? '-' : Number(g.fau.rh) || 0,
+          co2: g.fau.co2 === '-' ? '-' : Number(g.fau.co2) || 0,
+          filterDp: Number(g.fau.filterDp) || 0,
+        }
+      : null,
+    humidifier: g.humidifier
+      ? {
+          id: g.humidifier.id ?? '',
+          name: g.humidifier.name ?? '',
+          state: g.humidifier.state ?? '',
+          rh: g.humidifier.rh === '-' ? '-' : Number(g.humidifier.rh) || 0,
+          mode: g.humidifier.mode ?? '',
+        }
+      : null,
     leak: g.leak ?? { status: '正常', level: '正常', position: null, zone: 0 },
   }))
 }
@@ -1339,5 +1446,5 @@ export interface CracTrends {
 }
 
 export function getCracTrends(): Promise<CracTrends> {
-  return request.get<unknown, any>('/api/hvac/crac-trends').catch(() => ({} as any))
+  return request.get<unknown, any>('/api/hvac/crac-trends').catch(() => ({}) as any)
 }

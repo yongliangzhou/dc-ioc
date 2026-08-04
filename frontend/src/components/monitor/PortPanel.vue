@@ -3,9 +3,9 @@
     <div class="pp-header">
       <span class="pp-title">{{ title }}</span>
       <div class="pp-legend">
-        <span class="pp-lg"><i class="pp-dot" style="background:#22c55e"></i> UP</span>
-        <span class="pp-lg"><i class="pp-dot" style="background:#f59e0b"></i> 告警</span>
-        <span class="pp-lg"><i class="pp-dot" style="background:#374151"></i> DOWN</span>
+        <span class="pp-lg"><i class="pp-dot" style="background: #22c55e"></i> UP</span>
+        <span class="pp-lg"><i class="pp-dot" style="background: #f59e0b"></i> 告警</span>
+        <span class="pp-lg"><i class="pp-dot" style="background: #374151"></i> DOWN</span>
       </div>
     </div>
     <div class="pp-grid" v-if="ports.length">
@@ -21,10 +21,14 @@
         <span class="pp-speed-indicator" :class="speedCls(p)"></span>
       </div>
       <!-- fill empty slots to 48 -->
-      <div v-for="i in (Math.max(0, 48 - ports.length))" :key="'empty-'+i" class="pp-port pp-empty"></div>
+      <div
+        v-for="i in Math.max(0, 48 - ports.length)"
+        :key="'empty-' + i"
+        class="pp-port pp-empty"
+      ></div>
     </div>
     <div class="pp-grid pp-empty-placeholder" v-else>
-      <div v-for="i in 48" :key="'sk-'+i" class="pp-port pp-empty"></div>
+      <div v-for="i in 48" :key="'sk-' + i" class="pp-port pp-empty"></div>
     </div>
     <!-- detail card on selection -->
     <div class="pp-detail" v-if="selectedIndex !== null && ports[selectedIndex]">
@@ -37,13 +41,16 @@
       </div>
       <div class="pp-detail-grid">
         <div class="pp-kv">
-          <span class="pp-k">速率</span><span class="pp-v mono">{{ ports[selectedIndex].speed_mbps }}M</span>
+          <span class="pp-k">速率</span
+          ><span class="pp-v mono">{{ ports[selectedIndex].speed_mbps }}M</span>
         </div>
         <div class="pp-kv">
-          <span class="pp-k">入流量</span><span class="pp-v mono">{{ fmtBps(ports[selectedIndex].in_bps) }}</span>
+          <span class="pp-k">入流量</span
+          ><span class="pp-v mono">{{ fmtBps(ports[selectedIndex].in_bps) }}</span>
         </div>
         <div class="pp-kv">
-          <span class="pp-k">出流量</span><span class="pp-v mono">{{ fmtBps(ports[selectedIndex].out_bps) }}</span>
+          <span class="pp-k">出流量</span
+          ><span class="pp-v mono">{{ fmtBps(ports[selectedIndex].out_bps) }}</span>
         </div>
         <div class="pp-kv">
           <span class="pp-k">入利用率</span>
@@ -59,15 +66,22 @@
         </div>
         <div class="pp-kv">
           <span class="pp-k">错包</span>
-          <span class="pp-v mono" :class="(ports[selectedIndex].in_errors + ports[selectedIndex].out_errors) ? 'a-text' : 'g-text'">
+          <span
+            class="pp-v mono"
+            :class="
+              ports[selectedIndex].in_errors + ports[selectedIndex].out_errors ? 'a-text' : 'g-text'
+            "
+          >
             {{ ports[selectedIndex].in_errors + ports[selectedIndex].out_errors }}
           </span>
         </div>
         <div class="pp-kv" v-if="ports[selectedIndex].rx_power_dbm != null">
-          <span class="pp-k">收光</span><span class="pp-v mono">{{ ports[selectedIndex].rx_power_dbm }}dBm</span>
+          <span class="pp-k">收光</span
+          ><span class="pp-v mono">{{ ports[selectedIndex].rx_power_dbm }}dBm</span>
         </div>
         <div class="pp-kv" v-if="ports[selectedIndex].tx_power_dbm != null">
-          <span class="pp-k">发光</span><span class="pp-v mono">{{ ports[selectedIndex].tx_power_dbm }}dBm</span>
+          <span class="pp-k">发光</span
+          ><span class="pp-v mono">{{ ports[selectedIndex].tx_power_dbm }}dBm</span>
         </div>
       </div>
     </div>
@@ -77,13 +91,17 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import type { SwitchPortView } from '@/api/monitor'
+import { fmtBps, utilCls } from '@/utils/format'
 
-const props = withDefaults(defineProps<{
-  ports: SwitchPortView[]
-  title?: string
-}>(), {
-  title: '设备前面板',
-})
+const props = withDefaults(
+  defineProps<{
+    ports: SwitchPortView[]
+    title?: string
+  }>(),
+  {
+    title: '设备前面板',
+  },
+)
 
 const selectedIndex = ref<number | null>(null)
 
@@ -117,19 +135,6 @@ function portTooltip(p: SwitchPortView): string {
     lines.push(`入: ${fmtBps(p.in_bps)} / 出: ${fmtBps(p.out_bps)}`)
   }
   return lines.join('\n')
-}
-
-function utilCls(v: number): string {
-  if (v > 85) return 'a-text'
-  if (v > 60) return 'a-text'
-  return 'g-text'
-}
-
-function fmtBps(v: number): string {
-  if (!v) return '0bps'
-  if (v >= 1e9) return (v / 1e9).toFixed(2) + 'Gbps'
-  if (v >= 1e6) return (v / 1e6).toFixed(1) + 'Mbps'
-  return (v / 1e3).toFixed(1) + 'Kbps'
 }
 </script>
 
@@ -194,20 +199,25 @@ function fmtBps(v: number): string {
   z-index: 2;
 }
 .pp-port.pp-up {
-  background: rgba(34,197,94,0.15);
-  border-color: rgba(34,197,94,0.4);
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
 }
 .pp-port.pp-down {
   opacity: 0.5;
 }
 .pp-port.pp-alarm {
-  background: rgba(245,158,11,0.18);
-  border-color: rgba(245,158,11,0.5);
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.5);
   animation: pp-pulse 1.5s ease-in-out infinite;
 }
 @keyframes pp-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.3); }
-  50% { box-shadow: 0 0 6px 2px rgba(245,158,11,0.15); }
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 6px 2px rgba(245, 158, 11, 0.15);
+  }
 }
 .pp-port.pp-selected {
   box-shadow: 0 0 0 2px var(--cyan, #22e3ff);
@@ -220,7 +230,7 @@ function fmtBps(v: number): string {
 }
 .pp-num {
   font-size: 8px;
-  font-family: "SF Mono", Consolas, monospace;
+  font-family: 'SF Mono', Consolas, monospace;
   color: inherit;
   line-height: 1;
 }
@@ -261,15 +271,15 @@ function fmtBps(v: number): string {
 }
 .pp-detail-status.pp-up {
   color: #22c55e;
-  background: rgba(34,197,94,0.12);
+  background: rgba(34, 197, 94, 0.12);
 }
 .pp-detail-status.pp-down {
   color: #6b7280;
-  background: rgba(107,114,128,0.12);
+  background: rgba(107, 114, 128, 0.12);
 }
 .pp-detail-status.pp-alarm {
   color: #f59e0b;
-  background: rgba(245,158,11,0.12);
+  background: rgba(245, 158, 11, 0.12);
 }
 .pp-close {
   margin-left: auto;
@@ -301,8 +311,12 @@ function fmtBps(v: number): string {
 }
 .mono {
   font-variant-numeric: tabular-nums;
-  font-family: "SF Mono", Consolas, monospace;
+  font-family: 'SF Mono', Consolas, monospace;
 }
-.g-text { color: var(--green, #22c55e); }
-.a-text { color: var(--amber, #f59e0b); }
+.g-text {
+  color: var(--green, #22c55e);
+}
+.a-text {
+  color: var(--amber, #f59e0b);
+}
 </style>

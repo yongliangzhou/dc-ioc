@@ -18,8 +18,8 @@
 </template>
 
 <script setup lang="ts">
-import { useToast } from "@/hooks/useToast";
-const toast = useToast();
+import { useToast } from '@/hooks/useToast'
+const toast = useToast()
 </script>
 
 <style scoped>
@@ -48,7 +48,7 @@ const toast = useToast();
   color: var(--txt);
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, .45);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
 }
 .toast .dot {
@@ -58,18 +58,49 @@ const toast = useToast();
   flex: none;
   box-shadow: 0 0 8px currentColor;
 }
-.toast.success { border-color: rgba(43, 212, 122, .5); }
-.toast.success .dot { background: var(--green); color: var(--green); }
-.toast.error { border-color: rgba(242, 63, 63, .5); }
-.toast.error .dot { background: var(--red); color: var(--red); }
-.toast.warning { border-color: rgba(255, 176, 32, .5); }
-.toast.warning .dot { background: var(--amber); color: var(--amber); }
-.toast.info { border-color: rgba(34, 211, 238, .5); }
-.toast.info .dot { background: var(--cyan); color: var(--cyan); }
-.toast .msg { line-height: 1.4; word-break: break-word; }
+.toast.success {
+  border-color: rgba(43, 212, 122, 0.5);
+}
+.toast.success .dot {
+  background: var(--green);
+  color: var(--green);
+}
+.toast.error {
+  border-color: rgba(242, 63, 63, 0.5);
+}
+.toast.error .dot {
+  background: var(--red);
+  color: var(--red);
+}
+.toast.warning {
+  border-color: rgba(255, 176, 32, 0.5);
+}
+.toast.warning .dot {
+  background: var(--amber);
+  color: var(--amber);
+}
+.toast.info {
+  border-color: rgba(34, 211, 238, 0.5);
+}
+.toast.info .dot {
+  background: var(--cyan);
+  color: var(--cyan);
+}
+.toast .msg {
+  line-height: 1.4;
+  word-break: break-word;
+}
 
 .toast-enter-active,
-.toast-leave-active { transition: all .25s ease; }
-.toast-enter-from { opacity: 0; transform: translateY(-8px); }
-.toast-leave-to { opacity: 0; transform: translateY(-8px); }
+.toast-leave-active {
+  transition: all 0.25s ease;
+}
+.toast-enter-from {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+.toast-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
 </style>

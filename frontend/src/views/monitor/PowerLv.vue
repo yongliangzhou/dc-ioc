@@ -12,24 +12,24 @@
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="card err-card">
+    <Panel v-else-if="error" class="err-card">
       <div class="err-title">{{ tl('加载失败') }}</div>
       <div class="err-detail">{{ error }}</div>
       <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </div>
+    </Panel>
 
     <template v-else-if="s">
       <!-- ======== 3.2.1 低压一次系统图 SVG + 备自投/柴发开关监视 ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('低压一次系统图') }}</span>
+      <Panel>
+        <template #ct>{{ tl('低压一次系统图') }}</template>
+        <template #extra>
           <div class="legend">
             <span class="lg"><i class="dot g"></i>{{ tl('合闸') }}</span>
             <span class="lg"><i class="dot r"></i>{{ tl('分闸') }}</span>
             <span class="lg"><i class="dot b"></i>{{ tl('备用/柴发') }}</span>
             <span class="lg muted">{{ tl('点击开关查看详情') }}</span>
           </div>
-        </div>
+        </template>
         <div class="schematic-wrap">
           <svg :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="lv-svg" preserveAspectRatio="xMidYMid meet">
             <!-- I 段母排 -->
@@ -103,7 +103,7 @@
             </div>
           </div>
         </transition>
-      </div>
+      </Panel>
 
       <!-- ======== 顶部 KPI (KpiCard × 6) ======== -->
       <div class="grid cols-6">
@@ -122,11 +122,11 @@
 
       <!-- ======== 3.2.3 备自投切换状态可视化面板 ======== -->
       <div class="grid cols-3">
-        <div class="card" v-for="a in atsPanels" :key="a.id">
-          <div class="card-head">
-            <span class="ct">{{ a.id }} {{ tl('备自投 / ATS') }}</span>
+        <Panel v-for="a in atsPanels" :key="a.id">
+          <template #ct>{{ a.id }} {{ tl('备自投 / ATS') }}</template>
+          <template #extra>
             <span class="pill" :class="isClosed(a.state) ? 'g' : 'b'">{{ a.state }}</span>
-          </div>
+          </template>
           <div class="ats-body">
             <div class="ats-row"><span class="k">{{ tl('模式') }}</span><span class="v">{{ a.mode }}</span></div>
             <div class="ats-row"><span class="k">{{ tl('常用侧电压') }}</span><span class="v mono">{{ fmt(a.uIn) }} V</span></div>
@@ -142,14 +142,14 @@
             <span class="flow-arrow">→</span>
             <span class="flow-load" :class="isClosed(a.state) ? 'on' : ''">{{ tl('负载') }}</span>
           </div>
-        </div>
+        </Panel>
 
         <!-- 母联 + 柴发 备自投总览 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('母联 / 柴发 备自投') }}</span>
+        <Panel>
+          <template #ct>{{ tl('母联 / 柴发 备自投') }}</template>
+          <template #extra>
             <span class="pill" :class="busTieNode.breaker.includes('合') ? 'g' : 'a'">{{ busTieNode.breaker }}</span>
-          </div>
+          </template>
           <div class="ats-body">
             <div class="ats-row"><span class="k">{{ tl('母联开关') }}</span><span class="v mono">{{ busTieNode.code }} · {{ busTieNode.breaker }}</span></div>
             <div class="ats-row"><span class="k">{{ tl('备自投逻辑') }}</span><span class="v mono">{{ busTieNode.autoSwitch }}</span></div>
@@ -163,15 +163,15 @@
             <span class="flow-arrow">→</span>
             <span class="flow-load on">{{ tl('母排') }}</span>
           </div>
-        </div>
+        </Panel>
       </div>
 
       <!-- ======== 3.2.4 24h 相电流趋势曲线 (TrendChart) ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('24h 相电流趋势') }} ({{ tl('代表馈线') }} {{ repBranchId }})</span>
+      <Panel>
+        <template #ct>{{ tl('24h 相电流趋势') }} ({{ tl('代表馈线') }} {{ repBranchId }})</template>
+        <template #extra>
           <span class="pill g">{{ tl('三相 Ia / Ib / Ic') }}</span>
-        </div>
+        </template>
         <TrendChart
           :title="''"
           :x-axis-data="phaseTrend.labels"
@@ -181,11 +181,11 @@
       </div>
 
       <!-- ======== 3.2.2 回路电参量表 (DeviceTable: 全电参量) ======== -->
-      <div class="card scroll-x">
-        <div class="card-head">
-          <span class="ct">{{ tl('低压馈线回路监测') }} ({{ tl('全电参量') }})</span>
+      <Panel class="scroll-x moni-card">
+        <template #ct>{{ tl('低压馈线回路监测') }} ({{ tl('全电参量') }})</template>
+        <template #extra>
           <span class="pill" :class="branchAllClosed ? 'g' : 'a'">{{ s.branches.length }} {{ tl('路') }} · {{ tl('合闸') }} {{ branchClosedCount }}/{{ s.branches.length }}</span>
-        </div>
+        </template>
         <table>
           <thead>
             <tr>
@@ -214,15 +214,15 @@
             </tr>
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <!-- ======== 3.2.5 电能统计报表 ======== -->
       <div class="grid cols-2">
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('电能统计报表') }}</span>
+        <Panel>
+          <template #ct>{{ tl('电能统计报表') }}</template>
+          <template #extra>
             <span class="pill g">{{ tl('本月累计') }} {{ fmtEnergy(totalEnergy) }} kWh</span>
-          </div>
+          </template>
           <table class="report-tbl">
             <thead><tr><th>{{ tl('分段') }}</th><th>{{ tl('电度') }}(kWh)</th><th>{{ tl('占比') }}</th><th>{{ tl('平均负载率') }}</th></tr></thead>
             <tbody>
@@ -240,30 +240,30 @@
               </tr>
             </tbody>
           </table>
-        </div>
+        </Panel>
 
         <!-- 三相不平衡度 / 负载率柱状图 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('三相不平衡度 / 负载率') }}</span>
+        <Panel>
+          <template #ct>{{ tl('三相不平衡度 / 负载率') }}</template>
+          <template #extra>
             <span class="pill" :class="imbalance > 2 ? 'a' : 'g'">{{ tl('最大不平衡') }} {{ imbalance }}%</span>
-          </div>
+          </template>
           <TrendChart
             :title="''"
             :x-axis-data="loadLabels"
             :series="loadSeries"
             :height="220"
           />
-        </div>
+        </Panel>
       </div>
 
       <!-- ======== UPS / HVDC / 母排 概要 ======== -->
       <div class="grid cols-3" v-if="s.upsGroups?.length || s.hvdc?.length || s.busbars?.length">
-        <div class="card scroll-x" v-if="s.upsGroups?.length">
-          <div class="card-head">
-            <span class="ct">{{ tl('UPS 不间断电源') }}</span>
+        <Panel class="scroll-x moni-card" v-if="s.upsGroups?.length">
+          <template #ct>{{ tl('UPS 不间断电源') }}</template>
+          <template #extra>
             <span class="pill" :class="upsAllNormal ? 'g' : 'a'">{{ s.upsGroups.length }} {{ tl('组') }} · {{ upsNormalCount }} {{ tl('正常') }}</span>
-          </div>
+          </template>
           <table class="mini-tbl">
             <thead><tr><th>{{ tl('组') }}</th><th>{{ tl('模式') }}</th><th>{{ tl('旁路') }}</th><th>{{ tl('状态') }}</th><th>{{ tl('负载') }}</th><th>U出(V)</th><th>I出(A)</th><th>P(kW)</th></tr></thead>
             <tbody>
@@ -279,13 +279,13 @@
               </tr>
             </tbody>
           </table>
-        </div>
+        </Panel>
 
-        <div class="card scroll-x" v-if="s.hvdc?.length">
-          <div class="card-head">
-            <span class="ct">{{ tl('HVDC 直流电源') }}</span>
+        <Panel class="scroll-x moni-card" v-if="s.hvdc?.length">
+          <template #ct>{{ tl('HVDC 直流电源') }}</template>
+          <template #extra>
             <span class="pill g">{{ s.hvdc.length }} {{ tl('路') }}</span>
-          </div>
+          </template>
           <table class="mini-tbl">
             <thead><tr><th>{{ tl('编号') }}</th><th>U(V)</th><th>{{ tl('负载') }}</th><th>{{ tl('模块') }}</th><th>P(kW)</th><th>THD-I(%)</th><th>{{ tl('状态') }}</th></tr></thead>
             <tbody>
@@ -300,13 +300,13 @@
               </tr>
             </tbody>
           </table>
-        </div>
+        </Panel>
 
-        <div class="card scroll-x" v-if="s.busbars?.length">
-          <div class="card-head">
-            <span class="ct">{{ tl('低压母排') }}</span>
+        <Panel class="scroll-x moni-card" v-if="s.busbars?.length">
+          <template #ct>{{ tl('低压母排') }}</template>
+          <template #extra>
             <span class="pill g">{{ s.busbars.length }} {{ tl('段') }}</span>
-          </div>
+          </template>
           <table class="mini-tbl">
             <thead><tr><th>{{ tl('母排') }}</th><th>{{ tl('负载') }}</th><th>I(A)</th><th>U(V)</th><th>PF</th><th>THD-U(%)</th><th>{{ tl('状态') }}</th></tr></thead>
             <tbody>
@@ -321,15 +321,15 @@
               </tr>
             </tbody>
           </table>
-        </div>
+        </Panel>
       </div>
 
       <!-- ======== SPD 防雷状态 ======== -->
-      <div class="card scroll-x" v-if="s.spds?.length">
-        <div class="card-head">
-          <span class="ct">{{ tl('防雷 / 浪涌保护器') }} (SPD)</span>
+      <Panel class="scroll-x moni-card" v-if="s.spds?.length">
+        <template #ct>{{ tl('防雷 / 浪涌保护器') }} (SPD)</template>
+        <template #extra>
           <span class="pill" :class="spdAlarmCount === 0 ? 'g' : 'a'">{{ s.spds.length }} {{ tl('路') }} · {{ tl('正常') }} {{ spdNormalCount }}/{{ s.spds.length }}</span>
-        </div>
+        </template>
         <table class="mini-tbl">
           <thead><tr><th>{{ tl('安装位置') }}</th><th>{{ tl('运行状态') }}</th><th>{{ tl('泄漏电流') }}(mA)</th><th>{{ tl('动作次数') }}</th><th>{{ tl('报警状态') }}</th></tr></thead>
           <tbody>
@@ -342,15 +342,15 @@
             </tr>
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <!-- ======== 实时告警 (AlarmBadge) ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('实时告警') }}</span>
+      <Panel>
+        <template #ct>{{ tl('实时告警') }}</template>
+        <template #extra>
           <span v-if="!alarms.length" class="pill g">{{ tl('无活动告警') }}</span>
           <span v-else class="pill a">{{ alarms.length }} {{ tl('条') }}</span>
-        </div>
+        </template>
         <div v-if="!alarms.length" class="empty-tip muted">{{ tl('当前无越限/过载/谐波超标等告警') }}</div>
         <div v-else class="alarm-list">
           <div v-for="(a, ai) in alarms" :key="ai" class="alarm-row" :class="a.level">
@@ -361,7 +361,7 @@
             <span class="a-val mono">{{ a.value }}</span>
           </div>
         </div>
-      </div>
+      </Panel>
     </template>
   </div>
 </template>
@@ -369,11 +369,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { fmt, fmtInt, breakerCls, pfCls, loadCls, tempCls, thduCls, genHours } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import { getPowerLvDetailed, type LvSummary, type LvBranchView } from '@/api/power'
+import Panel from '@/components/common/Panel.vue'
 const { t: tl } = useI18n()
 
 // ──────────────────────────────────────────
@@ -545,15 +547,6 @@ const atsPanels = computed(() => {
 // ──────────────────────────────────────────
 // 3.2.4 24h 相电流趋势
 // ──────────────────────────────────────────
-function genHours(n: number): string[] {
-  const now = new Date()
-  const hrs: string[] = []
-  for (let i = n - 1; i >= 0; i--) {
-    const t = new Date(now.getTime() - i * 3600 * 1000)
-    hrs.push(t.getHours().toString().padStart(2, '0') + ':00')
-  }
-  return hrs
-}
 const repBranchId = computed(() => {
   const b = branches.value
   if (!b.length) return '-'
@@ -657,41 +650,7 @@ function avgNum(list: number[]): number {
   if (!vals.length) return 0
   return Number((vals.reduce((s2, v) => s2 + v, 0) / vals.length).toFixed(1))
 }
-function fmt(v: number | undefined | null, dp = 2): string {
-  if (v == null || !Number.isFinite(v)) return '-'
-  return Number(v).toFixed(dp)
-}
-function fmtEnergy(v: number | undefined | null): string {
-  if (v == null || !Number.isFinite(v)) return '-'
-  return Math.round(v).toLocaleString()
-}
-function breakerCls(v: string): string {
-  const t = String(v ?? '').trim()
-  if (isClosed(t)) return 'g'
-  if (t.includes('分')) return 'r'
-  if (t.includes('检修') || t.includes('备用') || t.includes('热备')) return 'b'
-  return 'a'
-}
-function pfCls(pf: number): string {
-  if (pf >= 0.95) return 'g-text'
-  if (pf >= 0.9) return 'a-text'
-  return 'r-text'
-}
-function loadCls(load: number): string {
-  if (load >= 90) return 'r-text'
-  if (load >= 80) return 'a-text'
-  return 'g-text'
-}
-function tempCls(t: number, warn: number, alarm: number): string {
-  if (t >= alarm) return 'r-text'
-  if (t >= warn) return 'a-text'
-  return 'g-text'
-}
-function thduCls(v: number): string {
-  if (v >= 5) return 'r-text'
-  if (v >= 3) return 'a-text'
-  return 'g-text'
-}
+
 function thdiCls(v: number): string {
   if (v >= 8) return 'r-text'
   if (v >= 5) return 'a-text'
@@ -798,14 +757,6 @@ onMounted(loadData)
 .grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
 .grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
 
-/* ── card ── */
-.card { background: var(--bg-card, #1e293b); border: 1px solid var(--border, #334155); border-radius: 10px; padding: 16px; }
-.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
-.ct { font-size: 0.875rem; font-weight: 600; color: var(--text-primary, #e5e7eb); }
-.pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; font-size: 0.6875rem; font-weight: 600; }
-.pill.g { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
-.pill.a { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
-
 /* ── SVG 一次图 ── */
 .schematic-wrap { background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 8px; }
 .lv-svg { width: 100%; height: auto; display: block; }
@@ -866,12 +817,12 @@ td { padding: 6px 8px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); color: va
 tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
 .d-name { font-weight: 500; color: var(--text-primary, #e5e7eb); }
 .mono { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
-.muted { color: var(--text-muted, #6b7280); }
+
 .mini-tbl th, .mini-tbl td { font-size: 11px; padding: 5px 6px; }
 .report-tbl .total-row td { font-weight: 700; color: var(--text-primary, #e5e7eb); border-top: 1px solid var(--border, #334155); }
 
 /* tag */
-.tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border, #334155); white-space: nowrap; }
+
 .tag.g { color: #22c55e; border-color: rgba(43,212,122,.4); background: rgba(43,212,122,.08); }
 .tag.a { color: #f59e0b; border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.08); }
 .tag.r { color: #ef4444; border-color: rgba(255,77,94,.4); background: rgba(255,77,94,.09); }

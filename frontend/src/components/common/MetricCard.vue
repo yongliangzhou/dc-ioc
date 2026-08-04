@@ -28,7 +28,12 @@
     </div>
 
     <!-- Sparkline -->
-    <svg v-if="sparkData.length > 1" class="mc-spark" viewBox="0 0 100 28" preserveAspectRatio="none">
+    <svg
+      v-if="sparkData.length > 1"
+      class="mc-spark"
+      viewBox="0 0 100 28"
+      preserveAspectRatio="none"
+    >
       <defs>
         <linearGradient :id="'sg-' + uid" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" :stop-color="sparkColor" stop-opacity="0.35" />
@@ -56,7 +61,9 @@
       </span>
       <Activity v-if="online && !stale" :size="10" class="mc-pulse" />
       <AlertTriangle v-else-if="stale" :size="10" class="mc-stale-icon" />
-      <span class="mc-ts muted" v-if="relative">{{ relative }}<span v-if="stale" class="stale-flag"> · 数据陈旧</span></span>
+      <span class="mc-ts muted" v-if="relative"
+        >{{ relative }}<span v-if="stale" class="stale-flag"> · 数据陈旧</span></span
+      >
     </div>
     <div v-else class="mc-trend muted">
       <CircleOff :size="10" />
@@ -67,7 +74,19 @@
 
 <script setup lang="ts">
 import { computed, ref, onBeforeUnmount, type Component } from 'vue'
-import { TrendingUp, TrendingDown, Minus, Circle, CircleOff, Activity, AlertTriangle, Zap, Thermometer, Droplets, CircleGauge } from 'lucide-vue-next'
+import {
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Circle,
+  CircleOff,
+  Activity,
+  AlertTriangle,
+  Zap,
+  Thermometer,
+  Droplets,
+  CircleGauge,
+} from 'lucide-vue-next'
 import type { MetricQuality } from '@/types'
 
 const props = withDefaults(
@@ -97,7 +116,7 @@ const props = withDefaults(
     iconHint: '',
     lastUpdateTs: '',
     stale: false,
-  }
+  },
 )
 
 defineEmits<{ select: [name: string] }>()
@@ -106,7 +125,9 @@ const uid = Math.random().toString(36).slice(2, 8)
 
 /* ---- 实时时钟: 驱动"Xs 前"相对时间刷新 (设备在线但测点卡住时显式标 stale) ---- */
 const now = ref(Date.now())
-let tick = window.setInterval(() => { now.value = Date.now() }, 1000)
+let tick = window.setInterval(() => {
+  now.value = Date.now()
+}, 1000)
 onBeforeUnmount(() => window.clearInterval(tick))
 
 const relative = computed(() => {
@@ -160,12 +181,15 @@ const sparkColor = computed(() => {
 const linePts = computed(() => {
   const d = props.sparkData
   if (d.length < 2) return ''
-  const vs = d.map(p => p.value)
+  const vs = d.map((p) => p.value)
   const min = Math.min(...vs)
   const max = Math.max(...vs)
   const r = max - min || 1
   return d
-    .map((p, i) => `${((i / (d.length - 1)) * 100).toFixed(1)},${(26 - ((p.value - min) / r) * 20 - 3).toFixed(1)}`)
+    .map(
+      (p, i) =>
+        `${((i / (d.length - 1)) * 100).toFixed(1)},${(26 - ((p.value - min) / r) * 20 - 3).toFixed(1)}`,
+    )
     .join(' ')
 })
 
@@ -187,14 +211,15 @@ const trendPct = computed(() => {
   const l = d[d.length - 1].value
   return f === 0 ? l * 100 : ((l - f) / Math.abs(f)) * 100
 })
-
-
 </script>
 
 <style scoped>
 .metric-card {
   cursor: pointer;
-  transition: border-color 0.25s, box-shadow 0.25s, transform 0.15s;
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s,
+    transform 0.15s;
   padding: 12px 14px;
   min-height: 144px;
   display: flex;

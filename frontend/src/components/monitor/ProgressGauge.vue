@@ -3,14 +3,18 @@
     <svg viewBox="0 0 100 100" class="gauge-svg">
       <!-- 背景轨道 -->
       <circle
-        cx="50" cy="50" :r="radius"
+        cx="50"
+        cy="50"
+        :r="radius"
         fill="none"
         :stroke="trackColor"
         :stroke-width="strokeWidth"
       />
       <!-- 进度弧 -->
       <circle
-        cx="50" cy="50" :r="radius"
+        cx="50"
+        cy="50"
+        :r="radius"
         fill="none"
         :stroke="progressColor"
         :stroke-width="strokeWidth"
@@ -31,20 +35,23 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{
-  value: number
-  max?: number
-  unit?: string
-  label?: string
-  size?: 'sm' | 'md' | 'lg'
-  status?: 'normal' | 'warning' | 'danger'
-  decimals?: number
-  color?: string
-}>(), {
-  max: 100,
-  size: 'md',
-  decimals: 1,
-})
+const props = withDefaults(
+  defineProps<{
+    value: number
+    max?: number
+    unit?: string
+    label?: string
+    size?: 'sm' | 'md' | 'lg'
+    status?: 'normal' | 'warning' | 'danger'
+    decimals?: number
+    color?: string
+  }>(),
+  {
+    max: 100,
+    size: 'md',
+    decimals: 1,
+  },
+)
 
 const sizeMap: Record<string, { r: number; sw: number }> = {
   sm: { r: 38, sw: 6 },
@@ -88,9 +95,18 @@ const formattedValue = computed(() => {
   align-items: center;
   justify-content: center;
 }
-.gauge-sm { width: 90px; height: 90px; }
-.gauge-md { width: 110px; height: 110px; }
-.gauge-lg { width: 130px; height: 130px; }
+.gauge-sm {
+  width: 90px;
+  height: 90px;
+}
+.gauge-md {
+  width: 110px;
+  height: 110px;
+}
+.gauge-lg {
+  width: 130px;
+  height: 130px;
+}
 
 .gauge-svg {
   position: absolute;
@@ -117,10 +133,18 @@ const formattedValue = computed(() => {
   color: var(--txt-strong);
   font-variant-numeric: tabular-nums;
 }
-.gauge-sm .gauge-value { font-size: 16px; }
-.gauge-lg .gauge-value { font-size: 28px; }
-.gauge-value.warning { color: var(--amber); }
-.gauge-value.danger { color: var(--red); }
+.gauge-sm .gauge-value {
+  font-size: 16px;
+}
+.gauge-lg .gauge-value {
+  font-size: 28px;
+}
+.gauge-value.warning {
+  color: var(--amber);
+}
+.gauge-value.danger {
+  color: var(--red);
+}
 .gauge-unit {
   font-size: 10px;
   color: var(--txt2);

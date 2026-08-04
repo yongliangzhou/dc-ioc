@@ -3,7 +3,9 @@
     <!-- Header -->
     <div class="view-head">
       <h1>{{ tl('柴发并机系统') }}</h1>
-      <span class="sub">{{ tl('N+1 并机机组 · 同期并车 · 负载母排 · 自动/手动控制 · 保护告警') }}</span>
+      <span class="sub">{{
+        tl('N+1 并机机组 · 同期并车 · 负载母排 · 自动/手动控制 · 保护告警')
+      }}</span>
     </div>
 
     <!-- Loading -->
@@ -12,79 +14,198 @@
     </div>
 
     <!-- Error -->
-    <div v-else-if="error" class="card err-card">
+    <Panel v-else-if="error" class="err-card">
       <div class="err-title">{{ tl('加载失败') }}</div>
       <div class="err-detail">{{ error }}</div>
       <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </div>
+    </Panel>
 
     <template v-else-if="s">
       <!-- ======== 3.3.1 机组运行总览 ======== -->
       <div class="grid cols-6">
-        <KpiCard :title="tl('机组数量')" :value="s.units.length" unit="台" :decimals="0" dot="var(--cyan)" size="sm" />
-        <KpiCard :title="tl('在线机组')" :value="onlineCount" unit="台" :decimals="0" :bar-value="onlinePercent" bar-color="var(--green)" size="sm" />
-        <KpiCard :title="tl('总输出功率')" :value="totalPower" unit="kW" :decimals="0" :bar-value="Math.min(100, totalPower/ratedP*100)" bar-color="var(--violet)" size="sm" />
-        <KpiCard :title="tl('平均负载率')" :value="avgLoad" unit="%" :decimals="1" :status="avgLoad >= 80 ? 'warning' : 'normal'" size="sm" :bar-value="avgLoad" bar-color="var(--blue)" />
-        <KpiCard :title="tl('并机母线')" :value="busStateText" :decimals="0" size="sm" :status="busState === '并联运行' ? 'normal' : 'warning'" />
-        <KpiCard :title="tl('控制模式')" :value="s.autoMode" :decimals="0" size="sm" :status="s.autoMode.includes('自动') ? 'normal' : 'warning'" />
+        <KpiCard
+          :title="tl('机组数量')"
+          :value="s.units.length"
+          unit="台"
+          :decimals="0"
+          dot="var(--cyan)"
+          size="sm"
+        />
+        <KpiCard
+          :title="tl('在线机组')"
+          :value="onlineCount"
+          unit="台"
+          :decimals="0"
+          :bar-value="onlinePercent"
+          bar-color="var(--green)"
+          size="sm"
+        />
+        <KpiCard
+          :title="tl('总输出功率')"
+          :value="totalPower"
+          unit="kW"
+          :decimals="0"
+          :bar-value="Math.min(100, (totalPower / ratedP) * 100)"
+          bar-color="var(--violet)"
+          size="sm"
+        />
+        <KpiCard
+          :title="tl('平均负载率')"
+          :value="avgLoad"
+          unit="%"
+          :decimals="1"
+          :status="avgLoad >= 80 ? 'warning' : 'normal'"
+          size="sm"
+          :bar-value="avgLoad"
+          bar-color="var(--blue)"
+        />
+        <KpiCard
+          :title="tl('并机母线')"
+          :value="busStateText"
+          :decimals="0"
+          size="sm"
+          :status="busState === '并联运行' ? 'normal' : 'warning'"
+        />
+        <KpiCard
+          :title="tl('控制模式')"
+          :value="s.autoMode"
+          :decimals="0"
+          size="sm"
+          :status="s.autoMode.includes('自动') ? 'normal' : 'warning'"
+        />
       </div>
 
       <!-- ======== 3.3.2 并机系统一次图 ======== -->
-      <div class="card">
-        <div class="card-head">
-          <span class="ct">{{ tl('并机系统一次图') }}</span>
+      <Panel title="并机系统一次图">
+        <template #extra>
           <div class="legend">
             <span class="lg"><i class="dot g"></i>{{ tl('运行/合闸') }}</span>
             <span class="lg"><i class="dot r"></i>{{ tl('停机/分闸') }}</span>
             <span class="lg"><i class="dot b"></i>{{ tl('热备/备用') }}</span>
             <span class="lg muted">{{ tl('点击机组/开关查看详情') }}</span>
           </div>
-        </div>
+        </template>
         <div class="schematic-wrap">
-          <svg :viewBox="`0 0 ${SVG_W} ${SVG_H}`" class="genset-svg" preserveAspectRatio="xMidYMid meet">
+          <svg
+            :viewBox="`0 0 ${SVG_W} ${SVG_H}`"
+            class="genset-svg"
+            preserveAspectRatio="xMidYMid meet"
+          >
             <!-- 市电汇流 (左) -->
             <g>
-              <rect :x="M_LINK.x - 40" :y="M_LINK.y - 16" width="80" height="24" rx="5" class="mains-box" />
+              <rect
+                :x="M_LINK.x - 40"
+                :y="M_LINK.y - 16"
+                width="80"
+                height="24"
+                rx="5"
+                class="mains-box"
+              />
               <text :x="M_LINK.x" :y="M_LINK.y + 1" class="mains-text">{{ tl('市电') }}</text>
-              <line :x1="M_LINK.x" :y1="M_LINK.y + 8" :x2="BUS_P.x" :y2="BUS_P.y - BUS_H/2" class="feeder-line" />
+              <line
+                :x1="M_LINK.x"
+                :y1="M_LINK.y + 8"
+                :x2="BUS_P.x"
+                :y2="BUS_P.y - BUS_H / 2"
+                class="feeder-line"
+              />
             </g>
 
             <!-- 并机母线 (竖) -->
-            <rect :x="BUS_P.x - BUS_W/2" :y="BUS_P.y" :width="BUS_W" :height="BUS_P.h" rx="4" class="bus" />
-            <text :x="BUS_P.x + BUS_W/2 + 6" :y="BUS_P.y + 12" class="bus-label">{{ tl('并机母线') }}</text>
+            <rect
+              :x="BUS_P.x - BUS_W / 2"
+              :y="BUS_P.y"
+              :width="BUS_W"
+              :height="BUS_P.h"
+              rx="4"
+              class="bus"
+            />
+            <text :x="BUS_P.x + BUS_W / 2 + 6" :y="BUS_P.y + 12" class="bus-label">
+              {{ tl('并机母线') }}
+            </text>
 
             <!-- 机组进线 + 出口断路器 G1..GN -->
-            <g v-for="(u, ui) in s.units" :key="'u'+u.id" class="feeder-line">
+            <g v-for="(u, ui) in s.units" :key="'u' + u.id" class="feeder-line">
               <!-- 机组框 -->
-              <rect :x="unitX(ui) - 46" :y="unitY(ui) - 16" width="92" height="24" rx="5"
-                    :class="['unit-box', stateCls(u.state)]" />
-              <text :x="unitX(ui)" :y="unitY(ui) + 1" :class="['unit-text', stateTextCls(u.state)]">{{ u.id }}</text>
+              <rect
+                :x="unitX(ui) - 46"
+                :y="unitY(ui) - 16"
+                width="92"
+                height="24"
+                rx="5"
+                :class="['unit-box', stateCls(u.state)]"
+              />
+              <text :x="unitX(ui)" :y="unitY(ui) + 1" :class="['unit-text', stateTextCls(u.state)]">
+                {{ u.id }}
+              </text>
               <!-- 进线连线 -->
-              <line :x1="unitX(ui)" :y1="unitY(ui) + 8" :x2="unitX(ui)" :y2="UNIT_BR_Y(ui) - BR_H/2" />
+              <line
+                :x1="unitX(ui)"
+                :y1="unitY(ui) + 8"
+                :x2="unitX(ui)"
+                :y2="UNIT_BR_Y(ui) - BR_H / 2"
+              />
               <!-- 出口断路器 -->
               <g class="breaker-node" @click="selectNode(unitBreakerNode(u, ui))">
-                <rect :x="unitX(ui) - BR_W/2" :y="UNIT_BR_Y(ui) - BR_H/2" :width="BR_W" :height="BR_H" rx="5"
-                      :class="['breaker-rect', breakerCls(u.breaker)]" />
-                <text :x="unitX(ui)" :y="UNIT_BR_Y(ui) + 4" class="breaker-text">{{ u.id.replace(/[^0-9]/g,'') }}-CB</text>
+                <rect
+                  :x="unitX(ui) - BR_W / 2"
+                  :y="UNIT_BR_Y(ui) - BR_H / 2"
+                  :width="BR_W"
+                  :height="BR_H"
+                  rx="5"
+                  :class="['breaker-rect', breakerCls(u.breaker)]"
+                />
+                <text :x="unitX(ui)" :y="UNIT_BR_Y(ui) + 4" class="breaker-text">
+                  {{ u.id.replace(/[^0-9]/g, '') }}-CB
+                </text>
               </g>
               <!-- 至并机母线连线 -->
-              <line :x1="unitX(ui)" :y1="UNIT_BR_Y(ui) + BR_H/2" :x2="unitX(ui)" :y2="BUS_P.y" />
+              <line :x1="unitX(ui)" :y1="UNIT_BR_Y(ui) + BR_H / 2" :x2="unitX(ui)" :y2="BUS_P.y" />
             </g>
 
             <!-- 并机母线 → 负载母排 联络断路器 QB -->
             <g class="breaker-node" @click="selectNode(busTieNode)">
-              <line :x1="BUS_P.x" :y1="BUS_P.y + BUS_P.h" :x2="BUS_P.x" :y2="BUS_L.y - BR_H/2" class="feeder-line" />
-              <rect :x="BUS_P.x - BR_W/2" :y="BUS_L.y - BR_H/2" :width="BR_W" :height="BR_H" rx="5"
-                    :class="['breaker-rect', breakerCls(busTieNode.breaker)]" />
+              <line
+                :x1="BUS_P.x"
+                :y1="BUS_P.y + BUS_P.h"
+                :x2="BUS_P.x"
+                :y2="BUS_L.y - BR_H / 2"
+                class="feeder-line"
+              />
+              <rect
+                :x="BUS_P.x - BR_W / 2"
+                :y="BUS_L.y - BR_H / 2"
+                :width="BR_W"
+                :height="BR_H"
+                rx="5"
+                :class="['breaker-rect', breakerCls(busTieNode.breaker)]"
+              />
               <text :x="BUS_P.x" :y="BUS_L.y + 4" class="breaker-text">QB</text>
             </g>
 
             <!-- 负载母排 -->
-            <rect :x="BUS_L.x" :y="BUS_L.y + BR_H/2" :width="BUS_L.w" :height="BUS_H" rx="4" class="bus" />
-            <text :x="BUS_L.x + BUS_L.w/2" :y="BUS_L.y + BR_H/2 - 8" class="bus-label">{{ tl('负载母排') }}</text>
+            <rect
+              :x="BUS_L.x"
+              :y="BUS_L.y + BR_H / 2"
+              :width="BUS_L.w"
+              :height="BUS_H"
+              rx="4"
+              class="bus"
+            />
+            <text :x="BUS_L.x + BUS_L.w / 2" :y="BUS_L.y + BR_H / 2 - 8" class="bus-label">
+              {{ tl('负载母排') }}
+            </text>
             <!-- 负载引出 -->
-            <line :x1="BUS_L.x + BUS_L.w/2" :y1="BUS_L.y + BR_H/2 + BUS_H" :x2="BUS_L.x + BUS_L.w/2" :y2="BUS_L.y + BR_H/2 + BUS_H + 26" class="feeder-line" />
-            <text :x="BUS_L.x + BUS_L.w/2" :y="BUS_L.y + BR_H/2 + BUS_H + 40" class="bus-label">{{ tl('数据中心负载') }}</text>
+            <line
+              :x1="BUS_L.x + BUS_L.w / 2"
+              :y1="BUS_L.y + BR_H / 2 + BUS_H"
+              :x2="BUS_L.x + BUS_L.w / 2"
+              :y2="BUS_L.y + BR_H / 2 + BUS_H + 26"
+              class="feeder-line"
+            />
+            <text :x="BUS_L.x + BUS_L.w / 2" :y="BUS_L.y + BR_H / 2 + BUS_H + 40" class="bus-label">
+              {{ tl('数据中心负载') }}
+            </text>
           </svg>
         </div>
 
@@ -92,7 +213,9 @@
         <transition name="fade">
           <div v-if="selectedNode" class="node-detail">
             <div class="nd-head">
-              <span class="nd-code" :class="breakerCls(selectedNode.breaker)">{{ selectedNode.code }}</span>
+              <span class="nd-code" :class="breakerCls(selectedNode.breaker)">{{
+                selectedNode.code
+              }}</span>
               <span class="nd-title">{{ selectedNode.label }}</span>
               <button class="nd-close" @click="selectedNode = null">×</button>
             </div>
@@ -104,27 +227,45 @@
             </div>
           </div>
         </transition>
-      </div>
+      </Panel>
 
       <!-- ======== 3.3.3 单机组电参量 + 趋势 ======== -->
       <div class="grid cols-2">
         <!-- 机组卡片 -->
-        <div class="card scroll-x">
-          <div class="card-head">
-            <span class="ct">{{ tl('机组电参量') }}</span>
-            <span class="pill" :class="runningCount > 0 ? 'g' : 'a'">{{ runningCount }} {{ tl('台运行') }}</span>
-          </div>
+        <Panel class="scroll-x" title="机组电参量">
+          <template #extra>
+            <span class="pill" :class="runningCount > 0 ? 'g' : 'a'"
+              >{{ runningCount }} {{ tl('台运行') }}</span
+            >
+          </template>
           <table class="mini-tbl">
             <thead>
               <tr>
-                <th>{{ tl('机组') }}</th><th>{{ tl('状态') }}</th><th>U(V)</th><th>I(A)</th><th>P(kW)</th>
-                <th>PF</th><th>Hz</th><th>{{ tl('转速') }}</th><th>{{ tl('水温') }}</th><th>{{ tl('油压') }}</th><th>{{ tl('电池') }}</th>
+                <th>{{ tl('机组') }}</th>
+                <th>{{ tl('状态') }}</th>
+                <th>U(V)</th>
+                <th>I(A)</th>
+                <th>P(kW)</th>
+                <th>PF</th>
+                <th>Hz</th>
+                <th>{{ tl('转速') }}</th>
+                <th>{{ tl('水温') }}</th>
+                <th>{{ tl('油压') }}</th>
+                <th>{{ tl('电池') }}</th>
               </tr>
             </thead>
             <tbody>
-              <tr v-for="u in s.units" :key="u.id" class="unit-row" :class="{ active: selectedUnitId === u.id }" @click="selectUnit(u.id)">
+              <tr
+                v-for="u in s.units"
+                :key="u.id"
+                class="unit-row"
+                :class="{ active: selectedUnitId === u.id }"
+                @click="selectUnit(u.id)"
+              >
                 <td class="d-name">{{ u.id }}</td>
-                <td><span class="tag" :class="stateTagCls(u.state)">{{ u.state }}</span></td>
+                <td>
+                  <span class="tag" :class="stateTagCls(u.state)">{{ u.state }}</span>
+                </td>
                 <td class="mono">{{ fmt(u.u, 0) }}</td>
                 <td class="mono">{{ fmt(u.i, 0) }}</td>
                 <td class="mono" :class="loadCls(loadPct(u))">{{ fmt(u.p, 0) }}</td>
@@ -137,39 +278,54 @@
               </tr>
             </tbody>
           </table>
-        </div>
+        </Panel>
 
         <!-- 选中机组趋势 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ selUnit ? selUnit.id + ' · ' + tl('运行趋势') : tl('机组运行趋势') }}</span>
-            <span class="pill" :class="selUnit && selUnit.state === '运行' ? 'g' : 'a'">{{ selUnit ? selUnit.state : '-' }}</span>
-          </div>
+        <Panel :title="selUnit ? selUnit.id + ' · ' + tl('运行趋势') : tl('机组运行趋势')">
+          <template #extra>
+            <span class="pill" :class="selUnit && selUnit.state === '运行' ? 'g' : 'a'">{{
+              selUnit ? selUnit.state : '-'
+            }}</span>
+          </template>
           <TrendChart :labels="trend.labels" :series="trend.series" :height="210" />
-        </div>
+        </Panel>
       </div>
 
       <!-- ======== 3.3.4 并机同步状态 ======== -->
-      <div class="card scroll-x">
-        <div class="card-head">
-          <span class="ct">{{ tl('并机同步状态') }}</span>
-          <span class="pill" :class="syncOk ? 'g' : 'a'">{{ syncOk ? tl('同步允许') : tl('待同期') }}</span>
-        </div>
+      <Panel class="scroll-x" title="并机同步状态">
+        <template #extra>
+          <span class="pill" :class="syncOk ? 'g' : 'a'">{{
+            syncOk ? tl('同步允许') : tl('待同期')
+          }}</span>
+        </template>
         <table class="mini-tbl">
           <thead>
             <tr>
-              <th>{{ tl('机组') }}</th><th>{{ tl('电压') }}(V)</th><th>{{ tl('频率') }}(Hz)</th><th>ΔU(V)</th><th>Δf(Hz)</th>
-              <th>{{ tl('相位差') }}(°)</th><th>{{ tl('并机状态') }}</th>
+              <th>{{ tl('机组') }}</th>
+              <th>{{ tl('电压') }}(V)</th>
+              <th>{{ tl('频率') }}(Hz)</th>
+              <th>ΔU(V)</th>
+              <th>Δf(Hz)</th>
+              <th>{{ tl('相位差') }}(°)</th>
+              <th>{{ tl('并机状态') }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(u, ui) in s.units" :key="'sy'+u.id">
+            <tr v-for="(u, ui) in s.units" :key="'sy' + u.id">
               <td class="d-name">{{ u.id }}</td>
               <td class="mono">{{ fmt(u.u, 0) }}</td>
-              <td class="mono" :class="Math.abs(u.freq - refFreq) > 0.2 ? 'a-text' : 'g-text'">{{ fmt(u.freq) }}</td>
-              <td class="mono" :class="Math.abs(u.u - refU) > 5 ? 'a-text' : 'g-text'">{{ fmt(Math.abs(u.u - refU), 0) }}</td>
-              <td class="mono" :class="Math.abs(u.freq - refFreq) > 0.2 ? 'a-text' : 'g-text'">{{ fmt(Math.abs(u.freq - refFreq)) }}</td>
-              <td class="mono" :class="phaseDiff(ui) > 10 ? 'a-text' : 'g-text'">{{ fmt(phaseDiff(ui), 1) }}</td>
+              <td class="mono" :class="Math.abs(u.freq - refFreq) > 0.2 ? 'a-text' : 'g-text'">
+                {{ fmt(u.freq) }}
+              </td>
+              <td class="mono" :class="Math.abs(u.u - refU) > 5 ? 'a-text' : 'g-text'">
+                {{ fmt(Math.abs(u.u - refU), 0) }}
+              </td>
+              <td class="mono" :class="Math.abs(u.freq - refFreq) > 0.2 ? 'a-text' : 'g-text'">
+                {{ fmt(Math.abs(u.freq - refFreq)) }}
+              </td>
+              <td class="mono" :class="phaseDiff(ui) > 10 ? 'a-text' : 'g-text'">
+                {{ fmt(phaseDiff(ui), 1) }}
+              </td>
               <td>
                 <span class="tag" :class="u.breaker.includes('合闸') ? 'g' : 'b'">
                   {{ u.breaker.includes('合闸') ? tl('已并机') : tl('待同期') }}
@@ -178,64 +334,80 @@
             </tr>
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <!-- ======== 3.3.5 同期 / 并机控制 ======== -->
       <div class="grid cols-2">
         <!-- 控制状态 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('同期 / 并机控制') }}</span>
-            <span class="pill" :class="s.autoMode.includes('自动') ? 'g' : 'a'">{{ s.autoMode }}</span>
-          </div>
+        <Panel title="同期 / 并机控制">
+          <template #extra>
+            <span class="pill" :class="s.autoMode.includes('自动') ? 'g' : 'a'">{{
+              s.autoMode
+            }}</span>
+          </template>
           <div class="ctrl-body">
             <div class="ctrl-row">
-              <span class="k">{{ tl('并机方案') }}</span><span class="v mono">{{ s.scheme }}</span>
+              <span class="k">{{ tl('并机方案') }}</span
+              ><span class="v mono">{{ s.scheme }}</span>
             </div>
             <div class="ctrl-row">
               <span class="k">{{ tl('母联状态') }}</span>
-              <span class="v"><span class="tag" :class="busTieNode.breaker.includes('合闸') ? 'g' : 'b'">{{ busTieNode.breaker }}</span></span>
+              <span class="v"
+                ><span class="tag" :class="busTieNode.breaker.includes('合闸') ? 'g' : 'b'">{{
+                  busTieNode.breaker
+                }}</span></span
+              >
             </div>
             <div class="ctrl-row">
               <span class="k">{{ tl('控制模式') }}</span>
-              <span class="v"><span class="tag" :class="s.autoMode.includes('自动') ? 'g' : 'a'">{{ s.autoMode }}</span></span>
+              <span class="v"
+                ><span class="tag" :class="s.autoMode.includes('自动') ? 'g' : 'a'">{{
+                  s.autoMode
+                }}</span></span
+              >
             </div>
             <div class="ctrl-actions">
-              <button class="btn" :class="{ on: s.autoMode.includes('自动') }" @click="toggleAuto">{{ tl('自动/手动') }}</button>
+              <button class="btn" :class="{ on: s.autoMode.includes('自动') }" @click="toggleAuto">
+                {{ tl('自动/手动') }}
+              </button>
               <button class="btn" @click="toggleBusTie">{{ tl('母联投/退') }}</button>
               <button class="btn" @click="startParallel">{{ tl('发起并机') }}</button>
             </div>
           </div>
-        </div>
+        </Panel>
 
         <!-- 并机步进流程 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('并机步进流程') }}</span>
+        <Panel title="并机步进流程">
+          <template #extra>
             <span class="pill" :class="s.stepActive >= s.parallelSteps.length ? 'g' : 'a'">
               {{ tl('第') }} {{ s.stepActive }}/{{ s.parallelSteps.length }} {{ tl('步') }}
             </span>
-          </div>
+          </template>
           <div class="steps">
-            <div v-for="(st, si) in s.parallelSteps" :key="si"
-                 class="step" :class="si + 1 < s.stepActive ? 'done' : (si + 1 === s.stepActive ? 'active' : 'todo')">
+            <div
+              v-for="(st, si) in s.parallelSteps"
+              :key="si"
+              class="step"
+              :class="si + 1 < s.stepActive ? 'done' : si + 1 === s.stepActive ? 'active' : 'todo'"
+            >
               <span class="step-idx">{{ si + 1 }}</span>
               <span class="step-txt">{{ st }}</span>
             </div>
           </div>
-        </div>
+        </Panel>
       </div>
 
       <!-- ======== 3.3.6 告警与保护 ======== -->
       <div class="grid cols-2">
         <!-- 实时告警 -->
-        <div class="card">
-          <div class="card-head">
-            <span class="ct">{{ tl('实时告警') }}</span>
+        <Panel title="实时告警">
+          <template #extra>
             <span v-if="!alarms.length" class="pill g">{{ tl('无活动告警') }}</span>
             <span v-else class="pill a">{{ alarms.length }} {{ tl('条') }}</span>
+          </template>
+          <div v-if="!alarms.length" class="empty-tip muted">
+            {{ tl('当前无越限/过载/保护动作等告警') }}
           </div>
-          <div v-if="!alarms.length" class="empty-tip muted">{{ tl('当前无越限/过载/保护动作等告警') }}</div>
           <div v-else class="alarm-list">
             <div v-for="(a, ai) in alarms" :key="ai" class="alarm-row" :class="a.level">
               <AlarmBadge :level="a.level" />
@@ -245,27 +417,44 @@
               <span class="a-val mono">{{ a.value }}</span>
             </div>
           </div>
-        </div>
+        </Panel>
 
         <!-- 保护与最近试机 -->
-        <div class="card">
-          <div class="card-head"><span class="ct">{{ tl('保护动作 / 最近试机') }}</span></div>
+        <Panel title="保护动作 / 最近试机">
           <div v-if="selUnit" class="protect-list">
-            <div v-for="(p, pi) in selUnit.protections" :key="'p'+pi" class="protect-row">
+            <div v-for="(p, pi) in selUnit.protections" :key="'p' + pi" class="protect-row">
               <span class="pt-name">{{ p.name }}</span>
-              <span class="pt-st" :class="p.state === '正常' ? 'g-text' : 'r-text'">{{ p.state }}</span>
+              <span class="pt-st" :class="p.state === '正常' ? 'g-text' : 'r-text'">{{
+                p.state
+              }}</span>
               <span class="pt-lv tag" :class="levelTagCls(p.level)">{{ p.level }}</span>
             </div>
-            <div v-if="!selUnit.protections.length" class="empty-tip muted">{{ tl('该机组无保护记录') }}</div>
+            <div v-if="!selUnit.protections.length" class="empty-tip muted">
+              {{ tl('该机组无保护记录') }}
+            </div>
           </div>
           <div v-if="s.lastTest" class="test-box">
             <div class="test-title">{{ tl('最近试机记录') }}</div>
-            <div class="ctrl-row"><span class="k">{{ tl('日期') }}</span><span class="v mono">{{ s.lastTest.date }}</span></div>
-            <div class="ctrl-row"><span class="k">{{ tl('类型') }}</span><span class="v">{{ s.lastTest.type }}</span></div>
-            <div class="ctrl-row"><span class="k">{{ tl('结果') }}</span><span class="v" :class="s.lastTest.result.includes('合格') ? 'g-text' : 'r-text'">{{ s.lastTest.result }}</span></div>
-            <div class="ctrl-row"><span class="k">{{ tl('时长') }}</span><span class="v mono">{{ s.lastTest.duration }}</span></div>
+            <div class="ctrl-row">
+              <span class="k">{{ tl('日期') }}</span
+              ><span class="v mono">{{ s.lastTest.date }}</span>
+            </div>
+            <div class="ctrl-row">
+              <span class="k">{{ tl('类型') }}</span
+              ><span class="v">{{ s.lastTest.type }}</span>
+            </div>
+            <div class="ctrl-row">
+              <span class="k">{{ tl('结果') }}</span
+              ><span class="v" :class="s.lastTest.result.includes('合格') ? 'g-text' : 'r-text'">{{
+                s.lastTest.result
+              }}</span>
+            </div>
+            <div class="ctrl-row">
+              <span class="k">{{ tl('时长') }}</span
+              ><span class="v mono">{{ s.lastTest.duration }}</span>
+            </div>
           </div>
-        </div>
+        </Panel>
       </div>
     </template>
   </div>
@@ -274,11 +463,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { pfCls, loadCls, tempCls, fmt, breakerCls, genHours } from '@/utils/format'
 import KpiCard from '@/components/monitor/KpiCard.vue'
 import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import { getPowerGensetDetailed, type GensetSummary, type GensetUnitView } from '@/api/power'
+import Panel from '@/components/common/Panel.vue'
 const { t: tl } = useI18n()
 
 // ──────────────────────────────────────────
@@ -303,11 +494,17 @@ function loadPct(u: GensetUnitView): number {
 
 function unitX(i: number): number {
   const n = s.value?.units.length || 1
-  const left = 200, right = 820, span = right - left
+  const left = 200,
+    right = 820,
+    span = right - left
   return n <= 1 ? (left + right) / 2 : Math.round(left + (span * i) / Math.max(1, n - 1))
 }
-function unitY(i: number): number { return 60 }
-function UNIT_BR_Y(i: number): number { return 110 }
+function unitY(i: number): number {
+  return 60
+}
+function UNIT_BR_Y(i: number): number {
+  return 110
+}
 
 interface BreakerNode {
   id: string
@@ -337,21 +534,27 @@ const selUnit = computed<GensetUnitView | null>(() => {
 })
 
 // 并机母线参考 (以首台运行机组为基准)
-const refUnit = computed(() => (s.value?.units ?? []).find((u) => u.state === '运行') ?? (s.value?.units ?? [])[0] ?? null)
+const refUnit = computed(
+  () => (s.value?.units ?? []).find((u) => u.state === '运行') ?? (s.value?.units ?? [])[0] ?? null,
+)
 const refU = computed(() => refUnit.value?.u ?? 400)
 const refFreq = computed(() => refUnit.value?.freq ?? 50)
 
 // ──────────────────────────────────────────
 // KPI 派生
 // ──────────────────────────────────────────
-const onlineCount = computed(() => (s.value?.units ?? []).filter((u) => u.state !== '停机' && u.state !== '检修').length)
+const onlineCount = computed(
+  () => (s.value?.units ?? []).filter((u) => u.state !== '停机' && u.state !== '检修').length,
+)
 const onlinePercent = computed(() => {
   const list = s.value?.units ?? []
   if (!list.length) return 0
   return Number(((onlineCount.value / list.length) * 100).toFixed(1))
 })
 const runningCount = computed(() => (s.value?.units ?? []).filter((u) => u.state === '运行').length)
-const totalPower = computed(() => Number((s.value?.units ?? []).reduce((sum, u) => sum + (u.p || 0), 0).toFixed(0)))
+const totalPower = computed(() =>
+  Number((s.value?.units ?? []).reduce((sum, u) => sum + (u.p || 0), 0).toFixed(0)),
+)
 const avgLoad = computed(() => {
   const list = (s.value?.units ?? []).filter((u) => (u.p || 0) > 0)
   if (!list.length) return 0
@@ -360,7 +563,11 @@ const avgLoad = computed(() => {
 const busState = computed(() => s.value?.busState ?? '-')
 const busStateText = computed(() => {
   const st = s.value?.busState ?? '-'
-  return st === '并联运行' ? tl('并联运行') : (runningCount.value > 1 ? tl('并联运行') : tl('单机/待机'))
+  return st === '并联运行'
+    ? tl('并联运行')
+    : runningCount.value > 1
+      ? tl('并联运行')
+      : tl('单机/待机')
 })
 const autoModeText = computed(() => autoModeLocal.value || s.value?.autoMode || '-')
 
@@ -370,7 +577,9 @@ const syncOk = computed(() => {
   if (list.length < 2) return false
   const running = list.filter((u) => u.breaker.includes('合闸'))
   if (running.length < 2) return false
-  return running.every((u) => Math.abs(u.u - refU.value) <= 5 && Math.abs(u.freq - refFreq.value) <= 0.2)
+  return running.every(
+    (u) => Math.abs(u.u - refU.value) <= 5 && Math.abs(u.freq - refFreq.value) <= 0.2,
+  )
 })
 
 // ──────────────────────────────────────────
@@ -385,8 +594,12 @@ function selectNode(n: BreakerNode) {
 }
 function unitBreakerNode(u: GensetUnitView, i: number): BreakerNode {
   return {
-    id: u.id, code: u.id.replace(/[^0-9]/g, '') + '-CB', label: u.id + ' ' + tl('出口断路器'), breaker: u.breaker,
-    x: unitX(i), y: UNIT_BR_Y(i),
+    id: u.id,
+    code: u.id.replace(/[^0-9]/g, '') + '-CB',
+    label: u.id + ' ' + tl('出口断路器'),
+    breaker: u.breaker,
+    x: unitX(i),
+    y: UNIT_BR_Y(i),
     kvs: [
       { k: tl('开关状态'), v: u.breaker, cls: breakerCls(u.breaker) },
       { k: tl('机组状态'), v: u.state, cls: stateTextCls(u.state) },
@@ -404,8 +617,12 @@ const busTieNode = computed<BreakerNode>(() => {
   const closed = busTieClosed.value == null ? true : busTieClosed.value
   const breaker = closed ? tl('合闸') : tl('分闸')
   return {
-    id: 'QB', code: 'QB', label: tl('并机母联断路器'), breaker,
-    x: BUS_P.x, y: BUS_L.y,
+    id: 'QB',
+    code: 'QB',
+    label: tl('并机母联断路器'),
+    breaker,
+    x: BUS_P.x,
+    y: BUS_L.y,
     kvs: [
       { k: tl('开关状态'), v: breaker, cls: breakerCls(breaker) },
       { k: tl('连接'), v: tl('并机母线') + ' ↔ ' + tl('负载母排') },
@@ -427,7 +644,10 @@ function startParallel() {
   // 演示: 将首台机组置为运行 + 出口合闸
   if (!s.value) return
   const u = s.value.units[0]
-  if (u) { u.state = tl('运行'); u.breaker = tl('合闸') }
+  if (u) {
+    u.state = tl('运行')
+    u.breaker = tl('合闸')
+  }
   busTieClosed.value = true
 }
 
@@ -444,33 +664,32 @@ function phaseDiff(i: number): number {
 // ──────────────────────────────────────────
 // 3.3.3 选中机组趋势
 // ──────────────────────────────────────────
-function genHours(n: number): string[] {
-  const now = new Date()
-  const hrs: string[] = []
-  for (let i = n - 1; i >= 0; i--) {
-    const t = new Date(now.getTime() - i * 3600 * 1000)
-    hrs.push(t.getHours().toString().padStart(2, '0') + ':00')
-  }
-  return hrs
-}
 function genPower(n: number, base: number, peak: number): number[] {
   return Array.from({ length: n }, (_, i) => {
     const daily = 0.5 + 0.5 * Math.sin(((i - 6) / 24) * Math.PI * 2)
     return Number((base + daily * (peak - base) + (Math.random() - 0.5) * peak * 0.06).toFixed(0))
   })
 }
-const trend = reactive<{ labels: string[]; series: { name: string; type: 'line' | 'bar'; data: number[]; color: string }[] }>({
+const trend = reactive<{
+  labels: string[]
+  series: { name: string; type: 'line' | 'bar'; data: number[]; color: string }[]
+}>({
   labels: genHours(24),
   series: [
     { name: tl('功率 kW'), type: 'line' as const, data: genPower(24, 200, 900), color: '#22d3ee' },
-    { name: tl('转速 rpm'), type: 'line' as const, data: genPower(24, 1480, 1510), color: '#22c55e' },
+    {
+      name: tl('转速 rpm'),
+      type: 'line' as const,
+      data: genPower(24, 1480, 1510),
+      color: '#22c55e',
+    },
     { name: tl('水温 °C'), type: 'line' as const, data: genPower(24, 70, 95), color: '#f59e0b' },
   ],
 })
 function rebuildTrend() {
   const u = selUnit.value
   const base = u ? (u.p || 300) * 0.6 : 300
-  const peak = u ? (u.p || 900) : 900
+  const peak = u ? u.p || 900 : 900
   trend.series[0].data = genPower(24, base * 0.5, peak)
   trend.series[1].data = genPower(24, u ? u.rpm - 20 : 1480, u ? u.rpm + 10 : 1510)
   trend.series[2].data = genPower(24, u ? u.waterT - 15 : 70, u ? u.waterT : 95)
@@ -484,17 +703,80 @@ const alarms = computed(() => {
   const now = new Date()
   const ts = (m: number) => new Date(now.getTime() - m * 60000).toTimeString().slice(0, 8)
   ;(s.value?.units ?? []).forEach((u, i) => {
-    if (loadPct(u) >= 90) out.push({ level: 'warning', time: ts(2 + i), source: u.id, message: tl('机组负载率过高'), value: loadPct(u) + '%' })
-    else if (loadPct(u) >= 80) out.push({ level: 'warning', time: ts(4 + i), source: u.id, message: tl('机组负载率偏高'), value: loadPct(u) + '%' })
-    if (u.waterT >= 98) out.push({ level: 'critical', time: ts(3), source: u.id, message: tl('冷却水温度过高'), value: u.waterT + '°C' })
-    else if (u.waterT >= 90) out.push({ level: 'warning', time: ts(5), source: u.id, message: tl('冷却水温度偏高'), value: u.waterT + '°C' })
-    if (u.oilP < 3) out.push({ level: 'critical', time: ts(6), source: u.id, message: tl('润滑油压力低'), value: fmt(u.oilP, 1) })
-    if (u.battU < 24) out.push({ level: 'warning', time: ts(7), source: u.id, message: tl('启动电池电压低'), value: fmt(u.battU) })
-    if (u.pf < 0.8) out.push({ level: 'warning', time: ts(8), source: u.id, message: tl('功率因数偏低'), value: fmt(u.pf) })
-    if (u.freq < 49.5 || u.freq > 50.5) out.push({ level: 'major', time: ts(9), source: u.id, message: tl('频率越限'), value: fmt(u.freq) + 'Hz' })
+    if (loadPct(u) >= 90)
+      out.push({
+        level: 'warning',
+        time: ts(2 + i),
+        source: u.id,
+        message: tl('机组负载率过高'),
+        value: loadPct(u) + '%',
+      })
+    else if (loadPct(u) >= 80)
+      out.push({
+        level: 'warning',
+        time: ts(4 + i),
+        source: u.id,
+        message: tl('机组负载率偏高'),
+        value: loadPct(u) + '%',
+      })
+    if (u.waterT >= 98)
+      out.push({
+        level: 'critical',
+        time: ts(3),
+        source: u.id,
+        message: tl('冷却水温度过高'),
+        value: u.waterT + '°C',
+      })
+    else if (u.waterT >= 90)
+      out.push({
+        level: 'warning',
+        time: ts(5),
+        source: u.id,
+        message: tl('冷却水温度偏高'),
+        value: u.waterT + '°C',
+      })
+    if (u.oilP < 3)
+      out.push({
+        level: 'critical',
+        time: ts(6),
+        source: u.id,
+        message: tl('润滑油压力低'),
+        value: fmt(u.oilP, 1),
+      })
+    if (u.battU < 24)
+      out.push({
+        level: 'warning',
+        time: ts(7),
+        source: u.id,
+        message: tl('启动电池电压低'),
+        value: fmt(u.battU),
+      })
+    if (u.pf < 0.8)
+      out.push({
+        level: 'warning',
+        time: ts(8),
+        source: u.id,
+        message: tl('功率因数偏低'),
+        value: fmt(u.pf),
+      })
+    if (u.freq < 49.5 || u.freq > 50.5)
+      out.push({
+        level: 'major',
+        time: ts(9),
+        source: u.id,
+        message: tl('频率越限'),
+        value: fmt(u.freq) + 'Hz',
+      })
     // 保护动作
     ;(u.protections ?? []).forEach((p) => {
-      if (p.state !== '正常') out.push({ level: 'critical', time: ts(10), source: `${u.id}·${p.name}`, message: tl('保护动作'), value: p.level })
+      if (p.state !== '正常')
+        out.push({
+          level: 'critical',
+          time: ts(10),
+          source: `${u.id}·${p.name}`,
+          message: tl('保护动作'),
+          value: p.level,
+        })
     })
   })
   return out.slice(0, 14)
@@ -506,17 +788,6 @@ const alarms = computed(() => {
 function isClosed(v?: string): boolean {
   const t = String(v ?? '').trim()
   return t.includes('合闸') || (t.includes('合') && !t.includes('分'))
-}
-function fmt(v: number | undefined | null, dp = 2): string {
-  if (v == null || !Number.isFinite(v)) return '-'
-  return Number(v).toFixed(dp)
-}
-function breakerCls(v: string): string {
-  const t = String(v ?? '').trim()
-  if (isClosed(t)) return 'g'
-  if (t.includes('分')) return 'r'
-  if (t.includes('检修') || t.includes('备用') || t.includes('热备')) return 'b'
-  return 'a'
 }
 function stateCls(state: string): string {
   if (state === '运行') return 'run'
@@ -533,21 +804,7 @@ function stateTagCls(state: string): string {
   if (state === '停机' || state === '检修') return 'r'
   return 'b'
 }
-function pfCls(pf: number): string {
-  if (pf >= 0.95) return 'g-text'
-  if (pf >= 0.9) return 'a-text'
-  return 'r-text'
-}
-function loadCls(load: number): string {
-  if (load >= 90) return 'r-text'
-  if (load >= 80) return 'a-text'
-  return 'g-text'
-}
-function tempCls(t: number, warn: number, alarm: number): string {
-  if (t >= alarm) return 'r-text'
-  if (t >= warn) return 'a-text'
-  return 'g-text'
-}
+
 function levelTagCls(level: string): string {
   if (level === 'critical' || level === '紧急') return 'r'
   if (level === 'major' || level === '严重') return 'a'
@@ -559,11 +816,37 @@ function levelTagCls(level: string): string {
 // Mock fallback
 // ──────────────────────────────────────────
 function mockSummary(): GensetSummary {
-  const mk = (id: string, state: string, breaker: string, p: number, i: number): GensetUnitView => ({
-    id, state, breaker,
-    incomer: '市电失电', ua: 230, ub: 231, uc: 229, u: 400, ia: i, ib: Math.round(i * 0.98), ic: Math.round(i * 0.99), i,
-    p, q: Math.round(p * 0.3), pf: 0.96, freq: 50.0, energy: Math.round(200000 + i * 1000),
-    rpm: 1500, waterT: 82, oilP: 4.2, battU: 27.5, heater: '关', startCnt: 12, runHrs: 1840,
+  const mk = (
+    id: string,
+    state: string,
+    breaker: string,
+    p: number,
+    i: number,
+  ): GensetUnitView => ({
+    id,
+    state,
+    breaker,
+    incomer: '市电失电',
+    ua: 230,
+    ub: 231,
+    uc: 229,
+    u: 400,
+    ia: i,
+    ib: Math.round(i * 0.98),
+    ic: Math.round(i * 0.99),
+    i,
+    p,
+    q: Math.round(p * 0.3),
+    pf: 0.96,
+    freq: 50.0,
+    energy: Math.round(200000 + i * 1000),
+    rpm: 1500,
+    waterT: 82,
+    oilP: 4.2,
+    battU: 27.5,
+    heater: '关',
+    startCnt: 12,
+    runHrs: 1840,
     faults: state === '运行' ? [] : [{ name: '低燃油液位', value: '12%', level: 'warning' }],
     protections: [
       { name: '过流保护', state: '正常', level: 'critical' },
@@ -571,14 +854,26 @@ function mockSummary(): GensetSummary {
       { name: '低油压保护', state: '正常', level: 'major' },
     ],
   })
-  const units = [mk('G1', '运行', '合闸', 760, 1380), mk('G2', '运行', '合闸', 720, 1310), mk('G3', '热备用', '分闸', 0, 0)]
+  const units = [
+    mk('G1', '运行', '合闸', 760, 1380),
+    mk('G2', '运行', '合闸', 720, 1310),
+    mk('G3', '热备用', '分闸', 0, 0),
+  ]
   return {
     scheme: 'N+1 自动并机',
     busState: '并联运行',
     autoMode: '自动',
     units,
     lastTest: { date: '2026-07-25', type: '带载试机', result: '合格', duration: '30min' },
-    parallelSteps: [tl('市电失电检测'), tl('机组自启动'), tl('转速/电压建立'), tl('同期检测'), tl('自动并车'), tl('均分负载'), tl('母联合闸')],
+    parallelSteps: [
+      tl('市电失电检测'),
+      tl('机组自启动'),
+      tl('转速/电压建立'),
+      tl('同期检测'),
+      tl('自动并车'),
+      tl('均分负载'),
+      tl('母联合闸'),
+    ],
     stepActive: 7,
     knowledge: {
       thresholds: [],
@@ -586,7 +881,12 @@ function mockSummary(): GensetSummary {
       logic: [],
       faults: [],
     },
-    total: 3, online: 3, avgLoadPercent: 62, avgVoltage: 400, avgCurrent: 2690, devices: [],
+    total: 3,
+    online: 3,
+    avgLoadPercent: 62,
+    avgVoltage: 400,
+    avgCurrent: 2690,
+    devices: [],
   }
 }
 
@@ -598,7 +898,7 @@ async function loadData() {
   error.value = ''
   try {
     const data = await getPowerGensetDetailed()
-    if (data && (data.units?.length)) {
+    if (data && data.units?.length) {
       s.value = data
     } else {
       s.value = mockSummary()
@@ -617,147 +917,519 @@ onMounted(loadData)
 
 <style scoped>
 /* ── view-head ── */
-.view-head { margin-bottom: 16px; }
-.view-head h1 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary, #e5e7eb); margin: 0; }
-.view-head .sub { font-size: 0.75rem; color: var(--text-muted, #6b7280); margin-top: 2px; display: block; }
+.view-head {
+  margin-bottom: 16px;
+}
+.view-head h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary, #e5e7eb);
+  margin: 0;
+}
+.view-head .sub {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  margin-top: 2px;
+  display: block;
+}
 
 /* ── grid ── */
-.grid { display: grid; gap: 14px; margin-bottom: 14px; }
-.grid.cols-6 { grid-template-columns: repeat(6, 1fr); }
-.grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
-.grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
-
-/* ── card ── */
-.card { background: var(--bg-card, #1e293b); border: 1px solid var(--border, #334155); border-radius: 10px; padding: 16px; }
-.card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 8px; }
-.ct { font-size: 0.875rem; font-weight: 600; color: var(--text-primary, #e5e7eb); }
-.pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 99px; font-size: 0.6875rem; font-weight: 600; }
-.pill.g { background: rgba(34, 197, 94, 0.12); color: #22c55e; }
-.pill.a { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+.grid {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.grid.cols-6 {
+  grid-template-columns: repeat(6, 1fr);
+}
+.grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+.grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
 
 /* ── SVG 一次图 ── */
-.schematic-wrap { background: rgba(15, 23, 42, 0.5); border-radius: 8px; padding: 8px; }
-.genset-svg { width: 100%; height: auto; display: block; }
-.bus { fill: #22d3ee; opacity: 0.85; }
-.bus-label { fill: var(--text-muted, #94a3b8); font-size: 11px; text-anchor: middle; }
-.feeder-line { stroke: #475569; stroke-width: 2; }
-.feeder-line line { stroke: #475569; stroke-width: 2; }
-.mains-box { fill: #1e3a5f; stroke: #22d3ee; stroke-width: 1; }
-.mains-text { fill: #cbd5e1; font-size: 11px; text-anchor: middle; }
-.unit-box { stroke-width: 1; }
-.unit-box.run { fill: rgba(34,197,94,0.18); stroke: #22c55e; }
-.unit-box.stop { fill: rgba(239,68,68,0.16); stroke: #ef4444; }
-.unit-box.standby { fill: rgba(245,158,11,0.14); stroke: #f59e0b; }
-.unit-text { font-size: 11px; text-anchor: middle; font-weight: 600; }
-.breaker-node { cursor: pointer; }
-.breaker-rect { stroke-width: 1.5; transition: filter 0.2s; }
-.breaker-node:hover .breaker-rect { filter: drop-shadow(0 0 6px rgba(34,211,255,0.7)); }
-.breaker-rect.g { fill: rgba(34, 197, 94, 0.25); stroke: #22c55e; }
-.breaker-rect.r { fill: rgba(239, 68, 68, 0.25); stroke: #ef4444; }
-.breaker-rect.b { fill: rgba(59, 130, 246, 0.2); stroke: #3b82f6; }
-.breaker-rect.a { fill: rgba(245, 158, 11, 0.2); stroke: #f59e0b; }
-.breaker-text { fill: #e5e7eb; font-size: 11px; text-anchor: middle; font-weight: 600; pointer-events: none; }
-.legend { display: flex; align-items: center; gap: 12px; font-size: 11px; }
-.lg { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted, #94a3b8); }
-.lg .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot.g { background: #22c55e; } .dot.r { background: #ef4444; } .dot.b { background: #3b82f6; }
+.schematic-wrap {
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 8px;
+  padding: 8px;
+}
+.genset-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.bus {
+  fill: #22d3ee;
+  opacity: 0.85;
+}
+.bus-label {
+  fill: var(--text-muted, #94a3b8);
+  font-size: 11px;
+  text-anchor: middle;
+}
+.feeder-line {
+  stroke: #475569;
+  stroke-width: 2;
+}
+.feeder-line line {
+  stroke: #475569;
+  stroke-width: 2;
+}
+.mains-box {
+  fill: #1e3a5f;
+  stroke: #22d3ee;
+  stroke-width: 1;
+}
+.mains-text {
+  fill: #cbd5e1;
+  font-size: 11px;
+  text-anchor: middle;
+}
+.unit-box {
+  stroke-width: 1;
+}
+.unit-box.run {
+  fill: rgba(34, 197, 94, 0.18);
+  stroke: #22c55e;
+}
+.unit-box.stop {
+  fill: rgba(239, 68, 68, 0.16);
+  stroke: #ef4444;
+}
+.unit-box.standby {
+  fill: rgba(245, 158, 11, 0.14);
+  stroke: #f59e0b;
+}
+.unit-text {
+  font-size: 11px;
+  text-anchor: middle;
+  font-weight: 600;
+}
+.breaker-node {
+  cursor: pointer;
+}
+.breaker-rect {
+  stroke-width: 1.5;
+  transition: filter 0.2s;
+}
+.breaker-node:hover .breaker-rect {
+  filter: drop-shadow(0 0 6px rgba(34, 211, 255, 0.7));
+}
+.breaker-rect.g {
+  fill: rgba(34, 197, 94, 0.25);
+  stroke: #22c55e;
+}
+.breaker-rect.r {
+  fill: rgba(239, 68, 68, 0.25);
+  stroke: #ef4444;
+}
+.breaker-rect.b {
+  fill: rgba(59, 130, 246, 0.2);
+  stroke: #3b82f6;
+}
+.breaker-rect.a {
+  fill: rgba(245, 158, 11, 0.2);
+  stroke: #f59e0b;
+}
+.breaker-text {
+  fill: #e5e7eb;
+  font-size: 11px;
+  text-anchor: middle;
+  font-weight: 600;
+  pointer-events: none;
+}
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+.lg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted, #94a3b8);
+}
+.lg .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.g {
+  background: #22c55e;
+}
+.dot.r {
+  background: #ef4444;
+}
+.dot.b {
+  background: #3b82f6;
+}
 
 /* 节点详情 */
-.node-detail { margin-top: 12px; border: 1px solid var(--border, #334155); border-radius: 8px; padding: 12px 14px; background: rgba(30, 41, 59, 0.5); }
-.nd-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-.nd-code { font-family: monospace; font-weight: 700; font-size: 13px; padding: 1px 8px; border-radius: 5px; }
-.nd-code.g { color: #22c55e; background: rgba(34,197,94,0.12); }
-.nd-code.r { color: #ef4444; background: rgba(239,68,68,0.12); }
-.nd-code.b { color: #3b82f6; background: rgba(59,130,246,0.12); }
-.nd-code.a { color: #f59e0b; background: rgba(245,158,11,0.12); }
-.nd-title { font-size: 13px; font-weight: 600; color: var(--text-primary, #e5e7eb); }
-.nd-close { margin-left: auto; background: none; border: none; color: var(--text-muted, #94a3b8); font-size: 18px; cursor: pointer; line-height: 1; }
-.nd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px 18px; }
-.nd-kv { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; border-bottom: 1px dotted rgba(51,65,85,0.5); }
-.nd-k { font-size: 11px; color: var(--text-muted, #94a3b8); }
-.nd-v { font-size: 12px; color: var(--text-secondary, #94a3b8); font-weight: 500; }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.node-detail {
+  margin-top: 12px;
+  border: 1px solid var(--border, #334155);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: rgba(30, 41, 59, 0.5);
+}
+.nd-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.nd-code {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 1px 8px;
+  border-radius: 5px;
+}
+.nd-code.g {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.12);
+}
+.nd-code.r {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+}
+.nd-code.b {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+}
+.nd-code.a {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.12);
+}
+.nd-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+}
+.nd-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--text-muted, #94a3b8);
+  font-size: 18px;
+  cursor: pointer;
+  line-height: 1;
+}
+.nd-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px 18px;
+}
+.nd-kv {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dotted rgba(51, 65, 85, 0.5);
+}
+.nd-k {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+.nd-v {
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 500;
+}
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 
 /* 机组表格行高亮 */
-.unit-row { cursor: pointer; }
-.unit-row.active { background: rgba(34,211,255,0.08); }
-.unit-row:hover { background: rgba(255,255,255,0.03); }
+.unit-row {
+  cursor: pointer;
+}
+.unit-row.active {
+  background: rgba(34, 211, 255, 0.08);
+}
+.unit-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
 
 /* ── 控制 / 同期 ── */
-.ctrl-body { display: flex; flex-direction: column; gap: 4px; }
-.ctrl-row { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed rgba(51,65,85,0.5); }
-.ctrl-row .k { color: var(--text-muted, #94a3b8); }
-.ctrl-row .v { color: var(--text-secondary, #94a3b8); font-weight: 500; }
-.ctrl-actions { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-.btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 6px; border: 1px solid var(--border, #334155); background: transparent; color: var(--text-primary, #e5e7eb); font-size: 0.75rem; cursor: pointer; }
-.btn:hover { background: rgba(255,255,255,0.05); }
-.btn.on { border-color: rgba(34,197,94,0.4); color: #22c55e; background: rgba(34,197,94,0.08); }
+.ctrl-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ctrl-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(51, 65, 85, 0.5);
+}
+.ctrl-row .k {
+  color: var(--text-muted, #94a3b8);
+}
+.ctrl-row .v {
+  color: var(--text-secondary, #94a3b8);
+  font-weight: 500;
+}
+.ctrl-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--border, #334155);
+  background: transparent;
+  color: var(--text-primary, #e5e7eb);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+.btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.btn.on {
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.08);
+}
 
 /* 步进 */
-.steps { display: flex; flex-direction: column; gap: 6px; }
-.step { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; font-size: 12px; background: rgba(30,41,59,0.5); border-left: 3px solid transparent; }
-.step.done { border-left-color: #22c55e; opacity: 0.7; }
-.step.active { border-left-color: #f59e0b; background: rgba(245,158,11,0.1); }
-.step.todo { border-left-color: #334155; opacity: 0.5; }
-.step-idx { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; background: rgba(51,65,85,0.6); color: #cbd5e1; }
-.step.done .step-idx { background: #22c55e; color: #0f172a; }
-.step.active .step-idx { background: #f59e0b; color: #0f172a; }
-.step-txt { color: var(--text-secondary, #94a3b8); }
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  background: rgba(30, 41, 59, 0.5);
+  border-left: 3px solid transparent;
+}
+.step.done {
+  border-left-color: #22c55e;
+  opacity: 0.7;
+}
+.step.active {
+  border-left-color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+.step.todo {
+  border-left-color: #334155;
+  opacity: 0.5;
+}
+.step-idx {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(51, 65, 85, 0.6);
+  color: #cbd5e1;
+}
+.step.done .step-idx {
+  background: #22c55e;
+  color: #0f172a;
+}
+.step.active .step-idx {
+  background: #f59e0b;
+  color: #0f172a;
+}
+.step-txt {
+  color: var(--text-secondary, #94a3b8);
+}
 
 /* 保护 / 试机 */
-.protect-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
-.protect-row { display: flex; align-items: center; gap: 10px; font-size: 12px; padding: 4px 0; border-bottom: 1px dashed rgba(51,65,85,0.5); }
-.pt-name { flex: 1; color: var(--text-secondary, #94a3b8); }
-.pt-st { font-weight: 600; }
-.pt-lv { font-size: 10px; padding: 1px 7px; border-radius: 20px; border: 1px solid var(--border, #334155); }
-.test-box { border-top: 1px solid var(--border, #334155); padding-top: 10px; }
-.test-title { font-size: 12px; font-weight: 600; color: var(--text-primary, #e5e7eb); margin-bottom: 6px; }
+.protect-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+.protect-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed rgba(51, 65, 85, 0.5);
+}
+.pt-name {
+  flex: 1;
+  color: var(--text-secondary, #94a3b8);
+}
+.pt-st {
+  font-weight: 600;
+}
+.pt-lv {
+  font-size: 10px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #334155);
+}
+.test-box {
+  border-top: 1px solid var(--border, #334155);
+  padding-top: 10px;
+}
+.test-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+  margin-bottom: 6px;
+}
 
 /* ── table ── */
-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
-th { text-align: left; color: var(--text-muted, #6b7280); font-weight: 600; font-size: 10px; letter-spacing: .4px; padding: 7px 8px; border-bottom: 1px solid var(--border, #334155); white-space: nowrap; }
-td { padding: 6px 8px; border-bottom: 1px solid rgba(51, 65, 85, 0.5); color: var(--text-secondary, #94a3b8); white-space: nowrap; }
-tbody tr:hover { background: rgba(255, 255, 255, 0.03); }
-.d-name { font-weight: 500; color: var(--text-primary, #e5e7eb); }
-.mono { font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace; }
-.muted { color: var(--text-muted, #6b7280); }
-.mini-tbl th, .mini-tbl td { font-size: 11px; padding: 5px 6px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+th {
+  text-align: left;
+  color: var(--text-muted, #6b7280);
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border, #334155);
+  white-space: nowrap;
+}
+td {
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  color: var(--text-secondary, #94a3b8);
+  white-space: nowrap;
+}
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.d-name {
+  font-weight: 500;
+  color: var(--text-primary, #e5e7eb);
+}
+.mono {
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
 
-/* tag */
-.tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 20px; border: 1px solid var(--border, #334155); white-space: nowrap; }
-.tag.g { color: #22c55e; border-color: rgba(43,212,122,.4); background: rgba(43,212,122,.08); }
-.tag.a { color: #f59e0b; border-color: rgba(255,176,32,.4); background: rgba(255,176,32,.08); }
-.tag.r { color: #ef4444; border-color: rgba(255,77,94,.4); background: rgba(255,77,94,.09); }
-.tag.b { color: #3b82f6; border-color: rgba(59,130,246,.4); background: rgba(59,130,246,.08); }
+.mini-tbl th,
+.mini-tbl td {
+  font-size: 11px;
+  padding: 5px 6px;
+}
 
 /* text color */
-.g-text { color: #22c55e; } .a-text { color: #f59e0b; } .r-text { color: #ef4444; }
+.g-text {
+  color: #22c55e;
+}
+.a-text {
+  color: #f59e0b;
+}
+.r-text {
+  color: #ef4444;
+}
 
 /* ── 告警列表 ── */
-.alarm-list { display: flex; flex-direction: column; gap: 6px; }
-.alarm-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; background: rgba(30,41,59,0.5); border-left: 3px solid transparent; }
-.alarm-row.major { border-left-color: #f59e0b; }
-.alarm-row.critical { border-left-color: #ef4444; }
-.alarm-row.warning { border-left-color: #eab308; }
-.a-ts { font-size: 11px; color: var(--text-muted, #94a3b8); }
-.a-src { font-size: 12px; font-weight: 600; color: var(--text-primary, #e5e7eb); min-width: 80px; }
-.a-msg { font-size: 12px; color: var(--text-secondary, #94a3b8); flex: 1; }
-.a-val { font-size: 11px; color: #f59e0b; }
+.alarm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.alarm-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: rgba(30, 41, 59, 0.5);
+  border-left: 3px solid transparent;
+}
+.alarm-row.major {
+  border-left-color: #f59e0b;
+}
+.alarm-row.critical {
+  border-left-color: #ef4444;
+}
+.alarm-row.warning {
+  border-left-color: #eab308;
+}
+.a-ts {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+.a-src {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary, #e5e7eb);
+  min-width: 80px;
+}
+.a-msg {
+  font-size: 12px;
+  color: var(--text-secondary, #94a3b8);
+  flex: 1;
+}
+.a-val {
+  font-size: 11px;
+  color: #f59e0b;
+}
 
 /* ── error/empty ── */
-.err-card { text-align: center; padding: 32px 16px; }
-.err-title { font-size: 1rem; font-weight: 700; color: #ef4444; margin-bottom: 8px; }
-.err-detail { font-size: 0.75rem; color: var(--text-muted, #6b7280); margin-bottom: 14px; }
-.empty-tip { text-align: center; padding: 20px; font-size: 12px; }
+.err-card {
+  text-align: center;
+  padding: 32px 16px;
+}
+.err-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #ef4444;
+  margin-bottom: 8px;
+}
+.err-detail {
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
+  margin-bottom: 14px;
+}
+.empty-tip {
+  text-align: center;
+  padding: 20px;
+  font-size: 12px;
+}
 
 /* ── responsive ── */
 @media (max-width: 1280px) {
-  .grid.cols-6 { grid-template-columns: repeat(3, 1fr); }
-  .grid.cols-3 { grid-template-columns: 1fr; }
-  .grid.cols-2 { grid-template-columns: 1fr; }
+  .grid.cols-6 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .grid.cols-3 {
+    grid-template-columns: 1fr;
+  }
+  .grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
 }
 @media (max-width: 860px) {
-  .grid.cols-6 { grid-template-columns: repeat(2, 1fr); }
+  .grid.cols-6 {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

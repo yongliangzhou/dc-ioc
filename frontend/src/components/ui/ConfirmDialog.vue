@@ -12,7 +12,12 @@
         </div>
         <div class="cf-foot">
           <button class="btn-sm" :disabled="loading" @click="onCancel">{{ cancelText }}</button>
-          <button class="btn-sm" :class="danger ? 'danger' : 'primary'" :disabled="loading" @click="onOk">
+          <button
+            class="btn-sm"
+            :class="danger ? 'danger' : 'primary'"
+            :disabled="loading"
+            @click="onOk"
+          >
             {{ loading ? loadingText : confirmText }}
           </button>
         </div>
@@ -22,76 +27,76 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref } from 'vue'
 
-const visible = ref(false);
-const title = ref("");
-const message = ref("");
-const detail = ref("");
-const confirmText = ref("确定");
-const cancelText = ref("取消");
-const loadingText = ref("处理中…");
-const danger = ref(false);
-const loading = ref(false);
-const err = ref("");
+const visible = ref(false)
+const title = ref('')
+const message = ref('')
+const detail = ref('')
+const confirmText = ref('确定')
+const cancelText = ref('取消')
+const loadingText = ref('处理中…')
+const danger = ref(false)
+const loading = ref(false)
+const err = ref('')
 
-let resolver: ((v: boolean) => void) | null = null;
+let resolver: ((v: boolean) => void) | null = null
 
 function open(opts: {
-  title?: string;
-  message: string;
-  detail?: string;
-  confirmText?: string;
-  cancelText?: string;
-  loadingText?: string;
-  danger?: boolean;
+  title?: string
+  message: string
+  detail?: string
+  confirmText?: string
+  cancelText?: string
+  loadingText?: string
+  danger?: boolean
 }): Promise<boolean> {
-  title.value = opts.title ?? "确认操作";
-  message.value = opts.message;
-  detail.value = opts.detail ?? "";
-  confirmText.value = opts.confirmText ?? "确定";
-  cancelText.value = opts.cancelText ?? "取消";
-  loadingText.value = opts.loadingText ?? "处理中…";
-  danger.value = opts.danger ?? false;
-  loading.value = false;
-  err.value = "";
-  visible.value = true;
+  title.value = opts.title ?? '确认操作'
+  message.value = opts.message
+  detail.value = opts.detail ?? ''
+  confirmText.value = opts.confirmText ?? '确定'
+  cancelText.value = opts.cancelText ?? '取消'
+  loadingText.value = opts.loadingText ?? '处理中…'
+  danger.value = opts.danger ?? false
+  loading.value = false
+  err.value = ''
+  visible.value = true
   return new Promise((resolve) => {
-    resolver = resolve;
-  });
+    resolver = resolve
+  })
 }
 
 function onCancel() {
-  visible.value = false;
-  resolver?.(false);
-  resolver = null;
+  visible.value = false
+  resolver?.(false)
+  resolver = null
 }
 
 function onOk() {
-  resolver?.(true);
-  resolver = null;
+  resolver?.(true)
+  resolver = null
   // 若外部 await 期间不关闭，由 setLoading 控制
 }
 
 // 暴露给 useConfirm 控制 loading / 关闭
 function setLoading(v: boolean) {
-  loading.value = v;
+  loading.value = v
 }
 function close() {
-  visible.value = false;
+  visible.value = false
 }
 function setError(e: string) {
-  err.value = e;
+  err.value = e
 }
 
-defineExpose({ open, close, setLoading, setError });
+defineExpose({ open, close, setLoading, setError })
 </script>
 
 <style scoped>
 .cf-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, .6);
+  background: rgba(6, 11, 20, 0.6);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -104,16 +109,38 @@ defineExpose({ open, close, setLoading, setError });
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, .5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
-.cf-modal.danger { border-color: rgba(242, 63, 63, .5); }
-.cf-head { padding: 14px 16px; border-bottom: 1px solid var(--line); }
-.cf-title { font-size: 15px; font-weight: 700; }
-.cf-body { padding: 14px 16px; font-size: 13px; line-height: 1.6; }
-.cf-msg { color: var(--txt); }
-.cf-detail { color: var(--txt3); font-size: 11px; margin-top: 6px; }
-.cf-err { color: var(--red); font-size: 12px; margin-top: 10px; }
+.cf-modal.danger {
+  border-color: rgba(242, 63, 63, 0.5);
+}
+.cf-head {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.cf-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+.cf-body {
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.cf-msg {
+  color: var(--txt);
+}
+.cf-detail {
+  color: var(--txt3);
+  font-size: 11px;
+  margin-top: 6px;
+}
+.cf-err {
+  color: var(--red);
+  font-size: 12px;
+  margin-top: 10px;
+}
 .cf-foot {
   display: flex;
   align-items: center;
@@ -131,8 +158,22 @@ defineExpose({ open, close, setLoading, setError });
   cursor: pointer;
   font-size: 12px;
 }
-.btn-sm.primary { background: linear-gradient(90deg, var(--cyan), var(--blue)); color: #04121f; border-color: transparent; font-weight: 700; }
-.btn-sm.danger { background: rgba(242, 63, 63, .15); color: var(--red); border-color: rgba(242, 63, 63, .4); }
-.btn-sm.danger:hover:not(:disabled) { background: rgba(242, 63, 63, .3); }
-.btn-sm:disabled { opacity: .6; cursor: default; }
+.btn-sm.primary {
+  background: linear-gradient(90deg, var(--cyan), var(--blue));
+  color: #04121f;
+  border-color: transparent;
+  font-weight: 700;
+}
+.btn-sm.danger {
+  background: rgba(242, 63, 63, 0.15);
+  color: var(--red);
+  border-color: rgba(242, 63, 63, 0.4);
+}
+.btn-sm.danger:hover:not(:disabled) {
+  background: rgba(242, 63, 63, 0.3);
+}
+.btn-sm:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 </style>
