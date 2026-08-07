@@ -150,7 +150,46 @@ def delete_device(
 
 @router.get("/thing-models", response_model=list[ThingModelDef], summary="物模型列表 (传感器/测点模板)")
 def list_thing_models(_user: User = Depends(get_current_user)):
-    """返回所有设备类别的测点模板 (从 Mock 采集器定义提取)。采集器和前端共用此契约。"""
+    """返回所有设备类别的测点模板。
+
+    优先从物模型库 (thing_model 表) 读取; 库为空时降级到 Mock 采集器定义提取,
+    保证采集器和前端在此契约下向后兼容。
+    """
+    from app.crud import thing_model as tm_crud
+    from app.db.session import SessionLocal
+
+    db = None
+    try:
+        db = SessionLocal()
+        db.execute(__import__("sqlalchemy").text("select 1"))
+        db_models = tm_crud.list_models(db, limit=500)
+    except Exception:  # noqa: BLE001
+        db_models = []
+    finally:
+        if db is not None:
+            db.close()
+
+    if db_models:
+        result: list[ThingModelDef] = []
+        for m in db_models:
+            result.append(ThingModelDef(
+                category=m["category"] or m["modelKey"],
+                category_label=m["name"],
+                domain=m["domain"],
+                protocol=m["protocol"],
+                metrics=[
+                    ThingModelMetricDef(
+                        metric_name=it["identifier"],
+                        unit=it["unit"],
+                        description=it["name"] or it["desc"],
+                    )
+                    for it in m["items"]
+                    if it["itemType"] == "property"
+                ],
+            ))
+        return result
+
+    # ---- 降级: 从 Mock 采集器定义提取 (历史行为) ----
     from app.collectors.mock_collector import _CATEGORY_METRICS
 
     # 类别中文名 + 业务域 + 协议 / 测点中文说明: 统一来自配置化物模型 (app.collectors.thing_models)。
@@ -159,7 +198,7 @@ def list_thing_models(_user: User = Depends(get_current_user)):
     _CATEGORY_LABEL = thing_models.CATEGORY_META
     _METRIC_LABEL = thing_models.METRIC_LABELS
 
-    result: list[ThingModelDef] = []
+    result = []
     for cat, metrics in _CATEGORY_METRICS.items():
         label_info = _CATEGORY_LABEL.get(cat, (cat, "", ""))
         result.append(ThingModelDef(

@@ -28,6 +28,7 @@ from app.api.v1.endpoints import (
     uploads,
     tickets,
     assistant,
+    thing_model,
 )
 from app.core.deps import get_current_user
 
@@ -65,6 +66,8 @@ api_router.include_router(risk.router, prefix="/ops/risk", tags=["risk"], depend
 api_router.include_router(runbooks.router, tags=["runbooks"], dependencies=_auth)
 api_router.include_router(inspection.router, prefix="/ops/inspection", tags=["inspection"], dependencies=_auth)
 api_router.include_router(assistant.router, prefix="", tags=["assistant"], dependencies=_auth)
+# 物模型 (property/service/event 三要素, 前端编辑器与采集器共用)
+api_router.include_router(thing_model.router, prefix="/thing-models", tags=["thing-model"], dependencies=_auth)
 
 # 网络监控 (交换机端口流量 / Ping / 带宽)
 api_router.include_router(network.router, prefix="/network", tags=["network"], dependencies=_auth)

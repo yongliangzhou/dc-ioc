@@ -32,6 +32,7 @@ from app.models.audit_log import AuditLog  # noqa: F401
 from app.models.assistant_feedback import AssistantFeedback  # noqa: F401
 from app.models.alarm_feedback import AlarmFeedback  # noqa: F401
 from app.models.energy_advice import EnergyAdviceAdopt  # noqa: F401
+from app.models.thing_model import ThingModel, ThingModelItem  # noqa: F401
 
 __all__ = [
     "Base",
@@ -63,6 +64,8 @@ __all__ = [
     "AssistantFeedback",
     "AlarmFeedback",
     "EnergyAdviceAdopt",
+    "ThingModel",
+    "ThingModelItem",
     "AlarmRule",
     "AlarmActiveState",
     "AlarmSuppressedDevice",
