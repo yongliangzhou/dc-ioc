@@ -68,7 +68,11 @@ function mapEnergy(raw: RawEnergy): EnergyOverview {
     weekTrend,
     loadForecast: raw.loadForecast ?? [],
     aiSaving: raw.aiSaving,
-    breakdown: raw.breakdown ?? [],
+    breakdown: (raw.breakdown ?? []).map((b) => ({
+      id: b.id ?? b.name ?? '',
+      kw: b.kw ?? 0,
+      pct: b.pct ?? 0,
+    })),
     carbon: raw.carbon,
     advice: (raw as { advice?: EnergyAdvice }).advice,
   }
@@ -111,7 +115,7 @@ export interface EnergyAdviceAdoptRecord {
 }
 
 export function adoptEnergyAdvice(payload: EnergyAdviceAdoptIn): Promise<EnergyAdviceAdoptRecord> {
-  return request.post<EnergyAdviceAdoptRecord>('/api/ops/energy/advice', payload)
+  return request.post<unknown, EnergyAdviceAdoptRecord>('/api/ops/energy/advice', payload)
 }
 
 export function getEnergyAdvice(action = ''): Promise<{ records: EnergyAdviceAdoptRecord[]; stats: { total: number; adopted: number; ignored: number; adoptedSavingKw: number } }> {

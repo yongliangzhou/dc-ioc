@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Optional
 
 import re
+from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.models.knowledge import KnowledgeItem
@@ -199,7 +200,7 @@ def review(db: Session, item_id: str, *, status: str, note: str = "", reviewer: 
     row.review_status = status
     row.review_note = note
     row.reviewer = reviewer
-    row.reviewed_at = _now()
+    row.reviewed_at = datetime.now()
     db.commit()
     db.refresh(row)
     return _to_dict(row)

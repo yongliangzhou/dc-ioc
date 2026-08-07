@@ -7,6 +7,7 @@ export interface DrillPlanView {
   scenario: string
   description: string | null
   participants: string | null
+  state?: string
 }
 
 export interface DrillRecordView {
@@ -76,7 +77,7 @@ export interface DrillRecordCreate {
   executedBy?: string
   startedAt?: string
   completedAt?: string
-  score?: number
+  score?: number | null
   result?: string
   notes?: string
 }

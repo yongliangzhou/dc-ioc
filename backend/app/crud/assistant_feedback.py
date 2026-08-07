@@ -1,8 +1,6 @@
 """AI 运维助手反馈 CRUD (批次B)。"""
 from __future__ import annotations
 
-from typing import Optional
-
 from sqlalchemy.orm import Session
 
 from app.models.assistant_feedback import AssistantFeedback

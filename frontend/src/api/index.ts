@@ -168,8 +168,13 @@ export const updateAlarmRule = (id: string, data: Partial<AlarmRuleDef>) =>
 export const deleteAlarmRule = (id: string) =>
   request.delete<unknown, void>(`/api/alarm-rules/${encodeURIComponent(id)}`)
 
-export const toggleAlarmRule = (id: string | number) =>
-  request.patch<unknown, AlarmRuleDef>(`/api/alarm-rules/${encodeURIComponent(id)}/toggle`)
+export const toggleAlarmRule = (id: string | number, status?: 'enabled' | 'silenced' | 'disabled') => {
+  const url = status && status !== 'disabled'
+    ? `/api/alarm-rules/${encodeURIComponent(id)}/status`
+    : `/api/alarm-rules/${encodeURIComponent(id)}/toggle`
+  const body = status && status !== 'disabled' ? { status } : undefined
+  return request.patch<unknown, AlarmRuleDef>(url, body)
+}
 
 export const getAuditLogs = (params: AuditLogQuery = {}) =>
   request.get<unknown, { items: AuditLogItem[]; total: number; page: number; page_size: number }>(

@@ -23,6 +23,7 @@ import type {
   MetricRealtimeResponse,
   Paginated,
   ThingModelDef,
+  KnowledgeItem,
 } from '@/types'
 
 /* v2 演示设备列表 (与 @/api 中 DemoDeviceItem/DemoDeviceList 同构, 本地定义避免循环依赖) */
@@ -2733,6 +2734,7 @@ const STORE: MockStore = {
       const t = types[i % types.length]
       list.push({
         id: i + 1,
+        code: `KB-${String(i + 1).padStart(4, '0')}`,
         title: `${cats[i % cats.length]} #${i + 1}`,
         category: cats[i % cats.length],
         domain: domains[i % domains.length],
@@ -2740,7 +2742,11 @@ const STORE: MockStore = {
         summary: '这是知识库条目自动生成的摘要，用于演示知识库列表、搜索与审核流程。',
         content: '详细内容：操作流程、检查要点、处置步骤、注意事项等完整的文档内容。\n\n步骤1：确认环境\n步骤2：执行操作\n步骤3：验证结果',
         tags: ['演示', domains[i % domains.length]],
-        version: '1.0',
+        relatedCategories: [cats[i % cats.length]],
+        relatedDomains: [domains[i % domains.length]],
+        relatedMetrics: [],
+        owner: 'system',
+        version: 1,
         hot: i < 3,
         reviewStatus: i % 5 === 0 ? 'pending' : 'approved',
         createdAt: new Date(Date.now() - i * 86400000).toISOString(),

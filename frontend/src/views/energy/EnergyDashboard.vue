@@ -65,7 +65,7 @@
     <div class="grid cols-2" v-if="data?.advice">
       <Panel :title="tl('能效指标')">
         <div class="eff-wrap" v-if="advice">
-          <BaseChart :option="pueRingOption" height="180px" />
+          <BaseChart v-if="pueRingOption" :option="pueRingOption" height="180px" />
           <div class="eff-list">
             <div class="eff-item">
               <span class="k">{{ tl('冷机 COP') }}</span>
@@ -187,9 +187,9 @@ import {
   adoptEnergyAdvice,
   getEnergyAdvice,
   type EnergyOverview,
-  type EnergySuggestion,
   type EnergyAdviceAdoptRecord,
 } from '@/api/energy'
+import type { EnergySuggestion } from '@/types'
 import type { EChartsOption } from '@/hooks/useECharts'
 import { useToast } from '@/hooks/useToast'
 import { usePermission, type PermAction } from '@/hooks/usePermission'

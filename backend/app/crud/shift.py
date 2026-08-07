@@ -5,7 +5,7 @@ from typing import Optional
 
 from sqlalchemy.orm import Session
 
-from app.models.shift import ShiftSchedule
+from app.models.shift import ShiftHandover, ShiftSchedule
 
 
 def list_items(
@@ -88,7 +88,6 @@ def _to_dict(r: ShiftSchedule) -> dict:
 
 
 # ===== 交接班 CRUD =====
-from app.models.shift import ShiftHandover
 
 
 def _to_handover_dict(r: ShiftHandover) -> dict:

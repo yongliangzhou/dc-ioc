@@ -10,6 +10,7 @@ export interface PlanView {
   nextDueDate: string | null
   status: string
   overdue: number
+  owner?: string
 }
 
 export interface RecordView {
