@@ -21,9 +21,8 @@ COPY packages/ /packages/
 # 安装前端依赖 (file:../packages/dc-ioc-ui 在 /app 内解析为 /packages/dc-ioc-ui)
 RUN npm install --no-audit --no-fund || npm ci --no-audit --no-fund
 
-# 安装并构建 @dc-ioc/ui (确保 dist/ 存在)
-RUN cd /packages/dc-ioc-ui && npm install --no-audit --no-fund && npx vite build
-
+# 复用已入库的 @dc-ioc/ui/dist (含 index.d.ts 类型声明), 不在容器内重新构建以避免
+# vite build 清空 outDir 后丢失 .d.ts 导致 vue-tsc 报 TS7016。
 # 修正 npm 为 file: 依赖创建的 symlink (Windows Docker 卷挂载会把目标解析为宿主机绝对路径, 容器内无效)
 RUN rm -f /app/node_modules/@dc-ioc/ui && ln -s /packages/dc-ioc-ui /app/node_modules/@dc-ioc/ui
 
@@ -55,9 +54,7 @@ COPY packages/ /packages/
 
 RUN npm install --no-audit --no-fund || npm ci --no-audit --no-fund
 
-# 构建 UI 库 (prod 构建需要完整的类型定义)
-RUN cd /packages/dc-ioc-ui && npm install --no-audit --no-fund && npx vite build
-
+# 复用已入库的 @dc-ioc/ui/dist (含 index.d.ts), 不重新构建 UI 库。
 COPY frontend/. .
 RUN npm run build
 
