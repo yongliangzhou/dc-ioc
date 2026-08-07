@@ -26,6 +26,9 @@ __pycache__/
 *.egg
 .eggs/
 dist/
+# 保留 @dc-ioc/ui 的预构建产物 (含 index.d.ts), 避免前端类型检查依赖本地构建步骤
+!packages/dc-ioc-ui/dist/
+!packages/dc-ioc-ui/dist/**
 build/
 *.whl
 .venv/
