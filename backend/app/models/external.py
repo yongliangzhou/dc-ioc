@@ -6,7 +6,7 @@
 """
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Float, Index, String, UniqueConstraint, func
+from sqlalchemy import JSON, DateTime, Float, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.session import Base
@@ -29,6 +29,8 @@ class ExternalDevice(Base, TimestampMixin):
     domain: Mapped[str | None] = mapped_column(String(32), index=True, default=None)
     category: Mapped[str | None] = mapped_column(String(32), index=True, default=None)
     location: Mapped[str | None] = mapped_column(String(128), default=None)
+    # 多数据中心管理: 设备归属站点 (软关联, 便于跨中心聚合; 无 FK 约束避免迁移脆弱)
+    idc_id: Mapped[int | None] = mapped_column(Integer, index=True, default=None, comment="归属数据中心 id")
     protocol: Mapped[str | None] = mapped_column(String(32), default=None)
     tags: Mapped[list] = mapped_column(JSON, default=list)
     description: Mapped[str | None] = mapped_column(String(512), default=None)

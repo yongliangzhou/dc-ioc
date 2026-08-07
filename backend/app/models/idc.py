@@ -25,6 +25,10 @@ class IDC(Base, TimestampMixin):
     rack_capacity: Mapped[int] = mapped_column(Integer, default=0, comment="机柜总容量")
     rooms: Mapped[int] = mapped_column(Integer, default=0, comment="包间数量")
     status: Mapped[str] = mapped_column(String(16), default="运营", index=True, comment="运营/建设/下线")
+    # 多数据中心管理扩展字段 (phase: datacenter)
+    capacity_kw: Mapped[int] = mapped_column(Integer, default=0, comment="机柜额定功率 kW (单体)")
+    description: Mapped[str] = mapped_column(String(512), default="", comment="站点说明")
+    is_current: Mapped[bool] = mapped_column(default=False, index=True, comment="是否为当前默认数据中心")
 
     cabinets: Mapped[List["Cabinet"]] = relationship(
         back_populates="idc", cascade="all, delete-orphan", lazy="selectin"
