@@ -1,6 +1,6 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.8.0** | 代码工程化（OpenAPI 代码生成 + 组件库化 + TypeScript 零错误） | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储）
+> **v0.9.0** | 物模型可视化编辑 · 3D 数字孪生拓扑 · 多数据中心管理 | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
 
 ---
 
@@ -47,6 +47,8 @@ dc-ioc-platform/
 │   │   │       ├── assistant.py       #   AI 运维助手
 │   │   │       ├── metrics.py         #   测点数据
 │   │   │       ├── external.py        #   外部设备接入 (注册/测点上报/告警评估)
+│   │   │       ├── thing_model.py     #   物模型 CRUD (property/service/event 三要素, 接管 GET /thing-models)
+│   │   │       ├── idc.py             #   多数据中心 (CRUD/切换/跨中心对比/统一告警)
 │   │   │       ├── runbooks.py        #   运维预案 (告警关联处置预案, /api/runbooks/related)
 │   │   │       ├── audit.py           #   审计日志查询 (/api/audit-logs, 过滤/分页/CSV 导出)
 │   │   │       ├── uploads.py         #   通用文件上传 (/api/uploads/avatar|attachment|batch)
@@ -54,9 +56,9 @@ dc-ioc-platform/
 │   │   │       ├── domain.py          #   域名/路由监控
 │   │   │       ├── demo.py            #   v2 演示/兜底数据
 │   │   │       └── ws.py              #   WebSocket 实时遥测
-│   │   ├── models/                    # SQLAlchemy ORM (User/Role/Permission/audit_logs/equipment/ticket 等)
-│   │   ├── schemas/                   # Pydantic DTO (请求/响应校验, 含 UserRegister)
-│   │   ├── crud/                      # 数据访问层 (含 ticket 状态机 + SLA 计算)
+│   │   ├── models/                    # SQLAlchemy ORM (User/Role/Permission/audit_logs/equipment/ticket/thing_model/idc 等)
+│   │   ├── schemas/                   # Pydantic DTO (请求/响应校验, 含 UserRegister/ThingModel/Idc)
+│   │   ├── crud/                      # 数据访问层 (含 ticket 状态机 + SLA 计算 + thing_model + idc 聚合)
 │   │   ├── services/                  # 业务逻辑层
 │   │   │   ├── dc_aggregator.py       #   ** 统一聚合出口 ** (真实链路→回退生成器, 35 个函数)
 │   │   │   ├── alarm_engine.py        #   告警引擎 (13类设备阈值+收敛+抑制+通知)
@@ -95,6 +97,9 @@ dc-ioc-platform/
 │   │   ├── api/
 │   │   │   ├── request.ts             #   axios 实例 (Bearer 注入 + 401 自动刷新 + Mock 兜底)
 │   │   │   └── index.ts              #   业务域 API (含 registerUser 自助注册)
+│   │   │   ├── thingModel.ts          #   物模型 CRUD 封装
+│   │   │   ├── idc.ts                 #   数据中心 CRUD/切换/对比/告警封装
+│   │   │   ├── twin.ts                #   3D 孪生设备拓扑封装 (复用 /api/external/devices)
 │   │   │   ├── generated/index.ts     #   orval 自动生成 (OpenAPI → TS, 1600+ 行)
 │   │   │   ├── generatedWrapper.ts    #   axios 桥接层 (封装所有 generated API)
 │   │   ├── openapi.json               #   API 契约 (29 端点 / 9 Schema)
@@ -118,7 +123,10 @@ dc-ioc-platform/
 │   │   │   │   ├── NetworkRouters.vue   #   路由器
 │   │   │   │   ├── NetworkFirewalls.vue #   防火墙
 │   │   │   │   └── NetworkWireless.vue  #   无线网络
-│   │   │   └── ops/                   #   智能运营与运维 (20 页面)
+│   │   │   ├── ops/                   #   智能运营与运维 (20 页面)
+│   │   │       ├── ThingModelEditor.vue # 物模型图形化编辑器 (属性/服务/事件 + 实时预览 + 校验)
+│   │   │       ├── DataCenterManage.vue # 多数据中心管理 (增改删/启停/设为当前)
+│   │   │       ├── DataCenterCompare.vue # 跨中心对比仪表盘 + 统一告警视图
 │   │   │       ├── Twin.vue           #     数字孪生
 │   │   │       ├── Topology.vue       #     链路拓扑
 │   │   │       ├── Capacity.vue       #     容量管理
@@ -138,14 +146,18 @@ dc-ioc-platform/
 │   │   │       ├── Telemetry.vue      #     设备遥测
 │   │   │       ├── Cabinets.vue       #     机柜管理
 │   │   │       └── Equipment.vue      #     统一设备台账
+│   │   │   ├── twin/
+│   │   │       ├── TwinDashboard.vue  #   数字孪生总览 (Raptor/方舟)
+│   │   │       └── Twin3D.vue         #   3D 数字孪生拓扑 (three.js: 旋转/缩放/分层/实时映射)
 │   │   ├── stores/modules/
 │   │   │   ├── auth.ts                #   认证状态 (Pinia: login/refresh/logout)
 │   │   │   ├── metrics.ts             #   实时指标状态
-│   │   │   └── tickets.ts             #   工单状态 (持久化)
+│   │   │   ├── tickets.ts             #   工单状态 (持久化)
+│   │   │   └── datacenter.ts          #   当前数据中心 (Pinia: 切换持久化 + 影响拓扑/监控范围)
 │   │   ├── hooks/useWebSocket.ts      #   WebSocket 组合式函数 (自动重连)
 │   │   ├── engine/
 │   │   │   └── realtimeLinkage.ts     #   实时越限联动引擎
-│   │   ├── router/index.ts            #   路由 + Auth Guard (33 条路由)
+│   │   ├── router/index.ts            #   路由 + Auth Guard (40+ 条路由)
 │   │   ├── layouts/DefaultLayout.vue   #   主布局 (7 组侧边栏菜单)
 │   │   ├── components/                #   通用/图表/业务组件
 │   │   │   ├── MetricCard.vue         #     指标卡片
@@ -290,6 +302,17 @@ dc-ioc-platform/
 | 防火墙 | `/monitor/network/firewalls` | admin/operator/viewer | 并发会话、吞吐量、规则命中统计 |
 | 无线网络 | `/monitor/network/wireless` | admin/operator/viewer | AP 在线状态、2.4G/5G 信道利用率、客户端分布 |
 
+### 3.8 物模型与多数据中心（v0.9 新增）
+
+| 能力 | 路由 | 权限 | 说明 |
+|---|---|---|---|
+| **物模型编辑器** | `/ops/thing-model` | admin/operator | 图形化编辑设备「属性/服务/事件」三要素模板；左列表 + 中表单 + 右实时 JSON 预览；保存前校验 key 唯一性/必填/标识符格式/重复 |
+| **3D 数字孪生拓扑** | `/twin/3d` | admin/operator | three.js 机房场景：按 location 分层（机房→机柜→设备）立体呈现；OrbitControls 旋转/滚轮缩放；分层显隐开关；轮询实时染色（在线青色 / 离线置灰 / 高温红色）；点击设备弹出指标卡 |
+| **多数据中心管理** | `/ops/datacenter` | admin/operator | 数据中心卡片网格（增改删/启停/设为当前）；切换写入 `/api/idc/current` 全局生效 |
+| **跨中心对比** | `/ops/datacenter/compare` | admin/operator | 各中心电力/制冷/机柜/告警并排 KPI 卡 + 对比柱状图 + 统一告警视图 |
+
+> **后端支撑**（v0.9 新增）：`thing_models` / `thing_model_items` 双表承接物模型全生命周期（接管原只读 `GET /thing-models`）；`IDC` 模型扩展 `capacity_kw` / `description` / `is_current` 字段，`ExternalDevice` 增加可空 `idc_id` 实现设备归属站点聚合。新增 `/api/thing-models`（CRUD）、`/api/idc`（CRUD + `/current` 切换 + `/compare` 对比 + `/alarms` 统一告警）。
+
 ---
 
 ## 四、版本演进
@@ -342,6 +365,8 @@ MockCollector (模拟采集器) 或 真实采集器
 | 上传 `uploads`（v0.7 新增） | `POST /api/uploads/avatar` / `/attachment` / `/batch`（类型/大小校验） |
 | 网络 `network` / 域名 `domain` | 交换机/路由/防火墙/无线、域名路由监控 |
 | 外部接入 `external` | 采集器注册/测点上报/告警评估（独立 `X-Collector-Token` 鉴权） |
+| 物模型 `thing-models` (v0.9) | `GET/POST/PUT/DELETE /api/thing-models`（property/service/event 三要素，接管只读出口） |
+| 多数据中心 `idc` (v0.9) | `GET/POST/PUT/DELETE /api/idc`、`GET/PUT /api/idc/current`、`GET /api/idc/compare`、`GET /api/idc/alarms` |
 | AI 助手 `assistant` | 知识库问答 + NIM 诊断端点 `/api/ops/assistant/status` |
 
 > 完整端点清单（含方法/路径/鉴权）见 `backend/api_endpoints.md`（由 `gen_api.py` 静态反射生成）。
@@ -498,6 +523,7 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 | `axios` | HTTP 客户端 |
 | `lucide-vue-next` | SVG 图标库 |
 | `dayjs` | 日期处理 |
+| `three` | 3D 数字孪生拓扑 (机房级 three.js 场景) |
 | `@dc-ioc/ui` | 共享 UI 组件库 (StatusBadge / AlarmBadge / KpiCard) |
 | `vite` `vue-tsc` `typescript` | 构建与类型 |
 | `orval` | OpenAPI → TypeScript 代码生成 (devDep) |
@@ -542,6 +568,17 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 | **组件库化** | `packages/dc-ioc-ui/` | StatusBadge / AlarmBadge / KpiCard 抽取为独立内部 npm 包 `@dc-ioc/ui`，Vite library mode 构建 (ESM + UMD + CSS)，24 个引用文件批量迁移，自包含样式 (零外部 class 依赖) |
 | **Pre-commit 检查** | `frontend/scripts/check-templates.mjs` `.husky/pre-commit` | 提交前自动扫描 Vue SFC 模板语法 (多行 @click/@change 等)，从根源预防 CI 构建失败 |
 | **Docker HMR 修复** | `frontend/Dockerfile` `deploy/docker-compose.dev.yml` | Vite `--poll` 轮询模式解决 WSL2/Docker 卷挂载 inotify 不触发问题，`.vite` 缓存卷持久化，前后端热重载配置完整 |
+
+### v0.9 — 物模型 / 3D 数字孪生 / 多数据中心 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **物模型后端** | `models/thing_model.py` `schemas/thing_model.py` `crud/thing_model.py` `api/v1/endpoints/thing_model.py` | `thing_models` + `thing_model_items`（type 区分 property/service/event）双表；CRUD 接管原只读 `GET /thing-models`；写操作 `require_role("admin")` |
+| **物模型编辑器** | `frontend/src/views/ops/ThingModelEditor.vue` `api/thingModel.ts` | 三栏布局（列表 / 属性·服务·事件 Tab 表单 / 实时 JSON 预览）；保存前校验 key 唯一性、必填、标识符格式与重复 |
+| **3D 数字孪生** | `frontend/src/views/twin/Twin3D.vue` `api/twin.ts` | three.js 机房场景，按 location 分层（机房→机柜→设备）；OrbitControls 旋转/缩放；分层显隐开关；每 8s 轮询实时染色（在线青 / 离线灰 / 高温红）；点击设备信息卡；卸载 `dispose` 防泄漏 |
+| **多数据中心后端** | `models/idc.py`（扩展 `capacity_kw`/`description`/`is_current`）`models/external.py`（`idc_id` 软关联）`crud/idc.py` `api/v1/endpoints/idc.py` | IDC CRUD + `set_current`（全局唯一当前中心）+ `compare`（按 `idc_id` 聚合设备/在线/告警）+ `unified_alarms`（告警映射回归属中心） |
+| **多数据中心前端** | `views/ops/DataCenterManage.vue` `DataCenterCompare.vue` `stores/datacenter.ts` `api/idc.ts` | 中心卡片网格增改删/启停/设为当前（`PUT /api/idc/current` 全局生效）；跨中心对比 KPI 卡 + 电力/制冷/告警柱状图 + 统一告警视图 |
+| **CI 修复** | `.github/workflows/ci.yml` `frontend/Dockerfile` | `npm ci` 同步 `package-lock.json`（含 three）；Docker 前端构建显式 `--file frontend/Dockerfile`；复用已入库 `@dc-ioc/ui/dist` 避免 vite 清空 `.d.ts` 导致 TS7016 |
 
 ### AI 运维助手大模型接入 (`LLM_API_KEY` 等)
 
