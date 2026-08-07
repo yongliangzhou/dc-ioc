@@ -335,6 +335,7 @@ def list_devices(
                 domain=r.domain,
                 category=r.category,
                 location=r.location,
+                idc_id=r.idc_id,
                 protocol=r.protocol,
                 tags=list(r.tags or []),
                 description=r.description,

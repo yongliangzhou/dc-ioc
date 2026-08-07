@@ -1,6 +1,6 @@
 import request from './request'
 
-// ===== Twin 数字孪生 =====
+// ===== Twin 数字孪生 (TwinDashboard) =====
 
 export interface TwinModelView {
   id: number
@@ -67,7 +67,6 @@ function mapTwin(raw: RawTwin): TwinOverview {
     nodeCount: 0,
     edgeCount: 0,
   }))
-  // 若没有 scenes, 用平台信息构造一个默认模型, 避免界面完全空白
   if (models.length === 0) {
     models.push({
       id: 1,
@@ -87,7 +86,6 @@ function mapTwin(raw: RawTwin): TwinOverview {
   }
 }
 
-// ---- 后端原始结构: agg.twin_topology() -> { twinGraph, topology, summary } ----
 interface RawTopoNode {
   id?: string | number
   label?: string
@@ -162,3 +160,31 @@ export function getTwinOverview(): Promise<TwinOverview> {
 export function getTwinTopology(): Promise<TwinTopology> {
   return request.get<unknown, RawTopology>('/api/ops/twin/topology').then(mapTopology)
 }
+
+// ===== 3D 数字孪生拓扑 (Twin3D) =====
+// 复用外部设备注册接口: 按 location 分层 (房间-机柜-设备) 构建拓扑。
+
+export interface TwinDevice {
+  device_id: string
+  name: string | null
+  category: string | null
+  location: string | null
+  domain: string | null
+  protocol: string | null
+  idc_id: number | null
+  online: boolean
+  last_seen: string | null
+  metric_count: number
+}
+
+export interface TwinDeviceList {
+  total: number
+  online: number
+  offline: number
+  items: TwinDevice[]
+}
+
+export const fetchTwinDevices = (params: { idcId?: number; limit?: number } = {}) =>
+  request.get<unknown, TwinDeviceList>('/api/external/devices', {
+    params: { limit: params.limit ?? 400 },
+  })

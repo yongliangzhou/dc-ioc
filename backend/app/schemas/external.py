@@ -179,6 +179,7 @@ class ExternalDeviceView(BaseModel):
     domain: Optional[str] = None
     category: Optional[str] = None
     location: Optional[str] = None
+    idc_id: Optional[int] = None
     protocol: Optional[str] = None
     tags: list[str] = Field(default_factory=list)
     description: Optional[str] = None
