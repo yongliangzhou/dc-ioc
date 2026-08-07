@@ -43,8 +43,8 @@
 </template>
 
 <script setup lang="ts">
-import StatusBadge from './StatusBadge.vue'
-import AlarmBadge from './AlarmBadge.vue'
+import { StatusBadge } from '@dc-ioc/ui'
+import { AlarmBadge } from '@dc-ioc/ui'
 import EmptyState from './EmptyState.vue'
 
 export interface TableColumn {

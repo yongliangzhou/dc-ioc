@@ -881,19 +881,8 @@ interface PumpRow extends PumpView {
   outP: number
 }
 import { getActiveAlarms } from '@/api/index'
-import {
-  KpiCard,
-  StatusBadge,
-  AlarmBadge,
-  GroupCard,
-  TrendChart,
-  DeviceTable,
-  HeatmapView,
-  TimeRangePicker,
-  QuickControl,
-  EmptyState,
-  SkeletonCard,
-} from '@/components/monitor'
+import { GroupCard, TrendChart, DeviceTable, HeatmapView, TimeRangePicker, QuickControl, EmptyState, SkeletonCard,  } from '@/components/monitor'
+import { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 import { CHART_COLORS } from '@/assets/echarts-theme'
 
 // ---- State ----

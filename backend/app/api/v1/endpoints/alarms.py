@@ -11,8 +11,11 @@ import logging
 
 from fastapi import APIRouter, Depends
 
-from app.core.deps import require_role
+from app.core.deps import require_role, get_current_user
 from app.services import alarm_engine
+from app.crud import alarm_feedback as fb_crud
+from app.schemas.alarm_feedback import AlarmFeedbackCreate
+from app.models.user import User
 
 logger = logging.getLogger("api.alarms")
 
@@ -90,3 +93,20 @@ def resolve_alarm(alarm_id: str):
     """关单告警 -> 从活跃态移除 (联动工单关单时调用)。"""
     alarm_engine.resolve_alarm(alarm_id)
     return {"ok": True, "id": alarm_id}
+
+
+@router.post("/feedback", summary="提交告警处理反馈/经验沉淀(持久化)")
+def submit_alarm_feedback(
+    payload: AlarmFeedbackCreate,
+    _u: User = Depends(get_current_user),
+):
+    """处理反馈从原 localStorage 改为后端持久化, 支持后续审核与经验复用。"""
+    from app.db.session import SessionLocal
+
+    data = payload.model_dump()
+    data["operator"] = payload.operator or _u.username
+    db = SessionLocal()
+    try:
+        return {"ok": True, "id": fb_crud.create(db=db, data=data)["id"]}
+    finally:
+        db.close()

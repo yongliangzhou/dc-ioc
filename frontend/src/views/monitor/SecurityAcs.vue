@@ -156,10 +156,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { DoorOpen, Activity, LogIn, ShieldAlert } from 'lucide-vue-next'
-import KpiCard from '@/components/monitor/KpiCard.vue'
+import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 import SecurityKnowledge from '@/components/SecurityKnowledge.vue'
-import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
+import { AlarmBadge } from '@dc-ioc/ui'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import QuickControl from '@/components/monitor/QuickControl.vue'
 import EmptyState from '@/components/monitor/EmptyState.vue'

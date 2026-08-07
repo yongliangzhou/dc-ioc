@@ -67,6 +67,29 @@ export async function getMaintenanceRecords(planId?: number | string): Promise<R
   return (resp.records as RecordView[]) ?? []
 }
 
+// ---- 执行记录写操作 ----
+export interface RecordCreate {
+  planCode?: string
+  planName?: string
+  equipmentCode?: string
+  maintainedBy?: string
+  startedAt?: string
+  completedAt?: string
+  status?: string
+  result?: string
+  actionDescription?: string
+  notes?: string
+}
+export function createMaintenanceRecord(payload: RecordCreate): Promise<unknown> {
+  return request.post('/api/ops/maintain/records', payload)
+}
+export function updateMaintenanceRecord(id: number, payload: Partial<RecordCreate>): Promise<unknown> {
+  return request.put(`/api/ops/maintain/records/${id}`, payload)
+}
+export function deleteMaintenanceRecord(id: number): Promise<unknown> {
+  return request.delete(`/api/ops/maintain/records/${id}`)
+}
+
 export async function getMaintenanceStats(): Promise<MaintenanceStats> {
   const resp = await request.get<unknown, RawItem>('/api/ops/maintain')
   const s = (resp.stats as RawItem) ?? {}
@@ -79,4 +102,41 @@ export async function getMaintenanceStats(): Promise<MaintenanceStats> {
     totalRecords: done,
     completedRecords: done,
   }
+}
+
+// ---- 维保计划读写 (批次补强, 区别于聚合器动态计划) ----
+export interface PlanCreate {
+  code?: string
+  name?: string
+  equipmentCode?: string
+  description?: string
+  frequency?: string
+  nextDueDate?: string
+  status?: string
+  owner?: string
+}
+export async function getMaintenancePlanList(status?: string): Promise<PlanView[]> {
+  const resp = await request.get<unknown, RawItem>('/api/ops/maintain/plans', {
+    params: status ? { status } : {},
+  })
+  const list = (resp.plans as PlanView[]) ?? []
+  return list.map((p) => ({
+    ...p,
+    id: Number(p.id),
+    overdue:
+      p.status === 'done'
+        ? 0
+        : p.nextDueDate && new Date(p.nextDueDate) < new Date()
+          ? 1
+          : 0,
+  }))
+}
+export function createMaintenancePlan(payload: PlanCreate): Promise<unknown> {
+  return request.post('/api/ops/maintain/plans', payload)
+}
+export function updateMaintenancePlan(id: number, payload: Partial<PlanCreate>): Promise<unknown> {
+  return request.put(`/api/ops/maintain/plans/${id}`, payload)
+}
+export function deleteMaintenancePlan(id: number): Promise<unknown> {
+  return request.delete(`/api/ops/maintain/plans/${id}`)
 }

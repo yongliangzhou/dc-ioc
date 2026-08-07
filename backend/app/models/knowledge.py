@@ -32,5 +32,11 @@ class KnowledgeItem(Base):
     owner = Column(String(64), default="")
     hot = Column(Boolean, default=False)
     version = Column(Integer, default=1)
+    # 人工审核状态机: pending(待审核) / approved(已通过) / rejected(已驳回)
+    # 导入切分自动生成的内容默认 pending, 审核通过后才正式入库可被检索。
+    review_status = Column(String(16), default="approved")
+    reviewer = Column(String(64), default="")
+    reviewed_at = Column(String(32), default="")
+    review_note = Column(Text, default="")
     created_at = Column(String(32), default=_now)
     updated_at = Column(String(32), default=_now, onupdate=_now)

@@ -61,11 +61,11 @@ function mapAlarm(a: RawAlarm): RtAlarm {
     value: Number(a.value ?? 0),
     threshold: Number(a.threshold ?? 0),
     unit: String(a.unit ?? ''),
-    lv: (a.level === 'crit' ? 'crit' : a.level === 'warn' ? 'warn' : 'info') as Alarm['lv'],
-    sys: String(a.system ?? '其他'),
-    desc: String(a.desc ?? ''),
-    state: String(a.state ?? '待确认'),
-    ts: toClock(String(a.ts ?? new Date().toISOString())),
+    level: (a.level === 'crit' ? 'crit' : a.level === 'warn' ? 'warn' : 'info') as Alarm['level'],
+    system: String(a.system ?? '其他'),
+    message: String(a.desc ?? ''),
+    status: String(a.state ?? '待确认'),
+    time: toClock(String(a.ts ?? new Date().toISOString())),
     owner: String(a.owner || '—'),
     rt: true,
   }
@@ -116,9 +116,9 @@ class RealtimeLinkage {
       const res = await getActiveAlarms()
       const list = Array.isArray(res?.items) ? res.items : []
       const mapped = list.map((a) => mapAlarm(a as unknown as RawAlarm))
-      const acked = new Set(this.active.filter((a) => a.state === '已确认').map((a) => a.id))
+      const acked = new Set(this.active.filter((a) => a.status === 'acknowledged').map((a) => a.id))
       const next = mapped.map((a) =>
-        acked.has(a.id) && a.state === '待确认' ? { ...a, state: '已确认' } : a,
+        acked.has(a.id) && a.status === 'active' ? { ...a, status: 'acknowledged' } : a,
       )
 
       // 检测新增告警 -> 实时通知（首轮快照不弹窗，避免存量轰炸）
@@ -141,7 +141,7 @@ class RealtimeLinkage {
   /** 确认联动告警 (乐观更新 + 后端同步) */
   ack(id: string) {
     const a = this.active.find((x) => x.id === id)
-    if (a) a.state = '已确认'
+    if (a) a.status = 'acknowledged'
     void ackActiveAlarm(id).catch(() => {})
   }
 

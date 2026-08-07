@@ -2430,48 +2430,48 @@ function genAlarmEvents(): AlarmEvent[] {
     const ageMin = Math.floor(Math.random() * 60 * 24 * 7)
     const triggeredAt = new Date(Date.now() - ageMin * 60000).toISOString()
     const roll = Math.random()
-    let state: AlarmEvent['state'] = 'active'
+    let status: AlarmEvent['status'] = 'active'
     let acknowledgedAt: string | undefined
     let acknowledgedBy: string | undefined
     let resolvedAt: string | undefined
     let resolvedBy: string | undefined
     let note: string | undefined
     if (roll > 0.6) {
-      state = 'resolved'
+      status = 'resolved'
       acknowledgedAt = new Date(Date.now() - ageMin * 60000 + 120000).toISOString()
       acknowledgedBy = '值班员'
       resolvedAt = new Date(Date.now() - ageMin * 60000 + 300000).toISOString()
       resolvedBy = Math.random() > 0.5 ? '系统' : '值班员'
       note = '已处置并闭环'
     } else if (roll > 0.3) {
-      state = 'acknowledged'
+      status = 'acknowledged'
       acknowledgedAt = new Date(Date.now() - ageMin * 60000 + 90000).toISOString()
       acknowledgedBy = '值班员'
     }
     const ref = r.critHi ?? r.warnHi ?? 0
     const value = +(ref + (Math.random() * 2 - 1) * 2).toFixed(1)
-    const lv: AlarmEvent['lv'] = r.critHi != null ? 'crit' : 'warn'
-    const desc = `${r.category} · ${r.metric} 触发 (${r.metric}=${value}${r.unit ?? ''})`
+    const level: AlarmEvent['level'] = r.critHi != null ? 'crit' : 'warn'
+    const message = `${r.category} · ${r.metric} 触发 (${r.metric}=${value}${r.unit ?? ''})`
     evs.push({
       id: `EVT-${String(1000 + i)}`,
       ruleId: String(r.id),
       ruleName: r.ruleCode ?? r.metric,
       metric: r.metric,
-      sys: r.category,
-      lv,
-      desc,
+      level,
+      system: r.category,
+      message,
       value,
       threshold: ref,
       unit: r.unit,
-      state,
+      status,
       triggeredAt,
       acknowledgedAt,
       acknowledgedBy,
       resolvedAt,
       resolvedBy,
       note,
-      autoResolved: state === 'resolved' && Math.random() > 0.5,
-      escalationCount: state === 'active' ? Math.floor(Math.random() * 3) : 0,
+      autoResolved: status === 'resolved' && Math.random() > 0.5,
+      escalationCount: status === 'active' ? Math.floor(Math.random() * 3) : 0,
     })
   }
   return evs.sort((a, b) => +new Date(b.triggeredAt) - +new Date(a.triggeredAt))
@@ -2490,9 +2490,9 @@ function alarmHistoryMock(params?: AlarmHistoryQuery): AlarmHistoryResponse {
   const p = params ?? {}
   let items = ALARM_EVENTS.filter(
     (e) =>
-      (!p.sys || e.sys === p.sys) &&
-      (!p.lv || e.lv === p.lv) &&
-      (!p.state || e.state === p.state) &&
+      (!p.system || e.system === p.system) &&
+      (!p.level || e.level === p.level) &&
+      (!p.status || e.status === p.status) &&
       inWindow(e.triggeredAt, p.from, p.to),
   )
   const total = items.length
@@ -2503,21 +2503,21 @@ function alarmHistoryMock(params?: AlarmHistoryQuery): AlarmHistoryResponse {
   const within = (iso: string, ms: number) => +new Date(iso) >= now - ms
   const stats = {
     total24h: ALARM_EVENTS.filter((e) => within(e.triggeredAt, 86400000)).length,
-    active24h: ALARM_EVENTS.filter((e) => e.state === 'active' && within(e.triggeredAt, 86400000))
+    active24h: ALARM_EVENTS.filter((e) => e.status === 'active' && within(e.triggeredAt, 86400000))
       .length,
     resolved24h: ALARM_EVENTS.filter(
-      (e) => e.state === 'resolved' && e.resolvedAt && within(e.resolvedAt, 86400000),
+      (e) => e.status === 'resolved' && e.resolvedAt && within(e.resolvedAt, 86400000),
     ).length,
     mttaMin: DC.alarms.sla.mttaMin,
     mttrMin: DC.alarms.sla.mttrMin,
     bySystem: ALARM_EVENTS.reduce<Record<string, number>>((acc, e) => {
-      acc[e.sys] = (acc[e.sys] ?? 0) + 1
+      acc[e.system] = (acc[e.system] ?? 0) + 1
       return acc
     }, {}),
     byLevel: {
-      crit: ALARM_EVENTS.filter((e) => e.lv === 'crit').length,
-      warn: ALARM_EVENTS.filter((e) => e.lv === 'warn').length,
-      info: ALARM_EVENTS.filter((e) => e.lv === 'info').length,
+      crit: ALARM_EVENTS.filter((e) => e.level === 'crit').length,
+      warn: ALARM_EVENTS.filter((e) => e.level === 'warn').length,
+      info: ALARM_EVENTS.filter((e) => e.level === 'info').length,
     },
   }
   return { items, total, page, limit, stats }
@@ -2698,12 +2698,477 @@ function equipmentMetricsMock(id: number, params?: MockQuery): EquipmentMetrics 
   return { equipment_id: id, code, range_minutes: minutes, metrics, series }
 }
 
+/* =====================================================================
+ * 内存写操作存储 (后端不可达时用于演示 CRUD / import / 保存)
+ * - KEY 前缀区分域: alarm-rules / knowledge / shifts / handovers / devices / metric-defs
+ * - 所有写入均持久化到内存, 同一页面刷新期间查询可回读
+ * ===================================================================== */
+
+/** 规范化 URL: 去除 query string 和 hash，保证严格匹配与 startsWith 匹配在带参场景下也命中 */
+function normalizeUrl(url: string): string {
+  if (!url) return url
+  // 先去掉 hash，再去掉 query
+  const noHash = url.split('#')[0]
+  const noQuery = noHash.split('?')[0]
+  return noQuery || '/'
+}
+
+interface MockStore {
+  alarmRules: AlarmRuleDef[]
+  knowledge: KnowledgeItem[]
+  shifts: any[]
+  handovers: any[]
+  metricDefs: Record<string, any[]> // deviceId → metricDef list
+}
+
+const STORE: MockStore = {
+  alarmRules: ALARM_RULES.map((r) => ({ ...r })),
+  knowledge: (() => {
+    // 从 DC.knowledge 派生初始条目，使列表非空
+    const types = ['sop', 'drawing', 'manual', 'emergency', 'case', 'training'] as const
+    const domains = ['hvac', 'power', 'security', 'network', 'fire']
+    const cats = ['应急预案', '运行 SOP', '设备手册', '竣工图纸', '故障案例库', '培训资料']
+    const list: KnowledgeItem[] = []
+    for (let i = 0; i < 24; i++) {
+      const t = types[i % types.length]
+      list.push({
+        id: i + 1,
+        title: `${cats[i % cats.length]} #${i + 1}`,
+        category: cats[i % cats.length],
+        domain: domains[i % domains.length],
+        type: t,
+        summary: '这是知识库条目自动生成的摘要，用于演示知识库列表、搜索与审核流程。',
+        content: '详细内容：操作流程、检查要点、处置步骤、注意事项等完整的文档内容。\n\n步骤1：确认环境\n步骤2：执行操作\n步骤3：验证结果',
+        tags: ['演示', domains[i % domains.length]],
+        version: '1.0',
+        hot: i < 3,
+        reviewStatus: i % 5 === 0 ? 'pending' : 'approved',
+        createdAt: new Date(Date.now() - i * 86400000).toISOString(),
+        updatedAt: new Date(Date.now() - i * 86400000).toISOString(),
+        steps: i % 2 ? ['确认上下文', '执行主操作', '验证结果'] : [],
+      })
+    }
+    return list
+  })(),
+  shifts: (() => {
+    // 未来 7 天的初始排班
+    const arr: any[] = []
+    const leaders = ['张伟', '李娜', '王强', '赵敏']
+    for (let i = 0; i < 14; i++) {
+      const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10)
+      arr.push({
+        id: i * 2 + 1,
+        date: day,
+        shift: 'day',
+        leader: leaders[i % leaders.length],
+        members: [
+          { name: leaders[i % leaders.length], role: '值班长', phone: '13800000000' },
+          { name: '组员A', role: '主值', phone: '13800000001' },
+        ],
+        note: i % 3 === 0 ? '注意负荷高峰' : '',
+        createdAt: new Date().toISOString(),
+      })
+      arr.push({
+        id: i * 2 + 2,
+        date: day,
+        shift: 'night',
+        leader: leaders[(i + 1) % leaders.length],
+        members: [
+          { name: leaders[(i + 1) % leaders.length], role: '值班长', phone: '13800000002' },
+          { name: '组员B', role: '主值', phone: '13800000003' },
+        ],
+        note: '',
+        createdAt: new Date().toISOString(),
+      })
+    }
+    return arr
+  })(),
+  handovers: [],
+  metricDefs: {},
+}
+
+/** 简单 ID 自增器 */
+function nextIdFor(arr: { id: number }[]): number {
+  return 1 + arr.reduce((m, x) => Math.max(m, Number(x.id) || 0), 0)
+}
+
+/* ---------- 告警规则写操作 ---------- */
+function wrAlarmRule(method: string, url: string, data: any, cfg: any): any {
+  const toggleM = url.match(/^\/api\/alarm-rules\/([^/]+)\/toggle$/)
+  const silenceM = url.match(/^\/api\/alarm-rules\/([^/]+)\/silence$/)
+  const idM = url.match(/^\/api\/alarm-rules\/([^/]+)$/)
+
+  if (method === 'post' && url === '/api/alarm-rules') {
+    const newOne = {
+      id: nextIdFor(STORE.alarmRules),
+      ruleCode: data.metric
+        ? `RULE-${data.metric.toUpperCase()}-${nextIdFor(STORE.alarmRules)}`
+        : `RULE-${nextIdFor(STORE.alarmRules)}`,
+      status: data.enabled ? 'enabled' : 'disabled',
+      source: 'USER',
+      ...data,
+      createdAt: new Date().toISOString(),
+    } as AlarmRuleDef
+    STORE.alarmRules.push(newOne)
+    return { ...newOne }
+  }
+  if (method === 'put' && idM) {
+    const id = Number(decodeURIComponent(idM[1]))
+    const idx = STORE.alarmRules.findIndex((r) => Number(r.id) === id)
+    if (idx < 0) throw { response: { data: { message: '规则不存在', detail: '规则不存在' } } }
+    STORE.alarmRules[idx] = { ...STORE.alarmRules[idx], ...data, updatedAt: new Date().toISOString() } as any
+    return { ...STORE.alarmRules[idx] }
+  }
+  if (method === 'delete' && idM) {
+    const id = Number(decodeURIComponent(idM[1]))
+    STORE.alarmRules = STORE.alarmRules.filter((r) => Number(r.id) !== id)
+    return { ok: true }
+  }
+  if (method === 'patch' && toggleM) {
+    const id = Number(decodeURIComponent(toggleM[1]))
+    const r = STORE.alarmRules.find((x) => Number(x.id) === id)
+    if (!r) throw { response: { data: { detail: '规则不存在' } } }
+    r.enabled = !r.enabled
+    r.status = r.enabled ? 'enabled' : 'disabled'
+    return { ...r }
+  }
+  if (method === 'patch' && silenceM) {
+    const id = Number(decodeURIComponent(silenceM[1]))
+    const r = STORE.alarmRules.find((x) => Number(x.id) === id)
+    if (!r) throw { response: { data: { detail: '规则不存在' } } }
+    r.status = 'silenced'
+    return { ...r }
+  }
+  return undefined
+}
+
+/* ---------- 知识库写操作 ---------- */
+function wrKnowledge(method: string, url: string, data: any, cfg: any): any {
+  const idM = url.match(/^\/api\/ops\/knowledge\/(\d+)(\/review)?$/)
+  if (url === '/api/ops/knowledge/import') {
+    // 文件导入: 解析文件内容 -> 生成待审核条目
+    const file: File | undefined = cfg?.__file
+    const count = Math.max(1, file ? Math.min(5, Math.ceil(file.size / 8192)) : 2)
+    const items: KnowledgeItem[] = []
+    const createdIdStart = nextIdFor(STORE.knowledge)
+    for (let i = 0; i < count; i++) {
+      items.push({
+        id: createdIdStart + i,
+        title: `导入条目 #${createdIdStart + i} (${file?.name ?? '指导书.txt'})`,
+        category: '运行 SOP',
+        domain: 'ops',
+        type: 'manual',
+        summary: `通过文件导入自动创建的知识条目，等待审核入库。(模拟解析第 ${i + 1} 段)`,
+        content: file ? `已从文件 ${file.name} 解析内容 (${file.size} bytes)\n\n请在待审核列表确认后入库。` : '文件内容已解析，待审核。',
+        tags: ['导入', '待审核'],
+        version: '0.1',
+        reviewStatus: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as any)
+    }
+    STORE.knowledge.push(...items)
+    return {
+      created: count,
+      skipped: 0,
+      total: count,
+      imported: count,
+      items,
+      note: `导入文件 ${file?.name ?? 'unknown'} 共 ${count} 条，已进入待审核队列`,
+    }
+  }
+  if (method === 'post' && url === '/api/ops/knowledge') {
+    const id = nextIdFor(STORE.knowledge)
+    const newOne = {
+      id,
+      reviewStatus: 'approved',
+      version: '1.0',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...data,
+    } as any
+    STORE.knowledge.unshift(newOne)
+    return { ...newOne }
+  }
+  if (method === 'put' && idM && !idM[2]) {
+    const id = Number(idM[1])
+    const idx = STORE.knowledge.findIndex((k) => k.id === id)
+    if (idx < 0) throw { response: { data: { detail: '条目不存在' } } }
+    STORE.knowledge[idx] = { ...STORE.knowledge[idx], ...data, updatedAt: new Date().toISOString() }
+    return { ...STORE.knowledge[idx] }
+  }
+  if (method === 'delete' && idM && !idM[2]) {
+    const id = Number(idM[1])
+    STORE.knowledge = STORE.knowledge.filter((k) => k.id !== id)
+    return { ok: true }
+  }
+  if (method === 'post' && idM && idM[2]) {
+    const id = Number(idM[1])
+    const r = STORE.knowledge.find((k) => k.id === id)
+    if (!r) throw { response: { data: { detail: '条目不存在' } } }
+    r.reviewStatus = data.status === 'approved' ? 'approved' : 'rejected'
+    ;(r as any).reviewNote = data.note || ''
+    r.updatedAt = new Date().toISOString()
+    return { ...r }
+  }
+  return undefined
+}
+
+/* ---------- 排班 / 交接写操作 ---------- */
+function wrShift(method: string, url: string, data: any): any {
+  // handover
+  const handId = url.match(/^\/api\/ops\/shift\/handover\/(\d+)$/)
+  if (url === '/api/ops/shift/handover') {
+    if (method === 'post') {
+      const id = nextIdFor(STORE.handovers)
+      const newOne = {
+        id,
+        status: 'completed',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        ...data,
+      }
+      STORE.handovers.push(newOne)
+      return { ...newOne }
+    }
+    return undefined
+  }
+  if (handId) {
+    const id = Number(handId[1])
+    if (method === 'put') {
+      const idx = STORE.handovers.findIndex((h) => h.id === id)
+      if (idx < 0) throw { response: { data: { detail: '交接记录不存在' } } }
+      STORE.handovers[idx] = { ...STORE.handovers[idx], ...data, updatedAt: new Date().toISOString() }
+      return { ...STORE.handovers[idx] }
+    }
+    if (method === 'delete') {
+      STORE.handovers = STORE.handovers.filter((h) => h.id !== id)
+      return { ok: true }
+    }
+  }
+  // shift
+  const shiftId = url.match(/^\/api\/ops\/shift\/(\d+)$/)
+  if (method === 'post' && url === '/api/ops/shift') {
+    const id = nextIdFor(STORE.shifts)
+    const newOne = {
+      id,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      ...data,
+    }
+    STORE.shifts.push(newOne)
+    return { ...newOne }
+  }
+  if (shiftId) {
+    const id = Number(shiftId[1])
+    if (method === 'put') {
+      const idx = STORE.shifts.findIndex((s) => s.id === id)
+      if (idx < 0) throw { response: { data: { detail: '排班不存在' } } }
+      STORE.shifts[idx] = { ...STORE.shifts[idx], ...data, updatedAt: new Date().toISOString() }
+      return { ...STORE.shifts[idx] }
+    }
+    if (method === 'delete') {
+      STORE.shifts = STORE.shifts.filter((s) => s.id !== id)
+      return { ok: true }
+    }
+  }
+  return undefined
+}
+
+/* ---------- 外部设备 + 测点定义写操作 ---------- */
+function wrExternal(method: string, url: string, data: any): any {
+  // 设备注册 / 更新 / 删除
+  if (method === 'post' && url === '/api/external/devices/register') {
+    const did = data.device_id
+    if (MOCK_REGISTERED.find((d) => d.device_id === did)) {
+      return { status: 'duplicate', device_id: did, message: '设备已存在' }
+    }
+    const newDev: any = {
+      device_id: did,
+      name: data.name ?? did,
+      model: data.model ?? 'Unknown',
+      ip: data.ip ?? '',
+      sn: data.sn ?? '',
+      vendor: data.vendor ?? '',
+      domain: data.domain ?? 'unknown',
+      category: data.category ?? 'chiller',
+      protocol: data.protocol ?? 'modbus',
+      location: data.location ?? '',
+      online: true,
+      registeredAt: new Date().toISOString(),
+    }
+    MOCK_REGISTERED.push(newDev)
+    return { status: 'created', device_id: did, message: '设备注册成功' }
+  }
+  const devM = url.match(/^\/api\/external\/devices\/([^/]+)$/)
+  if (devM) {
+    const did = decodeURIComponent(devM[1])
+    const idx = MOCK_REGISTERED.findIndex((d) => d.device_id === did)
+    if (method === 'put') {
+      if (idx < 0) throw { response: { data: { detail: '设备不存在' } } }
+      MOCK_REGISTERED[idx] = { ...MOCK_REGISTERED[idx], ...data } as any
+      return { status: 'updated', device_id: did, message: '设备已更新' }
+    }
+    if (method === 'delete') {
+      if (idx < 0) throw { response: { data: { detail: '设备不存在' } } }
+      MOCK_REGISTERED.splice(idx, 1)
+      delete STORE.metricDefs[did]
+      return { status: 'deleted', device_id: did, message: '设备已删除' }
+    }
+  }
+  // 测点定义 CRUD
+  const mdM = url.match(/^\/api\/external\/devices\/([^/]+)\/metric-defs(\/(\d+))?$/)
+  if (mdM) {
+    const did = decodeURIComponent(mdM[1])
+    const mdId = mdM[3] ? Number(mdM[3]) : null
+    if (!STORE.metricDefs[did]) {
+      // 初始值: 从 THING_MODELS 默认派生
+      const specs = specsFor(MOCK_REGISTERED.find((d) => d.device_id === did)?.category, did)
+      STORE.metricDefs[did] = specs.map((s, i) => ({
+        id: i + 1,
+        deviceId: did,
+        metricName: s.name,
+        label: s.name,
+        unit: s.unit,
+        dataType: 'number',
+        description: s.name,
+        enabled: true,
+      }))
+    }
+    const list = STORE.metricDefs[did]
+    if (method === 'get') {
+      // GET 由 mockForUrl 读取，这里兜底
+      return list
+    }
+    if (method === 'post') {
+      const id = nextIdFor(list)
+      const newMd = { id, deviceId: did, enabled: true, dataType: 'number', ...data }
+      list.push(newMd)
+      return { ...newMd }
+    }
+    if (method === 'put' && mdId != null) {
+      const idx = list.findIndex((m: any) => m.id === mdId)
+      if (idx < 0) throw { response: { data: { detail: '测点不存在' } } }
+      list[idx] = { ...list[idx], ...data }
+      return { ...list[idx] }
+    }
+    if (method === 'delete' && mdId != null) {
+      STORE.metricDefs[did] = list.filter((m: any) => m.id !== mdId)
+      return { ok: true }
+    }
+  }
+  return undefined
+}
+
+/* ---------- 写操作总入口 ---------- */
+export function mockWriteForUrl(
+  method: string,
+  url: string,
+  data: any,
+  cfg?: { params?: MockQuery; __file?: File },
+): unknown | undefined {
+  try {
+    // 关键修复: 先规范化 URL（去掉 ?query 和 #hash），保证带参请求也能命中 CRUD 兜底
+    const u = normalizeUrl(url)
+    // 告警规则
+    if (u.startsWith('/api/alarm-rules')) return wrAlarmRule(method, u, data, cfg)
+    // 知识库
+    if (u.startsWith('/api/ops/knowledge')) return wrKnowledge(method, u, data, cfg)
+    // 排班/交接
+    if (u.startsWith('/api/ops/shift')) return wrShift(method, u, data)
+    // 外部设备 + 测点
+    if (u.startsWith('/api/external')) return wrExternal(method, u, data)
+  } catch (e) {
+    // 模拟写操作内部校验错误 (统一抛给上层走异常分支)
+    throw e
+  }
+  return undefined
+}
+
+/* ---------- 覆盖读操作以返回 STORE 内存 (新增/修改后能回读) ---------- */
+function rdAlarmRules(): AlarmRuleDef[] {
+  return STORE.alarmRules.map((r) => ({ ...r }))
+}
+function rdShifts(params?: MockQuery): any[] {
+  let list = STORE.shifts.slice()
+  if (params?.start) list = list.filter((s) => s.date >= String(params.start))
+  if (params?.end) list = list.filter((s) => s.date <= String(params.end))
+  return list
+}
+function rdHandovers(params?: MockQuery): { items: any[]; total: number } {
+  let list = STORE.handovers.slice()
+  if (params?.shiftDate) list = list.filter((h) => h.shiftDate === String(params.shiftDate))
+  if (params?.status) list = list.filter((h) => h.status === String(params.status))
+  return { items: list, total: list.length }
+}
+function rdKnowledge(params?: MockQuery & { q?: string; category?: string; page?: number; page_size?: number }): any {
+  let list = STORE.knowledge.slice()
+  if (params?.category) list = list.filter((k) => k.category === params.category)
+  if (params?.q) {
+    const q = String(params.q).toLowerCase()
+    list = list.filter(
+      (k) =>
+        String(k.title).toLowerCase().includes(q) ||
+        String(k.content || '').toLowerCase().includes(q) ||
+        (k.tags || []).some((t: string) => t.toLowerCase().includes(q)),
+    )
+  }
+  const total = list.length
+  const page = Number(params?.page ?? 1)
+  const pageSize = Number(params?.page_size ?? 20)
+  const items = list.slice((page - 1) * pageSize, page * pageSize)
+  return { items, total, page, page_size: pageSize }
+}
+function rdKnowledgeCategories(): { categories: { name: string; count: number }[]; total: number } {
+  const map = new Map<string, number>()
+  for (const k of STORE.knowledge) {
+    if (!k.category) continue
+    map.set(k.category, (map.get(k.category) ?? 0) + 1)
+  }
+  const categories = Array.from(map.entries()).map(([name, count]) => ({ name, count }))
+  return { categories, total: categories.length }
+}
+function rdPendingKnowledge(): { total: number; items: KnowledgeItem[] } {
+  const items = STORE.knowledge.filter((k) => k.reviewStatus === 'pending')
+  return { total: items.length, items }
+}
+function rdMetricDefs(deviceId: string): any[] {
+  if (!STORE.metricDefs[deviceId]) {
+    const specs = specsFor(MOCK_REGISTERED.find((d) => d.device_id === deviceId)?.category, deviceId)
+    STORE.metricDefs[deviceId] = specs.map((s, i) => ({
+      id: i + 1,
+      deviceId,
+      metricName: s.name,
+      label: s.name,
+      unit: s.unit,
+      dataType: 'number',
+      description: s.name,
+      enabled: true,
+    }))
+  }
+  return STORE.metricDefs[deviceId].slice()
+}
+
 /**
  * 按请求 URL 返回对应的模拟数据, 供后端不可达时兜底。
  * - 业务域 GET (精确匹配) 返回旧版 DC.* 静态数据;
  * - 外部设备接入契约 (/api/external/*) 支持精确匹配与含设备 ID 的动态前缀匹配。
+ * - 排班/知识库/告警规则优先从内存 STORE 回读，保证增删改后刷新可见。
  */
 export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown | undefined {
+  // 关键修复: 先规范化 URL（去掉 ?query 和 #hash），带参请求也能严格命中内存回读分支
+  const u = normalizeUrl(url)
+
+  // ---- 优先走内存回读 (写操作后可见) ----
+  if (u === '/api/alarm-rules') return rdAlarmRules()
+  if (u === '/api/ops/shift') return rdShifts(cfg?.params)
+  if (u === '/api/ops/shift/handover') return rdHandovers(cfg?.params as any)
+  if (u === '/api/ops/knowledge') return rdKnowledge(cfg?.params as any)
+  if (u === '/api/ops/knowledge/categories') return rdKnowledgeCategories()
+  if (u === '/api/ops/knowledge/review/pending') return rdPendingKnowledge()
+  const mdm = u.match(/^\/api\/external\/devices\/([^/]+)\/metric-defs$/)
+  if (mdm) return rdMetricDefs(decodeURIComponent(mdm[1]))
+
   const table: Record<string, unknown> = {
     '/api/dashboard/overview': dashboardOverview(),
     '/api/hvac/chiller-plant': DC.chillerPlant,
@@ -2725,18 +3190,16 @@ export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown |
     '/api/ops/inspect': DC.inspect,
     '/api/ops/maintain': DC.maintain,
     '/api/ops/drill': DC.drill,
-    '/api/ops/shift': DC.shift,
-    '/api/ops/knowledge': DC.knowledge,
     '/api/ops/risk': DC.risk,
   }
-  if (url in table) return table[url]
+  if (u in table) return table[u]
 
   // ---- 外部设备接入契约 (动态设备 ID) ----
-  if (url.startsWith('/api/external/devices')) {
-    if (url === '/api/external/devices') return externalDevicesMock(cfg?.params)
-    if (url === '/api/external/thing-models') return thingModelsMock()
+  if (u.startsWith('/api/external/devices')) {
+    if (u === '/api/external/devices') return externalDevicesMock(cfg?.params)
+    if (u === '/api/external/thing-models') return thingModelsMock()
     // /api/external/devices/{id}/metrics[/(realtime|history)]
-    const m = url.match(/^\/api\/external\/devices\/([^/]+)\/metrics(\/(realtime|history))?$/)
+    const m = u.match(/^\/api\/external\/devices\/([^/]+)\/metrics(\/(realtime|history))?$/)
     if (m) {
       const deviceId = decodeURIComponent(m[1])
       const sub = m[3] // realtime | history | undefined
@@ -2755,23 +3218,23 @@ export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown |
   }
 
   // ---- 告警规则引擎 / 告警历史 ----
-  if (url === '/api/alarm-rules') return alarmRulesMock()
-  if (url === '/api/alarm-rules/state') return alarmEngineStateMock()
-  if (url === '/api/alarm-history') return alarmHistoryMock(cfg?.params as AlarmHistoryQuery | undefined)
+  if (u === '/api/alarm-rules') return alarmRulesMock()
+  if (u === '/api/alarm-rules/state') return alarmEngineStateMock()
+  if (u === '/api/alarm-history') return alarmHistoryMock(cfg?.params as AlarmHistoryQuery | undefined)
 
   // ---- 机柜 / 统一设备台账 ----
-  if (url === '/api/cabinets') return cabinetsMock(cfg?.params)
-  let _m = url.match(/^\/api\/cabinets\/(\d+)\/metrics$/)
+  if (u === '/api/cabinets') return cabinetsMock(cfg?.params)
+  let _m = u.match(/^\/api\/cabinets\/(\d+)\/metrics$/)
   if (_m) return cabinetMetricsMock(Number(_m[1]), cfg?.params)
-  if (url === '/api/equipment') return equipmentMock(cfg?.params)
-  _m = url.match(/^\/api\/equipment\/(\d+)$/)
+  if (u === '/api/equipment') return equipmentMock(cfg?.params)
+  _m = u.match(/^\/api\/equipment\/(\d+)$/)
   if (_m) return equipmentOneMock(Number(_m[1]))
-  _m = url.match(/^\/api\/equipment\/(\d+)\/metrics$/)
+  _m = u.match(/^\/api\/equipment\/(\d+)\/metrics$/)
   if (_m) return equipmentMetricsMock(Number(_m[1]), cfg?.params)
 
   // ---- v2 演示 / 兜底数据通道 ----
-  if (url === '/api/demo/overview') return dashboardOverview()
-  if (url === '/api/demo/devices') return demoDevicesMock(cfg?.params)
+  if (u === '/api/demo/overview') return dashboardOverview()
+  if (u === '/api/demo/devices') return demoDevicesMock(cfg?.params)
 
   return undefined
 }

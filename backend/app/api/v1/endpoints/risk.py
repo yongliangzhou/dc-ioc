@@ -48,3 +48,9 @@ def update_risk(rid: int, payload: RiskUpdate, db: Session = Depends(get_db)):
 def delete_risk(rid: int, db: Session = Depends(get_db)):
     if not crud.delete(db, rid):
         raise HTTPException(status_code=404, detail="风险项不存在")
+
+
+@router.post("/analyze", response_model=dict, summary="基于采集数据自动分析生成风险提示(草稿)")
+def analyze_risk(db: Session = Depends(get_db)):
+    """消费活跃告警 + 设备测点自动识别风险, 返回建议新增项 (需人工确认后入库)。"""
+    return crud.analyze_from_data(db)

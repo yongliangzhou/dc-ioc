@@ -48,10 +48,19 @@ export function deleteKnowledgeItem(id: number): Promise<void> {
   return request.delete(`/api/ops/knowledge/${id}`)
 }
 
-export function importKnowledge(file: File): Promise<{ imported: number; items: KnowledgeItem[] }> {
+export interface KnowledgeImportResult {
+  created: number
+  skipped: number
+  total: number
+  imported: number
+  items: KnowledgeItem[]
+  note?: string
+}
+
+export function importKnowledge(file: File): Promise<KnowledgeImportResult> {
   const formData = new FormData()
   formData.append('file', file)
-  return request.post<unknown, { imported: number; items: KnowledgeItem[] }>(
+  return request.post<unknown, KnowledgeImportResult>(
     '/api/ops/knowledge/import',
     formData,
     {
@@ -59,4 +68,21 @@ export function importKnowledge(file: File): Promise<{ imported: number; items: 
       timeout: 300000,
     },
   )
+}
+
+// 人工审核工作台: 待审核列表
+export function getPendingKnowledge(): Promise<{ total: number; items: KnowledgeItem[] }> {
+  return request.get<unknown, { total: number; items: KnowledgeItem[] }>('/api/ops/knowledge/review/pending')
+}
+
+// 审核一条知识条目: approved 通过 / rejected 驳回
+export function reviewKnowledge(
+  id: number,
+  status: 'approved' | 'rejected',
+  note?: string,
+): Promise<KnowledgeItem> {
+  return request.post<unknown, KnowledgeItem>(`/api/ops/knowledge/${id}/review`, {
+    status,
+    note: note || '',
+  })
 }

@@ -22,7 +22,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import StatusBadge from './StatusBadge.vue'
+import { StatusBadge } from '@dc-ioc/ui'
 
 export interface DeviceMetric {
   label: string

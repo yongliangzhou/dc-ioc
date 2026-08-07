@@ -47,6 +47,9 @@
       >
         {{ c.name }} ({{ c.count }})
       </button>
+      <button :class="{ on: reviewTab === 'pending' }" @click="togglePending">
+        {{ tl('待审核') }} ({{ pendingCount }})
+      </button>
     </div>
 
     <!-- 导入状态 -->
@@ -54,13 +57,49 @@
       {{ importMsg }}
     </div>
 
+    <!-- 待审核工作台 -->
+    <div v-if="reviewTab === 'pending'" class="kb-pending">
+      <div class="kb-pending-head">
+        <span>{{ tl('待审核知识条目') }}（{{ pendingCount }}）</span>
+        <button class="kb-act-btn" v-bind="authState('write')" @click="loadPending" :disabled="loadingPending">
+          {{ tl('刷新') }}
+        </button>
+      </div>
+      <div v-if="loadingPending" class="kb-empty">{{ tl('加载中') }}…</div>
+      <div v-else-if="!pending.length" class="kb-empty">{{ tl('暂无待审核条目') }}</div>
+      <div v-else class="kb-list">
+        <article v-for="item in pending" :key="item.id" class="kb-card" @click="openReview(item)">
+          <div class="kb-card-head">
+            <span class="kb-type-tag" :class="'t-' + item.type">{{ typeLabel(item.type) }}</span>
+            <span class="kb-domain">{{ item.domain }}</span>
+            <span class="kb-review-tag p">{{ tl('待审核') }}</span>
+          </div>
+          <h3 class="kb-card-title">{{ item.title }}</h3>
+          <p class="kb-card-summary">{{ item.summary || (item.content || '').slice(0, 120) + '…' }}</p>
+          <div class="kb-card-foot">
+            <span class="kb-version">v{{ item.version }}</span>
+            <span class="kb-review-actions">
+              <button class="kb-act-btn primary sm" @click.stop="approve(item)">{{ tl('通过') }}</button>
+              <button class="kb-act-btn danger sm" @click.stop="openReview(item)">{{ tl('驳回') }}</button>
+            </span>
+          </div>
+        </article>
+      </div>
+    </div>
+
     <!-- 知识卡片列表 -->
-    <div class="kb-list" v-if="items.length">
+    <div class="kb-list" v-if="reviewTab !== 'pending' && items.length">
       <article v-for="item in items" :key="item.id" class="kb-card" @click="openDetail(item)">
         <div class="kb-card-head">
           <span class="kb-type-tag" :class="'t-' + item.type">{{ typeLabel(item.type) }}</span>
           <span class="kb-domain">{{ item.domain }}</span>
           <span v-if="item.hot" class="kb-hot">🔥 {{ tl('热门') }}</span>
+          <span
+            v-if="item.reviewStatus && item.reviewStatus !== 'approved'"
+            class="kb-review-tag"
+            :class="item.reviewStatus === 'pending' ? 'p' : 'r'"
+            >{{ item.reviewStatus === 'pending' ? tl('待审核') : tl('已驳回') }}</span
+          >
         </div>
         <h3 class="kb-card-title">{{ item.title }}</h3>
         <p class="kb-card-summary">
@@ -194,6 +233,54 @@
         </div>
       </div>
     </transition>
+
+    <!-- ===== 审核弹窗 ===== -->
+    <transition name="fade">
+      <div v-if="reviewItem" class="kb-modal-mask" @click.self="reviewItem = null">
+        <div class="kb-modal">
+          <div class="kb-modal-head">
+            <h2>{{ tl('审核知识条目') }}</h2>
+            <button class="kb-modal-close" @click="reviewItem = null">✕</button>
+          </div>
+          <div class="kb-modal-meta">
+            <span class="kb-type-tag" :class="'t-' + reviewItem.type">{{
+              typeLabel(reviewItem.type)
+            }}</span>
+            <span>{{ reviewItem.domain }}</span>
+            <span>{{ reviewItem.category }}</span>
+            <span>v{{ reviewItem.version }}</span>
+          </div>
+          <div class="kb-modal-body">
+            <div class="kb-section">
+              <h4>{{ tl('标题') }}</h4>
+              <p>{{ reviewItem.title }}</p>
+            </div>
+            <div class="kb-section" v-if="reviewItem.summary">
+              <h4>{{ tl('摘要') }}</h4>
+              <p>{{ reviewItem.summary }}</p>
+            </div>
+            <div class="kb-section" v-if="reviewItem.content">
+              <h4>{{ tl('详细内容') }}</h4>
+              <pre class="kb-content">{{ reviewItem.content }}</pre>
+            </div>
+            <div class="kb-section" v-if="reviewItem.steps?.length">
+              <h4>{{ tl('处置步骤') }}</h4>
+              <ol class="kb-steps">
+                <li v-for="(s, i) in reviewItem.steps" :key="i">{{ s }}</li>
+              </ol>
+            </div>
+            <div class="kb-section">
+              <h4>{{ tl('审核意见') }}</h4>
+              <textarea v-model="reviewNote" class="kb-input" rows="2" :placeholder="tl('可选，驳回时填写原因')" />
+            </div>
+          </div>
+          <div class="kb-modal-foot">
+            <button class="kb-act-btn danger" @click="reject(reviewItem)">{{ tl('驳回') }}</button>
+            <button class="kb-act-btn primary" @click="approve(reviewItem)">{{ tl('通过入库') }}</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -209,6 +296,8 @@ import {
   updateKnowledgeItem,
   deleteKnowledgeItem,
   importKnowledge,
+  getPendingKnowledge,
+  reviewKnowledge,
 } from '@/api/knowledge'
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -234,6 +323,14 @@ const pageSize = 20
 const loading = ref(false)
 const searchQ = ref('')
 const activeCat = ref('')
+
+// ---- review (人工审核) ----
+const reviewTab = ref<'list' | 'pending'>('list')
+const pending = ref<KnowledgeItem[]>([])
+const pendingCount = ref(0)
+const loadingPending = ref(false)
+const reviewItem = ref<KnowledgeItem | null>(null)
+const reviewNote = ref('')
 
 // ---- detail ----
 const detailItem = ref<KnowledgeItem | null>(null)
@@ -303,6 +400,58 @@ function filterCat(cat: string) {
   activeCat.value = cat
   page.value = 1
   load()
+}
+
+// ---- 人工审核 ----
+function togglePending() {
+  if (reviewTab.value === 'pending') {
+    reviewTab.value = 'list'
+  } else {
+    reviewTab.value = 'pending'
+    loadPending()
+  }
+}
+
+async function loadPending() {
+  loadingPending.value = true
+  try {
+    const r = await getPendingKnowledge()
+    pending.value = r.items || []
+    pendingCount.value = r.total || 0
+  } catch {
+    pending.value = []
+  } finally {
+    loadingPending.value = false
+  }
+}
+
+function openReview(item: KnowledgeItem) {
+  reviewItem.value = item
+  reviewNote.value = ''
+}
+async function approve(item: KnowledgeItem) {
+  try {
+    await reviewKnowledge(item.id, 'approved')
+    toast.success(tl('已通过入库'))
+    pending.value = pending.value.filter((x) => x.id !== item.id)
+    pendingCount.value = Math.max(0, pendingCount.value - 1)
+    reviewItem.value = null
+    load()
+  } catch (e: unknown) {
+    toast.error((e as ErrorLike)?.message || tl('审核失败'))
+  }
+}
+async function reject(item: KnowledgeItem) {
+  try {
+    await reviewKnowledge(item.id, 'rejected', reviewNote.value)
+    toast.success(tl('已驳回'))
+    pending.value = pending.value.filter((x) => x.id !== item.id)
+    pendingCount.value = Math.max(0, pendingCount.value - 1)
+    reviewItem.value = null
+    load()
+  } catch (e: unknown) {
+    toast.error((e as ErrorLike)?.message || tl('审核失败'))
+  }
 }
 
 // ---- detail ----
@@ -396,22 +545,43 @@ async function handleImport(e: Event) {
   importErr.value = false
   try {
     const r = await importKnowledge(file)
-    importMsg.value = tl('导入完成') + '：' + r.imported + ' ' + tl('条')
+    const imported = r.created ?? r.imported ?? 0
+    const skipped = r.skipped ?? 0
+    importMsg.value =
+      tl('导入完成') + '：' + imported + ' ' + tl('条新增') +
+      (skipped ? '，' + skipped + ' ' + tl('条重复跳过') : '') + '（' + tl('待审核') + '）'
     load()
     loadCats()
-    toast.success(tl('导入完成'))
+    loadPending()
+    toast.success(tl('导入完成') + '，' + tl('请前往待审核确认'))
   } catch (e: unknown) {
-    importMsg.value =
-      tl('导入失败') +
-      '，' +
-      ((e as ErrorLike)?.detail || (e as ErrorLike)?.response?.data?.detail || (e as ErrorLike)?.message || tl('请检查文件格式'))
+    const rawDetail =
+      (e as ErrorLike)?.detail ||
+      (e as ErrorLike)?.response?.data?.detail ||
+      (e as ErrorLike)?.message ||
+      ''
+    // 对常见错误原因做友好翻译 (知识库导入失败的根因诊断)
+    let cause: string
+    if (/404|405|Not Found|Method Not Allowed/.test(String(rawDetail))) {
+      cause = tl('后端导入接口未实现或路径不匹配') + ' (HTTP 404/405)，' + tl('当前已切换到前端演示模式进行导入')
+    } else if (/502|503|504|network|Network/.test(String(rawDetail))) {
+      cause = tl('后端服务未启动或网络不通') + ' (HTTP 5xx)，' + tl('当前已切换到前端演示模式进行导入')
+    } else if (!rawDetail) {
+      cause = tl('后端无响应') + '，' + tl('请检查后端服务是否启动，或检查文件格式 (.txt/.pdf/.docx)')
+    } else {
+      cause = rawDetail
+    }
+    importMsg.value = tl('导入失败') + '，' + tl('原因') + '：' + cause
     importErr.value = true
+    // 同时将详细原始原因打印到控制台，便于排查
+    console.error('[knowledge-import] 导入失败详情:', e, 'rawDetail:', rawDetail)
   }
 }
 
 onMounted(() => {
   load()
   loadCats()
+  loadPending()
 })
 </script>
 
@@ -531,6 +701,38 @@ onMounted(() => {
   padding: 10px 14px;
   border-radius: 8px;
   font-size: 13px;
+}
+.kb-review-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+.kb-review-tag.p {
+  background: rgba(250, 173, 20, 0.12);
+  color: var(--amber);
+}
+.kb-review-tag.r {
+  background: rgba(255, 77, 79, 0.12);
+  color: var(--red);
+}
+.kb-pending {
+  margin-bottom: 16px;
+}
+.kb-pending-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.kb-review-actions {
+  display: flex;
+  gap: 8px;
+}
+.kb-act-btn.sm {
+  padding: 4px 12px;
+  font-size: 12px;
 }
 .kb-import-msg.ok {
   background: rgba(34, 197, 94, 0.1);

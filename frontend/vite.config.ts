@@ -46,6 +46,11 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // 使用 polling 轮询文件变更, 解决 WSL2/Docker 卷挂载下 inotify 不触发的问题
+    // (Vite 6 已移除 --poll CLI 参数, 统一在此配置)
+    watch: {
+      usePolling: true,
+    },
     // 预览环境通过 127.0.0.1 / localhost 访问时, 让 HMR 客户端显式连回 5173,
     // 避免出现 "WebSocket connection ... failed" 且 HMR 不生效。
     hmr: {

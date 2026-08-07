@@ -293,9 +293,9 @@ interface CampusLike extends Partial<CampusComparisonItem> {
   today_alarms?: number
   [k: string]: unknown
 }
-import KpiCard from '@/components/monitor/KpiCard.vue'
-import StatusBadge from '@/components/monitor/StatusBadge.vue'
-import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
+import { KpiCard } from '@dc-ioc/ui'
+import { StatusBadge } from '@dc-ioc/ui'
+import { AlarmBadge } from '@dc-ioc/ui'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 
 const router = useRouter()

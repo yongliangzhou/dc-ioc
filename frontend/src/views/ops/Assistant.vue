@@ -75,6 +75,15 @@
                     [{{ r.code }}] {{ r.title }}
                   </button>
                 </div>
+                <div class="ai-fb" v-if="m.role === 'ai' && !m.loading">
+                  <button class="ai-fb-btn" :class="{ on: m.feedback === 'up' }" @click="feedback(m, 'up')">
+                    👍 {{ tl('有用') }}
+                  </button>
+                  <button class="ai-fb-btn" :class="{ on: m.feedback === 'down' }" @click="feedback(m, 'down')">
+                    👎 {{ tl('无用') }}
+                  </button>
+                  <button class="ai-fb-btn" @click="openCorrect(m)">{{ tl('纠错') }}</button>
+                </div>
               </template>
             </div>
           </div>
@@ -128,6 +137,24 @@
         </p>
       </aside>
     </div>
+
+    <!-- 纠错弹窗 -->
+    <transition name="fade">
+      <div v-if="correctMsg" class="ai-corrmask" @click.self="correctMsg = null">
+        <div class="ai-corrmodal">
+          <div class="kb-modal-head">
+            <h2>{{ tl('纠错 / 补充正确答案') }}</h2>
+            <button class="kb-modal-close" @click="correctMsg = null">✕</button>
+          </div>
+          <p class="ai-corrtip">{{ tl('请描述正确处置方式，反馈将用于优化知识库与检索') }}：</p>
+          <textarea v-model="correctText" class="ai-corrta" rows="5" :placeholder="tl('如：正确做法应为…')" />
+          <div class="kb-modal-foot">
+            <button class="kb-act-btn" @click="correctMsg = null">{{ tl('取消') }}</button>
+            <button class="kb-act-btn primary" @click="submitCorrect">{{ tl('提交') }}</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -137,10 +164,16 @@ import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { ref, reactive, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { askAssistant, assistantStatus } from '@/api'
+import { askAssistant, assistantStatus, submitAssistantFeedback } from '@/api'
 import type { AssistantAskResp, AssistantRef, AssistantStatusResp } from '@/types'
+import { useToast } from '@/hooks/useToast'
 
 const router = useRouter()
+const toast = useToast()
+
+// 纠错弹窗
+const correctMsg = ref<Msg | null>(null)
+const correctText = ref('')
 
 const question = ref('')
 const sending = ref(false)
@@ -158,6 +191,8 @@ interface Msg {
   loading?: boolean
   /** 大模型调用失败原因（配置了大模型却回退时填充） */
   llmError?: string
+  /** 已反馈状态: up / down / null */
+  feedback?: 'up' | 'down' | null
 }
 
 const messages = ref<Msg[]>([])
@@ -187,6 +222,7 @@ const examples = [
 async function send(q?: string) {
   const text = (q ?? question.value).trim()
   if (!text || sending.value) return
+  lastQuestion.value = text
   messages.value.push({ role: 'user', text })
   const aiMsg: Msg = { role: 'ai', text: '', loading: true }
   messages.value.push(aiMsg)
@@ -228,6 +264,51 @@ async function send(q?: string) {
 
 function openRef(r: AssistantRef) {
   router.push({ path: '/ops/knowledge', query: { q: r.code } })
+}
+
+const lastQuestion = ref('')
+
+async function feedback(m: Msg, rating: 'up' | 'down') {
+  if (m.feedback) return
+  m.feedback = rating
+  try {
+    await submitAssistantFeedback({
+      question: lastQuestion.value,
+      answer: m.text,
+      rating,
+      grounded: engineLabel.value.includes('知识库') ? 'yes' : 'no',
+      model: engineLabel.value,
+    })
+    toast.success(rating === 'up' ? tl('已记录好评') : tl('已记录差评'))
+  } catch {
+    m.feedback = null
+    toast.error(tl('反馈提交失败'))
+  }
+}
+
+function openCorrect(m: Msg) {
+  correctMsg.value = m
+  correctText.value = ''
+}
+
+async function submitCorrect() {
+  if (!correctMsg.value) return
+  const m = correctMsg.value
+  try {
+    await submitAssistantFeedback({
+      question: lastQuestion.value,
+      answer: m.text,
+      rating: 'down',
+      correction: correctText.value,
+      grounded: engineLabel.value.includes('知识库') ? 'yes' : 'no',
+      model: engineLabel.value,
+    })
+    m.feedback = 'down'
+    toast.success(tl('纠错已提交，感谢反馈'))
+    correctMsg.value = null
+  } catch {
+    toast.error(tl('纠错提交失败'))
+  }
 }
 
 async function scroll() {
@@ -586,5 +667,68 @@ async function runDiag() {
   color: var(--muted);
   line-height: 1.6;
   margin: 0;
+}
+
+.ai-fb {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ai-fb-btn {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 999px;
+  padding: 3px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.ai-fb-btn:hover {
+  border-color: var(--cyan);
+  color: var(--txt);
+}
+.ai-fb-btn.on {
+  background: rgba(34, 211, 238, 0.12);
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+
+.ai-corrmask {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ai-corrmodal {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  width: min(520px, 92vw);
+  padding: 20px 24px;
+}
+.ai-corrtip {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 4px 0 10px;
+}
+.ai-corrta {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg);
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+.ai-corrta:focus {
+  outline: none;
+  border-color: var(--cyan);
 }
 </style>

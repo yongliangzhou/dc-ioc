@@ -18,7 +18,7 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.models.external import ExternalDevice, MetricRaw
+from app.models.external import ExternalDevice, MetricRaw, MetricDef
 # [P2-8] 摄取指标 (计数 / 延迟). monitoring 不反向依赖本模块, 可安全导入。
 from app.core import monitoring
 from app.schemas.external import (
@@ -429,6 +429,64 @@ def total_metric_count(db: Optional[Session]) -> int:
     if db is None:
         return sum(_MEM_METRIC_CNT.values())
     return db.query(func.count(MetricRaw.id)).scalar() or 0
+
+
+# ===== 测点定义 CRUD (前端「测点增删改查」) =====
+def list_metric_defs(db: Session, device_id: str) -> list[dict]:
+    rows = (
+        db.query(MetricDef)
+        .filter(MetricDef.device_id == device_id)
+        .order_by(MetricDef.id.asc())
+        .all()
+    )
+    return [_to_metric_def(r) for r in rows]
+
+
+def get_metric_def(db: Session, mid: int):
+    return db.query(MetricDef).filter(MetricDef.id == mid).first()
+
+
+def create_metric_def(db: Session, *, data: dict) -> dict:
+    row = MetricDef(**data)
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return _to_metric_def(row)
+
+
+def update_metric_def(db: Session, mid: int, *, data: dict) -> Optional[dict]:
+    row = get_metric_def(db, mid)
+    if not row:
+        return None
+    for k, v in data.items():
+        if k in ("id", "created_at"):
+            continue
+        setattr(row, k, v)
+    db.commit()
+    db.refresh(row)
+    return _to_metric_def(row)
+
+
+def delete_metric_def(db: Session, mid: int) -> bool:
+    row = get_metric_def(db, mid)
+    if not row:
+        return False
+    db.delete(row)
+    db.commit()
+    return True
+
+
+def _to_metric_def(r: MetricDef) -> dict:
+    return {
+        "id": r.id,
+        "deviceId": r.device_id,
+        "metricName": r.metric_name,
+        "label": r.label or "",
+        "unit": r.unit or "",
+        "dataType": r.data_type or "float",
+        "description": r.description or "",
+        "enabled": r.enabled,
+    }
 
 
 def delete_old_metrics(db: Session, older_than: datetime, batch_size: int = 50000) -> int:

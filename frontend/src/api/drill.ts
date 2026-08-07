@@ -48,6 +48,48 @@ export async function getDrillRecords(planId?: number): Promise<DrillRecordView[
   return (resp.records as DrillRecordView[]) ?? []
 }
 
+// ---- 演练方案写操作 ----
+export interface DrillPlanCreate {
+  name: string
+  type?: string
+  date?: string
+  state?: string
+  result?: string
+  code?: string
+  note?: string
+}
+export function createDrillPlan(payload: DrillPlanCreate): Promise<unknown> {
+  return request.post('/api/ops/drill', payload)
+}
+export function updateDrillPlan(id: number, payload: Partial<DrillPlanCreate>): Promise<unknown> {
+  return request.put(`/api/ops/drill/${id}`, payload)
+}
+export function deleteDrillPlan(id: number): Promise<unknown> {
+  return request.delete(`/api/ops/drill/${id}`)
+}
+
+// ---- 演练记录写操作 ----
+export interface DrillRecordCreate {
+  planId?: number
+  planCode?: string
+  planName?: string
+  executedBy?: string
+  startedAt?: string
+  completedAt?: string
+  score?: number
+  result?: string
+  notes?: string
+}
+export function createDrillRecord(payload: DrillRecordCreate): Promise<unknown> {
+  return request.post('/api/ops/drill/records', payload)
+}
+export function updateDrillRecord(id: number, payload: Partial<DrillRecordCreate>): Promise<unknown> {
+  return request.put(`/api/ops/drill/records/${id}`, payload)
+}
+export function deleteDrillRecord(id: number): Promise<unknown> {
+  return request.delete(`/api/ops/drill/records/${id}`)
+}
+
 export async function getDrillStats(): Promise<DrillStats> {
   const resp = await request.get<unknown, RawItem>('/api/ops/drill')
   const s = (resp.stats as RawItem) ?? {}

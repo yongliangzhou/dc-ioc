@@ -26,7 +26,7 @@
     <Panel class="toolbar">
       <select v-model="fSys" class="ipt" style="width: 160px" @change="onFilter">
         <option value="">{{ tl('全部系统') }}</option>
-        <option v-for="s in sysOptions" :key="s" :value="s">{{ s }}</option>
+        <option v-for="s in systemOptions" :key="s" :value="s">{{ s }}</option>
       </select>
       <select v-model="fLv" class="ipt" style="width: 110px" @change="onFilter">
         <option value="">{{ tl('全部级别') }}</option>
@@ -73,41 +73,41 @@
           <tr
             v-for="e in data?.items"
             :key="e.id"
-            :class="{ 'row-crit': e.lv === 'crit' && e.state !== 'resolved' }"
+            :class="{ 'row-crit': e.level === 'crit' && e.status !== 'resolved' }"
           >
             <td class="mono">{{ fmtDateTime(e.triggeredAt) }}</td>
             <td>
-              <span class="tag" :class="e.lv === 'crit' ? 'r' : e.lv === 'warn' ? 'a' : 'g'">{{
-                e.lv
+              <span class="tag" :class="e.level === 'crit' ? 'r' : e.level === 'warn' ? 'a' : 'g'">{{
+                e.level
               }}</span>
             </td>
-            <td>{{ e.sys }}</td>
+            <td>{{ e.system }}</td>
             <td>
               <div style="font-weight: 600">{{ e.ruleName }}</div>
-              <div class="muted" style="font-size: 11px">{{ e.desc }}</div>
+              <div class="muted" style="font-size: 11px">{{ e.message }}</div>
             </td>
             <td class="mono">
               {{ e.value }}{{ e.unit || '' }} / {{ e.threshold }}{{ e.unit || '' }}
             </td>
             <td>
-              <span class="tag" :class="stateTag(e.state)">{{ stateText(e.state) }}</span>
+              <span class="tag" :class="stateTag(e.status)">{{ stateText(e.status) }}</span>
             </td>
             <td>
-              <button class="btn-sm" v-if="e.state === 'active'" @click="ack(e)">
+              <button class="btn-sm" v-if="e.status === 'active'" @click="ack(e)">
                 {{ tl('确认') }}
               </button>
               <button
                 class="btn-sm primary"
-                v-if="e.state === 'active' || e.state === 'acknowledged'"
+                v-if="e.status === 'active' || e.status === 'acknowledged'"
                 style="margin-left: 4px"
                 @click="resolve(e)"
               >
                 {{ tl('闭环') }}
               </button>
-              <span class="muted" v-if="e.state === 'resolved'" style="font-size: 11px"
+              <span class="muted" v-if="e.status === 'resolved'" style="font-size: 11px"
                 >{{ e.resolvedBy }}{{ e.autoResolved ? '·自动' : '' }}</span
               >
-              <span class="muted" v-if="e.state === 'suppressed'" style="font-size: 11px">{{
+              <span class="muted" v-if="e.status === 'suppressed'" style="font-size: 11px">{{
                 tl('已抑制')
               }}</span>
             </td>
@@ -146,7 +146,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { acknowledgeAlarm, getAlarmHistory, resolveAlarm } from '@/api'
 import type { AlarmEvent, AlarmHistoryResponse } from '@/types'
 import Pagination from '@/components/Pagination.vue'
-import KpiCard from '@/components/monitor/KpiCard.vue'
+import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 
 const data = ref<AlarmHistoryResponse | null>(null)
@@ -158,8 +158,8 @@ const size = ref(50)
 const kw = ref('')
 const operator = '值班员'
 
-const sysOptions = computed(() =>
-  data.value ? [...new Set(data.value.items.map((e) => e.sys))] : [],
+const systemOptions = computed(() =>
+  data.value ? [...new Set(data.value.items.map((e) => e.system))] : [],
 )
 const stateTag = (s: string) =>
   s === 'active' ? 'r' : s === 'acknowledged' ? 'a' : s === 'resolved' ? 'g' : 'o'
@@ -179,7 +179,7 @@ function patchLocal(id: string, patch: Partial<AlarmEvent>) {
 }
 async function ack(e: AlarmEvent) {
   patchLocal(e.id, {
-    state: 'acknowledged',
+    status: 'acknowledged',
     acknowledgedAt: new Date().toISOString(),
     acknowledgedBy: operator,
   })
@@ -191,7 +191,7 @@ async function ack(e: AlarmEvent) {
 }
 async function resolve(e: AlarmEvent) {
   patchLocal(e.id, {
-    state: 'resolved',
+    status: 'resolved',
     resolvedAt: new Date().toISOString(),
     resolvedBy: operator,
     note: '已处置并闭环',
@@ -207,9 +207,9 @@ async function resolve(e: AlarmEvent) {
 async function reload() {
   try {
     data.value = await getAlarmHistory({
-      sys: fSys.value || undefined,
-      lv: fLv.value || undefined,
-      state: fState.value || undefined,
+      system: fSys.value || undefined,
+      level: fLv.value || undefined,
+      status: fState.value || undefined,
       page: page.value,
       limit: size.value,
     })

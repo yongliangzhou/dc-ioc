@@ -67,3 +67,23 @@ class MetricRaw(Base):
             name="uq_metric_raw_device_name_ts",
         ),
     )
+
+
+class MetricDef(Base):
+    """测点定义 (配置级, 供前端「测点增删改查」)。
+
+    与实时上报数据流 (MetricRaw) 解耦: 这里维护「某设备挂载哪些测点」的台账,
+    不仅支持实时上报自动落库, 也允许运维手动新增/编辑/删除测点定义。
+    """
+
+    __tablename__ = "metric_defs"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    device_id: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
+    metric_name: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    label: Mapped[str | None] = mapped_column(String(128), default=None, comment="测点中文名")
+    unit: Mapped[str | None] = mapped_column(String(32), default=None)
+    data_type: Mapped[str] = mapped_column(String(16), default="float", comment="float/int/bool/string")
+    description: Mapped[str | None] = mapped_column(String(256), default=None)
+    enabled: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), server_default=func.now(), default=None)

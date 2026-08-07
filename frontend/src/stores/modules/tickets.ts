@@ -86,12 +86,12 @@ export const useTicketsStore = defineStore('tickets', () => {
   /** 告警转工单: 优先调用 /from-alarm/{id}, 否则以 source=alarm 直接创建真实工单 */
   async function createFromAlarm(alarm: Alarm): Promise<Ticket> {
     const req: TicketCreateRequest = {
-      title: `[告警转工单] ${alarm.desc}`,
-      sys: alarm.sys,
-      lv: alarm.lv,
+      title: `[告警转工单] ${alarm.message}`,
+      sys: alarm.system,
+      lv: alarm.level,
       owner: alarm.owner ?? '待分配',
-      sla: alarm.lv === 'crit' ? '1h' : alarm.lv === 'warn' ? '4h' : '8h',
-      description: `来源告警系统: ${alarm.sys}\n告警内容: ${alarm.desc}\n触发时间: ${alarm.ts ?? '—'}\n原始状态: ${alarm.state}`,
+      sla: alarm.level === 'crit' ? '1h' : alarm.level === 'warn' ? '4h' : '8h',
+      description: `来源告警系统: ${alarm.system}\n告警内容: ${alarm.message}\n触发时间: ${alarm.time ?? '—'}\n原始状态: ${alarm.status}`,
       source: 'alarm',
       sourceAlarmId: alarm.id,
     }

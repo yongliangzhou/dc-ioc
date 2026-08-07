@@ -644,14 +644,8 @@ import type { ErrorLike } from '@/utils/error'
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt } from '@/utils/format'
-import {
-  KpiCard,
-  SkeletonCard,
-  AlarmBadge,
-  TrendChart,
-  ProgressGauge,
-  StatusBadge,
-} from '@/components/monitor'
+import { SkeletonCard, TrendChart, ProgressGauge,  } from '@/components/monitor'
+import { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 import {
   getPowerFuelDetailed,
   type FuelSummary,

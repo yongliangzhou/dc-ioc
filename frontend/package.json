@@ -12,9 +12,11 @@
     "test:run": "vitest run",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "generate:api": "orval",
     "prepare": "husky || true"
   },
   "dependencies": {
+    "@dc-ioc/ui": "file:../packages/dc-ioc-ui",
     "axios": "^1.7.9",
     "dayjs": "^1.11.13",
     "echarts": "^5.6.0",
@@ -34,6 +36,7 @@
     "husky": "^9.1.7",
     "jsdom": "^25.0.1",
     "lint-staged": "^16.4.0",
+    "orval": "^7.6.0",
     "prettier": "^3.9.6",
     "sass": "^1.84.0",
     "typescript": "~5.7.3",

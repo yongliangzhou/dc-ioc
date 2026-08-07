@@ -38,6 +38,76 @@ def _to_dict(r) -> dict:
     }
 
 
+# ===== 维保计划 CRUD (批次补强) =====
+def _to_plan_dict(r) -> dict:
+    return {
+        "id": r.id,
+        "code": r.code or "",
+        "name": r.name or "",
+        "equipmentCode": r.equipment_code or "",
+        "description": r.description or "",
+        "frequency": r.frequency or "monthly",
+        "nextDueDate": r.next_due_date or "",
+        "status": r.status or "active",
+        "owner": r.owner or "",
+        "createdAt": r.created_at or "",
+    }
+
+
+def count_plans(db: Session, status: str = "") -> int:
+    q = db.query(func.count(maintenance_mod.MaintenancePlan.id))
+    if status:
+        q = q.filter(maintenance_mod.MaintenancePlan.status == status)
+    return q.scalar() or 0
+
+
+def list_plans(db: Session, status: str = "",
+               limit: int = 200, offset: int = 0) -> list[dict]:
+    q = db.query(maintenance_mod.MaintenancePlan)
+    if status:
+        q = q.filter(maintenance_mod.MaintenancePlan.status == status)
+    q = q.order_by(maintenance_mod.MaintenancePlan.id.desc())
+    rows = q.offset(offset).limit(limit).all()
+    return [_to_plan_dict(r) for r in rows]
+
+
+def get_plan(db: Session, pid: int):
+    return db.query(maintenance_mod.MaintenancePlan).filter(
+        maintenance_mod.MaintenancePlan.id == pid).first()
+
+
+def create_plan(db: Session, data: dict) -> dict:
+    data = {k: v for k, v in _to_snake(data).items() if v is not None}
+    obj = maintenance_mod.MaintenancePlan(**data)
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return _to_plan_dict(obj)
+
+
+def update_plan(db: Session, pid: int, data: dict) -> Optional[dict]:
+    obj = get_plan(db, pid)
+    if not obj:
+        return None
+    data = {k: v for k, v in _to_snake(data).items() if v is not None}
+    for k, v in data.items():
+        if hasattr(obj, k):
+            setattr(obj, k, v)
+    db.commit()
+    db.refresh(obj)
+    return _to_plan_dict(obj)
+
+
+def delete_plan(db: Session, pid: int) -> bool:
+    obj = get_plan(db, pid)
+    if not obj:
+        return False
+    db.delete(obj)
+    db.commit()
+    return True
+
+
+# ===== 维保记录 CRUD =====
 def count(db: Session, plan_code: str = "") -> int:
     q = db.query(func.count(maintenance_mod.MaintenanceRecord.id))
     if plan_code:

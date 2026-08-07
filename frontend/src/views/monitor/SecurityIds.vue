@@ -214,10 +214,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Fence, Shield, ScanEye, AlertTriangle } from 'lucide-vue-next'
-import KpiCard from '@/components/monitor/KpiCard.vue'
+import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 import SecurityKnowledge from '@/components/SecurityKnowledge.vue'
-import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
+import { AlarmBadge } from '@dc-ioc/ui'
 import EmptyState from '@/components/monitor/EmptyState.vue'
 import { getSecurityIdsDetailed } from '@/api/security'
 import type { IdsSummary, IdsEventView } from '@/api/security'

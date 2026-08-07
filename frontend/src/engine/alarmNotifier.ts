@@ -116,7 +116,7 @@ const GENERIC: AlarmScenario = {
 }
 
 export function matchScenario(a: Alarm): AlarmScenario {
-  const text = `${a.sys} ${a.desc}`.toLowerCase()
+  const text = `${a.system} ${a.message}`.toLowerCase()
   for (const s of ALARM_SCENARIOS) {
     if (s.keywords.some((k) => text.includes(k.toLowerCase()))) return s
   }
@@ -143,8 +143,8 @@ let seq = 0
 let audioCtx: AudioContext | null = null
 
 function fingerprint(a: Alarm): string {
-  // Alarm 无 id，用 sys+desc+ts 组合；ts 可能为空则用序号兜底
-  return `${a.sys}|${a.desc}|${a.ts ?? ''}`
+  // Alarm 无 id，用 system+message+time 组合；time 可能为空则用序号兜底
+  return `${a.system}|${a.message}|${a.time ?? ''}`
 }
 
 /** 申请浏览器通知权限 */
@@ -156,7 +156,7 @@ export function requestNotificationPermission() {
 }
 
 /** Web Audio 合成告警音：crit 三连高音，warn 单声中音 */
-function beep(level: Alarm['lv']) {
+function beep(level: Alarm['level']) {
   if (!state.soundOn) return
   try {
     const Ctx = (window.AudioContext ||
@@ -189,10 +189,10 @@ function pushBrowserNotification(item: AlarmNotificationItem) {
   if (!state.notifyOn) return
   if (!('Notification' in window) || Notification.permission !== 'granted') return
   try {
-    const n = new Notification(`[${item.alarm.lv.toUpperCase()}] ${item.alarm.sys} 告警`, {
-      body: item.alarm.desc,
+    const n = new Notification(`[${item.alarm.level.toUpperCase()}] ${item.alarm.system} 告警`, {
+      body: item.alarm.message,
       tag: item.id,
-      requireInteraction: item.alarm.lv === 'crit',
+      requireInteraction: item.alarm.level === 'crit',
     })
     n.onclick = () => {
       window.focus()
@@ -221,10 +221,10 @@ export function notifyNew(alarm: Alarm, force = false) {
   if (state.items.length > 8) state.items.pop()
 
   // 智能分级：crit 强制弹窗 + 声音 + 推送；warn 弹窗 + 声音；info 仅角标
-  if (alarm.lv === 'crit' || force) {
+  if (alarm.level === 'crit' || force) {
     beep('crit')
     pushBrowserNotification(item)
-  } else if (alarm.lv === 'warn') {
+  } else if (alarm.level === 'warn') {
     beep('warn')
     pushBrowserNotification(item)
   }

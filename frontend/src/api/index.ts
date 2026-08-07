@@ -121,6 +121,17 @@ export const deleteTicket = (id: string) =>
 
 export const askAssistant = (payload: AssistantAskReq) =>
   request.post<unknown, AssistantAskResp>('/api/ops/assistant/ask', payload)
+
+/** 提交 AI 回答反馈 (满意度/纠错) */
+export const submitAssistantFeedback = (payload: {
+  question: string
+  answer: string
+  rating: string
+  correction?: string
+  note?: string
+  grounded?: string
+  model?: string
+}) => request.post<unknown, { ok: boolean; id: number }>('/api/ops/assistant/feedback', payload)
 /** 大模型接入状态自查（运维诊断用） */
 
 export const getActiveAlarms = () =>
@@ -135,6 +146,15 @@ export const ackActiveAlarm = (id: string) =>
 export const resolveActiveAlarm = (id: string) =>
   request.post<unknown, { ok: boolean }>(`/api/alarms/${encodeURIComponent(id)}/resolve`)
 
+/** 提交告警处理反馈/经验沉淀 (后端持久化) */
+export const submitAlarmFeedback = (payload: {
+  alarmId: string
+  system: string
+  result: string
+  note: string
+  operator?: string
+}) => request.post<unknown, { ok: boolean; id: number }>('/api/alarms/feedback', payload)
+
 /* ================= 告警规则引擎 API ================= */
 
 export const getAlarmRules = () => request.get<unknown, AlarmRuleDef[]>('/api/alarm-rules')
@@ -148,10 +168,8 @@ export const updateAlarmRule = (id: string, data: Partial<AlarmRuleDef>) =>
 export const deleteAlarmRule = (id: string) =>
   request.delete<unknown, void>(`/api/alarm-rules/${encodeURIComponent(id)}`)
 
-export const toggleAlarmRule = (id: string | number, status: AlarmRuleStatus) =>
-  request.patch<unknown, AlarmRuleDef>(`/api/alarm-rules/${encodeURIComponent(id)}/status`, {
-    status,
-  })
+export const toggleAlarmRule = (id: string | number) =>
+  request.patch<unknown, AlarmRuleDef>(`/api/alarm-rules/${encodeURIComponent(id)}/toggle`)
 
 export const getAuditLogs = (params: AuditLogQuery = {}) =>
   request.get<unknown, { items: AuditLogItem[]; total: number; page: number; page_size: number }>(
@@ -221,6 +239,40 @@ export const getDeviceMetrics = (deviceId: string, limit = 50) =>
 export const getDeviceRealtime = (deviceId: string) =>
   request.get<unknown, MetricRealtimeResponse>(
     `/api/external/devices/${encodeURIComponent(deviceId)}/metrics/realtime`,
+  )
+
+// ===== 测点定义 CRUD (前端「测点增删改查」) =====
+export interface MetricDef {
+  id: number
+  deviceId: string
+  metricName: string
+  label: string
+  unit: string
+  dataType: string
+  description: string
+  enabled: boolean
+}
+
+export const getMetricDefs = (deviceId: string) =>
+  request.get<unknown, MetricDef[]>(
+    `/api/external/devices/${encodeURIComponent(deviceId)}/metric-defs`,
+  )
+
+export const createMetricDef = (deviceId: string, payload: Partial<MetricDef>) =>
+  request.post<unknown, MetricDef>(
+    `/api/external/devices/${encodeURIComponent(deviceId)}/metric-defs`,
+    payload,
+  )
+
+export const updateMetricDef = (deviceId: string, id: number, payload: Partial<MetricDef>) =>
+  request.put<unknown, MetricDef>(
+    `/api/external/devices/${encodeURIComponent(deviceId)}/metric-defs/${id}`,
+    payload,
+  )
+
+export const deleteMetricDef = (deviceId: string, id: number) =>
+  request.delete<unknown, void>(
+    `/api/external/devices/${encodeURIComponent(deviceId)}/metric-defs/${id}`,
   )
 
 /** 某设备历史测点趋势: GET /api/external/devices/{device_id}/metrics/history */

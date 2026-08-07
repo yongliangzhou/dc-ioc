@@ -1,6 +1,5 @@
-export { default as KpiCard } from './KpiCard.vue'
-export { default as StatusBadge } from './StatusBadge.vue'
-export { default as AlarmBadge } from './AlarmBadge.vue'
+// Re-exported from @dc-ioc/ui (shared component library)
+export { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 export { default as ProgressGauge } from './ProgressGauge.vue'
 export { default as DeviceCard } from './DeviceCard.vue'
 export type { DeviceMetric } from './DeviceCard.vue'

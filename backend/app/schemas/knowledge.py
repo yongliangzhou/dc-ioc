@@ -27,6 +27,15 @@ class KnowledgeCreate(BaseModel):
     owner: str = ""
     hot: bool = False
     code: Optional[str] = None
+    # 导入切分自动生成的内容默认进入待审核
+    reviewStatus: Optional[str] = "pending"
+
+
+class KnowledgeReviewIn(BaseModel):
+    """人工审核：通过 / 驳回 + 意见。"""
+    status: str  # approved / rejected
+    note: str = ""
+    reviewer: str = ""
 
 
 class KnowledgeUpdate(BaseModel):
@@ -44,6 +53,8 @@ class KnowledgeUpdate(BaseModel):
     steps: Optional[list[str]] = None
     owner: Optional[str] = None
     hot: Optional[bool] = None
+    reviewStatus: Optional[str] = None
+    reviewNote: Optional[str] = None
 
 
 class KnowledgeOut(BaseModel):
@@ -64,6 +75,10 @@ class KnowledgeOut(BaseModel):
     owner: str = ""
     hot: bool = False
     version: int = 1
+    reviewStatus: str = "approved"
+    reviewer: str = ""
+    reviewedAt: Any = None
+    reviewNote: str = ""
     createdAt: Any = None
     updatedAt: Any = None
 

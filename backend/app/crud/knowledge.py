@@ -42,6 +42,7 @@ def list_items(
     domain: Optional[str] = None,
     type: Optional[str] = None,
     kw: Optional[str] = None,
+    review_status: Optional[str] = None,
     limit: int = 100,
     offset: int = 0,
 ) -> list[dict]:
@@ -52,6 +53,8 @@ def list_items(
         q = q.filter(KnowledgeItem.domain == domain)
     if type:
         q = q.filter(KnowledgeItem.type == type)
+    if review_status:
+        q = q.filter(KnowledgeItem.review_status == review_status)
     if kw:
         like = f"%{kw}%"
         q = q.filter(
@@ -71,6 +74,7 @@ def count(
     domain: Optional[str] = None,
     type: Optional[str] = None,
     kw: Optional[str] = None,
+    review_status: Optional[str] = None,
 ) -> int:
     q = db.query(KnowledgeItem)
     if category:
@@ -79,6 +83,8 @@ def count(
         q = q.filter(KnowledgeItem.domain == domain)
     if type:
         q = q.filter(KnowledgeItem.type == type)
+    if review_status:
+        q = q.filter(KnowledgeItem.review_status == review_status)
     if kw:
         like = f"%{kw}%"
         q = q.filter(
@@ -124,6 +130,9 @@ def create(db: Session, *, data: dict) -> dict:
     data = _to_snake(data)
     if not data.get("code"):
         data["code"] = _next_code(db)
+    # 导入切分自动生成的内容默认待审核; 手动新建默认通过(由创建人即视为已确认)
+    if data.get("review_status") is None:
+        data["review_status"] = "approved"
     item = KnowledgeItem(**data)
     db.add(item)
     db.commit()
@@ -182,6 +191,31 @@ def stats(db: Session) -> dict:
     return {"total": total, "byType": by_type, "hot": hot}
 
 
+def review(db: Session, item_id: str, *, status: str, note: str = "", reviewer: str = "") -> Optional[dict]:
+    """人工审核：pending -> approved / rejected。"""
+    row = db.query(KnowledgeItem).filter(KnowledgeItem.id == int(item_id)).first()
+    if not row:
+        return None
+    row.review_status = status
+    row.review_note = note
+    row.reviewer = reviewer
+    row.reviewed_at = _now()
+    db.commit()
+    db.refresh(row)
+    return _to_dict(row)
+
+
+def list_pending(db: Session, limit: int = 200) -> list[dict]:
+    rows = (
+        db.query(KnowledgeItem)
+        .filter(KnowledgeItem.review_status == "pending")
+        .order_by(KnowledgeItem.id.desc())
+        .limit(limit)
+        .all()
+    )
+    return [_to_dict(r) for r in rows]
+
+
 def _to_dict(r: KnowledgeItem) -> dict:
     return {
         "id": r.id,
@@ -200,6 +234,10 @@ def _to_dict(r: KnowledgeItem) -> dict:
         "owner": r.owner or "",
         "hot": bool(r.hot),
         "version": r.version or 1,
+        "reviewStatus": r.review_status or "approved",
+        "reviewer": r.reviewer or "",
+        "reviewedAt": r.reviewed_at or "",
+        "reviewNote": r.review_note or "",
         "createdAt": r.created_at,
         "updatedAt": r.updated_at,
     }

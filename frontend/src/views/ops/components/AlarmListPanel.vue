@@ -17,21 +17,21 @@
         <tr
           v-for="(x, i) in alarms"
           :key="i"
-          :class="{ 'row-crit': x.lv === 'crit', 'row-warn': x.lv === 'warn' }"
+          :class="{ 'row-crit': x.level === 'crit', 'row-warn': x.level === 'warn' }"
         >
           <td>
-            <AlarmBadge :level="mapLevel(x.lv)" />
+            <AlarmBadge :level="mapLevel(x.level)" />
           </td>
           <td>
-            <span class="source-tag" :class="sourceCls(x.sys)">
+            <span class="source-tag" :class="sourceCls(x.system)">
               <span class="source-dot"></span>
-              {{ sourceLabel(x.sys) }}
+              {{ sourceLabel(x.system) }}
             </span>
           </td>
-          <td class="desc-cell">{{ x.desc }}</td>
-          <td class="mono" style="font-size: 11px">{{ x.ts }}</td>
+          <td class="desc-cell">{{ x.message }}</td>
+          <td class="mono" style="font-size: 11px">{{ x.time }}</td>
           <td>
-            <StatusBadge :status="mapStateStatus(x.state)" :label="x.state" />
+            <StatusBadge :status="mapStateStatus(x.status)" :label="x.status" />
           </td>
           <td>{{ x.owner ?? '—' }}</td>
           <td>
@@ -43,25 +43,25 @@
           <td>
             <div class="flex gap4">
               <button class="act-btn runbook" @click="$emit('runbook', x)">{{ tl('预案') }}</button>
-              <button v-if="x.state === '待确认'" class="act-btn ack" @click="$emit('ack', x)">
+              <button v-if="x.status === 'active'" class="act-btn ack" @click="$emit('ack', x)">
                 {{ tl('确认') }}
               </button>
               <button
-                v-if="x.state !== '已关闭'"
+                v-if="x.status !== 'resolved'"
                 class="act-btn ticket"
                 @click="$emit('ticket', x)"
               >
                 {{ tl('转工单') }}
               </button>
               <button
-                v-if="x.state !== '已关闭'"
+                v-if="x.status !== 'resolved'"
                 class="act-btn resolve"
                 @click="$emit('resolve', x)"
               >
                 {{ tl('关单') }}
               </button>
               <button class="act-btn fb" @click="$emit('feedback', x)">{{ tl('反馈') }}</button>
-              <button v-if="x.state === '已关闭'" class="act-btn done" disabled>
+              <button v-if="x.status === 'resolved'" class="act-btn done" disabled>
                 {{ tl('已处理') }}
               </button>
             </div>
@@ -84,8 +84,8 @@ interface AlarmWithDevice extends Alarm {
   deviceId?: string
   device_id?: string
 }
-import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
-import StatusBadge from '@/components/monitor/StatusBadge.vue'
+import { AlarmBadge } from '@dc-ioc/ui'
+import { StatusBadge } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 
 defineProps<{ alarms: Alarm[] }>()
@@ -99,8 +99,8 @@ const emit = defineEmits<{
 }>()
 
 // ===== Level Mapping =====
-function mapLevel(lv: string): string {
-  switch (lv) {
+function mapLevel(level: string): string {
+  switch (level) {
     case 'crit':
       return 'critical'
     case 'warn':
@@ -108,17 +108,20 @@ function mapLevel(lv: string): string {
     case 'info':
       return 'info'
     default:
-      return lv
+      return level
   }
 }
 
 // ===== State → StatusBadge status =====
 function mapStateStatus(s: string): string {
   switch (s) {
+    case 'active':
     case '待确认':
       return 'warning'
+    case 'acknowledged':
     case '处理中':
       return 'warning'
+    case 'resolved':
     case '已关闭':
       return 'online'
     case '已处理':
@@ -129,8 +132,8 @@ function mapStateStatus(s: string): string {
 }
 
 // ===== Source System Label & Color =====
-function matchSource(sys: string): string {
-  const s = (sys || '').toLowerCase()
+function matchSource(system: string): string {
+  const s = (system || '').toLowerCase()
   if (s.includes('冷源') || s.includes('chiller') || s.includes('冷冻')) return 'chiller'
   if (s.includes('空调') || s.includes('精密') || s.includes('crac') || s.includes('末端'))
     return 'crac'
@@ -207,7 +210,7 @@ const DEVICE_ROUTES: Record<string, { path: string; label: string }> = {
 }
 
 function getDeviceRoute(alarm: Alarm): { path: string; label: string } | null {
-  const m = matchSource(alarm.sys)
+  const m = matchSource(alarm.system)
   const route = DEVICE_ROUTES[m]
   if (!route) return null
   // Append deviceId if available
@@ -223,7 +226,7 @@ function goDevice(alarm: Alarm) {
   if (!route) return
   // Use window.location or emit — let parent handle navigation
   emit('goDevice', {
-    sys: alarm.sys,
+    sys: alarm.system,
     deviceId: (alarm as AlarmWithDevice).deviceId ?? (alarm as AlarmWithDevice).device_id ?? '',
   })
 }

@@ -25,6 +25,42 @@ logger = logging.getLogger("lifespan")
 
 
 # ======================================================================
+#  缺失列自愈 (create_all 不修改已存在表, 老库需补齐新增列)
+# ======================================================================
+def _ensure_missing_columns(db):
+    """对已存在的旧表, 幂等补齐批次新增的列 (避免 SELECT 时报 column missing)。
+
+    策略: 逐列执行 ALTER TABLE ADD COLUMN, 若列已存在则忽略异常。
+    兼容 PostgreSQL 与 SQLite。
+    """
+    from sqlalchemy import text
+
+    # 表名 -> [(列名, 类型SQL, 默认值SQL)]
+    specs = {
+        "knowledge_items": [
+            ("review_status", "VARCHAR(16)", "DEFAULT 'approved'"),
+            ("reviewer", "VARCHAR(64)", "DEFAULT ''"),
+            ("reviewed_at", "VARCHAR(32)", "DEFAULT ''"),
+            ("review_note", "TEXT", "DEFAULT ''"),
+        ],
+    }
+    for table, cols in specs.items():
+        for col, col_type, col_default in cols:
+            try:
+                db.execute(
+                    text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type} {col_default}")
+                )
+                db.commit()
+                logger.info("补齐列 %s.%s", table, col)
+            except Exception as e:  # 列已存在 / 不支持等
+                db.rollback()
+                msg = str(e).lower()
+                if "already exists" in msg or "42701" in msg or "duplicate column" in msg:
+                    continue
+                logger.warning("补齐列 %s.%s 失败(可忽略): %s", table, col, e)
+
+
+# ======================================================================
 #  KPI 定时广播
 # ======================================================================
 async def kpi_broadcast_loop():
@@ -180,6 +216,8 @@ def _seed_default_users():
         from app.models import Base  # 触发 metadata 收集
         Base.metadata.create_all(bind=engine)
         logger.info("已确保 ORM 表结构就绪")
+        # 兜底: 对已存在但缺列的旧表补齐 (create_all 不改已有表结构)
+        _ensure_missing_columns(db)
 
         default_roles = [
             ("admin", "超级管理员", ["*"]),

@@ -1,11 +1,11 @@
 <template>
   <div class="card">
-    <div class="card-head">
-      <span class="lv" :class="it.alarm.lv">{{ lvText }}</span>
-      <div class="title">
-        <div class="sys">{{ it.alarm.sys }}</div>
-        <div class="desc">{{ it.alarm.desc }}</div>
-      </div>
+<div class="card-head">
+    <span class="lv" :class="it.alarm.level">{{ lvText }}</span>
+    <div class="title">
+      <div class="sys">{{ it.alarm.system }}</div>
+      <div class="desc">{{ it.alarm.message }}</div>
+    </div>
       <div class="time">{{ timeText }}</div>
       <button class="close" @click="$emit('close')">×</button>
     </div>
@@ -49,7 +49,7 @@ const emit = defineEmits<{
 const tab = ref<'cause' | 'steps' | 'fix'>('cause')
 
 const lvText = computed(() =>
-  props.it.alarm.lv === 'crit' ? '严重' : props.it.alarm.lv === 'warn' ? '预警' : '提示',
+  props.it.alarm.level === 'crit' ? '严重' : props.it.alarm.level === 'warn' ? '预警' : '提示',
 )
 const timeText = computed(() => {
   const d = new Date(props.it.ts)

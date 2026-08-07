@@ -106,3 +106,52 @@ def stats(db: Session) -> dict:
     low = db.query(func.count(RiskItem.id)).filter(RiskItem.level == "低").scalar() or 0
     closed = db.query(func.count(RiskItem.id)).filter(RiskItem.closed == 1).scalar() or 0
     return {"high": high, "mid": mid, "low": low, "closed": closed}
+
+
+def analyze_from_data(db: Session) -> dict:
+    """基于活跃告警 + 设备测点自动分析生成风险提示 (草稿, 不自动入库)。
+
+    返回建议新增的风险项列表, 由前端/审核人确认后调用 create 入库。
+    """
+    from app.services import dc_aggregator as agg
+
+    suggestions: list[dict] = []
+    try:
+        alarms = agg.alarms().get("active", []) if hasattr(agg, "alarms") else []
+    except Exception:  # noqa: BLE001 - 聚合器异常不应阻断分析
+        alarms = []
+
+    seen: set[str] = set()
+    for a in alarms:
+        metric = (a.get("metric") or a.get("sys") or "设备") if isinstance(a, dict) else ""
+        key = f"{metric}"
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        level_map = {"critical": ("高", 4, 4), "high": ("高", 4, 3),
+                     "warning": ("中", 3, 2), "info": ("低", 2, 1)}
+        lvl = a.get("level") if isinstance(a, dict) else None
+        cat, prob, impact = level_map.get(lvl, ("中", 3, 2))
+        suggestions.append({
+            "risk": f"{metric} 持续异常, 存在运行风险",
+            "cat": "自动分析",
+            "prob": prob,
+            "impact": impact,
+            "level": cat,
+            "ctrl": "建议核查相关设备并制定管控措施",
+            "owner": "",
+            "closed": 0,
+            "source": "alarm",
+            "sourceRef": a.get("id") if isinstance(a, dict) else None,
+        })
+
+    # 若聚合器无活跃告警, 给出一条基于 PUE 偏高的通用提示
+    if not suggestions:
+        suggestions.append({
+            "risk": "当前 PUE 偏高, 存在能效不达标风险",
+            "cat": "自动分析",
+            "prob": 2, "impact": 2, "level": "中",
+            "ctrl": "建议优化冷源运行策略", "owner": "", "closed": 0,
+            "source": "energy", "sourceRef": None,
+        })
+    return {"suggestions": suggestions, "count": len(suggestions)}

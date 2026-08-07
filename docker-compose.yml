@@ -77,7 +77,8 @@ services:
   # ---------- 前端 (Nginx 托管 + 反向代理) ----------
   frontend:
     build:
-      context: ./frontend
+      context: .                          # 项目根目录 (需要访问 packages/)
+      dockerfile: ./frontend/Dockerfile
       target: prod
     ports:
       - "8080:80"

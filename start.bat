@@ -96,11 +96,23 @@ if /i not "%MODE%"=="dev" (
     if errorlevel 2 exit /b 0
 )
 
+REM ---- 构建共享 UI 组件库 (@dc-ioc/ui) ----
+echo.
+echo [UI库] 安装并构建 @dc-ioc/ui...
+cd packages\dc-ioc-ui
+if not exist "node_modules" (
+    echo   npm install...
+    call npm install
+)
+echo   vite build...
+call npx vite build
+cd ..\..
+
 REM ---- 启动 ----
 echo.
-echo [启动] docker compose %COMPOSE_FILES% up -d --build
+echo [启动] docker compose %COMPOSE_FILES% up -d --build --force-recreate
 echo.
-docker compose %COMPOSE_FILES% up -d --build
+docker compose %COMPOSE_FILES% up -d --build --force-recreate
 if %errorlevel% neq 0 (
     echo [错误] 启动失败, 请查看上方日志。
     pause
@@ -109,8 +121,8 @@ if %errorlevel% neq 0 (
 
 REM ---- 等待就绪 ----
 echo.
-echo [等待] 服务启动中 (约 15 秒)...
-timeout /t 15 >nul
+echo [等待] 服务启动中 (约 20 秒)...
+timeout /t 20 >nul
 
 echo.
 echo [状态] 服务健康检查:
@@ -212,6 +224,16 @@ cd frontend
 if not exist "node_modules" (
     call npm install
 )
+
+REM ---- 构建共享 UI 组件库 ----
+echo [UI库] 构建 @dc-ioc/ui...
+cd ..\packages\dc-ioc-ui
+if not exist "node_modules" (
+    call npm install
+)
+call npx vite build
+cd ..\..\frontend
+
 echo [前端] 启动 Vite dev server (http://localhost:5173)...
 start "DC-IOC Frontend" cmd /c "npm run dev"
 cd ..

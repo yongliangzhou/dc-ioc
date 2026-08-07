@@ -13,7 +13,7 @@ from app.models.alarm_state import (  # noqa: F401
 )
 from app.models.cabinet import Cabinet  # noqa: F401
 from app.models.equipment import Equipment  # noqa: F401
-from app.models.external import ExternalDevice, MetricRaw  # noqa: F401
+from app.models.external import ExternalDevice, MetricRaw, MetricDef  # noqa: F401
 from app.models.capacity_energy import CapacityEnergyHistory  # noqa: F401
 from app.models.idc import IDC  # noqa: F401
 from app.models.knowledge import KnowledgeItem  # noqa: F401
@@ -25,10 +25,13 @@ from app.models.inspection import InspectionRoute, InspectionFinding, Inspection
 from app.models.point_data import PointData  # noqa: F401
 from app.models.room import Room  # noqa: F401
 from app.models.server import Server  # noqa: F401
-from app.models.shift import ShiftSchedule  # noqa: F401
+from app.models.shift import ShiftSchedule, ShiftHandover  # noqa: F401
 from app.models.ticket import Ticket  # noqa: F401
 from app.models.user import User, Role, user_role  # noqa: F401
 from app.models.audit_log import AuditLog  # noqa: F401
+from app.models.assistant_feedback import AssistantFeedback  # noqa: F401
+from app.models.alarm_feedback import AlarmFeedback  # noqa: F401
+from app.models.energy_advice import EnergyAdviceAdopt  # noqa: F401
 
 __all__ = [
     "Base",
@@ -49,12 +52,17 @@ __all__ = [
     "InspectionFinding",
     "InspectionRobot",
     "ShiftSchedule",
+    "ShiftHandover",
     "ExternalDevice",
+    "MetricDef",
     "MetricRaw",
     "User",
     "Role",
     "user_role",
     "AuditLog",
+    "AssistantFeedback",
+    "AlarmFeedback",
+    "EnergyAdviceAdopt",
     "AlarmRule",
     "AlarmActiveState",
     "AlarmSuppressedDevice",

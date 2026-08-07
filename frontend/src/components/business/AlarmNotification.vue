@@ -4,7 +4,7 @@
     <div v-if="hasCrit" class="an-mask" @click.self="keepOpen">
       <div class="an-stack">
         <transition-group name="an">
-          <div v-for="it in critItems" :key="it.id" class="an-card" :class="it.alarm.lv">
+          <div v-for="it in critItems" :key="it.id" class="an-card" :class="it.alarm.level">
             <AlarmCard :it="it" @close="dismiss(it.id)" @feedback="openFeedback(it)" @kb="gotoKb" />
           </div>
         </transition-group>
@@ -19,7 +19,7 @@
         <button class="an-clear" @click.stop="clear">清空</button>
       </div>
       <transition-group v-show="!collapsed" name="an" tag="div" class="an-float-body">
-        <div v-for="it in nonCritItems" :key="it.id" class="an-card" :class="it.alarm.lv">
+        <div v-for="it in nonCritItems" :key="it.id" class="an-card" :class="it.alarm.level">
           <AlarmCard :it="it" @close="dismiss(it.id)" @feedback="openFeedback(it)" @kb="gotoKb" />
         </div>
       </transition-group>
@@ -29,7 +29,7 @@
     <div v-if="feedbackItem" class="an-mask" @click.self="feedbackItem = null">
       <div class="an-feedback">
         <div class="an-fb-head">处理反馈 · 沉淀经验</div>
-        <div class="an-fb-subj">{{ feedbackItem.alarm.sys }} — {{ feedbackItem.alarm.desc }}</div>
+        <div class="an-fb-subj">{{ feedbackItem.alarm.system }} — {{ feedbackItem.alarm.message }}</div>
         <div class="an-fb-row">
           <span class="an-fb-label">处理结果</span>
           <div class="an-fb-tags">
@@ -79,9 +79,9 @@ const notifier = useAlarmNotifier()
 const { loading: saving } = useAsyncTask(async () => {})
 
 const items = computed(() => notifier.items)
-const hasCrit = computed(() => items.value.some((i) => i.alarm.lv === 'crit'))
-const critItems = computed(() => items.value.filter((i) => i.alarm.lv === 'crit'))
-const nonCritItems = computed(() => items.value.filter((i) => i.alarm.lv !== 'crit'))
+const hasCrit = computed(() => items.value.some((i) => i.alarm.level === 'crit'))
+const critItems = computed(() => items.value.filter((i) => i.alarm.level === 'crit'))
+const nonCritItems = computed(() => items.value.filter((i) => i.alarm.level !== 'crit'))
 
 const collapsed = ref(false)
 const feedbackItem = ref<AlarmNotificationItem | null>(null)

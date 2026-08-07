@@ -141,32 +141,37 @@ export interface EquipmentMetrics {
 }
 
 /* ===== 告警 ===== */
+/** 后端活跃告警返回结构 (GET /api/alarms/active) */
 export interface Alarm {
-  id?: string
-  lv: 'crit' | 'warn' | 'info'
-  sys: string
-  desc: string
-  state: string
-  ts?: string
+  /** 告警级别 */
+  level: 'crit' | 'warn' | 'info'
+  /** 所属系统/子系统 */
+  system: string
+  /** 告警描述 */
+  message: string
+  /** 告警状态: 待确认/处理中/已确认/已关闭/自动消警 等 */
+  status: string
+  /** 触发时间 (HH:mm 或 ISO) */
+  time: string
+  /** 责任人/处理人 */
   owner?: string
-  // 视图层展示字段 (与后端告警实体对齐, 可选以兼容扁平结构)
-  level?: 'crit' | 'warn' | 'info'
-  message?: string
-  title?: string
+  /** 可选扩展字段 */
   source?: string
   domain?: string
-  time?: string
+  title?: string
+  /** 创建时间 (ISO) */
   created_at?: string
-  status?: string
-  description?: string
+  /** 内部 ID (后端可能不返回) */
+  id?: string
 }
+
+/** 告警中心聚合视图 */
 export interface AlarmCenter {
   convergence: { raw: number; converged: number; rate: number }
   rules: string[]
   trend: { id: string; pred: string; conf: number; sug: string }[]
   active: Alarm[]
   sla: { mttaMin: number; mttrMin: number; autoCloseRate: number }
-  /** 运维知识面板：事件→问题→风险 闭环 / 智能趋势告警 */
   knowledge?: PowerKnowledge
 }
 
@@ -201,19 +206,21 @@ export interface AlarmEngineState {
 }
 
 /* ===== 告警持久化 ===== */
-/** 告警事件 — 规则触发后的生命周期记录 */
+/** 告警事件 — 规则触发后的生命周期记录 (告警历史/持久化) */
 export interface AlarmEvent {
   id: string
   ruleId: string
   ruleName: string
   metric: string
-  sys: string
-  lv: 'crit' | 'warn' | 'info'
-  desc: string
+  /** 统一字段名：与 Alarm 保持一致 */
+  level: 'crit' | 'warn' | 'info'
+  system: string
+  message: string
   value: number
   threshold: number
   unit?: string
-  state: 'active' | 'acknowledged' | 'resolved' | 'suppressed'
+  /** 生命周期状态 */
+  status: 'active' | 'acknowledged' | 'resolved' | 'suppressed'
   triggeredAt: string
   acknowledgedAt?: string
   acknowledgedBy?: string
@@ -221,24 +228,21 @@ export interface AlarmEvent {
   resolvedBy?: string
   note?: string
   autoResolved: boolean
-  escalationCount: number // 升级次数
-  // 视图层兼容字段
-  level?: 'crit' | 'warn' | 'info'
-  message?: string
-  title?: string
+  escalationCount: number
+  /** 兼容视图字段 */
   source?: string
   domain?: string
+  title?: string
   time?: string
   created_at?: string
-  status?: string
-  description?: string
+  owner?: string
 }
 
 /** 告警历史查询参数 */
 export interface AlarmHistoryQuery {
-  sys?: string
-  lv?: string
-  state?: string
+  system?: string
+  level?: string
+  status?: string
   from?: string
   to?: string
   page?: number
@@ -1717,6 +1721,10 @@ export interface KnowledgeItem {
   owner: string
   hot: boolean
   version: number
+  reviewStatus?: string // pending / approved / rejected
+  reviewer?: string
+  reviewedAt?: string
+  reviewNote?: string
   createdAt?: string
   updatedAt?: string
 }

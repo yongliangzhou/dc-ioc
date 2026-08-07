@@ -8,24 +8,29 @@ import {
 } from '@/api'
 import type { AlarmRuleDef, AlarmEvent, Alarm, AlarmEngineState } from '@/types'
 
-/** 后端告警摘要 (Alarm) 与生命周期事件 (AlarmEvent) 字段差异较大,
- *  这里把摘要归一化为事件模型以复用 store 统一处理逻辑 */
+/** 后端告警摘要 -> 告警事件模型映射 */
 function toAlarmEvent(a: Alarm): AlarmEvent {
   return {
-    id: a.ts != null ? String(a.ts) : a.sys,
+    id: a.id ?? `${a.system}:${a.time}:${a.message}`.slice(0, 64),
     ruleId: '',
-    ruleName: a.sys,
-    metric: a.sys,
-    sys: a.sys,
-    lv: a.lv,
-    desc: a.desc,
+    ruleName: a.system,
+    metric: a.system,
+    level: a.level,
+    system: a.system,
+    message: a.message,
     value: 0,
     threshold: 0,
     unit: undefined,
-    state: (a.state ?? 'active') as AlarmEvent['state'],
-    triggeredAt: a.ts ?? new Date().toISOString(),
+    status: a.status as AlarmEvent['status'],
+    triggeredAt: a.created_at ?? a.time ?? new Date().toISOString(),
     autoResolved: false,
     escalationCount: 0,
+    source: a.source,
+    domain: a.domain,
+    title: a.title,
+    time: a.time,
+    created_at: a.created_at,
+    owner: a.owner,
   }
 }
 
@@ -76,11 +81,11 @@ export const useAlarmsStore = defineStore('alarms', {
     },
     async ack(id: string) {
       const prev = this.activeAlarms.find((a) => a.id === id)
-      if (prev) prev.state = '已确认' as unknown as AlarmEvent['state'] // 乐观更新
+      if (prev) prev.status = 'acknowledged'
       try {
         await ackActiveAlarm(id)
       } catch (e) {
-        if (prev) prev.state = '待确认' as unknown as AlarmEvent['state'] // 回滚
+        if (prev) prev.status = 'active'
         throw e
       }
     },

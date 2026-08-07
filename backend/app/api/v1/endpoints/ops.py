@@ -10,6 +10,8 @@ from app.services import dc_aggregator as agg
 from app.services import capacity_forecast, energy_advice, equipment_health
 from app.crud import maintenance as mrec
 from app.schemas import maintenance as maintenance_schema
+from app.crud import energy_advice as energy_advice_crud
+from app.schemas import energy_advice as energy_advice_schema
 from app.core.deps import require_role
 
 router = APIRouter()
@@ -101,6 +103,21 @@ def energy(db: Session = Depends(get_db)):
     return base
 
 
+@router.get("/energy/advice", summary="Energy saving advice adopt records")
+def list_energy_advice(action: str = Query("", alias="action"), db: Session = Depends(get_db)):
+    records = energy_advice_crud.list_recent(db, action=action or None)
+    return {"records": records, "stats": energy_advice_crud.stats(db)}
+
+
+@router.post("/energy/advice", summary="Adopt / ignore energy saving advice",
+             dependencies=[Depends(require_role("admin", "operator"))])
+def adopt_energy_advice(payload: energy_advice_schema.EnergyAdviceAdoptIn,
+                        db: Session = Depends(get_db)):
+    data = payload.model_dump(exclude_none=True)
+    rec = energy_advice_crud.create(db, data=data)
+    return rec
+
+
 @router.get("/equipment-health", summary="Equipment health score")
 def equipment_health_():
     return equipment_health.build_equipment_health()
@@ -148,3 +165,43 @@ def update_maintenance_record(rid: int, payload: maintenance_schema.MaintenanceR
 def delete_maintenance_record(rid: int, db: Session = Depends(get_db)):
     if not mrec.delete(db, rid):
         raise HTTPException(status_code=404, detail="维保记录不存在")
+
+
+# ===== 维保计划 CRUD (批次补强) =====
+@router.get("/maintain/plans", summary="Maintenance plans (user-managed)")
+def list_maintenance_plans(db: Session = Depends(get_db),
+                            status: str = Query("", alias="status")):
+    plans = mrec.list_plans(db, status=status)
+    return {"plans": plans, "total": mrec.count_plans(db, status=status)}
+
+
+@router.post("/maintain/plans", summary="Create maintenance plan",
+             dependencies=[Depends(require_role("admin", "operator"))])
+def create_maintenance_plan(payload: maintenance_schema.MaintenancePlanCreate,
+                            db: Session = Depends(get_db)):
+    return mrec.create_plan(db, payload.model_dump(exclude_none=True))
+
+
+@router.get("/maintain/plans/{pid}", summary="Maintenance plan detail")
+def get_maintenance_plan(pid: int, db: Session = Depends(get_db)):
+    obj = mrec.get_plan(db, pid)
+    if not obj:
+        raise HTTPException(status_code=404, detail="维保计划不存在")
+    return obj
+
+
+@router.put("/maintain/plans/{pid}", summary="Update maintenance plan",
+            dependencies=[Depends(require_role("admin", "operator"))])
+def update_maintenance_plan(pid: int, payload: maintenance_schema.MaintenancePlanUpdate,
+                            db: Session = Depends(get_db)):
+    obj = mrec.update_plan(db, pid, payload.model_dump(exclude_none=True))
+    if not obj:
+        raise HTTPException(status_code=404, detail="维保计划不存在")
+    return obj
+
+
+@router.delete("/maintain/plans/{pid}", summary="Delete maintenance plan", status_code=204,
+               dependencies=[Depends(require_role("admin", "operator"))])
+def delete_maintenance_plan(pid: int, db: Session = Depends(get_db)):
+    if not mrec.delete_plan(db, pid):
+        raise HTTPException(status_code=404, detail="维保计划不存在")

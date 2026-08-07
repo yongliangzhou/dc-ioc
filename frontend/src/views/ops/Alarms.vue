@@ -265,13 +265,13 @@
           <tbody>
             <tr v-for="evt in history.items" :key="evt.id">
               <td>
-                <span class="tag" :class="lvClass(evt.lv)">{{ lvText(evt.lv) }}</span>
+                <span class="tag" :class="lvClass(evt.level)">{{ lvText(evt.level) }}</span>
               </td>
               <td>
-                <span class="sys-badge">{{ evt.sys }}</span>
+                <span class="sys-badge">{{ evt.system }}</span>
               </td>
               <td class="desc-cell">
-                {{ evt.desc }}
+                {{ evt.message }}
                 <div class="meta mono" style="font-size: 9px">
                   {{ evt.metric }}: {{ evt.value }}{{ evt.unit }} → 阈值 {{ evt.threshold
                   }}{{ evt.unit }}
@@ -279,8 +279,8 @@
               </td>
               <td class="mono" style="font-size: 11px">{{ evt.triggeredAt }}</td>
               <td>
-                <span class="tag" :class="stateTagClass(evt.state)">{{
-                  stateLabel(evt.state)
+                <span class="tag" :class="stateTagClass(evt.status)">{{
+                  stateLabel(evt.status)
                 }}</span>
               </td>
               <td class="mono" style="font-size: 11px">{{ evt.resolvedAt ?? '—' }}</td>
@@ -322,7 +322,7 @@
     <transition name="fade">
       <div v-if="relModalOpen" class="modal-mask" @click.self="relModalOpen = false">
         <div class="modal">
-          <div class="modal-h">关联处置预案 · {{ relAlarm?.sys }}</div>
+          <div class="modal-h">关联处置预案 · {{ relAlarm?.system }}</div>
           <div class="rel-list">
             <div class="rel-item" v-for="kb in relRunbooks" :key="kb.id">
               <div class="rel-top">
@@ -350,8 +350,8 @@
     <transition name="fade">
       <div v-if="fbModalOpen" class="modal-mask" @click.self="fbModalOpen = false">
         <div class="modal fb-modal">
-          <div class="modal-h">处理反馈 · 经验沉淀 · {{ fbAlarm?.sys }}</div>
-          <div class="fb-subj">{{ fbAlarm?.desc }}</div>
+          <div class="modal-h">处理反馈 · 经验沉淀 · {{ fbAlarm?.system }}</div>
+          <div class="fb-subj">{{ fbAlarm?.message }}</div>
 
           <!-- 智能匹配的场景化根因 / 排查 / 修复 -->
           <div class="fb-scn" v-if="fbScenario">
@@ -438,13 +438,14 @@ import {
   resolveAlarm,
   toggleAlarmRule,
   getRelatedRunbooks,
+  submitAlarmFeedback,
 } from '@/api'
 import MetricCard from '@/components/common/MetricCard.vue'
 import TrendChart from '@/components/charts/TrendChart.vue'
 import type { TrendMetric } from '@/components/charts/TrendChart.vue'
 import type { MetricHistoryPoint } from '@/types'
 import KnowledgePanels from '@/components/KnowledgePanels.vue'
-import KpiCard from '@/components/monitor/KpiCard.vue'
+import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 import { lvClass, lvText } from '@/utils/state'
 import { useTicketsStore } from '@/stores/modules/tickets'
@@ -484,12 +485,12 @@ function showToast(msg: string) {
 function openTicketFromAlarm(alarm: Alarm) {
   currentAlarm.value = alarm
   ticketInitial.value = {
-    title: `[告警转工单] ${alarm.desc}`,
-    sys: alarm.sys,
-    lv: alarm.lv,
+    title: `[告警转工单] ${alarm.message}`,
+    sys: alarm.system,
+    lv: alarm.level,
     owner: alarm.owner ?? '待分配',
-    sla: alarm.lv === 'crit' ? '1h' : alarm.lv === 'warn' ? '4h' : '8h',
-    description: `来源告警系统: ${alarm.sys}\n告警内容: ${alarm.desc}\n触发时间: ${alarm.ts ?? '—'}\n原始状态: ${alarm.state}`,
+    sla: alarm.level === 'crit' ? '1h' : alarm.level === 'warn' ? '4h' : '8h',
+    description: `来源告警系统: ${alarm.system}\n告警内容: ${alarm.message}\n触发时间: ${alarm.time ?? '—'}\n原始状态: ${alarm.status}`,
   }
   ticketModalOpen.value = true
 }
@@ -529,7 +530,7 @@ async function openRunbooks(alarm: Alarm) {
   relLoading.value = true
   try {
     relRunbooks.value = await getRelatedRunbooks({
-      system: alarm.sys,
+      system: alarm.system,
       domain: (alarm as RtAlarm).domain,
       metric: (alarm as RtAlarm).metric,
     })
@@ -580,7 +581,7 @@ function fmtTs(ts: number) {
 }
 
 function openFeedback(alarm: Alarm) {
-  const id = (alarm as RtAlarm).rt ? ((alarm as RtAlarm).id ?? '') : `evt-${alarm.ts}-${alarm.sys}`
+  const id = (alarm as RtAlarm).rt ? ((alarm as RtAlarm).id ?? '') : `evt-${alarm.time}-${alarm.system}`
   fbAlarm.value = alarm
   fbScenario.value = matchScenario(alarm)
   fbTab.value = 'cause'
@@ -599,7 +600,7 @@ async function submitFeedback() {
   if (!fbAlarm.value || !fbResult.value) return
   const id = (fbAlarm.value as RtAlarm).rt
   ? ((fbAlarm.value as RtAlarm).id ?? '')
-    : `evt-${fbAlarm.value.ts}-${fbAlarm.value.sys}`
+    : `evt-${fbAlarm.value.time}-${fbAlarm.value.system}`
   fbSaving.value = true
   try {
     const rec = { result: fbResult.value, note: fbNote.value, ts: Date.now() }
@@ -608,6 +609,17 @@ async function submitFeedback() {
       localStorage.setItem(fbKey(id), JSON.stringify(all))
     } catch {
       /* ignore */
+    }
+    // 后端持久化 (失败不阻断本地闭环)
+    try {
+      await submitAlarmFeedback({
+        alarmId: String(id),
+        system: fbAlarm.value.system || '',
+        result: fbResult.value,
+        note: fbNote.value,
+      })
+    } catch {
+      /* 后端未就绪时忽略, 本地已记录 */
     }
     // 闭环：确认 + 关单
     handleAck(fbAlarm.value)
@@ -690,7 +702,7 @@ const activeCount = computed(() => realtimeLinkage.active.length)
 const sortedActive = computed<Alarm[]>(() => {
   const all = [...realtimeLinkage.active] as Alarm[]
   const order = { crit: 0, warn: 1, info: 2 }
-  return all.sort((x, y) => (order[x.lv as 'crit'] ?? 3) - (order[y.lv as 'crit'] ?? 3))
+  return all.sort((x, y) => (order[x.level as 'crit'] ?? 3) - (order[y.level as 'crit'] ?? 3))
 })
 
 /* ---- 告警操作 (兼容实时联动告警) ---- */
@@ -701,11 +713,11 @@ async function handleAck(alarm: Alarm) {
     return
   }
   try {
-    await acknowledgeAlarm(`evt-${alarm.ts}-${alarm.sys}`, '运维人员')
+    await acknowledgeAlarm(`evt-${alarm.time}-${alarm.system}`, '运维人员')
   } catch (_) {}
   if (a.value) {
     const idx = a.value.active.findIndex((x) => x === alarm)
-    if (idx >= 0) a.value.active[idx] = { ...alarm, state: '已确认' }
+    if (idx >= 0) a.value.active[idx] = { ...alarm, status: 'acknowledged' }
   }
 }
 
@@ -716,10 +728,10 @@ async function handleResolve(alarm: Alarm) {
     return
   }
   try {
-    await resolveAlarm(`evt-${alarm.ts}-${alarm.sys}`, '运维人员')
+    await resolveAlarm(`evt-${alarm.time}-${alarm.system}`, '运维人员')
   } catch (_) {}
   if (a.value) {
-    a.value.active = a.value.active.filter((x) => x !== alarm).concat({ ...alarm, state: '已关闭' })
+    a.value.active = a.value.active.filter((x) => x !== alarm).concat({ ...alarm, status: 'resolved' })
   }
 }
 
@@ -737,21 +749,22 @@ async function loadHistory() {
       items: (a.value?.active ?? []).map((x, i) => ({
         id: `evt-hist-${i}`,
         ruleId: `r-hist-${i}`,
-        ruleName: `规则-${x.sys}`,
-        metric: x.sys,
-        sys: x.sys,
-        lv: x.lv,
-        desc: x.desc,
+        ruleName: `规则-${x.system}`,
+        metric: x.system,
+        level: x.level,
+        system: x.system,
+        message: x.message,
         value: 0,
         threshold: 0,
-        state:
-          x.state === '已关闭'
+        unit: undefined,
+        status:
+          x.status === 'resolved'
             ? ('resolved' as const)
-            : x.state === '已确认'
+            : x.status === 'acknowledged'
               ? ('acknowledged' as const)
               : ('active' as const),
-        triggeredAt: x.ts ?? '',
-        resolvedAt: x.state === '已关闭' ? '2026-07-25 14:30' : undefined,
+        triggeredAt: x.time ?? '',
+        resolvedAt: x.status === 'resolved' ? '2026-07-25 14:30' : undefined,
         autoResolved: false,
         escalationCount: 0,
       })),
@@ -760,22 +773,22 @@ async function loadHistory() {
       limit: 50,
       stats: {
         total24h: (a.value?.active.length ?? 0) + 12,
-        active24h: a.value?.active.filter((x) => x.state !== '已关闭').length ?? 0,
-        resolved24h: a.value?.active.filter((x) => x.state === '已关闭').length ?? 0,
+        active24h: a.value?.active.filter((x) => x.status !== 'resolved').length ?? 0,
+        resolved24h: a.value?.active.filter((x) => x.status === 'resolved').length ?? 0,
         mttaMin: a.value?.sla.mttaMin ?? 15,
         mttrMin: a.value?.sla.mttrMin ?? 30,
         bySystem:
           a.value?.active.reduce(
             (acc, x) => {
-              acc[x.sys] = (acc[x.sys] ?? 0) + 1
+              acc[x.system] = (acc[x.system] ?? 0) + 1
               return acc
             },
             {} as Record<string, number>,
           ) ?? {},
         byLevel: {
-          crit: a.value?.active.filter((x) => x.lv === 'crit').length ?? 0,
-          warn: a.value?.active.filter((x) => x.lv === 'warn').length ?? 0,
-          info: a.value?.active.filter((x) => x.lv === 'info').length ?? 0,
+          crit: a.value?.active.filter((x) => x.level === 'crit').length ?? 0,
+          warn: a.value?.active.filter((x) => x.level === 'warn').length ?? 0,
+          info: a.value?.active.filter((x) => x.level === 'info').length ?? 0,
         },
       },
     }

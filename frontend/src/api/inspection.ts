@@ -77,6 +77,44 @@ export function getInspectionItems(recordId: number): Promise<ItemView[]> {
   return Promise.resolve([])
 }
 
+// ---- 路线写操作 ----
+export interface RouteCreatePayload {
+  code?: string
+  freq: string
+  items?: number
+  last?: string
+  next?: string
+  state?: string
+  note?: string
+}
+export function createInspectionRoute(payload: RouteCreatePayload): Promise<unknown> {
+  return request.post('/api/ops/inspection/routes', payload)
+}
+export function updateInspectionRoute(id: number, payload: Partial<RouteCreatePayload>): Promise<unknown> {
+  return request.put(`/api/ops/inspection/routes/${id}`, payload)
+}
+export function deleteInspectionRoute(id: number): Promise<unknown> {
+  return request.delete(`/api/ops/inspection/routes/${id}`)
+}
+
+// ---- 发现写操作 ----
+export interface FindingCreatePayload {
+  route: string
+  item: string
+  ts?: string
+  lv?: string
+  action?: string
+}
+export function createInspectionFinding(payload: FindingCreatePayload): Promise<unknown> {
+  return request.post('/api/ops/inspection/findings', payload)
+}
+export function updateInspectionFinding(id: number, payload: Partial<FindingCreatePayload>): Promise<unknown> {
+  return request.put(`/api/ops/inspection/findings/${id}`, payload)
+}
+export function deleteInspectionFinding(id: number): Promise<unknown> {
+  return request.delete(`/api/ops/inspection/findings/${id}`)
+}
+
 // 后端 GET /api/ops/inspection 返回 { today: {...}, robot: {...}, routes, findings }
 // 统计从 today 字段派生
 export async function getInspectionStats(): Promise<InspectionStats> {

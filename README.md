@@ -1,6 +1,6 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.7.0** | 生产就绪（网络监控深化 + 代码质量 + 后端全面排查与补齐） | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储）
+> **v0.8.0** | 代码工程化（OpenAPI 代码生成 + 组件库化 + TypeScript 零错误） | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储）
 
 ---
 
@@ -83,12 +83,21 @@ dc-ioc-platform/
 │   ├── .env.staging                   # 预发环境配置
 │   └── .env.prod                      # 生产环境模板
 │
+├── packages/                          # ===== 共享组件库 =====
+│   └── dc-ioc-ui/                     #   @dc-ioc/ui (StatusBadge / AlarmBadge / KpiCard)
+│       ├── package.json               #     独立 npm 包 (Vite library mode)
+│       ├── src/
+│       └── dist/                      #     ESM + UMD + CSS + .d.ts
+│
 ├── frontend/                          # ===== 前端 Vue3+TS+Vite =====
 │   ├── src/
 │   │   ├── App.vue / main.ts          # 入口 (Pinia/Router 挂载 + Token 初始化)
 │   │   ├── api/
 │   │   │   ├── request.ts             #   axios 实例 (Bearer 注入 + 401 自动刷新 + Mock 兜底)
 │   │   │   └── index.ts              #   业务域 API (含 registerUser 自助注册)
+│   │   │   ├── generated/index.ts     #   orval 自动生成 (OpenAPI → TS, 1600+ 行)
+│   │   │   ├── generatedWrapper.ts    #   axios 桥接层 (封装所有 generated API)
+│   │   ├── openapi.json               #   API 契约 (29 端点 / 9 Schema)
 │   │   ├── views/
 │   │   │   ├── auth/Login.vue         #   登录页 (含可选自助注册表单)
 │   │   │   ├── overview/Index.vue     #   IOC 驾驶舱总览
@@ -489,7 +498,9 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 | `axios` | HTTP 客户端 |
 | `lucide-vue-next` | SVG 图标库 |
 | `dayjs` | 日期处理 |
+| `@dc-ioc/ui` | 共享 UI 组件库 (StatusBadge / AlarmBadge / KpiCard) |
 | `vite` `vue-tsc` `typescript` | 构建与类型 |
+| `orval` | OpenAPI → TypeScript 代码生成 (devDep) |
 | `sass` | 样式预处理 |
 
 ---
@@ -521,6 +532,16 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 | `BACKUP_ALERT_WEBHOOK` | 备份成功/失败告警 webhook（可选） | 空 |
 
 > 缓存 TTL、连续聚合刷新周期等以代码内常量为准（dashboard 缓存 30s；详见 `deploy/cache_strategy.md`）。
+
+### v0.8 — 代码工程化 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **Type 系统统一** | `frontend/src/types/index.ts` `stores/modules/alarms.ts` `engine/realtimeLinkage.ts` | 告警类型字段重命名 (lv→level / sys→system / desc→message / state→status / ts→time)，消除 86+ vue-tsc 类型错误，`vue-tsc --noEmit` 零错误通过 |
+| **OpenAPI 代码生成** | `frontend/openapi.json` `orval.config.js` `src/api/generated/index.ts` `src/api/generatedWrapper.ts` | 后端 API 契约 (29 端点 / 9 Schema) → orval 自动生成 1604 行 TypeScript 客户端，含 axios 桥接层 (`import { api } from '@/api/generatedWrapper'`) |
+| **组件库化** | `packages/dc-ioc-ui/` | StatusBadge / AlarmBadge / KpiCard 抽取为独立内部 npm 包 `@dc-ioc/ui`，Vite library mode 构建 (ESM + UMD + CSS)，24 个引用文件批量迁移，自包含样式 (零外部 class 依赖) |
+| **Pre-commit 检查** | `frontend/scripts/check-templates.mjs` `.husky/pre-commit` | 提交前自动扫描 Vue SFC 模板语法 (多行 @click/@change 等)，从根源预防 CI 构建失败 |
+| **Docker HMR 修复** | `frontend/Dockerfile` `deploy/docker-compose.dev.yml` | Vite `--poll` 轮询模式解决 WSL2/Docker 卷挂载 inotify 不触发问题，`.vite` 缓存卷持久化，前后端热重载配置完整 |
 
 ### AI 运维助手大模型接入 (`LLM_API_KEY` 等)
 
@@ -607,6 +628,12 @@ docker compose restart backend
 # 前端改源码后清除 Vite 缓存 (HMR 在 Docker 挂载下不生效时)
 docker exec dc-ioc-platform-frontend-1 rm -rf /app/node_modules/.vite
 docker restart dc-ioc-platform-frontend-1
+
+# 修改 @dc-ioc/ui 组件后重新构建 (Docker 会自动挂载 dist/)
+cd packages/dc-ioc-ui && npm run build
+
+# 重新生成 API 客户端 (openapi.json 有变更时)
+cd frontend && npm run generate:api
 
 # 重置全部数据 (⚠ 危险)
 docker compose down -v

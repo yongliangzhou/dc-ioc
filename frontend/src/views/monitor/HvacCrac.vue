@@ -386,7 +386,7 @@
         <div v-for="a in cracAlarms" :key="a.id" class="alarm-item">
           <AlarmBadge :level="a.level || 'warning'" />
           <span class="alarm-msg"
-            >{{ a.message || a.title || a.description || '-' }}
+            >{{ a.message || a.title || '-' }}
             <em class="alarm-tag">[{{ a.source || a.domain || '-' }}]</em></span
           >
           <span class="alarm-time">{{ formatTime(a.time || a.created_at) }}</span>
@@ -416,9 +416,9 @@ import type { CracSummary, CracView, CracRoomGroupView, CracTrends } from '@/api
 import type { Alarm } from '@/types'
 import type { LineSeriesOption } from 'echarts'
 import { CHART_COLORS } from '@/assets/echarts-theme'
-import KpiCard from '@/components/monitor/KpiCard.vue'
-import StatusBadge from '@/components/monitor/StatusBadge.vue'
-import AlarmBadge from '@/components/monitor/AlarmBadge.vue'
+import { KpiCard } from '@dc-ioc/ui'
+import { StatusBadge } from '@dc-ioc/ui'
+import { AlarmBadge } from '@dc-ioc/ui'
 import GroupCard from '@/components/monitor/GroupCard.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import DeviceTable from '@/components/monitor/DeviceTable.vue'

@@ -31,6 +31,32 @@ export async function getRisks(): Promise<RiskView[]> {
   return (resp.matrix as RiskView[]) ?? []
 }
 
+// ---- 风险项写操作 ----
+export interface RiskCreate {
+  risk: string
+  cat?: string
+  prob?: number
+  impact?: number
+  ctrl?: string
+  owner?: string
+  code?: string
+  closed?: number
+}
+export function createRisk(payload: RiskCreate): Promise<unknown> {
+  return request.post('/api/ops/risk', payload)
+}
+export function updateRisk(id: number, payload: Partial<RiskCreate>): Promise<unknown> {
+  return request.put(`/api/ops/risk/${id}`, payload)
+}
+export function deleteRisk(id: number): Promise<unknown> {
+  return request.delete(`/api/ops/risk/${id}`)
+}
+
+// 基于采集数据 + 活跃告警自动分析生成风险提示 (草稿)
+export function analyzeRisk(): Promise<unknown> {
+  return request.post('/api/ops/risk/analyze', {})
+}
+
 export async function getRiskStats(): Promise<RiskStats> {
   const resp = await request.get<unknown, RawItem>('/api/ops/risk')
   const s = (resp.stats as RawItem) ?? {}

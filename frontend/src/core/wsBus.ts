@@ -20,8 +20,15 @@ let destroyed = false
 let started = false
 
 function buildUrl(): string {
-  const base = import.meta.env.VITE_WS_URL || `ws://${window.location.hostname}:8000`
-  return `${base}/ws`
+  // 优先用环境变量 (如独立 WS 服务地址)
+  const envUrl = import.meta.env.VITE_WS_URL
+  if (envUrl) return `${envUrl}/ws`
+  // dev/prod 统一走同源 /ws:
+  //   dev  → vite proxy (vite.config.ts 已配 /ws 代理到 backend:8000)
+  //   prod → nginx 反代 /ws → backend:8000
+  // 避免直连 8000 端口 (docker 环境下后端未映射端口或端口不通时 WS 失败)
+  const proto = window.location.protocol === 'https:' ? 'wss' : 'ws'
+  return `${proto}://${window.location.host}/ws`
 }
 
 function dispatch(raw: string) {

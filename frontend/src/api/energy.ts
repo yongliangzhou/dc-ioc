@@ -1,4 +1,5 @@
 import request from './request'
+import type { EnergyAdvice, EnergySuggestion, EnergyEfficiency } from '@/types'
 
 // ===== Energy 能耗分析 =====
 
@@ -16,6 +17,11 @@ export interface EnergyOverview {
   todayItKwh: number | null
   todayCoolingKwh: number | null
   weekTrend: EnergyTrend[]
+  loadForecast?: { h: number; actual: number | null; pred: number }[]
+  aiSaving?: { enabled?: boolean; algo?: string; monthSaveKwh?: number; saveRate?: number }
+  breakdown?: { id: string; kw: number; pct: number }[]
+  carbon?: { greenPct?: number; pv?: string; monthCO2?: number }
+  advice?: EnergyAdvice
 }
 
 // ---- 后端/模拟原始结构: generated.energy() ----
@@ -60,9 +66,54 @@ function mapEnergy(raw: RawEnergy): EnergyOverview {
     todayItKwh: itKwh ?? null,
     todayCoolingKwh: coolKwh ?? null,
     weekTrend,
+    loadForecast: raw.loadForecast ?? [],
+    aiSaving: raw.aiSaving,
+    breakdown: raw.breakdown ?? [],
+    carbon: raw.carbon,
+    advice: (raw as { advice?: EnergyAdvice }).advice,
   }
 }
 
 export function getEnergyOverview(): Promise<EnergyOverview> {
   return request.get<unknown, RawEnergy>('/api/ops/energy').then(mapEnergy)
+}
+
+export interface EnergyAdviceAdoptIn {
+  suggestionId: string
+  title: string
+  priority: string
+  savingKw: number
+  savingPct: number
+  detail: string
+  basis: string
+  action: 'adopt' | 'ignore'
+  note?: string
+  pueCurrent?: number | null
+  pueTarget?: number | null
+  user?: string
+}
+
+export interface EnergyAdviceAdoptRecord {
+  id: number
+  suggestionId: string
+  title: string
+  priority: string
+  savingKw: number
+  savingPct: number
+  detail: string
+  basis: string
+  action: string
+  note: string
+  pueCurrent: number
+  pueTarget: number
+  user: string
+  createdAt: string
+}
+
+export function adoptEnergyAdvice(payload: EnergyAdviceAdoptIn): Promise<EnergyAdviceAdoptRecord> {
+  return request.post<EnergyAdviceAdoptRecord>('/api/ops/energy/advice', payload)
+}
+
+export function getEnergyAdvice(action = ''): Promise<{ records: EnergyAdviceAdoptRecord[]; stats: { total: number; adopted: number; ignored: number; adoptedSavingKw: number } }> {
+  return request.get('/api/ops/energy/advice', { params: action ? { action } : {} })
 }

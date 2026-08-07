@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, get_db, require_role
 from app.crud import knowledge as kb_crud
 from app.models.user import User
-from app.schemas.knowledge import KnowledgeCreate, KnowledgeOut, KnowledgeUpdate, KnowledgeImportOut
+from app.schemas.knowledge import KnowledgeCreate, KnowledgeOut, KnowledgeUpdate, KnowledgeImportOut, KnowledgeReviewIn
 from app.services import manual_import as mi
 
 router = APIRouter()
@@ -106,6 +106,8 @@ async def import_manual(
             if p["title"] in existing_titles:
                 skipped += 1
                 continue
+            # 导入切分自动生成的内容进入待审核, 需人工确认后才正式入库
+            p["reviewStatus"] = "pending"
             item = kb_crud.create(db, data=p)
             created.append(item)
             existing_titles.add(item["title"])
@@ -147,3 +149,33 @@ def delete_knowledge(
 ):
     if not kb_crud.delete(db, item_id):
         raise HTTPException(404, "知识条目不存在")
+
+
+@router.get("/review/pending", summary="待审核知识条目列表(导入切分后需人工确认)")
+def review_pending(
+    db: Session = Depends(get_db),
+    _u: User = Depends(require_role("admin", "operator")),
+):
+    """人工审核工作台：返回所有 pending 状态的知识条目。"""
+    return {"total": kb_crud.count(db, review_status="pending"), "items": kb_crud.list_pending(db)}
+
+
+@router.post("/{item_id}/review", response_model=KnowledgeOut, summary="人工审核(通过/驳回)")
+def review_knowledge(
+    item_id: str,
+    req: KnowledgeReviewIn,
+    db: Session = Depends(get_db),
+    _u: User = Depends(require_role("admin", "operator")),
+):
+    """对一条知识条目做审核：status=approved 通过入库 / status=rejected 驳回。"""
+    if req.status not in ("approved", "rejected"):
+        raise HTTPException(400, "status 必须为 approved 或 rejected")
+    item = kb_crud.review(db, item_id, status=req.status, note=req.note, reviewer=req.reviewer or _u.username)
+    if not item:
+        raise HTTPException(404, "知识条目不存在")
+    return item
+
+
+# 兼容 camelCase 查询参数 reviewStatus 的过滤别名
+def _patch_list_query():  # noqa: D401 - 占位, 保持向后兼容
+    return None

@@ -125,7 +125,7 @@
 import type { ErrorLike } from '@/utils/error'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { AlarmRuleDef, AlarmRuleStatus } from '@/types'
+import type { AlarmRuleDef } from '@/types'
 import {
   getAlarmRules,
   createAlarmRule,
@@ -219,8 +219,15 @@ async function save() {
     else await createAlarmRule(payload)
     editing.value = false
     await loadAll()
+    toast.success(tl('已保存'))
   } catch (e: unknown) {
-    err.value = (e as ErrorLike)?.response?.data?.message || tl('保存失败')
+    const raw = (e as ErrorLike)?.response?.data?.message || (e as ErrorLike)?.detail || (e as ErrorLike)?.message || ''
+    if (/404|405|Not Found|Method Not Allowed/.test(String(raw))) {
+      err.value = tl('后端告警规则接口未实现') + ` (${tl('演示模式')})`
+      console.warn('[alarm-rule-save] 后端接口不可达，已降级使用前端演示内存存储：', raw)
+    } else {
+      err.value = raw || tl('保存失败')
+    }
   } finally {
     saving.value = false
   }
@@ -228,18 +235,14 @@ async function save() {
 
 async function toggle(r: AlarmRuleDef) {
   if (busy.value['t' + r.id]) return
-  const next: AlarmRuleStatus = r.enabled ? 'disabled' : 'enabled'
-  const prev = r.status
   const prevEnabled = r.enabled
   r.enabled = !r.enabled
-  r.status = next
   busy.value['t' + r.id] = true
   try {
-    await toggleAlarmRule(String(r.id), next)
+    await toggleAlarmRule(String(r.id))
     toast.success(r.enabled ? tl('已启用规则') : tl('已禁用规则'))
   } catch (e: unknown) {
     r.enabled = prevEnabled
-    r.status = prev
     toast.error(
       (e as ErrorLike)?.detail ||
         (e as ErrorLike)?.response?.data?.detail ||
@@ -413,9 +416,12 @@ onMounted(loadAll)
 .drawer-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(6, 11, 20, 0.6);
+  backdrop-filter: blur(2px);
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+  padding: 6vh 16px;
   z-index: 40;
 }
 .drawer {

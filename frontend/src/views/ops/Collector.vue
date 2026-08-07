@@ -38,6 +38,9 @@
         />
         <button class="btn-sm" @click="load">{{ tl('查询') }}</button>
         <button class="btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
+        <button class="btn-sm primary" :disabled="!selected" @click="metricDefsOpen = true">
+          {{ tl('测点管理') }}
+        </button>
         <span class="muted" style="margin-left: auto; font-size: 11px">{{
           loading ? '刷新中…' : `最近刷新 ${lastRefresh}`
         }}</span>
@@ -61,6 +64,13 @@
       :loading="modalLoading"
       @close="closeMetrics"
       @refresh="loadModalMetrics"
+    />
+
+    <!-- 测点定义管理 (增删改查) -->
+    <CollectorMetricDefsModal
+      v-if="metricDefsOpen && selected"
+      :device="selected"
+      @close="metricDefsOpen = false"
     />
 
     <!-- 添加 / 编辑设备表单 (Presentational 合并) -->
@@ -135,8 +145,9 @@ import type {
 } from '@/types'
 import CollectorDeviceTable from './components/CollectorDeviceTable.vue'
 import CollectorMetricsModal from './components/CollectorMetricsModal.vue'
+import CollectorMetricDefsModal from './components/CollectorMetricDefsModal.vue'
 import CollectorDeviceForm from './components/CollectorDeviceForm.vue'
-import KpiCard from '@/components/monitor/KpiCard.vue'
+import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 
 // ===================== 容器层: 状态 + 数据 + API =====================
@@ -145,6 +156,7 @@ const loading = ref(false)
 const lastRefresh = ref('--:--:--')
 const filters = reactive<{ domain: string; protocol: string }>({ domain: '', protocol: '' })
 const selected = ref<ExternalDeviceView | null>(null)
+const metricDefsOpen = ref(false)
 
 // 查看测点 (Presentational 子组件接收)
 const modalOpen = ref(false)
@@ -222,6 +234,9 @@ async function loadModalMetrics() {
 
 function closeMetrics() {
   modalOpen.value = false
+  // 必须清空 modalDevice: CollectorMetricsModal 的显示条件是 v-if="device",
+  // 若仅置 modalOpen=false 而 device 仍非 null, 弹窗不会关闭 (关闭按钮失效根因)
+  modalDevice.value = null
 }
 
 // 添加

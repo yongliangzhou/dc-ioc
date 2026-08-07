@@ -16,12 +16,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Body, Depends, Header, HTTPException
 from pydantic import ValidationError
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, get_db, require_role
 from app.crud import external as ext_crud
 from app.db.session import SessionLocal
 from app.models.user import User
@@ -279,6 +279,49 @@ def device_metrics_realtime(device_id: str, _user: User = Depends(get_current_us
         online=ext_crud.is_online(device_id),
         points=points,
     )
+
+
+# ===== 测点定义 CRUD (前端「测点增删改查」) =====
+@router.get("/devices/{device_id}/metric-defs", summary="某设备测点定义列表")
+def list_metric_defs(device_id: str, db: Session = Depends(get_db), _u: User = Depends(get_current_user)):
+    if db is None:
+        return []
+    return ext_crud.list_metric_defs(db, device_id)
+
+
+@router.post("/devices/{device_id}/metric-defs", summary="新增测点定义",
+             dependencies=[Depends(require_role("admin", "operator"))])
+def create_metric_def(device_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
+    name = (payload.get("metricName") or "").strip()
+    if not name:
+        raise HTTPException(422, "metricName 为必填")
+    data = {
+        "device_id": device_id,
+        "metric_name": name,
+        "label": payload.get("label", ""),
+        "unit": payload.get("unit", ""),
+        "data_type": payload.get("dataType", "float"),
+        "description": payload.get("description", ""),
+        "enabled": payload.get("enabled", True),
+    }
+    return ext_crud.create_metric_def(db, data=data)
+
+
+@router.put("/devices/{device_id}/metric-defs/{mid}", summary="更新测点定义",
+            dependencies=[Depends(require_role("admin", "operator"))])
+def update_metric_def(device_id: str, mid: int, payload: dict = Body(...), db: Session = Depends(get_db)):
+    data = {k: v for k, v in payload.items() if v is not None}
+    row = ext_crud.update_metric_def(db, mid, data=data)
+    if not row:
+        raise HTTPException(404, "测点定义不存在")
+    return row
+
+
+@router.delete("/devices/{device_id}/metric-defs/{mid}", status_code=204, summary="删除测点定义",
+               dependencies=[Depends(require_role("admin", "operator"))])
+def delete_metric_def(device_id: str, mid: int, db: Session = Depends(get_db)):
+    if not ext_crud.delete_metric_def(db, mid):
+        raise HTTPException(404, "测点定义不存在")
 
 
 @router.get("/devices/{device_id}/metrics/history", response_model=MetricHistoryResponse, summary="某设备历史测点 (趋势)")

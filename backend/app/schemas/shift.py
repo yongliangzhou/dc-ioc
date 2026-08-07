@@ -39,3 +39,45 @@ class ShiftOut(BaseModel):
     note: str = ""
     createdAt: Any = None
     updatedAt: Any = None
+
+
+# ===== 交接班 =====
+class HandoverItemIn(BaseModel):
+    level: str = "normal"  # normal / warn / critical
+    text: str = ""
+
+
+class HandoverCreate(BaseModel):
+    shiftDate: str = ""
+    shiftType: str = "day"
+    fromUser: str = ""
+    toUser: str = ""
+    items: str = "[]"   # JSON 串 [{level, text}]
+    note: str = ""
+    status: str = "pending"
+
+
+class HandoverUpdate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    shiftDate: Optional[str] = None
+    shiftType: Optional[str] = None
+    fromUser: Optional[str] = None
+    toUser: Optional[str] = None
+    items: Optional[str] = None
+    note: Optional[str] = None
+    status: Optional[str] = None
+
+
+class HandoverOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    shiftDate: str = ""
+    shiftType: str = "day"
+    fromUser: str = ""
+    toUser: str = ""
+    items: str = "[]"
+    note: str = ""
+    status: str = "pending"
+    createdAt: Any = None
+    updatedAt: Any = None
+

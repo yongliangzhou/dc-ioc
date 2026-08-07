@@ -64,6 +64,8 @@ services:
 
   frontend:
     build:
+      context: .                          # 项目根目录 (确保 COPY 能访问 packages/)
+      dockerfile: ./frontend/Dockerfile
       target: dev
     ports:
       - "5173:5173"
@@ -72,7 +74,12 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
-    command: npm run dev -- --host 0.0.0.0
+      - ./packages:/packages              # @dc-ioc/ui 源码 (file: 协议解析: /app/../packages/dc-ioc-ui)
+      - frontend-vite-cache:/app/node_modules/.vite
+    # 启动前自动重建 @dc-ioc/ui 软链接 + 确保 dist/ 存在
+    # (Windows Docker 卷挂载 ./packages:/packages 会覆盖 build 阶段的 symlink 和 dist/,
+    #  导致 vite 找不到 @dc-ioc/ui — 即用户反馈"必须手动 docker exec ln -s"的根因)
+    command: sh -c "rm -f /app/node_modules/@dc-ioc/ui && ln -s /packages/dc-ioc-ui /app/node_modules/@dc-ioc/ui && ( [ -d /packages/dc-ioc-ui/dist ] || (cd /packages/dc-ioc-ui && npx vite build) ) && npm run dev -- --host 0.0.0.0"
     depends_on:
       - backend
 
@@ -91,3 +98,4 @@ services:
 
 volumes:
   backend-venv:
+  frontend-vite-cache:
