@@ -170,15 +170,14 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          dockerfile: ./frontend/Dockerfile
-          push: false
-          load: true
-          tags: dc-ioc-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        run: >
+          docker buildx build
+          --file frontend/Dockerfile
+          --tag dc-ioc-frontend:latest
+          --load
+          --cache-from type=gha
+          --cache-to type=gha,mode=max
+          .
 
       - name: Trivy vulnerability scan (backend)
         uses: aquasecurity/trivy-action@master
