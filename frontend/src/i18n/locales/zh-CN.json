@@ -78,7 +78,11 @@
     "networkPing": "Ping 延迟监测",
     "networkBandwidth": "带宽利用率 TopN",
     "multiDC": "多 DC 聚合视图",
-    "facilityMonitoring": "设施监控"
+    "facilityMonitoring": "设施监控",
+    "thingModel": "物模型",
+    "datacenter": "数据中心",
+    "datacenterCompare": "数据中心对比",
+    "twin3d": "3D 数字孪生"
   },
   "admin": {
     "title": "系统管理",
@@ -1670,5 +1674,36 @@
   "（依据手册": "（依据手册",
   "（手册": "（手册",
   "（手册）": "（手册）",
-  "）": "）"
+  "）": "）",
+  "placeholder": {
+    "sub": "模块建设中（阶段占位）",
+    "title": "功能占位",
+    "desc": "该模块尚在开发阶段，后续版本上线。"
+  },
+  "thingModel": {
+    "title": "物模型管理",
+    "sub": "设备属性 / 服务 / 事件模板定义",
+    "search": "搜索模型 key / 名称",
+    "newModel": "新建物模型",
+    "property": "属性",
+    "service": "服务",
+    "event": "事件",
+    "identifier": "标识符",
+    "dataType": "数据类型",
+    "unit": "单位",
+    "save": "保存",
+    "delete": "删除",
+    "confirmDelete": "确认删除该物模型？"
+  },
+  "datacenter": {
+    "title": "数据中心管理",
+    "sub": "多数据中心生命周期与切换",
+    "newDc": "新建数据中心",
+    "setCurrent": "设为当前",
+    "current": "当前中心",
+    "region": "地域",
+    "capacity": "容量(kW)",
+    "status": "状态",
+    "compare": "跨中心对比"
+  }
 }

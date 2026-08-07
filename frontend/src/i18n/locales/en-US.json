@@ -77,7 +77,11 @@
     "networkPing": "Ping Latency",
     "networkBandwidth": "Bandwidth Utilization TopN",
     "multiDC": "Multi-DC Aggregation",
-    "facilityMonitoring": "Facility Monitoring"
+    "facilityMonitoring": "Facility Monitoring",
+    "thingModel": "Thing Model",
+    "datacenter": "Data Center",
+    "datacenterCompare": "DC Compare",
+    "twin3d": "3D Digital Twin"
   },
   "admin": {
     "title": "System Admin",
@@ -1610,5 +1614,36 @@
   "暂无设备": "No equipment",
   "暂无液冷设备": "No liquid cooling equipment",
   "周界与内部探测": "Perimeter & Interior Detection",
-  "总览 · 点击进入子系统": "Overview · Click to enter subsystem"
+  "总览 · 点击进入子系统": "Overview · Click to enter subsystem",
+  "placeholder": {
+    "sub": "Module under construction (phase placeholder)",
+    "title": "Feature Placeholder",
+    "desc": "This module is in development and will ship in a later version."
+  },
+  "thingModel": {
+    "title": "Thing Model Management",
+    "sub": "Device property / service / event template definition",
+    "search": "Search model key / name",
+    "newModel": "New Thing Model",
+    "property": "Property",
+    "service": "Service",
+    "event": "Event",
+    "identifier": "Identifier",
+    "dataType": "Data Type",
+    "unit": "Unit",
+    "save": "Save",
+    "delete": "Delete",
+    "confirmDelete": "Delete this thing model?"
+  },
+  "datacenter": {
+    "title": "Data Center Management",
+    "sub": "Multi-DC lifecycle and switching",
+    "newDc": "New Data Center",
+    "setCurrent": "Set Current",
+    "current": "Current",
+    "region": "Region",
+    "capacity": "Capacity (kW)",
+    "status": "Status",
+    "compare": "Cross-DC Compare"
+  }
 }

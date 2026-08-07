@@ -193,11 +193,33 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/ops/Duty.vue'),
         meta: { title: '值班管理', requiredRoles: ['admin', 'operator'] },
       },
+      // Phase 4 · 物模型与多数据中心 (阶段0 占位, 后续阶段实现)
+      {
+        path: 'ops/thing-model',
+        component: () => import('@/views/ops/ThingModelEditor.vue'),
+        meta: { title: '物模型', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/datacenter',
+        component: () => import('@/views/ops/DataCenterManage.vue'),
+        meta: { title: '数据中心管理', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/datacenter/compare',
+        component: () => import('@/views/ops/DataCenterCompare.vue'),
+        meta: { title: '数据中心对比', requiredRoles: ['admin', 'operator'] },
+      },
       // Phase 3 · P2 智能运营域
       {
         path: 'twin/dashboard',
         component: () => import('@/views/twin/TwinDashboard.vue'),
         meta: { title: '数字孪生', requiredRoles: ['admin', 'operator'] },
+      },
+      // Phase 5 · 3D 数字孪生拓扑 (阶段0 占位)
+      {
+        path: 'twin/3d',
+        component: () => import('@/views/twin/Twin3D.vue'),
+        meta: { title: '3D 数字孪生', requiredRoles: ['admin', 'operator'] },
       },
       {
         path: 'analysis/capacity',
