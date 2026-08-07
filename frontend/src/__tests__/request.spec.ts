@@ -6,6 +6,7 @@ vi.mock('@/router', () => ({
 }))
 vi.mock('@/api/mockData', () => ({
   mockForUrl: vi.fn((url: string) => (url === '/api/known' ? { mocked: true } : undefined)),
+  mockWriteForUrl: vi.fn(() => undefined),
 }))
 
 import request from '@/api/request'
