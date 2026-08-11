@@ -1745,7 +1745,20 @@ export interface AssistantRef {
   code: string
   title: string
   type: string
+  /** Dify 召回相关度（本地命中为 None） */
+  score?: number | null
 }
+
+/** Dify RAG 检索层状态（内嵌于 ask 响应） */
+export interface AssistantDifyRetrieval {
+  /** 是否启用 Dify 检索层 */
+  enabled: boolean
+  /** 命中片段数 */
+  retrieved: number
+  /** 失败原因（Dify 调用失败时填充，否则为 null） */
+  error: string | null
+}
+
 export interface AssistantAskResp {
   question: string
   answer: string
@@ -1756,6 +1769,18 @@ export interface AssistantAskResp {
   noMatch: boolean
   /** 配置了大模型但调用失败回退时的可读原因（Key 失效/网络不通/模型不存在等） */
   llmError?: string | null
+  /** Dify RAG 检索层状态 */
+  dify?: AssistantDifyRetrieval | null
+}
+
+/** Dify RAG 检索层诊断信息（内嵌于 status 响应） */
+export interface AssistantDifyStatus {
+  configured: boolean
+  base_url: string
+  dataset_id: string | null
+  reachable: boolean
+  retrieved: number
+  detail: string
 }
 
 /** 大模型接入状态自查响应 (GET /api/ops/assistant/status) */
@@ -1768,6 +1793,8 @@ export interface AssistantStatusResp {
   latency: number | null
   model_available: boolean | null
   detail: string
+  /** Dify RAG 检索层状态 */
+  dify?: AssistantDifyStatus | null
 }
 
 /* ===== 2.3 值班排班 (GET /api/ops/shift) ===== */
