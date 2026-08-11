@@ -26,8 +26,10 @@ def ask_assistant(
 
 @router.get("/status", response_model=AssistantStatusResp)
 def assistant_status(_user=Depends(get_current_user)):
-    """一键自查大模型接入状态：配置 / 可达性 / Key 有效性 / 模型是否存在。"""
-    return assistant_service.check_llm_status()
+    """一键自查大模型接入状态：配置 / 可达性 / Key 有效性 / 模型是否存在，并附带 Dify RAG 层状态。"""
+    data = assistant_service.check_llm_status()
+    data["dify"] = assistant_service.check_dify_status()
+    return data
 
 
 @router.post("/feedback", summary="提交问答反馈(满意度/纠错)")

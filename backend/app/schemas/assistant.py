@@ -27,6 +27,7 @@ class AssistantRef(BaseModel):
     code: str
     title: str
     type: str
+    score: Optional[float] = Field(None, description="Dify 召回相关度（本地命中为 None）")
 
 
 class SituationAlarm(BaseModel):
@@ -67,6 +68,11 @@ class AssistantAskResp(BaseModel):
         None,
         description="大模型调用失败原因（如 Key 失效/网络不通/模型不存在）；成功或未配置时为 None",
     )
+    # [Dify RAG] Dify 检索层状态：enabled/retrieved/error
+    dify: Optional[dict] = Field(
+        None,
+        description="Dify RAG 检索层状态：enabled(是否启用)/retrieved(命中片段数)/error(失败原因)",
+    )
 
 
 class AssistantStatusResp(BaseModel):
@@ -79,3 +85,8 @@ class AssistantStatusResp(BaseModel):
     latency: Optional[float] = Field(None, description="探测耗时（秒）")
     model_available: Optional[bool] = Field(None, description="所配置模型 id 是否在端点模型列表中")
     detail: str = Field(..., description="可读诊断说明")
+    # [Dify RAG] 知识库检索层（Dify）状态
+    dify: Optional[dict] = Field(
+        None,
+        description="Dify RAG 检索层状态：configured/base_url/dataset_id/reachable/retrieved/detail",
+    )

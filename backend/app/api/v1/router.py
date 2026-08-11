@@ -30,6 +30,7 @@ from app.api.v1.endpoints import (
     tickets,
     assistant,
     thing_model,
+    dify_tools,
 )
 from app.core.deps import get_current_user
 
@@ -69,6 +70,8 @@ api_router.include_router(inspection.router, prefix="/ops/inspection", tags=["in
 api_router.include_router(assistant.router, prefix="", tags=["assistant"], dependencies=_auth)
 # 物模型 (property/service/event 三要素, 前端编辑器与采集器共用)
 api_router.include_router(thing_model.router, prefix="/thing-models", tags=["thing-model"], dependencies=_auth)
+# Dify API Tool 回调端点 (供 Dify 平台配置为工具, 独立 Bearer 鉴权, 不叠加登录依赖)
+api_router.include_router(dify_tools.router, prefix="/ops", tags=["dify-tools"])
 # 多数据中心 (生命周期/切换/跨中心对比/统一告警)
 api_router.include_router(idc.router, prefix="/idc", tags=["idc"], dependencies=_auth)
 

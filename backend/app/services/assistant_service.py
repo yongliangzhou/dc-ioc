@@ -20,7 +20,9 @@ from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.models.knowledge import KnowledgeItem
+from app.services.dify_client import dify_configured, dify_retrieve
 
 logger = logging.getLogger("assistant")
 
@@ -122,6 +124,27 @@ def _dedupe_steps(items: List[KnowledgeItem], limit: int = 8) -> List[str]:
                 continue
             seen.add(key)
             out.append(key)
+            if len(out) >= limit:
+                return out
+    return out
+
+
+def _dedupe_dify_steps(hits: List[Dict[str, Any]], limit: int = 8) -> List[str]:
+    """从 Dify 召回片段的 content 中, 粗略抽取带有序号/换行分隔的处置步骤。"""
+    if not hits:
+        return []
+    seen = set()
+    out: List[str] = []
+    for h in hits:
+        content = (h.get("content") or "").replace("\r", "\n")
+        for line in content.split("\n"):
+            line = line.strip().lstrip("0123456789.、)） ").strip()
+            if not line or len(line) < 4:
+                continue
+            if line in seen:
+                continue
+            seen.add(line)
+            out.append(line)
             if len(out) >= limit:
                 return out
     return out
@@ -336,6 +359,41 @@ def check_llm_status() -> Dict[str, Any]:
         }
 
 
+def check_dify_status() -> Dict[str, Any]:
+    """探测 Dify RAG 检索层可用性，供运维一键自查 (/ops/assistant/status)。
+
+    直接发起一次 retrieve 调用（query="状态自检"）验证：Key 有效、知识库存在、网络可达。
+    """
+    if not dify_configured():
+        return {
+            "configured": False,
+            "base_url": settings.DIFY_BASE_URL,
+            "dataset_id": settings.DIFY_DATASET_ID,
+            "reachable": False,
+            "retrieved": 0,
+            "detail": "未配置 DIFY_API_KEY/DIFY_DATASET_ID，助手走本地关键词检索兜底。",
+        }
+    try:
+        recs = dify_retrieve("状态自检", top_k=1)
+        return {
+            "configured": True,
+            "base_url": settings.DIFY_BASE_URL,
+            "dataset_id": settings.DIFY_DATASET_ID,
+            "reachable": True,
+            "retrieved": len(recs),
+            "detail": "Dify 知识库检索可用：Key 有效、知识库存在、网络可达。",
+        }
+    except Exception as e:  # noqa: BLE001
+        return {
+            "configured": True,
+            "base_url": settings.DIFY_BASE_URL,
+            "dataset_id": settings.DIFY_DATASET_ID,
+            "reachable": False,
+            "retrieved": 0,
+            "detail": f"Dify 检索探测失败（{type(e).__name__}）：{e}。问答将回退本地关键词检索。",
+        }
+
+
 def _build_situation(ctx: Dict[str, Any]) -> Dict[str, Any]:
     """[B6] 构建实时态势上下文: 活跃告警 + (若携带 device_id) 该设备实时测点。
 
@@ -420,6 +478,19 @@ def answer(db: Session, question: str, context: Optional[Dict[str, Any]] = None)
             "situation": situation,
         }
 
+    # ---------- [Dify RAG] 检索优先走 Dify 向量召回, 失败/未命中回退本地关键词打分 ----------
+    dify_hits: List[Dict[str, Any]] = []
+    dify_error: Optional[str] = None
+    if dify_configured():
+        try:
+            raw = dify_retrieve(question, top_k=settings.DIFY_RETRIEVE_TOP_K)
+            # 按归一化分数阈值过滤, 避免低质召回污染上下文
+            dify_hits = [h for h in raw if h.get("score", 0) >= 0.1]
+            logger.info("Dify 检索命中 %d 条有效片段", len(dify_hits))
+        except Exception as e:  # noqa: BLE001
+            dify_error = f"{type(e).__name__}: {e}"
+            logger.warning("Dify 检索失败, 回退本地关键词打分: %s", dify_error)
+
     scored, _ = _retrieve(db, question, ctx_for_retrieval)
     # 放宽命中门槛（A+B 修复）：身份字段(strong)命中始终纳入；
     # 仅正文(weak)命中时要求 score>=2.0（≥2 个二元词重叠），在抑制噪声的同时
@@ -428,8 +499,23 @@ def answer(db: Session, question: str, context: Optional[Dict[str, Any]] = None)
     items = [it for s, strong, it in scored if strong > 0 or s >= 2.0]
 
     refs = [{"code": it.code, "title": it.title, "type": it.type} for it in items]
+    # [Dify RAG] 把 Dify 召回片段来源一并标注, 便于前端展示"知识来源"
+    if dify_hits:
+        for h in dify_hits:
+            refs.append(
+                {
+                    "code": h.get("doc_id") or "dify",
+                    "title": h.get("title") or "Dify 知识片段",
+                    "type": "dify",
+                    "score": round(h.get("score", 0.0), 3),
+                }
+            )
+    # [Dify RAG] Dify 片段也参与去重步骤提取 (若有结构化步骤文本)
+    dify_steps = _dedupe_dify_steps(dify_hits)
     steps = _dedupe_steps(items)
-    no_match = len(items) == 0
+    if not steps:
+        steps = dify_steps
+    no_match = len(items) == 0 and len(dify_hits) == 0
     grounded_text = _grounded_answer(question, items, no_match)
 
     cfg = _llm_config()
@@ -438,14 +524,25 @@ def answer(db: Session, question: str, context: Optional[Dict[str, Any]] = None)
     grounded = True
     llm_error: Optional[str] = None
 
-    # 若配置了大模型，将检索到的知识 + 实时态势作为上下文交给 LLM 润色
-    if items and cfg["configured"]:
-        kb_ctx = "\n\n".join(
+    # 若配置了大模型，将检索到的知识（本地知识库 + Dify 召回）+ 实时态势作为上下文交给 LLM 润色
+    if (items or dify_hits) and cfg["configured"]:
+        local_ctx = "\n\n".join(
             f"[{it.code}] {it.title}（类型:{it.type}）\n摘要:{it.summary}\n处置步骤:"
             + "；".join(it.steps or [])
             + f"\n详情:{(it.content or '')[:4000]}"
             for it in items
         )
+        dify_ctx = "\n\n".join(
+            f"[Dify 知识片段] {h.get('title') or ''}（相关度:{round(h.get('score',0),3)}）\n"
+            f"{h.get('content') or ''}"
+            for h in dify_hits
+        )
+        kb_parts = []
+        if local_ctx:
+            kb_parts.append("【本地知识库】\n" + local_ctx)
+        if dify_ctx:
+            kb_parts.append("【Dify 知识库召回】\n" + dify_ctx)
+        kb_ctx = "\n\n".join(kb_parts)
         system = (
             "你是数据中心运维辅助助手，面向初级运维人员。只能依据给定的知识库条目与实时态势作答，"
             "给出清晰、可执行的处置步骤，并强调安全与上报要求；不得编造知识库以外的步骤。"
@@ -475,4 +572,9 @@ def answer(db: Session, question: str, context: Optional[Dict[str, Any]] = None)
         "noMatch": no_match,
         "situation": situation,
         "llm_error": llm_error,
+        "dify": {
+            "enabled": dify_configured(),
+            "retrieved": len(dify_hits),
+            "error": dify_error,
+        },
     }

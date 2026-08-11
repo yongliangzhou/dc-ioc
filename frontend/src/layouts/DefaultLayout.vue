@@ -70,10 +70,19 @@ const nav = computed<NavGroup[]>(() => [
   {
     title: t('nav.opsPlatform'),
     items: [
-      { path: '/twin/dashboard', title: t('nav.twin'), ico: 'Map' },
+      {
+        path: '/twin/dashboard',
+        title: t('nav.twin'),
+        ico: 'Map',
+        children: [
+          { path: '/twin/dashboard', title: t('nav.twin'), ico: 'Map' },
+          { path: '/twin/3d', title: t('nav.twin3d'), ico: 'Box' },
+        ],
+      },
       { path: '/analysis/capacity', title: t('nav.capacity'), ico: 'BarChart3' },
       { path: '/analysis/energy', title: t('nav.energy'), ico: 'Leaf' },
       { path: '/ops/alarms', title: t('nav.alarms'), ico: 'Bell', badge: '7', alert: true },
+      { path: '/ops/alarm-rules', title: t('nav.alarmRules'), ico: 'SlidersHorizontal' },
       { path: '/ops/alarm-history', title: t('nav.alarmHistory'), ico: 'Clock' },
       { path: '/ops/knowledge', title: t('nav.knowledge'), ico: 'BookOpen' },
       { path: '/ops/assistant', title: t('nav.assistant'), ico: 'Bot' },
@@ -146,6 +155,16 @@ const nav = computed<NavGroup[]>(() => [
       },
       { path: '/ops/collector', title: t('nav.collector'), ico: 'Antenna' },
       { path: '/ops/telemetry', title: t('nav.telemetry'), ico: 'Radio' },
+      { path: '/ops/thing-model', title: t('nav.thingModel'), ico: 'Blocks' },
+      {
+        path: '/ops/datacenter',
+        title: t('nav.datacenter'),
+        ico: 'Building2',
+        children: [
+          { path: '/ops/datacenter', title: t('nav.datacenter'), ico: 'Building2' },
+          { path: '/ops/datacenter/compare', title: t('nav.datacenterCompare'), ico: 'GitCompare' },
+        ],
+      },
     ],
   },
   {

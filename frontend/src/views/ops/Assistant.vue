@@ -38,6 +38,34 @@
           }}</b>
         </div>
         <div class="ai-diag-detail">{{ diag.detail }}</div>
+        <!-- Dify RAG 检索层状态 -->
+        <template v-if="diag.dify">
+          <div class="ai-diag-row ai-diag-sep">
+            <span>Dify 检索层</span>
+            <b :class="diag.dify.configured ? (diag.dify.reachable ? 'ok' : 'warn') : 'off'">{{
+              !diag.dify.configured
+                ? '未启用'
+                : diag.dify.reachable
+                  ? '已连接'
+                  : '未连接'
+            }}</b>
+          </div>
+          <template v-if="diag.dify.configured">
+            <div class="ai-diag-row"><span>知识库 ID</span>{{ diag.dify.dataset_id || '—' }}</div>
+            <div class="ai-diag-row">
+              <span>召回探测</span
+              ><b :class="diag.dify.reachable ? 'ok' : 'bad'">{{
+                diag.dify.reachable ? '可用' : '失败'
+              }}</b></div
+            >
+            <div class="ai-diag-detail">{{ diag.dify.detail }}</div>
+          </template>
+          <template v-else>
+            <div class="ai-diag-detail">
+              未配置 DIFY_API_KEY / DIFY_DATASET_ID，知识库检索走本地关键词打分兜底。
+            </div>
+          </template>
+        </template>
       </div>
     </transition>
 
@@ -71,8 +99,31 @@
                 </ol>
                 <div v-if="m.refs && m.refs.length" class="ai-refs">
                   <span class="ai-refs-label">{{ tl('参考知识条目') }}：</span>
-                  <button v-for="(r, k) in m.refs" :key="k" class="ai-ref" @click="openRef(r)">
+                  <!-- Dify 来源徽章 -->
+                  <span
+                    v-if="m.dify && m.dify.enabled"
+                    class="ai-refs-badge"
+                    :class="{ ok: m.dify.retrieved > 0, warn: m.dify.retrieved === 0 }"
+                  >
+                    <Sparkles class="ico" />
+                    {{
+                      m.dify.retrieved > 0
+                        ? tl('Dify 知识库召回') + ' ' + m.dify.retrieved
+                        : tl('Dify 未命中·本地兜底')
+                    }}
+                  </span>
+                  <button
+                    v-for="(r, k) in m.refs"
+                    :key="k"
+                    class="ai-ref"
+                    :class="{ 'dify-ref': r.type === 'dify' }"
+                    @click="openRef(r)"
+                  >
+                    <component :is="typeIcon(r.type)" class="ico" />
                     [{{ r.code }}] {{ r.title }}
+                    <b v-if="r.type === 'dify' && r.score != null" class="dify-score">
+                      {{ Math.round(r.score * 100) }}%
+                    </b>
                   </button>
                 </div>
                 <div class="ai-fb" v-if="m.role === 'ai' && !m.loading">
@@ -167,6 +218,21 @@ import { useRouter } from 'vue-router'
 import { askAssistant, assistantStatus, submitAssistantFeedback } from '@/api'
 import type { AssistantAskResp, AssistantRef, AssistantStatusResp } from '@/types'
 import { useToast } from '@/hooks/useToast'
+import { BookOpen, Sparkles, FileText, Server, Database, Wrench, AlertTriangle } from 'lucide-vue-next'
+
+// 知识来源类型 → 图标 (dify 为向量召回来源)
+const REF_ICONS: Record<string, any> = {
+  sop: FileText,
+  manual: BookOpen,
+  alarm: AlertTriangle,
+  rule: Wrench,
+  model: Server,
+  dataset: Database,
+  dify: Sparkles,
+}
+function typeIcon(type: string) {
+  return REF_ICONS[type] || FileText
+}
 
 const router = useRouter()
 const toast = useToast()
@@ -191,6 +257,8 @@ interface Msg {
   loading?: boolean
   /** 大模型调用失败原因（配置了大模型却回退时填充） */
   llmError?: string
+  /** Dify RAG 检索层状态: enabled / retrieved / error */
+  dify?: { enabled: boolean; retrieved: number; error: string | null } | null
   /** 已反馈状态: up / down / null */
   feedback?: 'up' | 'down' | null
 }
@@ -248,6 +316,7 @@ async function send(q?: string) {
     aiMsg.steps = res.steps
     aiMsg.refs = res.refs
     aiMsg.llmError = res.llmError ?? undefined
+    aiMsg.dify = res.dify ?? null
     if (res.grounded && res.llmError) {
       engineLabel.value = '知识库检索（大模型不可用）'
     } else {
@@ -433,6 +502,23 @@ async function runDiag() {
   color: var(--muted);
   line-height: 1.6;
 }
+.ai-diag-sep {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+.ai-diag-detail b.ok {
+  color: #22c55e;
+}
+.ai-diag-detail b.bad {
+  color: #ef4444;
+}
+.ai-diag-detail b.warn {
+  color: #f59e0b;
+}
+.ai-diag-detail b.off {
+  color: var(--muted);
+}
 
 .ai-warn {
   margin-bottom: 8px;
@@ -556,6 +642,46 @@ async function runDiag() {
 }
 .ai-ref:hover {
   border-color: var(--cyan);
+}
+/* Dify 召回来源标识 */
+.ai-ref.dify-ref {
+  color: #c084fc;
+  border-color: rgba(192, 132, 252, 0.45);
+  background: rgba(192, 132, 252, 0.08);
+}
+.ai-ref .ico {
+  width: 12px;
+  height: 12px;
+  vertical-align: -2px;
+  margin-right: 3px;
+}
+.dify-score {
+  margin-left: 4px;
+  color: #c084fc;
+  font-weight: 700;
+}
+.ai-refs-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.ai-refs-badge .ico {
+  width: 12px;
+  height: 12px;
+}
+.ai-refs-badge.ok {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.12);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+}
+.ai-refs-badge.warn {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.4);
 }
 
 .ai-typing {

@@ -139,6 +139,16 @@ class Settings(BaseSettings):
     # 格式见 deploy/thing_models.example.json; 留空则仅使用内置默认映射。
     THING_MODELS_FILE: str | None = None
 
+    # [AI 助手] Dify RAG 检索层 (可选)
+    # 配置 DIFY_API_KEY + DIFY_DATASET_ID 后, 知识库检索优先走 Dify Knowledge API (向量召回 top-k);
+    # 失败/未配置时回退本地关键词打分。生成仍走现有 NIM 小模型 (LLM_*)。
+    DIFY_API_KEY: str | None = None
+    DIFY_BASE_URL: str = "http://localhost:5001/v1"  # Dify 控制台 API 地址, 结尾不带 /
+    DIFY_DATASET_ID: str | None = None  # 知识库 ID (Dify 知识库设置页 "API 访问" 获取)
+    # Dify 平台 API Tool 回调本项目后端时携带的 Bearer Token (与 Dify 侧配置一致)
+    DIFY_TOOL_KEY: str | None = None
+    DIFY_RETRIEVE_TOP_K: int = 5  # 向量检索召回数量
+
 
 @lru_cache
 def get_settings() -> Settings:

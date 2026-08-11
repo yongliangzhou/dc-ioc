@@ -22,7 +22,7 @@ from app.crud import idc as idc_crud
 from app.models.user import User
 from app.schemas.idc import IdcCreate, IdcOut, IdcUpdate
 
-router = APIRouter(prefix="/idc", tags=["idc"])
+router = APIRouter(tags=["idc"])
 
 
 @router.get("", response_model=list[IdcOut], summary="数据中心列表")

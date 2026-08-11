@@ -3,6 +3,7 @@
     <div class="tf-legend">
       <span class="tf-lg"><i class="dot flow-power" />{{ tl('供电能流') }}</span>
       <span class="tf-lg"><i class="dot flow-cool" />{{ tl('制冷冷量流') }}</span>
+      <span class="tf-lg"><i class="dot heat" />{{ tl('机柜热力') }}</span>
       <span class="tf-lg" v-if="affectedIds?.length"
         ><i class="dot fault" />{{ tl('故障传播') }} · {{ affectedIds!.length }} 台波及</span
       >
@@ -22,6 +23,70 @@
           class="tf-svg"
           @click="clearFocus"
         >
+          <!-- [增强] 机房平面图层: 底板 + 机柜行列网格 + 冷/电通道标注 (最底层) -->
+          <g class="tf-floor" v-if="floor.enabled">
+            <!-- 机房底板 -->
+            <rect
+              :x="floor.x"
+              :y="floor.y"
+              :width="floor.w"
+              :height="floor.h"
+              rx="14"
+              class="floor-board"
+            />
+            <rect
+              :x="floor.x"
+              :y="floor.y"
+              :width="floor.w"
+              :height="22"
+              rx="14"
+              class="floor-strip"
+            />
+            <text :x="floor.x + 12" :y="floor.y + 15" class="floor-title">
+              {{ tl('机房平面图') }} · {{ tl('机柜热力') }}
+            </text>
+            <!-- 冷/电通道标签 -->
+            <text :x="floor.x + 12" :y="floor.y + floor.h - 10" class="floor-tag cool">
+              {{ tl('冷通道') }}
+            </text>
+            <text :x="floor.x + floor.w - 12" :y="floor.y + floor.h - 10" class="floor-tag power" text-anchor="end">
+              {{ tl('电通道') }}
+            </text>
+            <!-- 机柜行列网格 + 热力气泡 -->
+            <g
+              v-for="(rack, i) in floor.racks"
+              :key="'rack' + i"
+              class="floor-rack"
+              :class="{ dim: activeId != null && !rack.near }"
+            >
+              <rect
+                :x="rack.x"
+                :y="rack.y"
+                :width="rack.w"
+                :height="rack.h"
+                rx="4"
+                :fill="rack.color"
+                class="rack-cell"
+              />
+              <!-- 热力脉冲 -->
+              <circle
+                v-if="rack.hot"
+                :cx="rack.x + rack.w / 2"
+                :cy="rack.y + rack.h / 2"
+                :r="rack.w * 0.7"
+                :fill="rack.color"
+                class="rack-pulse"
+              />
+              <text
+                :x="rack.x + rack.w / 2"
+                :y="rack.y + rack.h / 2 + 3"
+                class="rack-label"
+              >
+                {{ rack.load }}°
+              </text>
+            </g>
+          </g>
+
           <!-- 边 (底层) -->
           <g class="tf-edges">
             <template v-for="e in layout.edges" :key="e.id">
@@ -31,21 +96,19 @@
                 :class="['edge', e.type, { fault: e.affected, dim: dimEdge(e), hot: hotEdge(e) }]"
                 fill="none"
               />
+              <!-- [增强] 能流粒子密度随负载变化: 负载越高粒子越多 -->
               <circle
-                v-if="!dimEdge(e)"
-                r="3.2"
-                :class="['flow-dot', e.type, { fault: e.affected, dim: dimEdge(e) }]"
-              >
-                <animateMotion :dur="e.dur" repeatCount="indefinite">
-                  <mpath :href="'#' + e.id" />
-                </animateMotion>
-              </circle>
-              <circle
+                v-for="k in e.particles"
+                :key="'p' + k"
                 v-if="!dimEdge(e)"
                 r="3.2"
                 :class="['flow-dot', e.type, { fault: e.affected }]"
               >
-                <animateMotion :dur="e.dur" begin="-1.2s" repeatCount="indefinite">
+                <animateMotion
+                  :dur="e.dur"
+                  :begin="(-(e.durMs / e.particles) * k).toFixed(2) + 's'"
+                  repeatCount="indefinite"
+                >
                   <mpath :href="'#' + e.id" />
                 </animateMotion>
               </circle>
@@ -287,8 +350,26 @@ interface LEdge {
   type: 'power' | 'cool'
   affected: boolean
   dur: string
+  durMs: number
+  particles: number
   source: number
   target: number
+}
+
+// [增强] 机柜热力色: 温度 → 蓝(冷)→青→黄→红(热) 渐变
+function heatColor(temp: number): string {
+  const t = Math.max(10, Math.min(45, temp))
+  // 10℃→蓝, 22℃→青, 30℃→黄, 40℃+→红
+  if (t <= 22) {
+    const r = (t - 10) / 12
+    return `rgba(${Math.round(34 + r * 0)}, ${Math.round(211 - r * 0)}, ${Math.round(238 - r * 0)}, 0.55)`
+  }
+  if (t <= 30) {
+    const r = (t - 22) / 8
+    return `rgba(${Math.round(34 + r * 188)}, ${Math.round(211 - r * 12)}, ${Math.round(238 - r * 16)}, 0.6)`
+  }
+  const r = Math.min(1, (t - 30) / 10)
+  return `rgba(251, ${Math.round(199 - r * 4)}, ${Math.round(222 - r * 145)}, ${0.6 + r * 0.2})`
 }
 
 const affectedSet = computed(() => new Set(props.affectedIds ?? []))
@@ -443,6 +524,9 @@ function layerAssign(
   return layer
 }
 
+/** 提取机房平面图层 (从 layout 中暴露给模板直接使用) */
+const floor = computed(() => layout.value.floor)
+
 const layout = computed(() => {
   const nodes = props.graph?.nodes ?? []
   const edges = props.graph?.edges ?? []
@@ -563,7 +647,10 @@ const layout = computed(() => {
     const dx = tx - sx
     const d = `M ${sx} ${sy} C ${sx + dx * 0.5} ${sy}, ${tx - dx * 0.5} ${ty}, ${tx} ${ty}`
     const avgLoad = (effById.get(e.source)! + effById.get(e.target)!) / 2
-    const dur = Math.max(0.9, Math.min(3, 2.6 - avgLoad / 45)).toFixed(2) + 's'
+    const durMs = Math.max(900, Math.min(3000, Math.round(2600 - avgLoad / 45 * 1700)))
+    // [增强] 粒子数随负载升高: 负载 20%→2 颗, 100%→6 颗
+    const particles = Math.max(2, Math.min(6, Math.round(2 + avgLoad / 20)))
+    const dur = (durMs / 1000).toFixed(2) + 's'
     const touch = affectedSet.value.has(e.source) || affectedSet.value.has(e.target)
     ledges.push({
       id: `e-${e.source}-${e.target}`,
@@ -571,6 +658,8 @@ const layout = computed(() => {
       type: (e.type === 'cool' ? 'cool' : 'power') as 'power' | 'cool',
       affected: touch,
       dur,
+      durMs,
+      particles,
       source: e.source,
       target: e.target,
     })
@@ -578,7 +667,66 @@ const layout = computed(() => {
 
   const width = LEFT + (maxCol + 1) * COL_GAP + 24
   const height = laneTop + 10
-  return { nodes: lnodes, edges: ledges, width, height }
+
+  // [增强] 机房平面 + 机柜热力层: 把拓扑节点按 lane 聚合为虚拟机柜网格,
+  // 每个机柜格显示该 lane 聚合温度(取节点温度均值)的热力色 + 脉冲动画。
+  const floor = (() => {
+    const pad = 14
+    const fx = pad
+    const fy = pad
+    const fw = width - pad * 2
+    const fh = Math.max(height - pad * 2, 220)
+    const lanes: Lane[] = ['power', 'cool', 'aux']
+    const cols = Math.max(6, maxCol + 2)
+    const rows = lanes.length
+    const cellGap = 10
+    const gridW = fw - 24
+    const gridH = fh - 48
+    const cw = (gridW - (cols - 1) * cellGap) / cols
+    const ch = (gridH - (rows - 1) * cellGap) / rows
+    const racks: {
+      x: number
+      y: number
+      w: number
+      h: number
+      color: string
+      load: number
+      hot: boolean
+      near: boolean
+    }[] = []
+    lanes.forEach((lane, r) => {
+      const ns = laneNodes[lane]
+      const temps = ns
+        .map((n) => {
+          const rt = rtm[n.id]
+          if (rt?.temp != null) return rt.temp
+          if (rt?.supplyTemp != null && rt?.returnTemp != null)
+            return (rt.supplyTemp + rt.returnTemp) / 2
+          return 26 - (effById.get(n.id) ?? 0) / 12 // 负载越高越热
+        })
+        .filter((v) => v != null)
+      const avg = temps.length ? temps.reduce((a, b) => a + b, 0) / temps.length : 24
+      const count = ns.length || 1
+      for (let c = 0; c < cols; c++) {
+        // 该列机柜格温度: 依据对应节点索引偏移, 形成起伏的热力分布
+        const idx = c % count
+        const t = avg + (idx - count / 2) * 0.8
+        racks.push({
+          x: fx + 12 + c * (cw + cellGap),
+          y: fy + 30 + r * (ch + cellGap),
+          w: cw,
+          h: ch,
+          color: heatColor(t),
+          load: Math.round(t),
+          hot: t >= 36,
+          near: true,
+        })
+      }
+    })
+    return { enabled: true, x: fx, y: fy, w: fw, h: fh, racks }
+  })()
+
+  return { nodes: lnodes, edges: ledges, width, height, floor }
 })
 </script>
 
@@ -624,6 +772,71 @@ const layout = computed(() => {
 .dot.fault {
   background: #ff4d4f;
   box-shadow: 0 0 6px #ff4d4f;
+}
+.dot.heat {
+  background: linear-gradient(90deg, #22d3ee, #fbbf24, #ff4d4f);
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+}
+
+/* [增强] 机房平面 + 机柜热力层 */
+.floor-board {
+  fill: rgba(12, 20, 34, 0.55);
+  stroke: rgba(34, 211, 238, 0.22);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 5;
+}
+.floor-strip {
+  fill: rgba(34, 211, 238, 0.08);
+  stroke: none;
+}
+.floor-title {
+  fill: rgba(125, 211, 252, 0.85);
+  font-size: 11px;
+  font-weight: 700;
+}
+.floor-tag {
+  font-size: 10px;
+  font-weight: 600;
+  opacity: 0.8;
+}
+.floor-tag.cool {
+  fill: #22d3ee;
+}
+.floor-tag.power {
+  fill: #fbbf24;
+}
+.rack-cell {
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 0.8;
+  transition: opacity 0.2s ease;
+}
+.floor-rack {
+  transition: opacity 0.2s ease;
+}
+.floor-rack.dim {
+  opacity: 0.18;
+}
+.rack-pulse {
+  opacity: 0.35;
+  transform-origin: center;
+  animation: rackPulse 1.6s ease-out infinite;
+}
+@keyframes rackPulse {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+.rack-label {
+  fill: rgba(8, 12, 20, 0.85);
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
 }
 
 .tf-stage {

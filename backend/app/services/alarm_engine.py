@@ -547,19 +547,21 @@ def _lookup_rule(rule_id: str) -> dict | None:
             db.close()
     # fallback to DEFAULT_RULES
     for d in DEFAULT_RULES:
-        for m in d.get("metrics", []):
-            rid = f"{d['cat']}:{m['key']}"
+        # DEFAULT_RULES: {"category": ..., "unit": ..., "metrics": {"metric_name": { ... }}}
+        cat = d.get("category", "")
+        metrics = d.get("metrics", {}) or {}
+        for m_name, cfg in metrics.items():
+            rid = f"{cat}:{m_name}"
             if rid == rule_id:
-                cfg = m.get("levels", {})
                 return {
                     "rule_id": rid,
-                    "category": d["cat"],
-                    "metric": m["key"],
-                    "warn_lo": cfg.get("warn", {}).get("lo"),
-                    "warn_hi": cfg.get("warn", {}).get("hi"),
-                    "crit_lo": cfg.get("crit", {}).get("lo"),
-                    "crit_hi": cfg.get("crit", {}).get("hi"),
-                    "unit": m.get("unit", ""),
+                    "category": cat,
+                    "metric": m_name,
+                    "warn_lo": (cfg.get("warn") or {}).get("lo"),
+                    "warn_hi": (cfg.get("warn") or {}).get("hi"),
+                    "crit_lo": (cfg.get("crit") or {}).get("lo"),
+                    "crit_hi": (cfg.get("crit") or {}).get("hi"),
+                    "unit": cfg.get("unit") or d.get("unit", ""),
                     "enabled": rule_id not in _disabled_rules,
                     "silenced": False,
                 }
@@ -584,9 +586,62 @@ def create_rule(category: str, metric: str, warn_lo: float | None, warn_hi: floa
 def update_rule(rule_id: str, category: str, metric: str, warn_lo: float | None, warn_hi: float | None,
                 crit_lo: float | None, crit_hi: float | None, unit: str = "") -> dict | None:
     """更新规则, 写穿 DB。"""
-    if _lookup_rule(rule_id) is None:
+    old = _lookup_rule(rule_id)
+    if old is None:
         return None
-    alarm_store.update_rule_db(rule_id, category, metric, warn_lo, warn_hi, crit_lo, crit_hi, unit)
+
+    # 持久化写入 (best-effort)
+    try:
+        alarm_store.update_rule_db(rule_id, category, metric, warn_lo, warn_hi, crit_lo, crit_hi, unit)
+    except Exception:  # best-effort: 保持引擎内存可用
+        logger.debug("alarm_store.update_rule_db 异常 (已忽略)")
+
+    # 立即更新内存索引，确保修改对实时评估生效
+    # 构造新的规则配置
+    new_cfg = {
+        "warn": {"lo": warn_lo, "hi": warn_hi},
+        "crit": {"lo": crit_lo, "hi": crit_hi},
+        "unit": unit or old.get("unit", ""),
+    }
+    # 旧的 category/metric
+    old_cat = old.get("category", "")
+    old_met = old.get("metric", "")
+
+    # 如果用户修改了 category/metric，则尝试执行重命名: 新 rule_id 不存在则创建并删除旧记录
+    new_rule_id = f"{category}:{metric}"
+    old_rule_id = rule_id
+    if (category, metric) != (old_cat, old_met):
+        # 检查目标是否已存在冲突
+        if _lookup_rule(new_rule_id) and new_rule_id != old_rule_id:
+            logger.debug("[alarm_engine:update]: 目标规则已存在，重命名失败: %s", new_rule_id)
+            return None
+        # 插入新记录并删除旧记录（best-effort）
+        try:
+            alarm_store.insert_rule(new_rule_id, category, metric, warn_lo, warn_hi, crit_lo, crit_hi, unit)
+            alarm_store.delete_rule_db(old_rule_id)
+        except Exception:
+            logger.debug("alarm_store rename (insert/delete) 异常 (已忽略)")
+        # 更新内存索引: 移动旧索引到新 key
+        if (old_cat, old_met) in _MATCHED_RULES:
+            _MATCHED_RULES.pop((old_cat, old_met), None)
+        _MATCHED_RULES[(category, metric)] = new_cfg
+        try:
+            # 保持 RULE_ORDER 的顺序替换旧项为新项
+            idx = RULE_ORDER.index((old_cat, old_met))
+            RULE_ORDER[idx] = (category, metric)
+        except ValueError:
+            if (category, metric) not in RULE_ORDER:
+                RULE_ORDER.append((category, metric))
+        # 更新 numeric id 映射: 将旧 id 迁移到新 rule_id 保持前端 id 稳定
+        if old_rule_id in _rule_id_index:
+            nid = _rule_id_index.pop(old_rule_id)
+            _rule_id_index[new_rule_id] = nid
+    else:
+        # 简单更新阈值
+        _MATCHED_RULES[(category, metric)] = new_cfg
+        if (category, metric) not in RULE_ORDER:
+            RULE_ORDER.append((category, metric))
+
     logger.info("[alarm_engine:update]: 规则已更新: %s", rule_id)
     return _format_one_rule(rule_id, {})
 

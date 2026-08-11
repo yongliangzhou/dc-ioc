@@ -9,6 +9,21 @@
       <span class="pill">{{
         activeTab === 'rules' ? '规则引擎' : activeTab === 'active' ? '活动告警' : '告警历史'
       }}</span>
+      <button class="go-rule-btn" @click="goRuleEngine" title="进入告警规则引擎管理页面">
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        </svg>
+        {{ tl('进入规则引擎') }}
+      </button>
     </div>
 
     <!-- KPI 行 -->
@@ -470,6 +485,11 @@ function ruleBandLabel(r: AlarmRuleDef): string {
 
 const router = useRouter()
 const ticketsStore = useTicketsStore()
+
+function goRuleEngine() {
+  router.push('/ops/alarm-rules')
+}
+
 const ticketModalOpen = ref(false)
 const ticketInitial = ref<Partial<TicketCreateRequest>>({})
 const currentAlarm = ref<Alarm | null>(null)
@@ -891,6 +911,31 @@ onBeforeUnmount(() => clearInterval(timer))
   border-color: var(--cyan);
   color: var(--cyan);
   font-weight: 600;
+}
+
+/* 跳转规则引擎按钮 */
+.go-rule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid rgba(34, 227, 255, 0.5);
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(34, 227, 255, 0.18), rgba(34, 227, 255, 0.06));
+  color: var(--cyan);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.go-rule-btn:hover {
+  background: linear-gradient(90deg, rgba(34, 227, 255, 0.32), rgba(34, 227, 255, 0.12));
+  box-shadow: 0 0 12px rgba(34, 227, 255, 0.25);
+  color: #fff;
+}
+.go-rule-btn svg {
+  flex-shrink: 0;
 }
 
 /* 规则卡片 */
