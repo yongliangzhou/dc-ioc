@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import datetime
+import json
 from typing import Optional
 
 from sqlalchemy import func
@@ -18,14 +19,24 @@ def _to_snake(d: dict) -> dict:
     out: dict = {}
     for k, v in d.items():
         s = "".join("_" + c.lower() if c.isupper() else c for c in k)
-        out[s] = v
+        # steps 为复杂对象, 序列化后再转 snake (steps -> steps 不变)
+        if k == "steps" and isinstance(v, (list, dict)):
+            out["steps"] = json.dumps(v, ensure_ascii=False)
+        else:
+            out[s] = v
     return out
 
 
 def _to_dict(r: DrillPlan) -> dict:
+    try:
+        steps = json.loads(r.steps) if r.steps else []
+    except (ValueError, TypeError):
+        steps = []
     return {
         "id": r.id, "code": r.code, "name": r.name, "type": r.type,
         "date": r.date, "state": r.state, "result": r.result,
+        "note": r.note, "level": r.level, "scope": r.scope,
+        "duration": r.duration, "steps": steps,
     }
 
 

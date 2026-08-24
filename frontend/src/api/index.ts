@@ -13,8 +13,19 @@ import type {
   CabinetMetrics,
   CampusComparisonResponse,
   CampusesResponse,
+  FaultImpactReq,
+  FaultImpactResp,
+  FaultSourceList,
+  Mitigation,
+  AnalysisHistory,
   DashboardOverview,
   DeviceActionResponse,
+  Drill,
+  DrillPlan,
+  DrillRecord,
+  DrillStep,
+  TenantItem,
+  TenantStats,
   DeviceListResponse,
   DeviceRegisterResponse,
   DeviceUpdateRequest,
@@ -26,7 +37,10 @@ import type {
   MetricRealtimeResponse,
   MetricRecordView,
   Paginated,
+  RecognizeResp,
+  ServerItem,
   ThingModelDef,
+  UPositionView,
   Ticket,
   TicketCenter,
   TicketCreateRequest,
@@ -121,6 +135,16 @@ export const deleteTicket = (id: string) =>
 
 export const askAssistant = (payload: AssistantAskReq) =>
   request.post<unknown, AssistantAskResp>('/api/ops/assistant/ask', payload)
+
+/** 自定义模型列表（含当前激活） */
+export const getAssistantModels = () =>
+  request.get<unknown, { active: string; models: AssistantModel[] }>('/api/ops/assistant/models')
+/** 切换激活模型（admin/operator） */
+export const selectAssistantModel = (model: string) =>
+  request.post<unknown, { ok: boolean; active: string }>('/api/ops/assistant/models/select', { model })
+/** 探测指定模型真实推理可用性 */
+export const assistantModelStatus = (model: string) =>
+  request.get<unknown, AssistantStatusResp>('/api/ops/assistant/models/status', { params: { model } })
 
 /** 提交 AI 回答反馈 (满意度/纠错) */
 export const submitAssistantFeedback = (payload: {
@@ -346,3 +370,118 @@ export const registerUser = (data: UserRegisterRequest) =>
     '/api/auth/register',
     data,
   )
+
+/* ================= U 位识别 API (RFID + 电子工单多源融合) ================= */
+
+export interface CabinetOption {
+  id: number
+  code: string
+  room: string
+  row: string
+  uTotal: number
+}
+
+export interface CabinetListQuery {
+  page?: number
+  size?: number
+  room?: string
+}
+
+/** 机柜下拉选项 (来自 /api/cabinets) */
+export const getCabinetOptions = (params: CabinetListQuery = {}) =>
+  request.get<unknown, { items: CabinetOption[]; total: number }>('/api/cabinets', { params })
+
+/** 机柜内服务器列表 (RFID/资产标签实测) */
+export const getServers = (cabinetId: number) =>
+  request.get<unknown, ServerItem[]>('/api/servers', { params: { cabinetId } })
+
+/** 机柜 U 位立面图 (含识别冲突) */
+export const getUPosition = (cabinetId: number) =>
+  request.get<unknown, UPositionView>(`/api/cabinets/${cabinetId}/u-position`)
+
+/** 触发 U 位多源识别 (电子工单 + RFID 融合) */
+export const recognizeUPosition = (cabinetId: number) =>
+  request.post<unknown, RecognizeResp>(`/api/cabinets/${cabinetId}/u-position/recognize`)
+
+// ---- 故障影响分析 (复用 twin_graph 真实拓扑做链路 BFS 传播) ----
+/** 候选故障源: 真实拓扑节点 + 易故障提示 (低健康/已告警/高负载) */
+export const getFaultSources = () =>
+  request.get<unknown, FaultSourceList>('/api/ops/fault-impact/sources')
+
+/** 故障影响分析: 指定故障源 + 传播范围开关, 沿真实拓扑 BFS 传播 */
+export const analyzeFaultImpact = (req: FaultImpactReq) =>
+  request.post<unknown, FaultImpactResp>('/api/ops/fault-impact/analyze', req)
+
+/** 影响分析报告历史列表 (存档 + 会签) */
+export const getFaultImpactHistory = (limit = 50) =>
+  request.get<unknown, AnalysisHistory[]>(`/api/ops/fault-impact/history?limit=${limit}`)
+
+/** 保存影响分析报告 (存档) */
+export const saveFaultImpactHistory = (data: Partial<AnalysisHistory>) =>
+  request.post<unknown, AnalysisHistory>('/api/ops/fault-impact/history', data)
+
+/** 报告会签 (追加会签人) */
+export const signFaultImpactHistory = (id: number, signer: string) =>
+  request.post<unknown, AnalysisHistory>(`/api/ops/fault-impact/history/${id}/sign`, { signer })
+
+// ---- 应急演练 (全栈打通真实数据, 持久化到 DB) ----
+/** 演练总览: 真实专业域类别建议演练 + DB 计划 (含 steps/level/scope/duration) */
+export const getDrills = () => request.get<unknown, Drill>('/api/ops/drill')
+
+/** 新建演练计划 (steps/level/scope/duration 全栈持久化) */
+export const createDrill = (data: Partial<DrillPlan>) =>
+  request.post<unknown, DrillPlan>('/api/ops/drill', data)
+
+/** 更新演练计划 */
+export const updateDrill = (id: number, data: Partial<DrillPlan>) =>
+  request.put<unknown, DrillPlan>(`/api/ops/drill/${id}`, data)
+
+/** 删除演练计划 */
+export const deleteDrill = (id: number) =>
+  request.delete(`/api/ops/drill/${id}`)
+
+/** 演练记录列表 (真实数据, 可过滤 planId) */
+export const getDrillRecords = (planId?: number) =>
+  request.get<unknown, { records: DrillRecord[]; total: number }>(
+    '/api/ops/drill/records' + (planId != null ? `?planId=${planId}` : '')
+  )
+
+/** 新建演练记录 */
+export const createDrillRecord = (data: Partial<DrillRecord>) =>
+  request.post<unknown, DrillRecord>('/api/ops/drill/records', data)
+
+/** 更新演练记录 */
+export const updateDrillRecord = (id: number, data: Partial<DrillRecord>) =>
+  request.put<unknown, DrillRecord>(`/api/ops/drill/records/${id}`, data)
+
+/** 删除演练记录 */
+export const deleteDrillRecord = (id: number) =>
+  request.delete(`/api/ops/drill/records/${id}`)
+
+/* ===== 租户管理 (阶段三 A · 资源运营) — 真实数据驱动 ===== */
+/** 租户列表 (真实数据, 支持关键字/状态过滤) */
+export const getTenants = (kw?: string, status?: string) => {
+  const q: string[] = []
+  if (kw) q.push(`kw=${encodeURIComponent(kw)}`)
+  if (status) q.push(`status=${encodeURIComponent(status)}`)
+  const qs = q.length ? '?' + q.join('&') : ''
+  return request.get<unknown, { tenants: TenantItem[]; total: number }>(
+    `/api/ops/tenants${qs}`
+  )
+}
+
+/** 租户级统计汇总 (顶部统计卡真实聚合) */
+export const getTenantStats = () =>
+  request.get<unknown, TenantStats>('/api/ops/tenants/stats')
+
+/** 新建租户 */
+export const createTenant = (data: Partial<TenantItem>) =>
+  request.post<unknown, TenantItem>('/api/ops/tenants', data)
+
+/** 更新租户 */
+export const updateTenant = (id: number, data: Partial<TenantItem>) =>
+  request.put<unknown, TenantItem>(`/api/ops/tenants/${id}`, data)
+
+/** 删除租户 */
+export const deleteTenant = (id: number) =>
+  request.delete(`/api/ops/tenants/${id}`)

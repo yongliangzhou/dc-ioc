@@ -26,6 +26,105 @@ from app.services.dify_client import dify_configured, dify_retrieve
 
 logger = logging.getLogger("assistant")
 
+# ---------------------------------------------------------------------------
+# [自定义模型] 免费大模型注册表
+# 经由 NVIDIA NIM 免费层实测（chat/completions 返回 200）校验通过的模型。
+# 默认内置以下 9 个；可通过环境变量 LLM_MODELS 以逗号分隔覆盖（例如追加
+# 自有部署/第三方兼容端点模型）。激活模型在运行时可热切换，无需重启服务。
+# ---------------------------------------------------------------------------
+def _default_models() -> List[Dict[str, Any]]:
+    return [
+        {"id": "meta/llama-3.1-8b-instruct", "name": "Llama 3.1 8B", "vendor": "Meta", "note": "轻量·响应快·默认"},
+        {"id": "nvidia/nemotron-mini-4b-instruct", "name": "Nemotron Mini 4B", "vendor": "NVIDIA", "note": "极小·低延迟"},
+        {"id": "meta/llama-3.3-70b-instruct", "name": "Llama 3.3 70B", "vendor": "Meta", "note": "强推理·较慢"},
+        {"id": "nvidia/llama-3.3-nemotron-super-49b-v1", "name": "Nemotron Super 49B", "vendor": "NVIDIA", "note": "均衡·强综合能力"},
+        {"id": "openai/gpt-oss-20b", "name": "GPT-OSS 20B", "vendor": "OpenAI", "note": "开源·推理友好"},
+        {"id": "openai/gpt-oss-120b", "name": "GPT-OSS 120B", "vendor": "OpenAI", "note": "强推理·较慢"},
+        {"id": "z-ai/glm-5.2", "name": "GLM 5.2", "vendor": "Z.ai", "note": "中文能力强"},
+        {"id": "minimaxai/minimax-m3", "name": "MiniMax M3", "vendor": "MiniMax", "note": "中文·长上下文"},
+        {"id": "stepfun-ai/step-3.7-flash", "name": "Step 3.7 Flash", "vendor": "StepFun", "note": "中文·快速"},
+    ]
+
+
+def _load_models() -> List[Dict[str, Any]]:
+    """模型注册表：环境变量 LLM_MODELS 覆盖默认；否则使用内置已验证免费模型。"""
+    env = (os.getenv("LLM_MODELS") or "").strip()
+    if env:
+        ids = [m.strip() for m in env.split(",") if m.strip()]
+        # 保留内置已知的名称/厂商信息，未知 id 仅给占位
+        known = {m["id"]: m for m in _default_models()}
+        out: List[Dict[str, Any]] = []
+        for i in ids:
+            out.append(known.get(i, {"id": i, "name": i.split("/")[-1], "vendor": i.split("/")[0], "note": "自定义"}))
+        return out
+    return _default_models()
+
+
+# 模块级注册表（进程内）与运行时激活模型
+_MODEL_REGISTRY: List[Dict[str, Any]] = _load_models()
+_ACTIVE_MODEL: str = os.getenv("LLM_MODEL") or (_MODEL_REGISTRY[0]["id"] if _MODEL_REGISTRY else "")
+
+
+def get_models() -> List[Dict[str, Any]]:
+    """返回模型列表（含当前激活标记）。"""
+    return [
+        {**m, "selected": m["id"] == _ACTIVE_MODEL}
+        for m in _MODEL_REGISTRY
+    ]
+
+
+def get_active_model() -> str:
+    return _ACTIVE_MODEL
+
+
+def set_active_model(model_id: str) -> bool:
+    """切换运行时激活模型（热更新，无需重启）。返回是否成功。"""
+    global _ACTIVE_MODEL
+    if not any(m["id"] == model_id for m in _MODEL_REGISTRY):
+        return False
+    _ACTIVE_MODEL = model_id
+    return True
+
+
+def check_model_status(model: str) -> Dict[str, Any]:
+    """探测指定模型的真实推理可用性（最小 chat 调用）。"""
+    cfg = _llm_config()
+    if not cfg["configured"]:
+        return {"configured": False, "model": model, "reachable": False,
+                "http_status": None, "latency": None, "model_available": None,
+                "detail": "未配置 LLM_API_KEY，无法调用大模型。"}
+    url = cfg["base_url"] + "/chat/completions"
+    payload = {"model": model, "messages": [{"role": "user", "content": "ping"}],
+               "max_tokens": 1, "temperature": 0}
+    data = json.dumps(payload).encode("utf-8")
+    headers = {"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"}
+    req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+    t0 = time.time()
+    try:
+        with urllib.request.urlopen(req, timeout=min(cfg["timeout"], 20)) as resp:
+            return {"configured": True, "model": model, "reachable": True,
+                    "http_status": resp.status, "latency": round(time.time() - t0, 3),
+                    "model_available": True, "detail": "可用：Key 有效、网络可达、模型已授权。"}
+    except urllib.error.HTTPError as e:
+        body = ""
+        try:
+            body = e.read().decode("utf-8", "ignore")[:300]
+        except Exception:  # noqa: BLE001
+            pass
+        if e.code in (401, 403):
+            detail = f"Key 失效或额度用尽（HTTP {e.code}）。"
+        elif e.code == 404:
+            detail = f"该模型对当前账号未授权/未部署（HTTP 404）：{body}"
+        else:
+            detail = f"推理调用返回 HTTP {e.code}：{body}"
+        return {"configured": True, "model": model, "reachable": False,
+                "http_status": e.code, "latency": round(time.time() - t0, 3),
+                "model_available": False, "detail": detail}
+    except Exception as e:  # noqa: BLE001
+        return {"configured": True, "model": model, "reachable": False,
+                "http_status": None, "latency": round(time.time() - t0, 3),
+                "model_available": None, "detail": f"探测异常（{type(e).__name__}）：{e}。"}
+
 _CJK = re.compile(r"[一-鿿]+")
 _ASCII = re.compile(r"[a-z0-9]+")
 _STOP = set("的吗了呢吧啊嘛呀哦呃?？!！，,。.、；;:：\"'（）()【】[]{}<>《》 \t\n\r　—-…·")
@@ -189,7 +288,7 @@ def _llm_config() -> Dict[str, Any]:
         "configured": bool(api_key),
         "api_key": api_key,
         "base_url": os.getenv("LLM_BASE_URL", "https://api.openai.com/v1").rstrip("/"),
-        "model": os.getenv("LLM_MODEL", "gpt-4o-mini"),
+        "model": _ACTIVE_MODEL or os.getenv("LLM_MODEL", "gpt-4o-mini"),
         "timeout": timeout,
         "max_retries": max_retries,
     }
@@ -214,7 +313,7 @@ def _call_llm(system_prompt: str, user_prompt: str) -> Dict[str, Any]:
         return {"text": None, "error": "未配置 LLM_API_KEY，无法调用大模型", "http_status": None, "latency": 0.0}
     url = cfg["base_url"] + "/chat/completions"
     payload = {
-        "model": cfg["model"],
+        "model": target_model,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -268,7 +367,7 @@ def _call_llm(system_prompt: str, user_prompt: str) -> Dict[str, Any]:
     return {"text": None, "error": last_error, "http_status": last_status, "latency": latency}
 
 
-def check_llm_status() -> Dict[str, Any]:
+def check_llm_status(model: Optional[str] = None) -> Dict[str, Any]:
     """探测大模型「真实推理」可用性，供运维一键自查 (/ops/assistant/status)。
 
     直接发起一次最小化的 chat/completions 调用（max_tokens=1），因为 /models 目录
@@ -279,11 +378,12 @@ def check_llm_status() -> Dict[str, Any]:
     - 连接异常：网络不通/需配置代理/被防火墙拦截。
     """
     cfg = _llm_config()
+    target_model = model or cfg["model"]
     if not cfg["configured"]:
         return {
             "configured": False,
             "base_url": cfg["base_url"],
-            "model": cfg["model"],
+            "model": target_model,
             "reachable": False,
             "http_status": None,
             "latency": None,
@@ -292,7 +392,7 @@ def check_llm_status() -> Dict[str, Any]:
         }
     url = cfg["base_url"] + "/chat/completions"
     payload = {
-        "model": cfg["model"],
+        "model": target_model,
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 1,
         "temperature": 0,
@@ -306,7 +406,7 @@ def check_llm_status() -> Dict[str, Any]:
             return {
                 "configured": True,
                 "base_url": cfg["base_url"],
-                "model": cfg["model"],
+                "model": target_model,
                 "reachable": True,
                 "http_status": resp.status,
                 "latency": round(time.time() - t0, 3),
@@ -328,7 +428,7 @@ def check_llm_status() -> Dict[str, Any]:
         return {
             "configured": True,
             "base_url": cfg["base_url"],
-            "model": cfg["model"],
+            "model": target_model,
             "reachable": False,
             "http_status": e.code,
             "latency": round(time.time() - t0, 3),
@@ -339,7 +439,7 @@ def check_llm_status() -> Dict[str, Any]:
         return {
             "configured": True,
             "base_url": cfg["base_url"],
-            "model": cfg["model"],
+            "model": target_model,
             "reachable": False,
             "http_status": None,
             "latency": round(time.time() - t0, 3),
@@ -350,7 +450,7 @@ def check_llm_status() -> Dict[str, Any]:
         return {
             "configured": True,
             "base_url": cfg["base_url"],
-            "model": cfg["model"],
+            "model": target_model,
             "reachable": False,
             "http_status": None,
             "latency": round(time.time() - t0, 3),

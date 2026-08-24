@@ -5,6 +5,9 @@
  * ========================================================================== */
 
 import { THING_MODELS } from '@/constants/thingModels'
+import type { ThingModel } from '@/api/thingModel'
+import type { RecognizeResp, ServerItem, UCell, UConflict, UPositionView } from '@/types'
+import type { FaultImpactReq, FaultImpactResp, FaultSourceList, FaultSourceNode } from '@/types'
 import type {
   AlarmEngineState,
   AlarmEvent,
@@ -1729,52 +1732,86 @@ export const DC = {
     stats: { year: 12, done: 8, pass: 8, next: '2026-08-05 全停演练' },
     plans: [
       {
-        id: 'DR-01',
+        id: 1,
+        code: 'DR-01',
         name: '市电全停-柴发接管演练',
         type: '电力',
         date: '2026-08-05',
         state: '已编排',
         result: '—',
+        level: '一级',
+        scope: '全园区供电',
+        duration: 120,
+        steps: [
+          { title: '发布演练指令并隔离市电', minutes: 10, desc: '调度中心下令, 拉开进线开关' },
+          { title: '柴发自启并带载', minutes: 15, desc: '确认柴发频率/电压正常, 逐级送电' },
+          { title: '关键负荷验证', minutes: 20, desc: 'UPS/冷却/消防电源核相' },
+        ],
       },
       {
-        id: 'DR-02',
+        id: 2,
+        code: 'DR-02',
         name: '冷源系统故障切换演练',
         type: '暖通',
         date: '2026-06-20',
         state: '已完成',
         result: '通过',
+        level: '二级',
+        scope: '冷源机房',
+        duration: 90,
+        steps: [{ title: '主冷机停机', minutes: 10, desc: '切换至备用冷机' }],
       },
       {
-        id: 'DR-03',
+        id: 3,
+        code: 'DR-03',
         name: '母联备自投切换演练',
         type: '电力',
         date: '2026-07-05',
         state: '已完成',
         result: '通过',
+        level: '二级',
+        scope: '10kV 母线',
+        duration: 60,
+        steps: [],
       },
       {
-        id: 'DR-04',
+        id: 4,
+        code: 'DR-04',
         name: '气体灭火联动演练',
         type: '消防',
         date: '2026-06-28',
         state: '已完成',
         result: '通过',
+        level: '三级',
+        scope: '机房区',
+        duration: 45,
+        steps: [],
       },
       {
-        id: 'DR-05',
+        id: 5,
+        code: 'DR-05',
         name: '周界入侵应急演练',
         type: '安防',
         date: '2026-05-16',
         state: '已完成',
         result: '通过',
+        level: '三级',
+        scope: '园区周界',
+        duration: 30,
+        steps: [],
       },
       {
-        id: 'DR-06',
+        id: 6,
+        code: 'DR-06',
         name: 'UPS 切旁路演练',
         type: '电力',
         date: '2026-09-12',
         state: '计划中',
         result: '—',
+        level: '二级',
+        scope: 'UPS 室',
+        duration: 60,
+        steps: [],
       },
     ],
   },
@@ -2212,6 +2249,511 @@ function thingModelsMock(): ThingModelDef[] {
     protocol: m.protocol,
     metrics: m.metrics.map((mt) => ({ metric_name: mt.name, unit: mt.unit, description: mt.desc })),
   }))
+}
+
+/**
+ * 物模型管理页 (/api/thing-models) 离线兜底。
+ * 后端不可达时, 由 THING_MODELS 派生完整 ThingModel 结构 (含 items),
+ * 使管理页列表与详情都能正常渲染, 避免 "加载物模型失败"。
+ */
+let _adminTmCache: ThingModel[] | null = null
+function thingModelsAdminMock(): ThingModel[] {
+  if (_adminTmCache) return _adminTmCache
+  _adminTmCache = THING_MODELS.map((m, idx) => ({
+    id: idx + 1,
+    modelKey: `${m.category}_model`,
+    name: m.name,
+    category: m.category,
+    domain: m.domain,
+    protocol: m.protocol,
+    vendor: '',
+    description: `${m.name} 物模型 (离线演示数据)`,
+    items: m.metrics.map((mt, i) => ({
+      id: idx * 100 + i + 1,
+      thingModelId: idx + 1,
+      itemType: 'property' as const,
+      identifier: mt.name,
+      name: mt.name,
+      dataType: 'float' as const,
+      unit: mt.unit,
+      desc: mt.desc ?? '',
+      extra: {},
+    })),
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * (idx + 1)).toISOString(),
+    updatedAt: new Date(Date.now() - 1000 * 60 * 60 * (idx + 1)).toISOString(),
+  }))
+  return _adminTmCache
+}
+
+function thingModelAdminOneMock(id: number): ThingModel | undefined {
+  return thingModelsAdminMock().find((m) => m.id === id)
+}
+
+// ---------- U 位识别离线兜底 (RFID 实测 + 电子工单台账多源融合) ----------
+const U_BRANDS = ['Dell', 'HPE', 'Inspur', 'Huawei', 'Lenovo']
+const U_BUSINESS = ['核心交易', '大数据分析', 'AI 训练', '中间件', '存储集群', '网关']
+
+function genServersForCabinet(cabinetId: number, uTotal = 42): ServerItem[] {
+  const rnd = (n: number) => {
+    const x = Math.sin((cabinetId * 7 + 3) * 999 + n * 13.13) * 10000
+    return x - Math.floor(x)
+  }
+  const servers: ServerItem[] = []
+  let sid = cabinetId * 100
+  let u = 1 + Math.floor(rnd(1) * 2)
+  const n = 6 + Math.floor(rnd(2) * 6)
+  const drift = cabinetId % 5 === 0
+  let drifted = false
+  for (let i = 0; i < n; i++) {
+    if (u > uTotal - 1) break
+    const h = [1, 1, 2, 2, 4][Math.floor(rnd(i + 3) * 5)]
+    let height = h
+    if (u + height - 1 > uTotal) height = uTotal - u + 1
+    if (height < 1) break
+    let uStart = u
+    let uEnd = u + height - 1
+    if (drift && !drifted && i === Math.max(2, Math.floor(n / 2))) {
+      uStart += 1
+      uEnd += 1
+      drifted = true
+    }
+    sid += 1
+    servers.push({
+      id: sid,
+      cabinetId,
+      assetNo: `AS${String(cabinetId).padStart(3, '0')}-${String(sid).padStart(4, '0')}`,
+      hostname: `node-${String(cabinetId).padStart(3, '0')}-${String(i + 1).padStart(2, '0')}`,
+      ip: `10.${(cabinetId / 250) % 250 | 0}.${cabinetId % 250}.${i + 1}`,
+      brand: U_BRANDS[Math.floor(rnd(i + 4) * U_BRANDS.length)],
+      model: `R${4 + Math.floor(rnd(i + 5) * 6)}40`,
+      uStart,
+      uEnd,
+      uHeight: uEnd - uStart + 1,
+      cpuModel: 'Xeon Gold 6348',
+      cpuCount: rnd(i + 6) > 0.5 ? 4 : 2,
+      cpuCores: [48, 64, 96][Math.floor(rnd(i + 7) * 3)],
+      memoryGb: [256, 512, 1024][Math.floor(rnd(i + 8) * 3)],
+      diskDesc: `${2 + Math.floor(rnd(i + 9) * 7)}x${[960, 1920][Math.floor(rnd(i + 10)) * 2]}GB SSD`,
+      business: U_BUSINESS[Math.floor(rnd(i + 11) * U_BUSINESS.length)],
+      status: rnd(i + 12) > 0.75 ? '离线' : '在线',
+      source: 'rfid',
+    })
+    u = uEnd + 1 + (rnd(i + 13) > 0.6 ? 1 : 0)
+  }
+  return servers
+}
+
+function genLedgerForCabinet(cabinetId: number, uTotal = 42): ServerItem[] {
+  const rfid = genServersForCabinet(cabinetId, uTotal)
+  const ledger = rfid.map((s) => ({ ...s, source: 'ledger' as const }))
+  if (cabinetId % 5 === 0 && ledger.length) {
+    const first = ledger[0]
+    ledger.push({
+      ...first,
+      id: cabinetId * 1000 + 1,
+      assetNo: `AS${String(cabinetId).padStart(3, '0')}-L000`,
+      hostname: `node-${String(cabinetId).padStart(3, '0')}-L`,
+      ip: '10.0.0.0',
+      brand: 'Lenovo',
+      model: 'SR650',
+      uStart: first.uStart,
+      uEnd: first.uStart,
+      uHeight: 1,
+      cpuModel: 'Xeon Silver 4310',
+      cpuCores: 24,
+      business: '网关',
+      status: '在线',
+      source: 'ledger',
+    })
+  }
+  return ledger
+}
+
+function buildUCells(
+  rfid: ServerItem[],
+  ledger: ServerItem[],
+  uTotal: number,
+): { cells: UCell[]; conflicts: UConflict[] } {
+  const cells: UCell[] = Array.from({ length: uTotal }, (_, k) => ({
+    u: k + 1,
+    status: 'empty' as const,
+    sources: [],
+    deviceRefs: [],
+    confidence: 1,
+    note: '',
+  }))
+  const conflicts: UConflict[] = []
+
+  for (const s of rfid) {
+    for (let u = s.uStart; u <= s.uEnd; u++) {
+      if (u >= 1 && u <= uTotal) {
+        const c = cells[u - 1]
+        c.status = 'occupied'
+        if (!c.sources.includes('rfid')) c.sources.push('rfid')
+        if (!c.deviceRefs.includes(s.id)) c.deviceRefs.push(s.id)
+      }
+    }
+  }
+  const ledgerByAsset = new Map<string, ServerItem>()
+  for (const s of ledger) {
+    ledgerByAsset.set(s.assetNo, s)
+    for (let u = s.uStart; u <= s.uEnd; u++) {
+      if (u >= 1 && u <= uTotal) {
+        const c = cells[u - 1]
+        if (!c.sources.includes('ledger')) c.sources.push('ledger')
+        if (!c.deviceRefs.includes(s.id)) c.deviceRefs.push(s.id)
+      }
+    }
+  }
+  // RFID 内部区间重叠
+  const ranges: Array<[number, number, string]> = []
+  for (const s of rfid) {
+    for (const [lo, hi, asset] of ranges) {
+      if (!(s.uEnd < lo || s.uStart > hi)) {
+        conflicts.push({
+          u: Math.max(s.uStart, lo),
+          type: 'range_overlap',
+          detail: `RFID 实测区间重叠: ${asset} 与 ${s.assetNo}`,
+          assetNos: [asset, s.assetNo],
+          severity: 'crit',
+        })
+      }
+    }
+    ranges.push([s.uStart, s.uEnd, s.assetNo])
+  }
+  // 台账与实测不符
+  const rfidByAsset = new Map(rfid.map((s) => [s.assetNo, s]))
+  for (const [asset, ls] of ledgerByAsset) {
+    const rs = rfidByAsset.get(asset)
+    if (rs && (ls.uStart !== rs.uStart || ls.uEnd !== rs.uEnd)) {
+      const lo = Math.max(ls.uStart, rs.uStart)
+      const hi = Math.min(ls.uEnd, rs.uEnd)
+      for (let u = Math.max(1, lo); u <= Math.min(uTotal, hi); u++) cells[u - 1].status = 'conflict'
+      conflicts.push({
+        u: ls.uStart,
+        type: 'ledger_mismatch',
+        detail: `台账规划 U${ls.uStart}-${ls.uEnd} 与 RFID 实测 U${rs.uStart}-${rs.uEnd} 不符: ${asset}`,
+        assetNos: [asset],
+        severity: 'warn',
+      })
+    }
+  }
+  // 台账多出设备与现场已占重叠
+  const rfidSet = new Set<number>()
+  for (const s of rfid) for (let u = s.uStart; u <= s.uEnd; u++) rfidSet.add(u)
+  for (const s of ledger) {
+    if (!rfidByAsset.has(s.assetNo)) {
+      for (let u = s.uStart; u <= s.uEnd; u++) {
+        if (rfidSet.has(u) && u >= 1 && u <= uTotal) {
+          cells[u - 1].status = 'conflict'
+          conflicts.push({
+            u,
+            type: 'reservation_clash',
+            detail: `台账登记设备 ${s.assetNo} 位于已占用 U${u}`,
+            assetNos: [s.assetNo],
+            severity: 'warn',
+          })
+        }
+      }
+    }
+  }
+  for (const c of cells) {
+    if (c.status === 'conflict') c.confidence = 0.4
+    else if (c.sources.includes('rfid') && c.sources.includes('ledger')) c.confidence = 0.95
+    else if (c.status === 'occupied') c.confidence = 0.8
+    else c.confidence = 1
+  }
+  return { cells, conflicts }
+}
+
+function uPositionMock(cabinetId: number): UPositionView {
+  const cab = CABINETS.find((c) => c.id === cabinetId)
+  const uTotal = (cab?.u_total as number) ?? 42
+  const rfid = genServersForCabinet(cabinetId, uTotal)
+  const ledger = genLedgerForCabinet(cabinetId, uTotal)
+  const { cells, conflicts } = buildUCells(rfid, ledger, uTotal)
+  const occupied = cells.filter((c) => c.status === 'occupied' || c.status === 'conflict').length
+  return {
+    cabinetId,
+    code: cab?.code ?? String(cabinetId),
+    room: cab?.room ?? '',
+    row: (cab as any)?.row ?? '',
+    uTotal,
+    cells,
+    conflicts,
+    occupiedU: occupied,
+    emptyU: uTotal - occupied,
+    conflictU: cells.filter((c) => c.status === 'conflict').length,
+    generatedAt: new Date().toISOString(),
+  }
+}
+
+function recognizeUPositionMock(cabinetId: number): RecognizeResp {
+  const cab = CABINETS.find((c) => c.id === cabinetId)
+  const uTotal = (cab?.u_total as number) ?? 42
+  const rfid = genServersForCabinet(cabinetId, uTotal)
+  const ledger = genLedgerForCabinet(cabinetId, uTotal)
+  const { cells, conflicts } = buildUCells(rfid, ledger, uTotal)
+  const occupied = cells.filter((c) => c.status === 'occupied' || c.status === 'conflict').length
+  const conf = cells.filter((c) => c.status === 'occupied').map((c) => c.confidence)
+  const avg = conf.length ? conf.reduce((a, b) => a + b, 0) / conf.length : 1
+  return {
+    cabinetId,
+    code: cab?.code ?? String(cabinetId),
+    room: cab?.room ?? '',
+    uTotal,
+    sources: [
+      { key: 'ledger', name: '电子工单 / 资产台账', confidence: 0.92, count: ledger.length },
+      { key: 'rfid', name: 'RFID / 资产标签', confidence: 0.88, count: rfid.length },
+    ],
+    cells,
+    conflicts,
+    summary: {
+      totalU: uTotal,
+      occupied,
+      empty: uTotal - occupied,
+      conflict: cells.filter((c) => c.status === 'conflict').length,
+      avgConfidence: Number(avg.toFixed(3)),
+      ledgerCount: ledger.length,
+      rfidCount: rfid.length,
+    },
+    recognizedAt: new Date().toISOString(),
+  }
+}
+
+// ---- 故障影响分析离线兜底 (复用 DC 供电/制冷节点 + 简化 BFS 传播) ----
+const _FI_CRIT_CATS = new Set([
+  'hv_incomer', 'hv_isolator', 'hv_breaker', 'transformer', 'ups', 'hvdc',
+  'lv_feeder', 'ats', 'bus_tie', 'chiller', 'chw_pump', 'cooling_tower',
+  'hex', 'sec_pump', 'crac',
+])
+const _FI_BIZ = [
+  { business: '核心交易系统', sla: '99.999%', cats: ['server', 'switch', 'router'], note: '金融核心交易, 双路供电+2N制冷, 中断即资损' },
+  { business: '客户门户/网银', sla: '99.95%', cats: ['server', 'switch'], note: '对外服务, 可用性敏感' },
+  { business: '大数据/AI 平台', sla: '99.9%', cats: ['server', 'gpu'], note: '离线/近线计算, 短时中断可容忍' },
+  { business: '办公协同/邮箱', sla: '99.5%', cats: ['server'], note: '内部办公, 低优先级' },
+  { business: '视频监控平台', sla: '99.9%', cats: ['nvr', 'switch'], note: '安防录像, 断链影响合规留存' },
+]
+
+const _FI_SOURCES: FaultSourceNode[] = [
+  { id: 1, label: '冷水机组 A', kind: '冷水机组', domain: 'hvac_source', category: 'chiller', status: '运行', health: 60, loadPct: 76, redundancy: 'N+1', roomCode: '制冷站', riskHint: '健康分偏低 60' },
+  { id: 2, label: '冷水机组 B', kind: '冷水机组', domain: 'hvac_source', category: 'chiller', status: '运行', health: 60, loadPct: 71, redundancy: 'N+1', roomCode: '制冷站', riskHint: '健康分偏低 60' },
+  { id: 7, label: '变压器 T1', kind: '变压器', domain: 'power_source', category: 'transformer', status: '运行', health: 72, loadPct: 68, redundancy: '2N', roomCode: '配电室', riskHint: '健康分偏低 72' },
+  { id: 9, label: 'UPS 主机', kind: 'UPS', domain: 'power_source', category: 'ups', status: '运行', health: 80, loadPct: 45, redundancy: '2N', roomCode: '配电室', riskHint: null },
+  { id: 11, label: '精密空调 CRAC-01', kind: '精密空调', domain: 'hvac_terminal', category: 'crac', status: '故障', health: 60, loadPct: 0, redundancy: 'N+1', roomCode: 'A01', riskHint: '状态异常:故障' },
+  { id: 12, label: '精密空调 CRAC-02', kind: '精密空调', domain: 'hvac_terminal', category: 'crac', status: '运行', health: 85, loadPct: 52, redundancy: 'N+1', roomCode: 'A01', riskHint: null },
+]
+
+function faultImpactSourcesMock(): FaultSourceList {
+  const nodes = _FI_SOURCES.slice().sort((a, b) => (a.riskHint ? 0 : 1) - (b.riskHint ? 0 : 1) || a.health - b.health)
+  return { generatedAt: new Date().toISOString(), source: 'mock', nodes, edges: [] }
+}
+
+function faultImpactAnalyzeMock(req: FaultImpactReq): FaultImpactResp {
+  const scope = req.scope || { power: true, cool: true, network: true, business: true }
+  const failed = new Set((req.faultIds || []).filter((x) => x != null))
+  const faultNodes = _FI_SOURCES.filter((n) => failed.has(n.id))
+  const affected = new Set(failed)
+  // 简化传播: 任何供电/制冷链路节点故障 -> 机房级 IT 设备受影响
+  const linkHit = faultNodes.some((n) => _FI_CRIT_CATS.has(n.category))
+  const itBiz: Array<{ id: number; label: string; category: string; health: number }> = []
+  if (scope.business !== false && linkHit) {
+    let i = 0
+    for (const room of ['A01', 'A02', 'B01']) {
+      for (const cat of ['server', 'server', 'server', 'switch', 'gpu']) {
+        i++
+        const id = 100000 + i
+        itBiz.push({ id, label: `${room}-${cat}-${i}`, category: cat, health: 78 })
+        affected.add(id)
+      }
+    }
+  }
+  const nodes: FaultImpactResp['nodes'] = [
+    ...faultNodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, domain: n.domain, category: n.category, status: n.status, health: n.health, roomCode: n.roomCode, state: 'fault' as const, hop: 0, critical: _FI_CRIT_CATS.has(n.category), business: null, slaRisk: null })),
+    ...itBiz.map((d, idx) => {
+      const biz = _FI_BIZ.find((b) => b.cats.includes(d.category))
+      return { id: d.id, label: d.label, kind: d.category, domain: 'it', category: d.category, status: '在线', health: d.health, roomCode: 'A01', state: 'affected' as const, hop: 1, critical: false, business: biz?.business ?? null, slaRisk: biz ? 'medium' : null }
+    }),
+  ]
+  const bizCount = scope.business !== false && linkHit ? _FI_BIZ.filter((b) => b.cats.includes('server')).length : 0
+  const businesses: FaultImpactResp['businesses'] = (scope.business !== false && linkHit)
+    ? _FI_BIZ.map((b) => ({
+        business: b.business, criticalDevices: b.cats.includes('server') ? 1 : 0,
+        affectedDevices: itBiz.filter((d) => b.cats.includes(d.category)).length,
+        severity: b.cats.includes('server') ? 'high' : 'medium', sla: b.sla, note: b.note,
+      })).filter((x) => x.affectedDevices > 0)
+    : []
+  const severity = !failed.size ? 'low' : (linkHit || businesses.length ? (linkHit && businesses.some((b) => b.severity === 'critical') ? 'critical' : 'high') : (affected.size > 0 ? 'medium' : 'low'))
+  return {
+    faultIds: Array.from(failed),
+    generatedAt: new Date().toISOString(),
+    nodes,
+    edges: nodes.filter((n) => n.state === 'affected').map((n) => ({ source: faultNodes[0]?.id ?? 0, target: n.id, type: 'it_feed', label: '机房级冷量/电力丧失' })),
+    affectedIds: Array.from(affected).filter((x) => !failed.has(x)),
+    summary: { severity, faultCount: failed.size, affectedCount: affected.size - failed.size, criticalPaths: faultNodes.filter((n) => _FI_CRIT_CATS.has(n.category)).length, slaRisk: businesses.length ? 'high' : (linkHit ? 'medium' : 'low'), bizCount },
+    businesses,
+    suggestion: faultNodes.length
+      ? `故障源 ${faultNodes.length} 个: ${faultNodes.map((n) => n.label).join('、')}。${linkHit ? '已冲击关键供电/制冷节点, 优先切换冗余链路。' : ''}${businesses.length ? `业务域「${businesses[0].business}」(SLA ${businesses[0].sla}) 受影响最重, 建议立即启动容灾切换。` : '未直接波及核心业务域, 按常规工单处置。'}`
+      : '未选择故障源, 请指定一个或多个候选故障节点后分析。',
+  }
+}
+
+// ---- 应急演练离线兜底 (内存 CRUD, 与后端契约一致: 数字 id + steps/level/scope/duration) ----
+let _memDrills: any[] = (DC.drill as any).plans.map((p: any) => ({ ...p }))
+let _memDrillSeq = _memDrills.length + 1
+let _memRecords: any[] = [
+  { id: 1, planId: 2, planName: '冷源系统故障切换演练', date: '2026-06-20', participants: 8, startAt: '09:00', endAt: '10:30', score: 92, result: '通过', note: '切换耗时达标' },
+  { id: 2, planId: 3, planName: '母联备自投切换演练', date: '2026-07-05', participants: 6, startAt: '14:00', endAt: '15:00', score: 88, result: '通过', note: '备自投动作正常' },
+  { id: 3, planId: 1, planName: '市电全停-柴发接管演练', date: '2026-08-05', participants: 12, startAt: '10:00', endAt: '12:00', score: 0, result: '—', note: '待执行' },
+]
+let _memRecSeq = _memRecords.length + 1
+
+function drillListMock(kw = '', type = ''): { stats: any; plans: any[] } {
+  let plans = _memDrills.slice()
+  if (kw) plans = plans.filter((p) => (p.name + p.code).includes(kw))
+  if (type) plans = plans.filter((p) => p.type === type)
+  const stats = {
+    year: plans.length,
+    done: plans.filter((p) => p.state === '已完成').length,
+    pass: plans.filter((p) => p.result === '通过').length,
+    next: (plans.find((p) => p.state !== '已完成')?.date + ' ' + plans.find((p) => p.state !== '已完成')?.name) || '—',
+  }
+  return { stats, plans }
+}
+
+function drillMutations(method: string, u: string, data: any): any {
+  // POST /api/ops/drill  -> 新建
+  if (method === 'POST' && u === '/api/ops/drill') {
+    const id = _memDrillSeq++
+    const code = data.code || `DR-${String(id).padStart(3, '0')}`
+    const plan = { id, code, name: data.name || '', type: data.type || '电力', date: data.date || '', state: data.state || '计划中', result: data.result || '—', note: data.note || '', level: data.level || '—', scope: data.scope || '', duration: data.duration || 0, steps: data.steps || [] }
+    _memDrills.push(plan)
+    return plan
+  }
+  // PUT /api/ops/drill/:id
+  if (method === 'PUT') {
+    const m = u.match(/^\/api\/ops\/drill\/(\d+)$/)
+    if (m) {
+      const id = Number(m[1])
+      const p = _memDrills.find((x) => x.id === id)
+      if (p) Object.assign(p, { ...data, id })
+      return p
+    }
+  }
+  // DELETE /api/ops/drill/:id
+  if (method === 'DELETE') {
+    const m = u.match(/^\/api\/ops\/drill\/(\d+)$/)
+    if (m) {
+      const id = Number(m[1])
+      _memDrills = _memDrills.filter((x) => x.id !== id)
+      return { ok: true }
+    }
+  }
+  // POST /api/ops/drill/records
+  if (method === 'POST' && u === '/api/ops/drill/records') {
+    const id = _memRecSeq++
+    const rec = { id, planId: data.planId || 0, planName: data.planName || '', date: data.date || '', participants: data.participants || 0, startAt: data.startAt || '', endAt: data.endAt || '', score: data.score || 0, result: data.result || '—', note: data.note || '' }
+    _memRecords.push(rec)
+    return rec
+  }
+  // PUT /api/ops/drill/records/:id
+  if (method === 'PUT' && u.startsWith('/api/ops/drill/records/')) {
+    const id = Number(u.split('/').pop())
+    const r = _memRecords.find((x) => x.id === id)
+    if (r) Object.assign(r, { ...data, id })
+    return r
+  }
+  // DELETE /api/ops/drill/records/:id
+  if (method === 'DELETE' && u.startsWith('/api/ops/drill/records/')) {
+    const id = Number(u.split('/').pop())
+    _memRecords = _memRecords.filter((x) => x.id !== id)
+    return { ok: true }
+  }
+  return null
+}
+
+/* =================== 租户管理 (阶段三 A · 资源运营) 离线兜底 =================== */
+let _memTenants: any[] = [
+  { id: 1, name: '云栖科技', code: 'TH-001', contact: '王经理', phone: '13800000001', industry: '互联网', contractNo: 'HT-2023-001', validFrom: '2023-01-01', validTo: '2026-12-31', status: 'active', rent: 120000, cabinets: 8, quotaCabinets: 10, quotaDevices: 200, quotaPowerKw: 160, quotaBandwidthMbps: 2000, usedDevices: 168, usedPowerKw: 142.6, usedBandwidthMbps: 1680, uOccupied: 264, note: '核心客户' },
+  { id: 2, name: '智算网络', code: 'TH-002', contact: '李总', phone: '13800000002', industry: '人工智能', contractNo: 'HT-2023-002', validFrom: '2023-03-01', validTo: '2025-09-30', status: 'expired', rent: 200000, cabinets: 12, quotaCabinets: 12, quotaDevices: 320, quotaPowerKw: 300, quotaBandwidthMbps: 4000, usedDevices: 305, usedPowerKw: 292.4, usedBandwidthMbps: 3720, uOccupied: 396, note: '合同待续签' },
+  { id: 3, name: '金信金融', code: 'TH-003', contact: '赵主管', phone: '13800000003', industry: '金融', contractNo: 'HT-2023-003', validFrom: '2023-06-01', validTo: '2027-06-30', status: 'active', rent: 150000, cabinets: 6, quotaCabinets: 10, quotaDevices: 150, quotaPowerKw: 120, quotaBandwidthMbps: 1500, usedDevices: 142, usedPowerKw: 119.8, usedBandwidthMbps: 980, uOccupied: 198, note: '等保三级' },
+  { id: 4, name: '联创医疗', code: 'TH-004', contact: '孙主任', phone: '13800000004', industry: '医疗', contractNo: 'HT-2024-001', validFrom: '2024-01-15', validTo: '2026-01-14', status: 'pending', rent: 90000, cabinets: 4, quotaCabinets: 8, quotaDevices: 100, quotaPowerKw: 80, quotaBandwidthMbps: 1000, usedDevices: 61, usedPowerKw: 52.3, usedBandwidthMbps: 410, uOccupied: 132, note: '新签待启用' },
+  { id: 5, name: '远图物流', code: 'TH-005', contact: '周经理', phone: '13800000005', industry: '物流', contractNo: 'HT-2024-002', validFrom: '2024-05-01', validTo: '2026-04-30', status: 'active', rent: 80000, cabinets: 5, quotaCabinets: 6, quotaDevices: 90, quotaPowerKw: 70, quotaBandwidthMbps: 900, usedDevices: 88, usedPowerKw: 68.9, usedBandwidthMbps: 870, uOccupied: 165, note: '机柜接近配额' },
+]
+let _memTenantSeq = 6
+
+function _deriveHealth(t: any): 'normal' | 'warn' | 'over' {
+  const WARN = 0.8
+  const ratio = (used: number, quota: number) => (quota ? used / quota : 0)
+  const rs = [ratio(t.cabinets || 0, t.quotaCabinets || 0), ratio(t.usedDevices || 0, t.quotaDevices || 0), ratio(t.usedPowerKw || 0, t.quotaPowerKw || 0), ratio(t.usedBandwidthMbps || 0, t.quotaBandwidthMbps || 0)]
+  if (rs.some((r) => r >= 1)) return 'over'
+  if (rs.some((r) => r >= WARN)) return 'warn'
+  return 'normal'
+}
+
+function tenantListMock(params?: MockQuery): { tenants: any[]; total: number } {
+  let list = _memTenants.slice()
+  const kw = String(params?.kw ?? '').toLowerCase()
+  if (kw) list = list.filter((t) => (t.name + t.code + t.contact).toLowerCase().includes(kw))
+  const status = String(params?.status ?? '')
+  if (status) list = list.filter((t) => t.status === status)
+  return { tenants: list.map((t) => ({ ...t, health: _deriveHealth(t) })), total: list.length }
+}
+
+function tenantStatsMock(): any {
+  const total = _memTenants.length
+  const active = _memTenants.filter((t) => t.status === 'active').length
+  const totalCabinets = _memTenants.reduce((s, t) => s + (t.cabinets || 0), 0)
+  const totalPowerKw = Math.round(_memTenants.reduce((s, t) => s + (t.usedPowerKw || 0), 0) * 10) / 10
+  let warnCount = 0
+  let overCount = 0
+  _memTenants.forEach((t) => {
+    const h = _deriveHealth(t)
+    if (h === 'over') overCount++
+    else if (h === 'warn') warnCount++
+  })
+  return { total, active, totalCabinets, totalPowerKw, warnCount, overCount }
+}
+
+function tenantMutations(method: string, u: string, data: any): any {
+  // GET 单条
+  if (method === 'GET') {
+    const m = u.match(/^\/api\/ops\/tenants\/(\d+)$/)
+    if (m) {
+      const t = _memTenants.find((x) => x.id === Number(m[1]))
+      return t ? { ...t, health: _deriveHealth(t) } : null
+    }
+    if (u === '/api/ops/tenants/stats') return tenantStatsMock()
+    if (u === '/api/ops/tenants') return tenantListMock(data)
+  }
+  // POST 新建
+  if (method === 'POST' && u === '/api/ops/tenants') {
+    const id = _memTenantSeq++
+    const code = data.code || `TH-${String(id).padStart(3, '0')}`
+    const t = { id, code, name: data.name || '', contact: data.contact || '', phone: data.phone || '', industry: data.industry || '', contractNo: data.contractNo || '', validFrom: data.validFrom || '', validTo: data.validTo || '', status: data.status || 'active', rent: data.rent || 0, cabinets: data.cabinets || 0, quotaCabinets: data.quotaCabinets || 0, quotaDevices: data.quotaDevices || 0, quotaPowerKw: data.quotaPowerKw || 0, quotaBandwidthMbps: data.quotaBandwidthMbps || 0, usedDevices: data.usedDevices || 0, usedPowerKw: data.usedPowerKw || 0, usedBandwidthMbps: data.usedBandwidthMbps || 0, uOccupied: data.uOccupied || 0, note: data.note || '' }
+    _memTenants.push(t)
+    return { ...t, health: _deriveHealth(t) }
+  }
+  // PUT 更新
+  if (method === 'PUT') {
+    const m = u.match(/^\/api\/ops\/tenants\/(\d+)$/)
+    if (m) {
+      const id = Number(m[1])
+      const t = _memTenants.find((x) => x.id === id)
+      if (t) Object.assign(t, { ...data, id })
+      return t ? { ...t, health: _deriveHealth(t) } : null
+    }
+  }
+  // DELETE 删除
+  if (method === 'DELETE') {
+    const m = u.match(/^\/api\/ops\/tenants\/(\d+)$/)
+    if (m) {
+      const id = Number(m[1])
+      _memTenants = _memTenants.filter((x) => x.id !== id)
+      return { ok: true }
+    }
+  }
+  return null
 }
 
 function recentMetricsMock(deviceId: string, limit = 20): MetricRecordView[] {
@@ -2717,9 +3259,9 @@ function normalizeUrl(url: string): string {
 interface MockStore {
   alarmRules: AlarmRuleDef[]
   knowledge: KnowledgeItem[]
-  shifts: any[]
-  handovers: any[]
-  metricDefs: Record<string, any[]> // deviceId → metricDef list
+  shifts: unknown[] // 排班记录 (结构见 rdShifts)
+  handovers: unknown[] // 交接班记录
+  metricDefs: Record<string, unknown[]> // deviceId → metricDef list
 }
 
 const STORE: MockStore = {
@@ -3084,6 +3626,18 @@ export function mockWriteForUrl(
     if (u.startsWith('/api/ops/shift')) return wrShift(method, u, data)
     // 外部设备 + 测点
     if (u.startsWith('/api/external')) return wrExternal(method, u, data)
+    // 故障影响分析 (POST 计算, 离线兜底直接返回传播结果)
+    if (u === '/api/ops/fault-impact/analyze') return faultImpactAnalyzeMock(data || { faultIds: [] })
+    // 应急演练 (内存 CRUD 兜底)
+    if (u === '/api/ops/drill' || u.startsWith('/api/ops/drill/')) {
+      const r = drillMutations(method, u, data || {})
+      return r ?? { ok: true }
+    }
+    // 租户管理 (内存 CRUD 兜底)
+    if (u === '/api/ops/tenants' || u.startsWith('/api/ops/tenants/')) {
+      const r = tenantMutations(method, u, data || {})
+      if (r !== null) return r
+    }
   } catch (e) {
     // 模拟写操作内部校验错误 (统一抛给上层走异常分支)
     throw e
@@ -3168,8 +3722,8 @@ export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown |
   // ---- 优先走内存回读 (写操作后可见) ----
   if (u === '/api/alarm-rules') return rdAlarmRules()
   if (u === '/api/ops/shift') return rdShifts(cfg?.params)
-  if (u === '/api/ops/shift/handover') return rdHandovers(cfg?.params as any)
-  if (u === '/api/ops/knowledge') return rdKnowledge(cfg?.params as any)
+  if (u === '/api/ops/shift/handover') return rdHandovers(cfg?.params)
+  if (u === '/api/ops/knowledge') return rdKnowledge(cfg?.params)
   if (u === '/api/ops/knowledge/categories') return rdKnowledgeCategories()
   if (u === '/api/ops/knowledge/review/pending') return rdPendingKnowledge()
   const mdm = u.match(/^\/api\/external\/devices\/([^/]+)\/metric-defs$/)
@@ -3195,10 +3749,43 @@ export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown |
     '/api/ops/tickets': DC.tickets,
     '/api/ops/inspect': DC.inspect,
     '/api/ops/maintain': DC.maintain,
-    '/api/ops/drill': DC.drill,
+    '/api/ops/drill': drillListMock(),
+    '/api/ops/drill/records': { records: _memRecords, total: _memRecords.length },
+    '/api/ops/tenants': tenantListMock(cfg?.params),
+    '/api/ops/tenants/stats': tenantStatsMock(),
     '/api/ops/risk': DC.risk,
+    '/api/ops/fault-impact/sources': faultImpactSourcesMock(),
   }
   if (u in table) return table[u]
+
+  // ---- 租户详情 (单条) 离线兜底 ----
+  if (u.startsWith('/api/ops/tenants')) {
+    const r = tenantMutations('GET', u, cfg?.params)
+    if (r !== null) return r
+  }
+
+  // ---- 物模型管理 (/api/thing-models) 离线兜底 (与后端 list_models 一致返回数组) ----
+  if (u === '/api/thing-models') {
+    const kw = String(cfg?.params?.kw ?? '').toLowerCase()
+    const all = thingModelsAdminMock()
+    return kw ? all.filter((m) => (m.name + m.modelKey + m.category).toLowerCase().includes(kw)) : all
+  }
+  const tmOne = u.match(/^\/api\/thing-models\/(\d+)$/)
+  if (tmOne) return thingModelAdminOneMock(Number(tmOne[1])) ?? null
+
+  // ---- U 位识别 (RFID 实测 + 电子工单台账多源融合) 离线兜底 ----
+  if (u === '/api/servers') {
+    const cabinetId = Number(cfg?.params?.cabinetId ?? cfg?.params?.cabinet_id ?? 0) || 1
+    const cab = CABINETS.find((c) => c.id === cabinetId)
+    const uTotal = (cab?.u_total as number) ?? 42
+    return genServersForCabinet(cabinetId, uTotal)
+  }
+  const upMat = u.match(/^\/api\/cabinets\/(\d+)\/u-position(\/recognize)?$/)
+  if (upMat) {
+    const cabinetId = Number(upMat[1])
+    if (upMat[2]) return recognizeUPositionMock(cabinetId)
+    return uPositionMock(cabinetId)
+  }
 
   // ---- 外部设备接入契约 (动态设备 ID) ----
   if (u.startsWith('/api/external/devices')) {

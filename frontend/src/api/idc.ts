@@ -74,6 +74,47 @@ export interface IdcAlarmResp {
   byIdc: Record<string, number>
 }
 
+export interface IdcRelatedService {
+  key: string
+  name: string
+  deviceCount: number
+  onlineCount: number
+  alarmCount: number
+}
+
+export interface IdcServicesResp {
+  idcId: number
+  idcName: string
+  services: IdcRelatedService[]
+  totalDevices: number
+  onlineDevices: number
+}
+
+export interface IdcOpLog {
+  id: number
+  ts: string
+  action: string
+  target: string
+  operator: string
+  detail: string
+}
+
+export interface IdcOpLogsResp {
+  total: number
+  items: IdcOpLog[]
+}
+
+export interface IdcBatchDeleteResp {
+  deleted: number
+  skipped: number[]
+}
+
+export interface IdcToggleStatusResp {
+  id: number
+  status: string
+  isCurrent: boolean
+}
+
 export const listIdcs = (params: { region?: string; status?: string } = {}) =>
   request.get<unknown, Idc[]>('/api/idc', { params })
 
@@ -93,3 +134,15 @@ export const updateIdc = (id: number, data: Partial<IdcCreate>) =>
   request.put<unknown, Idc>(`/api/idc/${id}`, data)
 
 export const deleteIdc = (id: number) => request.delete(`/api/idc/${id}`)
+
+export const batchDeleteIdcs = (ids: number[]) =>
+  request.post<unknown, IdcBatchDeleteResp>('/api/idc/batch-delete', { ids })
+
+export const toggleIdcStatus = (id: number) =>
+  request.put<unknown, IdcToggleStatusResp>(`/api/idc/${id}/toggle-status`, {})
+
+export const getIdcServices = (id: number) =>
+  request.get<unknown, IdcServicesResp>(`/api/idc/${id}/services`)
+
+export const getIdcOpLogs = (limit = 50) =>
+  request.get<unknown, IdcOpLogsResp>('/api/idc/op-logs', { params: { limit } })

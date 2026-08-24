@@ -262,50 +262,52 @@
         />
       </div>
 
-      <!-- 历史列表 -->
-      <div class="section-title">近期告警记录</div>
+      <!-- 历史列表 (虚拟滚动, 千条数据不卡顿) -->
+      <div class="section-title">近期告警记录 ({{ history?.total ?? history?.items.length ?? 0 }})</div>
       <Panel class="scroll-x" v-if="history">
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 70px">级别</th>
-              <th style="width: 70px">系统</th>
-              <th>告警内容</th>
-              <th style="width: 120px">触发时间</th>
-              <th style="width: 70px">状态</th>
-              <th style="width: 120px">解决时间</th>
-              <th style="width: 80px">自动</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="evt in history.items" :key="evt.id">
-              <td>
+        <div class="hist-thead">
+          <div class="hc w-lv">级别</div>
+          <div class="hc w-sys">系统</div>
+          <div class="hc w-msg">告警内容</div>
+          <div class="hc w-time">触发时间</div>
+          <div class="hc w-st">状态</div>
+          <div class="hc w-time">解决时间</div>
+          <div class="hc w-auto">自动</div>
+        </div>
+        <VirtualList
+          class="hist-virtual"
+          :items="history.items"
+          :item-height="48"
+          :height="460"
+          key-field="id"
+        >
+          <template #default="{ item: evt }">
+            <div class="hist-row">
+              <div class="hc w-lv">
                 <span class="tag" :class="lvClass(evt.level)">{{ lvText(evt.level) }}</span>
-              </td>
-              <td>
+              </div>
+              <div class="hc w-sys">
                 <span class="sys-badge">{{ evt.system }}</span>
-              </td>
-              <td class="desc-cell">
+              </div>
+              <div class="hc w-msg desc-cell">
                 {{ evt.message }}
                 <div class="meta mono" style="font-size: 9px">
                   {{ evt.metric }}: {{ evt.value }}{{ evt.unit }} → 阈值 {{ evt.threshold
                   }}{{ evt.unit }}
                 </div>
-              </td>
-              <td class="mono" style="font-size: 11px">{{ evt.triggeredAt }}</td>
-              <td>
+              </div>
+              <div class="hc w-time mono" style="font-size: 11px">{{ evt.triggeredAt }}</div>
+              <div class="hc w-st">
                 <span class="tag" :class="stateTagClass(evt.status)">{{
                   stateLabel(evt.status)
                 }}</span>
-              </td>
-              <td class="mono" style="font-size: 11px">{{ evt.resolvedAt ?? '—' }}</td>
-              <td>{{ evt.autoResolved ? '是' : '否' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="muted" style="text-align: center; padding: 20px" v-if="!history.items.length">
-          暂无告警历史记录
-        </div>
+              </div>
+              <div class="hc w-time mono" style="font-size: 11px">{{ evt.resolvedAt ?? '—' }}</div>
+              <div class="hc w-auto">{{ evt.autoResolved ? '是' : '否' }}</div>
+            </div>
+          </template>
+          <template #empty>暂无告警历史记录</template>
+        </VirtualList>
       </Panel>
     </template>
 
@@ -467,6 +469,7 @@ import { useTicketsStore } from '@/stores/modules/tickets'
 import TicketFormModal from '@/components/business/TicketFormModal.vue'
 import AlarmRulePanel from './components/AlarmRulePanel.vue'
 import AlarmListPanel from './components/AlarmListPanel.vue'
+import VirtualList from '@/components/common/VirtualList.vue'
 import { matchScenario } from '@/engine/alarmNotifier'
 import type { TicketCreateRequest, KnowledgeItem } from '@/types'
 
@@ -1048,6 +1051,49 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .desc-cell {
   max-width: 280px;
+}
+
+/* ===== 告警历史虚拟滚动表格 ===== */
+.hist-thead,
+.hist-row {
+  display: grid;
+  grid-template-columns: 70px 70px 1fr 120px 70px 120px 80px;
+  align-items: center;
+}
+.hist-thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+.hist-thead .hc {
+  font-size: 11px;
+  color: var(--txt3);
+  font-weight: 500;
+  padding: 8px 10px;
+}
+.hist-virtual :deep(.vl-row) {
+  border-bottom: 1px solid var(--td-line);
+}
+.hist-virtual :deep(.vl-row:hover) {
+  background: rgba(34, 227, 255, 0.03);
+}
+.hist-row .hc {
+  font-size: 12px;
+  color: var(--txt);
+  padding: 6px 10px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hist-row .w-msg {
+  white-space: normal;
+}
+.hist-row .w-lv,
+.hist-row .w-st,
+.hist-row .w-auto {
+  text-align: center;
 }
 
 /* 操作按钮 */

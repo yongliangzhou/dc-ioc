@@ -1,4 +1,9 @@
-import axios, { AxiosError, AxiosInstance } from 'axios'
+import axios, {
+  AxiosError,
+  AxiosInstance,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios'
 import router from '@/router'
 import { mockForUrl, mockWriteForUrl } from './mockData'
 
@@ -7,6 +12,8 @@ declare module 'axios' {
     _retry?: boolean
     // 存储 FormData 中的 File 引用，写操作兜底 mock 时可读取
     __file?: File | undefined
+    // 每个请求挂载的独立 AbortController，路由切换时统一中断
+    _controller?: AbortController
   }
 }
 
@@ -15,8 +22,53 @@ const request: AxiosInstance = axios.create({
   timeout: 15000,
 })
 
-// ---- 请求拦截: 自动附加 Bearer token + 提取 File (for import mock) ----
+// ---- GET 短时缓存 (仅幂等 GET 生效, 成功响应后才写缓存) ----
+interface CacheEntry {
+  data: unknown
+  ts: number
+}
+const GET_CACHE_TTL = 5000
+const getCache = new Map<string, CacheEntry>()
+
+function cacheKeyOf(config: { url?: string; method?: string; params?: unknown }): string | null {
+  if (String(config.method || 'get').toLowerCase() !== 'get') return null
+  if (!config.url) return null
+  const params = config.params ? JSON.stringify(config.params) : ''
+  return `${config.url}?${params}`
+}
+
+// ---- 请求取消: 路由切换时中断未完成请求 ----
+const pendingControllers = new Set<AbortController>()
+
+/** 中断所有尚未完成的请求 (路由切换时调用) */
+export function abortPendingRequests(): void {
+  for (const c of pendingControllers) {
+    try {
+      c.abort()
+    } catch {
+      /* noop */
+    }
+  }
+  pendingControllers.clear()
+}
+
+// ---- 请求拦截: 自动附加 Bearer token + 提取 File (for import mock) + 挂 AbortController ----
 request.interceptors.request.use((config) => {
+  // GET 短时缓存命中: 在发起真实请求前短路返回, 减少重复后端调用
+  const key = cacheKeyOf(config)
+  if (key) {
+    const hit = getCache.get(key)
+    if (hit && Date.now() - hit.ts < GET_CACHE_TTL) {
+      return Promise.resolve({
+        data: hit.data,
+        status: 200,
+        statusText: 'cached',
+        headers: {},
+        config,
+      } as AxiosResponse)
+    }
+  }
+
   const token = localStorage.getItem('dc_ioc_token')
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`
@@ -24,10 +76,21 @@ request.interceptors.request.use((config) => {
   // FormData 中若有 file 字段，引用存到 __file 以便写操作 mock 时读取
   if (config.data instanceof FormData) {
     const f = config.data.get('file')
-    if (f instanceof File) (config as any).__file = f
+    if (f instanceof File) config.__file = f
   }
+  // 为每个请求挂载独立的 AbortController，支持路由切换时统一中断
+  const controller = new AbortController()
+  config.signal = controller.signal
+  pendingControllers.add(controller)
+  config._controller = controller
   return config
 })
+
+// 响应完成后从待取消集合中移除对应 controller
+function releaseController(config: InternalAxiosRequestConfig | undefined): void {
+  const c = (config as InternalAxiosRequestConfig & { _controller?: AbortController })?._controller
+  if (c) pendingControllers.delete(c)
+}
 
 // ---- 后端不可达兜底 / 401 自动刷新 ----
 let isRefreshing = false
@@ -66,7 +129,7 @@ function isWriteMethod(method: string | undefined) {
 }
 
 function tryLocalFallback(err: AxiosError): unknown {
-  const cfg = err?.config as any
+  const cfg = err?.config as InternalAxiosRequestConfig | undefined
   if (!cfg) return undefined
   const status = err?.response?.status
   const noResponse = !err?.response
@@ -103,13 +166,17 @@ function tryLocalFallback(err: AxiosError): unknown {
   }
   // 关键修复1: 从 FormData 中提取上传的 File 对象 + category/tags/description 等字段，
   //          供知识库导入 / 文件上传等 mock 兜底读取
-  const extra: { params?: any; __file?: File; __formData?: FormData } = { params: cfg.params }
+  const extra: {
+    params?: Record<string, unknown>
+    __file?: File
+    __formData?: FormData
+  } = { params: cfg.params as Record<string, unknown> | undefined }
   if (decoded instanceof FormData) {
     const fileEntry = decoded.get('file')
     if (fileEntry instanceof File) extra.__file = fileEntry
     extra.__formData = decoded
   }
-  const wrote = mockWriteForUrl(method, url, decoded, extra as any)
+  const wrote = mockWriteForUrl(method, url, decoded, extra)
   if (wrote !== undefined) {
     console.warn(
       `[mock-fallback-write] 后端不可达, 写操作已落到前端内存: ${method.toUpperCase()} ${url}`,
@@ -129,9 +196,38 @@ function tryLocalFallback(err: AxiosError): unknown {
 }
 
 request.interceptors.response.use(
-  (res) => res.data,
+  (res) => {
+    releaseController(res.config)
+    // 写 GET 缓存 (成功响应后才写入)
+    const key = cacheKeyOf(res.config)
+    if (key && res.status >= 200 && res.status < 300) {
+      getCache.set(key, { data: res.data, ts: Date.now() })
+    }
+    return res.data
+  },
   async (err: AxiosError) => {
     const originalRequest = err?.config
+    releaseController(originalRequest)
+
+    // 网络层错误 (无响应) 且为幂等 GET 时, 重试 1 次 (间隔 300ms)
+    const isNetworkError = !err?.response && axios.isAxiosError(err)
+    const isRetryableGet = String(originalRequest?.method || 'get').toLowerCase() === 'get'
+    if (
+      isNetworkError &&
+      isRetryableGet &&
+      originalRequest &&
+      !(originalRequest as typeof originalRequest & { _netRetry?: boolean })._netRetry
+    ) {
+      ;(originalRequest as typeof originalRequest & { _netRetry?: boolean })._netRetry = true
+      await new Promise((r) => setTimeout(r, 300))
+      try {
+        const retryResp = await request(originalRequest)
+        return retryResp
+      } catch (retryErr) {
+        // 重试仍失败 → 落到下方兜底逻辑
+        err = retryErr as AxiosError
+      }
+    }
 
     // 401 且未重试过 → 尝试刷新 token
     if (err?.response?.status === 401 && originalRequest && !originalRequest._retry) {

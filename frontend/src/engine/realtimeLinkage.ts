@@ -38,7 +38,7 @@ export interface RtAlarm extends Alarm {
 /** 联动规则 = 规则定义 (由后端下发, 类型与 AlarmRuleDef 一致) */
 type LinkRule = AlarmRuleDef
 
-function toClock(iso: string): string {
+export function toClock(iso: string): string {
   try {
     const d = new Date(iso)
     const p = (n: number) => String(n).padStart(2, '0')
@@ -49,10 +49,10 @@ function toClock(iso: string): string {
 }
 
 // 后端活动告警原始形状 (动态 JSON, 字段以 unknown 呈现)
-type RawAlarm = Record<string, unknown>
+export type RawAlarm = Record<string, unknown>
 
 /** 后端活动告警 -> 前端 RtAlarm 形状映射 */
-function mapAlarm(a: RawAlarm): RtAlarm {
+export function mapAlarm(a: RawAlarm): RtAlarm {
   return {
     id: String(a.id ?? `${a.device_id}:${a.metric_name}:${a.level}`),
     ruleId: `${a.category}:${a.metric_name}`,

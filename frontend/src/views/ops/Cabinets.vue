@@ -34,14 +34,14 @@
       <table>
         <thead>
           <tr>
-            <th>{{ tl('机柜编码') }}</th>
-            <th>{{ tl('机房') }}</th>
-            <th>{{ tl('列') }}</th>
-            <th>U {{ tl('位使用') }}</th>
-            <th>{{ tl('功耗') }} ({{ tl('当前') }}/{{ tl('额定') }})</th>
-            <th>{{ tl('负载率') }}</th>
-            <th>{{ tl('状态') }}</th>
-            <th>{{ tl('操作') }}</th>
+            <th scope="col">{{ tl('机柜编码') }}</th>
+            <th scope="col">{{ tl('机房') }}</th>
+            <th scope="col">{{ tl('列') }}</th>
+            <th scope="col">U {{ tl('位使用') }}</th>
+            <th scope="col">{{ tl('功耗') }} ({{ tl('当前') }}/{{ tl('额定') }})</th>
+            <th scope="col">{{ tl('负载率') }}</th>
+            <th scope="col">{{ tl('状态') }}</th>
+            <th scope="col">{{ tl('操作') }}</th>
           </tr>
         </thead>
         <tbody>

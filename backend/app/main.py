@@ -2,8 +2,9 @@
 import logging
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.endpoints import ws
@@ -11,6 +12,7 @@ from app.api.v1.router import api_router
 from app.core.audit import AuditMiddleware
 from app.core.config import settings
 from app.core.lifespan import lifespan
+from app.services.dc_aggregator import DataSourceNotReadyError
 from app.core.logging_config import setup_logging
 from app.core.monitoring import setup_monitoring
 from app.core.secret_check import check_secrets_on_startup
@@ -65,6 +67,40 @@ if os.path.isdir(_upload_root):
 
 # 实时遥测 WebSocket
 app.include_router(ws.router)
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """透传业务层主动抛出的 HTTPException 状态码与 detail。"""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"code": exc.status_code, "message": exc.detail},
+        headers=getattr(exc, "headers", None),
+    )
+
+
+@app.exception_handler(DataSourceNotReadyError)
+async def data_source_not_ready_handler(request: Request, exc: DataSourceNotReadyError):
+    """[S-04] 真实数据源未就绪: 明确拒绝服务, 返回 503 + 结构化错误体。"""
+    logger.warning("数据源未就绪 (拒绝服务): %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "code": exc.status_code,
+            "message": str(exc),
+            "source": "error",
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """兜底未捕获异常: 记录完整堆栈, 但不向客户端暴露内部细节。"""
+    logger.exception("未捕获异常: %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"code": 500, "message": "服务内部错误，请稍后重试"},
+    )
 
 
 @app.get("/health", tags=["system"])

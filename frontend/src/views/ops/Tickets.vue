@@ -1,10 +1,10 @@
 <template>
   <div>
     <div class="view-head">
-      <h1>{{ tl('运维作业') }} {{ tl('·') }} {{ tl('事件工单中心') }}</h1>
+      <h1>{{ tl('工单中心') }}</h1>
       <span class="sub"
-        >{{ tl('工单') }} CRUD {{ tl('生命周期') }} {{ tl('·') }} {{ tl('告警自动转单') }}
-        {{ tl('·') }} {{ tl('状态流转') }} {{ tl('·') }} SLA {{ tl('跟踪') }} {{ tl('·') }}
+        >{{ tl('维修工单') }} {{ tl('与') }} {{ tl('事件工单') }} {{ tl('统一创建') }} · {{ tl('派发') }} · {{ tl('跟踪') }} {{ tl('·') }}
+        {{ tl('告警自动转单') }} {{ tl('·') }} {{ tl('状态流转') }} {{ tl('·') }} SLA {{ tl('跟踪') }} {{ tl('·') }}
         {{ tl('按看板分组') }}</span
       >
       <button class="hdr-btn" v-bind="authState('write')" @click="openCreate">
@@ -111,15 +111,15 @@
         <table>
           <thead>
             <tr>
-              <th>工单号</th>
-              <th>标题</th>
-              <th>系统</th>
-              <th>级别</th>
-              <th>状态</th>
-              <th>责任</th>
-              <th>创建时间</th>
-              <th>SLA</th>
-              <th>进度</th>
+              <th scope="col">工单号</th>
+              <th scope="col">标题</th>
+              <th scope="col">系统</th>
+              <th scope="col">级别</th>
+              <th scope="col">状态</th>
+              <th scope="col">责任</th>
+              <th scope="col">创建时间</th>
+              <th scope="col">SLA</th>
+              <th scope="col">进度</th>
               <th style="width: 140px">操作</th>
             </tr>
           </thead>

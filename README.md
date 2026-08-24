@@ -1,6 +1,6 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.9.0** | 物模型可视化编辑 · 3D 数字孪生拓扑 · 多数据中心管理 | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
+> **v0.10.0** | 多模型 AI 运维助手 · iHealth 月度健康报告 · 运维页面美化与图表布局优化 | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
 
 ---
 
@@ -145,7 +145,11 @@ dc-ioc-platform/
 │   │   │       ├── Collector.vue      #     采集器接入
 │   │   │       ├── Telemetry.vue      #     设备遥测
 │   │   │       ├── Cabinets.vue       #     机柜管理
-│   │   │       └── Equipment.vue      #     统一设备台账
+│   │   │       ├── Equipment.vue      #     统一设备台账
+│   │   │       ├── HealthReport.vue   #     iHealth 月度健康报告
+│   │   │       ├── IntegrationHub.vue #     集成验证中心
+│   │   │       ├── Supplier.vue       #     供应商管理
+│   │   │       └── PowerAiHazards.vue #     供配电 AI 隐患
 │   │   │   ├── twin/
 │   │   │       ├── TwinDashboard.vue  #   数字孪生总览 (Raptor/方舟)
 │   │   │       └── Twin3D.vue         #   3D 数字孪生拓扑 (three.js: 旋转/缩放/分层/实时映射)
@@ -284,6 +288,7 @@ dc-ioc-platform/
 | 知识库 | `/ops/knowledge` | admin/operator |
 | 采集器接入 | `/ops/collector` | admin/operator |
 | 设备遥测 | `/ops/telemetry` | admin/operator |
+| iHealth 健康报告 | `/ops/health-report` | admin/operator |
 
 ### 3.6 资产管理
 
@@ -580,17 +585,44 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 | **多数据中心前端** | `views/ops/DataCenterManage.vue` `DataCenterCompare.vue` `stores/datacenter.ts` `api/idc.ts` | 中心卡片网格增改删/启停/设为当前（`PUT /api/idc/current` 全局生效）；跨中心对比 KPI 卡 + 电力/制冷/告警柱状图 + 统一告警视图 |
 | **CI 修复** | `.github/workflows/ci.yml` `frontend/Dockerfile` | `npm ci` 同步 `package-lock.json`（含 three）；Docker 前端构建显式 `--file frontend/Dockerfile`；复用已入库 `@dc-ioc/ui/dist` 避免 vite 清空 `.d.ts` 导致 TS7016 |
 
+### v0.10 — 多模型 AI / iHealth 报告 / 运维页面优化 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **AI 多模型注册表** | `backend/app/services/assistant_service.py` `api/v1/endpoints/assistant.py` | 模块级模型注册表 `_MODEL_REGISTRY` + 激活状态 `_ACTIVE_MODEL`；`LLM_MODELS` 环境变量覆盖默认列表；`get_models` / `set_active_model` / `check_model_status`；`_llm_config` 读取当前激活模型 |
+| **模型切换端点** | `backend/app/api/v1/endpoints/assistant.py` | `GET /api/ops/assistant/models`、`POST /api/ops/assistant/models/select` (`require_role admin/operator`)、`GET /api/ops/assistant/models/status` |
+| **模型选择前端** | `frontend/src/views/ops/Assistant.vue` `api/index.ts` `types/index.ts` | 模型下拉框 + 切换激活模型 + 当前模型诊断；新增 `getAssistantModels` / `selectAssistantModel` / `assistantModelStatus` 与 `AssistantModel` 类型 |
+| **iHealth 健康报告** | `frontend/src/views/ops/HealthReport.vue` | 新增月度健康报告页 (`/ops/health-report`)：聚合供配电/制冷/网络/隐患/演练/供应商/维修 7 大域评分 → 总分/等级/环形图；关键发现与改进建议；数据取自各模块 localStorage（隐患/供应商/演练/维修）按权重聚合 |
+| **i18n 补全** | `frontend/src/i18n/locales/zh-CN.json` `en-US.json` | 新增 `healthReport` 段（标题/域/说明/建议等 30+ 键）与 `assistant` 模型相关键 |
+| **运维页面美化** | 生命周期 / 供配电 AI 隐患 / 供应商管理 / 应急演练 / 故障影响分析 / 维保日历 / 集成验证中心 | 统一暗色科技风卡片、栅格与配色；ITIL 流程 SVG 渲染修复 |
+| **链路图布局优化** | `frontend/src/components/power/PowerLinkageDiagram.vue` `views/monitor/PowerLinkage.vue` `components/hvac/CoolingLinkageDiagram.vue` `views/monitor/HvacLinkage.vue` | 配电链路增大 viewBox / 层间 Y 间距 / 层内 gap，收紧组框 padding，消除组件堆叠；制冷链路放大容器并改保守 gap 公式，确保设备完整显示在边界内 |
+| **HealthReport 运行时防护** | `frontend/src/views/ops/HealthReport.vue` | `generate()` 中 i18n 取值统一经 `s()` 安全包装，缺失翻译时回退空串，避免 `Cannot read properties of undefined (reading 'replace')` 导致面板崩溃 |
+
+> 部署提示：改后端 `.py` 后若用 `uvicorn --reload` 已挂载则自动重载（必要时 `docker restart dc-ioc-platform-backend-1`）；改 `.env` 的 `LLM_*` 后必须**重建**后端容器而非 `restart`。前端改源码后在 Docker 挂载下 HMR 不生效，需清 `.vite` 缓存并 `restart` 前端容器 + 浏览器硬刷新。
+
 ### AI 运维助手大模型接入 (`LLM_API_KEY` 等)
 
 `/ops/assistant` 的 AI 运维助手默认走**本地知识库检索生成** (无需任何外部依赖)；配置以下
 环境变量后可启用**大模型自然语言润色** (`assistant_service._call_llm` 基于标准库 `urllib`
 调用 OpenAI 兼容的 `/chat/completions` 接口，任何异常自动回退检索生成，保证离线可用)。
 
+**多模型支持 (v0.10 新增)：** 后端维护模型注册表与「当前激活模型」状态，支持运行时切换——
+无需重启即可在多个免费/授权模型间热切换。前端 `Assistant.vue` 提供模型下拉框，可查看可用模型、
+一键切换激活模型、并对当前模型做连通性诊断。
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/ops/assistant/models` | GET | 返回可用模型列表（含 id / name / 是否激活） |
+| `/api/ops/assistant/models/select` | POST | 切换当前激活模型 (`{ "model": "<id>" }`，`require_role admin/operator`) |
+| `/api/ops/assistant/models/status` | GET | 探测当前激活模型 `/chat/completions` 真实连通性与错误体 |
+| `/api/ops/assistant/status` | GET | 诊断端点（v0.9 既有，直接探测 chat/completions 避免误报） |
+
 | 变量 | 说明 | 默认值 |
 |------|------|--------|
 | `LLM_API_KEY` | 大模型 API Key (`Authorization: Bearer <key>`)，留空则不启用大模型 | 空 |
 | `LLM_BASE_URL` | OpenAI 兼容接口 Base URL (代码自动拼接 `/chat/completions`) | `https://api.openai.com/v1` |
-| `LLM_MODEL` | 模型名 (必须为目标端点实际托管的模型) | `gpt-4o-mini` |
+| `LLM_MODEL` | 默认激活模型（被 `LLM_MODELS` 覆盖时取列表首项） | `gpt-4o-mini` |
+| `LLM_MODELS` | 逗号分隔的可用模型 id 列表，注入模型注册表；留空则回退默认单模型 | 空 |
 
 支持任意 OpenAI 兼容端点（OpenAI / 通义 / 本地 vLLM 等）。当前开发环境默认接入**英伟达 NIM**:
 
@@ -599,14 +631,10 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 LLM_API_KEY=nvapi-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 LLM_BASE_URL=https://integrate.api.nvidia.com/v1
 LLM_MODEL=meta/llama-3.1-8b-instruct
+LLM_MODELS=meta/llama-3.1-8b-instruct,nvidia/llama-3.3-70b-instruct,nvidia/nemotron-mini-4b-instruct,nvidia/nemotron-super-49b-instruct,openai/gpt-oss-120b,openai/gpt-oss-20b,zai-ai/glm-5.2,minimax/minimax-m3,stepfun/step-3.7-flash
 ```
 
-> 修改 `.env` 后需**重启后端容器** (`docker compose restart backend`) 才能生效——环境变量在
-> 容器启动时注入，`--reload` 不会重新读取。NIM 端点没有 `gpt-4o-mini`，`LLM_MODEL` 必须填
-> NVIDIA 托管的模型 id。注意：**并非目录里列出的模型都能调用**——部分 `nvidia/*` 大模型（如
-> `nvidia/llama-3.1-nemotron-70b-instruct`）对当前 API Key 账号未授权，会返回
-> `404 Function '...' not found for account`。可用 `meta/llama-3.1-8b-instruct` 等已授权模型；
-> 若要用 70B 等大模型，需换用具备相应授权的 Key/账号，或用 `GET /api/ops/assistant/status` 一键自查。
+> 修改 `.env` 后需**重建后端容器** (`docker compose -f docker-compose.yml -f deploy/docker-compose.dev.yml up -d backend`) 才能生效——环境变量在容器启动时注入，`docker compose restart` **不会**重新读取 `.env`。NIM 端点没有 `gpt-4o-mini`，`LLM_MODEL` 必须填 NVIDIA 托管的模型 id。注意：**并非列表里所有模型都能调用**——部分 `nvidia/*` 大模型（如 `nvidia/llama-3.1-nemotron-70b-instruct`）对当前 API Key 账号未授权，会返回 `404 Function '...' not found for account`。可用 `meta/llama-3.1-8b-instruct` 等已授权模型；若要用 70B 等大模型，需换用具备相应授权的 Key/账号，或用 `/api/ops/assistant/models/status` 一键自查。
 
 ---
 

@@ -31,7 +31,7 @@ export default defineConfig({
       output: {
         // ===== 代码分割: 第三方大库单独成包, 利于浏览器长缓存与并行加载 =====
         manualChunks: {
-          echarts: ["echarts"],
+          echarts: ["echarts/core"],
           vue: ["vue", "vue-router", "pinia"],
           axios: ["axios"],
         },

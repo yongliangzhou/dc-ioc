@@ -51,7 +51,11 @@
                 ><input
                   v-model.trim="form.device_id"
                   class="ipt"
+                  :class="{ invalid: singleTouched.device_id && singleErrors.device_id }"
                   :placeholder="tl('如 CHILLER-01')"
+                  @blur="singleValidate('device_id', form)"
+                /><FieldError
+                  :message="singleTouched.device_id ? singleErrors.device_id : ''"
                 /><span class="hint"
                   >{{ tl('字母') }}/{{ tl('数字开头') }}，2-64{{ tl('字符') }}，{{
                     tl('允许')
@@ -61,27 +65,52 @@
               </div>
               <div class="form-row">
                 <label>{{ tl('名称') }}</label
-                ><input v-model.trim="form.name" class="ipt" :placeholder="tl('展示名称')" /><span
+                ><input
+                  v-model.trim="form.name"
+                  class="ipt"
+                  :class="{ invalid: singleTouched.name && singleErrors.name }"
+                  :placeholder="tl('展示名称')"
+                  @blur="singleValidate('name', form)"
+                /><FieldError :message="singleTouched.name ? singleErrors.name : ''" /><span
                   class="hint"
                   >{{ tl('最长') }} 128 {{ tl('字符') }}</span
                 >
               </div>
               <div class="form-row">
                 <label>IP *</label
-                ><input v-model.trim="form.ip" class="ipt" placeholder="10.20.1.11 或主机名" /><span
+                ><input
+                  v-model.trim="form.ip"
+                  class="ipt"
+                  :class="{ invalid: singleTouched.ip && singleErrors.ip }"
+                  placeholder="10.20.1.11 或主机名"
+                  @blur="singleValidate('ip', form)"
+                /><FieldError :message="singleTouched.ip ? singleErrors.ip : ''" /><span
                   class="hint"
                   >{{ tl('合法') }} IPv4/IPv6 {{ tl('地址或主机名') }}</span
                 >
               </div>
               <div class="form-row">
                 <label>{{ tl('序列号') }} SN *</label
-                ><input v-model.trim="form.sn" class="ipt" placeholder="SN..." /><span class="hint"
+                ><input
+                  v-model.trim="form.sn"
+                  class="ipt"
+                  :class="{ invalid: singleTouched.sn && singleErrors.sn }"
+                  placeholder="SN..."
+                  @blur="singleValidate('sn', form)"
+                /><FieldError :message="singleTouched.sn ? singleErrors.sn : ''" /><span
+                  class="hint"
                   >{{ tl('最长') }} 128 {{ tl('字符') }}</span
                 >
               </div>
               <div class="form-row">
                 <label>{{ tl('型号') }} *</label
-                ><input v-model.trim="form.model" class="ipt" /><span class="hint"
+                ><input
+                  v-model.trim="form.model"
+                  class="ipt"
+                  :class="{ invalid: singleTouched.model && singleErrors.model }"
+                  @blur="singleValidate('model', form)"
+                /><FieldError :message="singleTouched.model ? singleErrors.model : ''" /><span
+                  class="hint"
                   >{{ tl('最长') }} 128 {{ tl('字符') }}</span
                 >
               </div>
@@ -119,7 +148,13 @@
             <div class="grid2">
               <div class="form-row">
                 <label>ID 前缀 *</label
-                ><input v-model.trim="batch.prefix" class="ipt" placeholder="MOCK-CHILLER-" />
+                ><input
+                  v-model.trim="batch.prefix"
+                  class="ipt"
+                  :class="{ invalid: batchTouched.prefix && batchErrors.prefix }"
+                  placeholder="MOCK-CHILLER-"
+                  @blur="batchValidate('prefix', batch)"
+                /><FieldError :message="batchTouched.prefix ? batchErrors.prefix : ''" />
               </div>
               <div class="form-row">
                 <label>起始序号</label
@@ -127,11 +162,25 @@
               </div>
               <div class="form-row">
                 <label>数量 *</label
-                ><input v-model.number="batch.count" class="ipt" type="number" min="1" max="200" />
+                ><input
+                  v-model.number="batch.count"
+                  class="ipt"
+                  :class="{ invalid: batchTouched.count && batchErrors.count }"
+                  type="number"
+                  min="1"
+                  max="200"
+                  @blur="batchValidate('count', batch)"
+                /><FieldError :message="batchTouched.count ? batchErrors.count : ''" />
               </div>
               <div class="form-row">
                 <label>IP 网段前缀 *</label
-                ><input v-model.trim="batch.ipPrefix" class="ipt" placeholder="10.30.0." />
+                ><input
+                  v-model.trim="batch.ipPrefix"
+                  class="ipt"
+                  :class="{ invalid: batchTouched.ipPrefix && batchErrors.ipPrefix }"
+                  placeholder="10.30.0."
+                  @blur="batchValidate('ipPrefix', batch)"
+                /><FieldError :message="batchTouched.ipPrefix ? batchErrors.ipPrefix : ''" />
               </div>
               <div class="form-row">
                 <label>IP 起始</label
@@ -198,13 +247,31 @@
                 <label>名称</label><input v-model.trim="editForm.name" class="ipt" />
               </div>
               <div class="form-row">
-                <label>IP *</label><input v-model.trim="editForm.ip" class="ipt" />
+                <label>IP *</label
+                ><input
+                  v-model.trim="editForm.ip"
+                  class="ipt"
+                  :class="{ invalid: editTouched.ip && editErrors.ip }"
+                  @blur="editValidate('ip', editForm)"
+                /><FieldError :message="editTouched.ip ? editErrors.ip : ''" />
               </div>
               <div class="form-row">
-                <label>序列号 SN *</label><input v-model.trim="editForm.sn" class="ipt" />
+                <label>序列号 SN *</label
+                ><input
+                  v-model.trim="editForm.sn"
+                  class="ipt"
+                  :class="{ invalid: editTouched.sn && editErrors.sn }"
+                  @blur="editValidate('sn', editForm)"
+                /><FieldError :message="editTouched.sn ? editErrors.sn : ''" />
               </div>
               <div class="form-row">
-                <label>型号 *</label><input v-model.trim="editForm.model" class="ipt" />
+                <label>型号 *</label
+                ><input
+                  v-model.trim="editForm.model"
+                  class="ipt"
+                  :class="{ invalid: editTouched.model && editErrors.model }"
+                  @blur="editValidate('model', editForm)"
+                /><FieldError :message="editTouched.model ? editErrors.model : ''" />
               </div>
               <div class="form-row">
                 <label>厂商</label><input v-model.trim="editForm.vendor" class="ipt" />
@@ -281,6 +348,8 @@ const { t: tl } = useI18n()
 import { computed, reactive, ref, watch } from 'vue'
 import { THING_MODELS } from '@/constants/thingModels'
 import type { ExternalDevice, ExternalDeviceView, ThingModelDef } from '@/types'
+import FieldError from '@/components/common/FieldError.vue'
+import { useFormValidation, required, maxLen, isIpOrHost, rangeLen, pattern } from '@/composables/useFormValidation'
 
 const props = defineProps<{
   open: boolean
@@ -334,6 +403,37 @@ const editForm = reactive({
   protocol: '',
   tags: '',
 })
+
+// U-05 字段级实时校验
+const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
+const singleFV = useFormValidation({
+  rules: {
+    device_id: [required('请输入设备 ID'), rangeLen(2, 64), pattern(ID_RE, '须以字母/数字开头，仅允许字母/数字/._:-')],
+    name: [maxLen(128)],
+    ip: [required('请输入 IP'), isIpOrHost],
+    sn: [required('请输入序列号'), maxLen(128)],
+    model: [required('请输入型号'), maxLen(128)],
+  },
+})
+const { errors: singleErrors, touched: singleTouched, validate: singleValidate, validateAll: singleValid } = singleFV
+
+const batchFV = useFormValidation({
+  rules: {
+    prefix: [required('请输入 ID 前缀')],
+    count: [(v) => (Number(v) > 0 && Number(v) <= 200 ? true : '数量需为 1-200')],
+    ipPrefix: [required('请输入 IP 网段前缀'), isIpOrHost],
+  },
+})
+const { errors: batchErrors, touched: batchTouched, validate: batchValidate, validateAll: batchValid } = batchFV
+
+const editFV = useFormValidation({
+  rules: {
+    ip: [required('请输入 IP'), isIpOrHost],
+    sn: [required('请输入序列号'), maxLen(128)],
+    model: [required('请输入型号'), maxLen(128)],
+  },
+})
+const { errors: editErrors, touched: editTouched, validate: editValidate, validateAll: editValid } = editFV
 
 const currentModel = computed(() => THING_MODELS.find((m) => m.key === form.modelKey) || null)
 const editThingModel = computed<ThingModelDef | null>(() => {
@@ -429,8 +529,10 @@ watch(
 
 function onSubmit() {
   if (props.mode === 'edit') {
-    if (!editForm.ip || !editForm.sn || !editForm.model) {
-      emit('close')
+    if (!editValid(editForm)) {
+      editFV.validate('ip', editForm)
+      editFV.validate('sn', editForm)
+      editFV.validate('model', editForm)
       return
     }
     const tags = editForm.tags
@@ -452,7 +554,14 @@ function onSubmit() {
     return
   }
   if (addMode.value === 'single') {
-    if (!form.device_id || !form.ip || !form.sn || !form.model) return
+    if (!singleValid(form)) {
+      singleFV.validate('device_id', form)
+      singleFV.validate('name', form)
+      singleFV.validate('ip', form)
+      singleFV.validate('sn', form)
+      singleFV.validate('model', form)
+      return
+    }
     emit('submit-single', {
       device_id: form.device_id,
       ip: form.ip,
@@ -467,7 +576,12 @@ function onSubmit() {
       tags: parseTags(),
     })
   } else {
-    if (!batch.prefix || !batch.ipPrefix || !(Number(batch.count) > 0)) return
+    if (!batchValid(batch)) {
+      batchFV.validate('prefix', batch)
+      batchFV.validate('count', batch)
+      batchFV.validate('ipPrefix', batch)
+      return
+    }
     const payloads: ExternalDevice[] = batchPreview.value.map((p, i) => {
       const seq = Number(batch.start) + i
       return {
@@ -600,6 +714,10 @@ function onSubmit() {
 select.ipt {
   appearance: none;
   cursor: pointer;
+}
+.ipt.invalid {
+  border-color: #ff6b6b !important;
+  background: rgba(255, 107, 107, 0.08);
 }
 .preview {
   max-height: 220px;

@@ -60,12 +60,12 @@
       <table>
         <thead>
           <tr>
-            <th>{{ tl('触发时间') }}</th>
-            <th>{{ tl('级别') }}</th>
-            <th>{{ tl('系统') }}</th>
-            <th>{{ tl('规则') }} / {{ tl('描述') }}</th>
-            <th>{{ tl('实测') }} / {{ tl('阈值') }}</th>
-            <th>{{ tl('状态') }}</th>
+            <th scope="col">{{ tl('触发时间') }}</th>
+            <th scope="col">{{ tl('级别') }}</th>
+            <th scope="col">{{ tl('系统') }}</th>
+            <th scope="col">{{ tl('规则') }} / {{ tl('描述') }}</th>
+            <th scope="col">{{ tl('实测') }} / {{ tl('阈值') }}</th>
+            <th scope="col">{{ tl('状态') }}</th>
             <th style="min-width: 150px">{{ tl('操作') }}</th>
           </tr>
         </thead>
@@ -129,6 +129,95 @@
       />
     </Panel>
 
+    <!-- 告警触达通道 (由多通道告警模块整合) -->
+    <div class="channels">
+      <div class="view-sub">
+        <h2>{{ tl('告警触达通道') }}</h2>
+        <span class="sub">{{ tl('统一管理多通道触达策略与发送记录') }}</span>
+      </div>
+
+      <div class="ch-grid">
+        <div
+          v-for="c in channels"
+          :key="c.id"
+          class="ch-card"
+          :class="{ disabled: !c.enabled }"
+        >
+          <div class="ch-top">
+            <span class="ch-icon">{{ c.icon }}</span>
+            <span class="ch-name">{{ c.name }}</span>
+            <span class="ch-status" :class="c.enabled ? 'on' : 'off'">{{
+              c.enabled ? tl('启用') : tl('停用')
+            }}</span>
+          </div>
+          <div class="ch-meta">
+            <div><span class="muted">{{ tl('触发级别') }}</span> {{ c.levels.join(' / ') }}</div>
+            <div><span class="muted">{{ tl('触达对象') }}</span> {{ c.target }}</div>
+          </div>
+          <div class="ch-bar">
+            <span class="muted sm">{{ tl('近 24h 触达') }}</span>
+            <span class="ch-count">{{ c.sent }}</span>
+          </div>
+        </div>
+      </div>
+
+      <Panel class="toolbar" style="margin-top: 16px">
+        <strong style="font-size: 13px">{{ tl('触达规则') }}</strong>
+        <table style="margin-top: 10px">
+          <thead>
+            <tr>
+              <th>{{ tl('规则名称') }}</th>
+              <th>{{ tl('通道') }}</th>
+              <th>{{ tl('适用级别') }}</th>
+              <th>{{ tl('静默') }}</th>
+              <th>{{ tl('状态') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in channelRules" :key="r.id">
+              <td>{{ r.name }}</td>
+              <td>{{ r.channels.join(' / ') }}</td>
+              <td>{{ r.levels.join(' / ') }}</td>
+              <td>{{ r.silence }}</td>
+              <td>
+                <span class="tag" :class="r.enabled ? 'g' : 'n'">{{
+                  r.enabled ? tl('生效') : tl('停用')
+                }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </Panel>
+
+      <Panel class="scroll-x" style="margin-top: 16px">
+        <strong style="font-size: 13px">{{ tl('触达记录') }}</strong>
+        <table style="margin-top: 10px">
+          <thead>
+            <tr>
+              <th>{{ tl('时间') }}</th>
+              <th>{{ tl('通道') }}</th>
+              <th>{{ tl('级别') }}</th>
+              <th>{{ tl('接收人') }}</th>
+              <th>{{ tl('内容摘要') }}</th>
+              <th>{{ tl('状态') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="l in channelLogs" :key="l.id">
+              <td class="mono">{{ fmtDateTime(l.at) }}</td>
+              <td>{{ l.channel }}</td>
+              <td><span class="tag" :class="l.level === 'crit' ? 'r' : l.level === 'warn' ? 'a' : 'g'">{{ l.level }}</span></td>
+              <td>{{ l.receiver }}</td>
+              <td class="muted">{{ l.summary }}</td>
+              <td>
+                <span class="tag" :class="l.ok ? 'g' : 'r'">{{ l.ok ? tl('成功') : tl('失败') }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </Panel>
+    </div>
+
     <div class="footer-note">
       {{ tl('智能运营·告警历史') }} {{ tl('—') }} {{ tl('接入后端') }} /api/alarm-history ({{
         tl('确认')
@@ -157,6 +246,25 @@ const page = ref(1)
 const size = ref(50)
 const kw = ref('')
 const operator = '值班员'
+
+/* 触达通道数据 (由多通道告警模块整合) */
+const channels = [
+  { id: 'ch1', icon: '📟', name: tl('短信 SMS'), enabled: true, levels: ['crit', 'warn'], target: tl('运维值班组'), sent: 184 },
+  { id: 'ch2', icon: '💬', name: tl('企业微信'), enabled: true, levels: ['crit', 'warn', 'info'], target: tl('数据中心运维群'), sent: 326 },
+  { id: 'ch3', icon: '🔔', name: tl('钉钉'), enabled: true, levels: ['crit'], target: tl('应急管理群'), sent: 47 },
+  { id: 'ch4', icon: '📧', name: tl('邮件'), enabled: true, levels: ['crit', 'warn'], target: tl('设施经理'), sent: 92 },
+  { id: 'ch5', icon: '📞', name: tl('语音外呼'), enabled: false, levels: ['crit'], target: tl('7×24 值守'), sent: 0 },
+]
+const channelRules = [
+  { id: 'r1', name: tl('一级事件电话升级'), channels: [tl('语音外呼'), tl('短信 SMS')], levels: ['crit'], silence: tl('22:00–07:00 免打扰'), enabled: true },
+  { id: 'r2', name: tl('二级事件群通知'), channels: [tl('企业微信'), tl('钉钉')], levels: ['warn'], silence: tl('无'), enabled: true },
+  { id: 'r3', name: tl('三级事件邮件'), channels: [tl('邮件')], levels: ['info'], silence: tl('工作日 09:00–18:00'), enabled: false },
+]
+const channelLogs = [
+  { id: 'l1', at: new Date(Date.now() - 3600e3).toISOString(), channel: tl('企业微信'), level: 'crit', receiver: tl('数据中心运维群'), summary: tl('A 区冷机 2 回风温度越限'), ok: true },
+  { id: 'l2', at: new Date(Date.now() - 7200e3).toISOString(), channel: tl('短信 SMS'), level: 'warn', receiver: tl('运维值班组'), summary: tl('B 区 UPS 负载率 86%'), ok: true },
+  { id: 'l3', at: new Date(Date.now() - 10800e3).toISOString(), channel: tl('钉钉'), level: 'crit', receiver: tl('应急管理群'), summary: tl('市电中断演练触发'), ok: false },
+]
 
 const systemOptions = computed(() =>
   data.value ? [...new Set(data.value.items.map((e) => e.system))] : [],
@@ -281,5 +389,87 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .row-crit {
   background: rgba(242, 63, 63, 0.05);
+}
+.channels {
+  margin-top: 20px;
+}
+.view-sub {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.view-sub h2 {
+  font-size: 16px;
+  color: var(--txt);
+  margin: 0;
+}
+.view-sub .sub {
+  color: var(--muted, #7e93b8);
+  font-size: 12px;
+}
+.ch-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+.ch-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  background: var(--bg2);
+}
+.ch-card.disabled {
+  opacity: 0.5;
+}
+.ch-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.ch-icon {
+  font-size: 16px;
+}
+.ch-name {
+  color: var(--txt);
+  font-weight: 600;
+  font-size: 13px;
+  flex: 1;
+}
+.ch-status {
+  font-size: 11px;
+  padding: 1px 8px;
+  border-radius: 999px;
+}
+.ch-status.on {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.14);
+}
+.ch-status.off {
+  color: #7e93b8;
+  background: rgba(126, 147, 184, 0.14);
+}
+.ch-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--txt);
+  margin-bottom: 10px;
+}
+.ch-meta .muted {
+  margin-right: 4px;
+}
+.ch-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.ch-count {
+  color: var(--cyan);
+  font-weight: 700;
+  font-size: 15px;
 }
 </style>

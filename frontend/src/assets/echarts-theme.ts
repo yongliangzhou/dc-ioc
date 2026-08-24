@@ -2,7 +2,8 @@
  * 统一 ECharts 深色主题 and 颜色板
  * 所有图表组件共用此配置
  */
-import * as echarts from 'echarts'
+import echarts from '@/utils/echarts'
+import type * as echartsTypes from 'echarts'
 
 // ---- 统一调色板 ----
 export const CHART_COLORS = {
@@ -42,7 +43,7 @@ export const CHART_BASE = {
 }
 
 // ---- 基础 grid 配置 ----
-export function baseGrid(overrides?: Partial<echarts.GridComponentOption>): echarts.GridComponentOption {
+export function baseGrid(overrides?: Partial<echartsTypes.GridComponentOption>): echartsTypes.GridComponentOption {
   return {
     left: 55,
     right: 20,
@@ -55,8 +56,8 @@ export function baseGrid(overrides?: Partial<echarts.GridComponentOption>): echa
 
 // ---- 基础 tooltip 配置 ----
 export function baseTooltip(
-  overrides?: Partial<echarts.TooltipComponentOption>,
-): echarts.TooltipComponentOption {
+  overrides?: Partial<echartsTypes.TooltipComponentOption>,
+): echartsTypes.TooltipComponentOption {
   return {
     trigger: 'axis',
     backgroundColor: 'rgba(15, 27, 51, 0.95)',
@@ -67,7 +68,7 @@ export function baseTooltip(
 }
 
 // ---- 基础 xAxis 配置 ----
-export function baseXAxis(overrides?: Partial<echarts.XAXisComponentOption>): echarts.XAXisComponentOption {
+export function baseXAxis(overrides?: Partial<echartsTypes.XAXisComponentOption>): echartsTypes.XAXisComponentOption {
   return {
     type: 'category',
     axisLabel: { color: CHART_BASE.labelColor, fontSize: 10 },
@@ -79,7 +80,7 @@ export function baseXAxis(overrides?: Partial<echarts.XAXisComponentOption>): ec
 }
 
 // ---- 基础 yAxis 配置 ----
-export function baseYAxis(overrides?: Partial<echarts.YAXisComponentOption>): echarts.YAXisComponentOption {
+export function baseYAxis(overrides?: Partial<echartsTypes.YAXisComponentOption>): echartsTypes.YAXisComponentOption {
   return {
     type: 'value',
     axisLabel: { color: CHART_BASE.labelColor },
@@ -89,7 +90,7 @@ export function baseYAxis(overrides?: Partial<echarts.YAXisComponentOption>): ec
 }
 
 // ---- 基础 legend 配置 ----
-export function baseLegend(overrides?: Partial<echarts.LegendComponentOption>): echarts.LegendComponentOption {
+export function baseLegend(overrides?: Partial<echartsTypes.LegendComponentOption>): echartsTypes.LegendComponentOption {
   return {
     bottom: 0,
     textStyle: { color: CHART_BASE.textColor, fontSize: 11 },
@@ -119,10 +120,10 @@ export function areaGradient(color: string, alpha?: number) {
 // ---- 快速创建折线 series ----
 export function lineSeries(
   name: string,
-  data: echarts.LineSeriesOption['data'],
+  data: echartsTypes.LineSeriesOption['data'],
   color: string,
-  overrides?: Partial<echarts.LineSeriesOption>,
-): echarts.LineSeriesOption {
+  overrides?: Partial<echartsTypes.LineSeriesOption>,
+): echartsTypes.LineSeriesOption {
   return {
     name,
     type: 'line',
@@ -137,10 +138,10 @@ export function lineSeries(
 // ---- 快速创建柱状 series ----
 export function barSeries(
   name: string,
-  data: echarts.BarSeriesOption['data'],
+  data: echartsTypes.BarSeriesOption['data'],
   color: string,
-  overrides?: Partial<echarts.BarSeriesOption>,
-): echarts.BarSeriesOption {
+  overrides?: Partial<echartsTypes.BarSeriesOption>,
+): echartsTypes.BarSeriesOption {
   return {
     name,
     type: 'bar' as const,

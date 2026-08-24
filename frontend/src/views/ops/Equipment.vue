@@ -25,6 +25,7 @@
         <option value="待机">{{ tl('待机') }}</option>
         <option value="故障">{{ tl('故障') }}</option>
         <option value="维保">{{ tl('维保') }}</option>
+        <option value="库房备件">{{ tl('库房备件') }}</option>
       </select>
       <input
         v-model.trim="kw"
@@ -41,15 +42,15 @@
       <table>
         <thead>
           <tr>
-            <th>{{ tl('设备编码') }}</th>
-            <th>{{ tl('名称') }}</th>
-            <th>{{ tl('业务域') }}</th>
-            <th>{{ tl('类别') }}</th>
-            <th>{{ tl('厂商') }} / {{ tl('型号') }}</th>
-            <th>{{ tl('状态') }}</th>
-            <th>{{ tl('负载率') }}</th>
-            <th>{{ tl('运行小时') }}</th>
-            <th>{{ tl('操作') }}</th>
+            <th scope="col">{{ tl('设备编码') }}</th>
+            <th scope="col">{{ tl('名称') }}</th>
+            <th scope="col">{{ tl('业务域') }}</th>
+            <th scope="col">{{ tl('类别') }}</th>
+            <th scope="col">{{ tl('厂商') }} / {{ tl('型号') }}</th>
+            <th scope="col">{{ tl('状态') }}</th>
+            <th scope="col">{{ tl('负载率') }}</th>
+            <th scope="col">{{ tl('运行小时') }}</th>
+            <th scope="col">{{ tl('操作') }}</th>
           </tr>
         </thead>
         <tbody>
@@ -71,7 +72,9 @@
                       ? 'r'
                       : e.status === '维保'
                         ? 'a'
-                        : 'o'
+                        : e.status === '库房备件'
+                          ? 'p'
+                          : 'o'
                 "
                 >{{ e.status }}</span
               >

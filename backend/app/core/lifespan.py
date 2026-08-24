@@ -34,9 +34,10 @@ def _ensure_missing_columns(db):
     兼容 PostgreSQL 与 SQLite。
     """
     from sqlalchemy import text
+    from sqlalchemy.types import String, Integer, Numeric, Boolean
 
     # 表名 -> [(列名, 类型SQL, 默认值SQL)]
-    specs = {
+    specs: dict[str, list[tuple[str, str, str]]] = {
         "knowledge_items": [
             ("review_status", "VARCHAR(16)", "DEFAULT 'approved'"),
             ("reviewer", "VARCHAR(64)", "DEFAULT ''"),
@@ -44,11 +45,49 @@ def _ensure_missing_columns(db):
             ("review_note", "TEXT", "DEFAULT ''"),
         ],
     }
+
+    # 按模型元数据自动补齐缺失列 (兼容老库缺列) 的表清单
+    auto_tables = {}
+    try:
+        from app.models.idc import IDC
+        auto_tables["idc"] = IDC
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from app.models.external import ExternalDevice
+        auto_tables["external_devices"] = ExternalDevice
+    except Exception:  # noqa: BLE001
+        pass
+
+    for table_name, model in auto_tables.items():
+        cols: list[tuple[str, str, str]] = []
+        for col in model.__table__.columns:
+            if col.name in ("id",):
+                continue
+            ctype = col.type
+            if isinstance(ctype, String):
+                sql = f"VARCHAR({getattr(ctype, 'length', 255) or 255})"
+            elif isinstance(ctype, Numeric):
+                sql = f"NUMERIC({getattr(ctype, 'precision', 12) or 12},{getattr(ctype, 'scale', 2) or 2})"
+            elif isinstance(ctype, Integer):
+                sql = "INTEGER"
+            elif isinstance(ctype, Boolean):
+                sql = "BOOLEAN"
+            else:
+                sql = "TEXT"
+            if isinstance(ctype, Boolean):
+                default = "DEFAULT FALSE"
+            elif isinstance(ctype, (Integer, Numeric)):
+                default = "DEFAULT 0"
+            else:
+                default = "DEFAULT ''"
+            cols.append((col.name, sql, default))
+        specs[table_name] = cols
     for table, cols in specs.items():
         for col, col_type, col_default in cols:
             try:
                 db.execute(
-                    text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type} {col_default}")
+                    text(f"ALTER TABLE {table} ADD COLUMN {col} {col_type} {col_default}")  # sql-guard-ignore
                 )
                 db.commit()
                 logger.info("补齐列 %s.%s", table, col)
@@ -609,6 +648,47 @@ def _seed_drill_risk_inspection():
             db.close()
 
 
+def _seed_tenants():
+    """首次启动时填充租户演示数据 (幂等)。"""
+    import logging
+    logger = logging.getLogger("seed")
+    from app.db.session import SessionLocal, engine
+    from app.models import Base
+
+    db = None
+    try:
+        db = SessionLocal()
+        from sqlalchemy import text
+        db.execute(text("select 1"))
+    except Exception:
+        if db is not None:
+            db.close()
+        return
+
+    try:
+        Base.metadata.create_all(bind=engine)
+        from app.crud import tenant as tenant_crud
+
+        if tenant_crud.count(db) == 0:
+            seeds = [
+                {"name": "云栖科技", "code": "TH-001", "contact": "王经理", "phone": "13800000001", "industry": "互联网", "contractNo": "HT-2023-001", "validFrom": "2023-01-01", "validTo": "2026-12-31", "status": "active", "rent": 120000, "cabinets": 8, "quotaCabinets": 10, "quotaDevices": 200, "quotaPowerKw": 160, "quotaBandwidthMbps": 2000, "usedDevices": 168, "usedPowerKw": 142.6, "usedBandwidthMbps": 1680, "uOccupied": 264, "note": "核心客户"},
+                {"name": "智算网络", "code": "TH-002", "contact": "李总", "phone": "13800000002", "industry": "人工智能", "contractNo": "HT-2023-002", "validFrom": "2023-03-01", "validTo": "2025-09-30", "status": "expired", "rent": 200000, "cabinets": 12, "quotaCabinets": 12, "quotaDevices": 320, "quotaPowerKw": 300, "quotaBandwidthMbps": 4000, "usedDevices": 305, "usedPowerKw": 292.4, "usedBandwidthMbps": 3720, "uOccupied": 396, "note": "合同待续签"},
+                {"name": "金信金融", "code": "TH-003", "contact": "赵主管", "phone": "13800000003", "industry": "金融", "contractNo": "HT-2023-003", "validFrom": "2023-06-01", "validTo": "2027-06-30", "status": "active", "rent": 150000, "cabinets": 6, "quotaCabinets": 10, "quotaDevices": 150, "quotaPowerKw": 120, "quotaBandwidthMbps": 1500, "usedDevices": 142, "usedPowerKw": 119.8, "usedBandwidthMbps": 980, "uOccupied": 198, "note": "等保三级"},
+                {"name": "联创医疗", "code": "TH-004", "contact": "孙主任", "phone": "13800000004", "industry": "医疗", "contractNo": "HT-2024-001", "validFrom": "2024-01-15", "validTo": "2026-01-14", "status": "pending", "rent": 90000, "cabinets": 4, "quotaCabinets": 8, "quotaDevices": 100, "quotaPowerKw": 80, "quotaBandwidthMbps": 1000, "usedDevices": 61, "usedPowerKw": 52.3, "usedBandwidthMbps": 410, "uOccupied": 132, "note": "新签待启用"},
+                {"name": "远图物流", "code": "TH-005", "contact": "周经理", "phone": "13800000005", "industry": "物流", "contractNo": "HT-2024-002", "validFrom": "2024-05-01", "validTo": "2026-04-30", "status": "active", "rent": 80000, "cabinets": 5, "quotaCabinets": 6, "quotaDevices": 90, "quotaPowerKw": 70, "quotaBandwidthMbps": 900, "usedDevices": 88, "usedPowerKw": 68.9, "usedBandwidthMbps": 870, "uOccupied": 165, "note": "机柜接近配额"},
+            ]
+            for s in seeds:
+                tenant_crud.create(db, data=s)
+            logger.info("已种子租户 %d 条", len(seeds))
+    except Exception as e:
+        if db is not None:
+            db.rollback()
+        logger.warning("租户种子跳过: %s", e)
+    finally:
+        if db is not None:
+            db.close()
+
+
 def _seed_external_devices():
     """首次启动时填充采集器接入(外部设备)演示数据 (幂等)。"""
     import logging
@@ -660,6 +740,10 @@ def _seed_external_devices():
                 tags=[d[7], d[6]],
                 description=f"{d[4]} 演示采集设备",
             ))
+        # 将演示设备归属到当前数据中心 (idc_id=1), 供关联服务聚合
+        from sqlalchemy import update as sa_update
+        db.execute(sa_update(ExternalDevice).values(idc_id=1))
+        db.commit()
         logger.info("已种子外部设备 %d 台", len(devices))
 
         now = datetime.utcnow()
@@ -687,6 +771,56 @@ def _seed_external_devices():
         if db is not None:
             db.rollback()
         logger.warning("外部设备种子跳过: %s", e)
+    finally:
+        if db is not None:
+            db.close()
+
+
+def _seed_idc():
+    """首次启动时填充多数据中心演示数据 (幂等)。"""
+    import logging
+    logger = logging.getLogger("seed")
+    from app.db.session import SessionLocal, engine
+    from app.models import Base
+
+    db = None
+    try:
+        db = SessionLocal()
+        from sqlalchemy import text
+        db.execute(text("select 1"))
+    except Exception:
+        if db is not None:
+            db.close()
+        return
+
+    try:
+        Base.metadata.create_all(bind=engine)
+        from sqlalchemy import select, func
+        from app.models.idc import IDC
+
+        if (db.scalar(select(func.count()).select_from(IDC)) or 0) > 0:
+            return
+
+        seeds = [
+            {"code": "EC1-HZ", "name": "杭州东冠数据中心", "region": "华东1(杭州)", "address": "杭州市滨江区", "power_capacity_mw": 20.0, "cooling_capacity_mw": 18.0, "rack_capacity": 1200, "rooms": 6, "status": "运营", "capacity_kw": 8, "description": "核心生产中心，承载主要业务", "is_current": True},
+            {"code": "EC2-SH", "name": "上海临港数据中心", "region": "华东2(上海)", "address": "上海市浦东新区临港", "power_capacity_mw": 30.0, "cooling_capacity_mw": 27.0, "rack_capacity": 1800, "rooms": 8, "status": "运营", "capacity_kw": 10, "description": "高密算力中心", "is_current": False},
+            {"code": "NC1-BJ", "name": "北京亦庄数据中心", "region": "华北2(北京)", "address": "北京市大兴区亦庄", "power_capacity_mw": 25.0, "cooling_capacity_mw": 22.0, "rack_capacity": 1500, "rooms": 7, "status": "运营", "capacity_kw": 9, "description": "北方灾备中心", "is_current": False},
+            {"code": "SC1-CD", "name": "成都天府数据中心", "region": "西南1(成都)", "address": "成都市天府新区", "power_capacity_mw": 15.0, "cooling_capacity_mw": 14.0, "rack_capacity": 900, "rooms": 5, "status": "建设", "capacity_kw": 7, "description": "新建西部节点，建设中", "is_current": False},
+        ]
+        for s in seeds:
+            db.add(IDC(**s))
+        db.commit()
+        logger.info("已种子数据中心 %d 个", len(seeds))
+
+        # 将尚无归属的外部设备归集到当前数据中心 (idc_id=1), 供关联服务聚合展示
+        from sqlalchemy import update as sa_update
+        from app.models.external import ExternalDevice
+        db.execute(sa_update(ExternalDevice).where(ExternalDevice.idc_id.is_(None)).values(idc_id=1))
+        db.commit()
+    except Exception as e:
+        if db is not None:
+            db.rollback()
+        logger.warning("数据中心种子跳过: %s", e)
     finally:
         if db is not None:
             db.close()
@@ -752,6 +886,16 @@ async def lifespan(app: FastAPI):
         logger.warning("外部设备种子跳过: %s", e)
 
     try:
+        _seed_idc()
+    except Exception as e:
+        logger.warning("数据中心种子跳过: %s", e)
+
+    try:
+        _seed_tenants()
+    except Exception as e:
+        logger.warning("租户种子跳过: %s", e)
+
+    try:
         _seed_alarm_rules()
     except Exception as e:
         logger.warning("告警规则种子跳过: %s", e)
@@ -788,6 +932,22 @@ async def lifespan(app: FastAPI):
 
     retention_task = asyncio.create_task(metric_retention_loop(), name="metric-retention")
     logger.info("测点保留清理循环已启动 (保留 %d 天)", METRIC_RETENTION_DAYS)
+
+    # [S-04] 数据源模式启动日志 + 生产误用检查
+    if settings.DATA_SOURCE == "real":
+        logger.info(
+            "[数据源] 模式=real (真实采集器接入)。聚合层要求已注册外部设备存在, "
+            "无真实数据时将拒绝服务 (HTTP 503)。"
+        )
+        if settings.EXTERNAL_MOCK_COLLECTOR_ENABLED:
+            logger.warning(
+                "[数据源] 检测到 DATA_SOURCE=real 但 EXTERNAL_MOCK_COLLECTOR_ENABLED=True, "
+                "二者互斥。Mock 采集器推送的是演示数据, 生产真实模式下应设为 False。"
+            )
+    else:
+        logger.info(
+            "[数据源] 模式=mock (开发/演示)。无真实外部设备时静默回退内置生成器 (_source=generated)。"
+        )
 
     try:
         yield

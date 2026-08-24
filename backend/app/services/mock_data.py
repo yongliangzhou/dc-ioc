@@ -95,3 +95,103 @@ def cabinet_metrics(cabinet_id: int, minutes: int = 60, step_sec: int = 60) -> C
         humidity=_series(rng, 50.0, 5.0, n, now, step, f=1),
         power_kw=_series(rng, cab.current_power_kw, 0.8, n, now, step),
     )
+
+
+# ---------- U 位识别演示数据 ----------
+# RFID / 资产标签实测来源 (现场实时 U 位)。
+_U_BRANDS = ["Dell", "HPE", "Inspur", "Huawei", "Lenovo"]
+_U_BUSINESS = ["核心交易", "大数据分析", "AI 训练", "中间件", "存储集群", "网关"]
+
+
+def servers_for_cabinet(cabinet_id: int, u_total: int = 42) -> list[dict]:
+    """模拟 RFID / 资产标签现场实测的机柜内服务器 U 位分布。
+
+    返回 dict 列表, 字段对齐 server ORM (snake_case), 用于前端 U 位识别。
+    刻意在个别机柜制造与台账的偏差, 以演示冲突检测。
+    """
+    rng = random.Random(cabinet_id * 7 + 3)
+    servers: list[dict] = []
+    sid = cabinet_id * 100
+    u = 1
+    # 预留 1~2U 走线空间, 从底部往上铺
+    u = rng.randint(1, 2)
+    n_servers = rng.randint(6, 11)
+    drift = (cabinet_id % 5) == 0  # 每 5 个机柜制造一处 U 位漂移冲突
+    drifted = False
+    for i in range(n_servers):
+        if u > u_total - 1:
+            break
+        height = rng.choice([1, 1, 2, 2, 4])
+        if u + height - 1 > u_total:
+            height = u_total - u + 1
+        if height < 1:
+            break
+        u_start = u
+        u_end = u + height - 1
+        # 漂移: 把某台设备整体下移 1U, 制造与台账不符
+        if drift and not drifted and i == max(2, n_servers // 2):
+            u_start += 1
+            u_end += 1
+            drifted = True
+        sid += 1
+        servers.append(
+            dict(
+                id=sid,
+                cabinet_id=cabinet_id,
+                asset_no=f"AS{cabinet_id:03d}-{sid:04d}",
+                hostname=f"node-{cabinet_id:03d}-{i+1:02d}",
+                ip=f"10.{(cabinet_id // 250) % 250}.{cabinet_id % 250}.{i+1}",
+                brand=rng.choice(_U_BRANDS),
+                model=f"R{rng.randint(4, 9)}40",
+                u_start=u_start,
+                u_end=u_end,
+                cpu_model="Xeon Gold 6348",
+                cpu_count=rng.choice([2, 4]),
+                cpu_cores=rng.choice([48, 64, 96]),
+                memory_gb=rng.choice([256, 512, 1024]),
+                disk_desc=f"{rng.randint(2, 8)}x{rng.choice([960, 1920])}GB SSD",
+                business=rng.choice(_U_BUSINESS),
+                status=rng.choice(["在线", "在线", "在线", "离线"]),
+                source="rfid",
+            )
+        )
+        u = u_end + 1 + rng.choice([0, 0, 1])  # 偶尔留 1U 空隙
+    return servers
+
+
+def ledger_for_cabinet(cabinet_id: int, u_total: int = 42) -> list[dict]:
+    """模拟电子工单 / 资产台账的规划 U 位 (基准真值)。
+
+    大部分与 RFID 实测一致, 仅个别机柜存在规划与现场偏差 (演示冲突检测)。
+    """
+    rfid = servers_for_cabinet(cabinet_id, u_total)
+    ledger: list[dict] = []
+    for s in rfid:
+        entry = dict(s)
+        entry["source"] = "ledger"
+        ledger.append(entry)
+    # 第 5 个机柜: 台账比现场多规划一台, 制造台账不符
+    if (cabinet_id % 5) == 0 and ledger:
+        first = ledger[0]
+        ledger.append(
+            dict(
+                id=cabinet_id * 1000 + 1,
+                cabinet_id=cabinet_id,
+                asset_no=f"AS{cabinet_id:03d}-L000",
+                hostname=f"node-{cabinet_id:03d}-L",
+                ip="10.0.0.0",
+                brand="Lenovo",
+                model="SR650",
+                u_start=first["u_start"],
+                u_end=first["u_start"],  # 台账认为此处只有 1U, 现场实测 2U
+                cpu_model="Xeon Silver 4310",
+                cpu_count=2,
+                cpu_cores=24,
+                memory_gb=256,
+                disk_desc="2x960GB SSD",
+                business="网关",
+                status="在线",
+                source="ledger",
+            )
+        )
+    return ledger

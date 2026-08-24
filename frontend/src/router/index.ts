@@ -88,6 +88,16 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '液冷系统' },
       },
       {
+        path: 'monitor/hvac/linkage',
+        component: () => import('@/views/monitor/HvacLinkage.vue'),
+        meta: { title: '制冷链路可视化' },
+      },
+      {
+        path: 'monitor/hvac/thermal',
+        component: () => import('@/views/monitor/ThermalCloud.vue'),
+        meta: { title: '温度云图' },
+      },
+      {
         path: 'monitor/power',
         component: () => import('@/views/monitor/PowerDashboard.vue'),
         meta: { title: '电力监控', requiredRoles: ['admin', 'operator'] },
@@ -101,6 +111,11 @@ const routes: RouteRecordRaw[] = [
         path: 'monitor/power/lv',
         component: () => import('@/views/monitor/PowerLv.vue'),
         meta: { title: '0.4KV 低压配电' },
+      },
+      {
+        path: 'monitor/power/linkage',
+        component: () => import('@/views/monitor/PowerLinkage.vue'),
+        meta: { title: '配电链路可视化' },
       },
       {
         path: 'monitor/power/genset',
@@ -167,6 +182,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/monitor/NetworkWireless.vue'),
         meta: { title: '无线网络' },
       },
+      {
+        path: 'monitor/visual',
+        redirect: '/monitor/visual/3d',
+      },
+      {
+        path: 'monitor/visual/3d',
+        component: () => import('@/views/monitor/Scene3D.vue'),
+        meta: { title: '3D 视图', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'monitor/visual/bigscreen',
+        component: () => import('@/views/monitor/BigScreen.vue'),
+        meta: { title: '定制大屏', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'monitor/visual/designer',
+        component: () => import('@/views/monitor/BigScreenDesigner.vue'),
+        meta: { title: '大屏定制', requiredRoles: ['admin', 'operator'] },
+      },
       // Phase 3 · 运维域
       {
         path: 'ops/inspection',
@@ -179,9 +213,14 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '维保管理', requiredRoles: ['admin', 'operator'] },
       },
       {
-        path: 'ops/drill',
-        component: () => import('@/views/ops/Drill.vue'),
-        meta: { title: '演练管理', requiredRoles: ['admin', 'operator'] },
+        path: 'ops/maintenance-calendar',
+        component: () => import('@/views/ops/MaintenanceCalendar.vue'),
+        meta: { title: '维保日历', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/room-access',
+        component: () => import('@/views/ops/RoomAccess.vue'),
+        meta: { title: '机房进出登记', requiredRoles: ['admin', 'operator'] },
       },
       {
         path: 'ops/risk',
@@ -193,6 +232,73 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/ops/Duty.vue'),
         meta: { title: '值班管理', requiredRoles: ['admin', 'operator'] },
       },
+      {
+        path: 'ops/duty-calendar',
+        component: () => import('@/views/ops/DutyCalendar.vue'),
+        meta: { title: '排班日历', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/inspection-template',
+        component: () => import('@/views/ops/InspectionTemplate.vue'),
+        meta: { title: '电子巡检', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/knowledge-collab',
+        component: () => import('@/views/ops/KnowledgeCollaboration.vue'),
+        meta: { title: '知识协作', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/workflow',
+        component: () => import('@/views/ops/WorkflowCenter.vue'),
+        meta: { title: 'ITIL 流程', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/fault-impact',
+        component: () => import('@/views/ops/FaultImpact.vue'),
+        meta: { title: '故障影响分析', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/drill-plan',
+        component: () => import('@/views/ops/DrillPlan.vue'),
+        meta: { title: '应急演练', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/supplier',
+        component: () => import('@/views/ops/Supplier.vue'),
+        meta: { title: '供应商管理', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/power-ai-hazards',
+        component: () => import('@/views/ops/PowerAiHazards.vue'),
+        meta: { title: '供配电 AI 隐患', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/health-report',
+        component: () => import('@/views/ops/HealthReport.vue'),
+        meta: { title: 'iHealth 健康报告', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/integration-hub',
+        component: () => import('@/views/ops/IntegrationHub.vue'),
+        meta: { title: '集成验证中心', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/asset-lifecycle',
+        component: () => import('@/views/ops/AssetLifecycle.vue'),
+        meta: { title: '资产生命周期', requiredRoles: ['admin', 'operator'] },
+      },
+
+      {
+        path: 'ops/tenant-manage',
+        component: () => import('@/views/ops/TenantManage.vue'),
+        meta: { title: '租户管理', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/u-position',
+        component: () => import('@/views/ops/UPosition.vue'),
+        meta: { title: 'U 位识别', requiredRoles: ['admin', 'operator'] },
+      },
+
       // Phase 4 · 物模型与多数据中心 (阶段0 占位, 后续阶段实现)
       {
         path: 'ops/thing-model',
@@ -210,22 +316,6 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '数据中心对比', requiredRoles: ['admin', 'operator'] },
       },
       // Phase 3 · P2 智能运营域
-      {
-        path: 'twin/dashboard',
-        component: () => import('@/views/twin/TwinDashboard.vue'),
-        meta: { title: '数字孪生', requiredRoles: ['admin', 'operator'] },
-      },
-      // Phase 5 · 3D 数字孪生拓扑 (阶段0 占位)
-      {
-        path: 'twin/3d',
-        component: () => import('@/views/twin/Twin3D.vue'),
-        meta: { title: '3D 数字孪生', requiredRoles: ['admin', 'operator'] },
-      },
-      {
-        path: 'analysis/capacity',
-        component: () => import('@/views/capacity/CapacityDashboard.vue'),
-        meta: { title: '容量管理', requiredRoles: ['admin', 'operator'] },
-      },
       {
         path: 'analysis/energy',
         component: () => import('@/views/energy/EnergyDashboard.vue'),
@@ -252,6 +342,12 @@ const routes: RouteRecordRaw[] = [
 ]
 
 const router = createRouter({ history: createWebHistory(), routes })
+
+// 路由切换时中断尚未完成的请求, 避免旧页面请求污染新页面/内存泄漏
+router.afterEach(() => {
+  // 动态导入避免与 request 模块循环依赖
+  import('@/api/request').then((m) => m.abortPendingRequests()).catch(() => {})
+})
 
 // ---- 路由守卫: 未登录跳转登录页 + 基础 RBAC ----
 export function isTokenValid(token: string | null): boolean {

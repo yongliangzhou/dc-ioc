@@ -619,7 +619,7 @@ export interface BatterySummary {
 // ---- 工具函数 ----
 
 /** 后端中文状态 -> 前端统一状态标识。 */
-function normStatus(state: unknown): string {
+export function normStatus(state: unknown): string {
   const s = String(state ?? '').trim()
   if (!s) return 'unknown'
   if (s.includes('故障') || s.includes('检修') || s.includes('停机') || s.includes('失电'))
@@ -631,24 +631,24 @@ function normStatus(state: unknown): string {
   return 'standby'
 }
 
-function num(v: unknown): number | null {
+export function num(v: unknown): number | null {
   const n = Number(v)
   return Number.isFinite(n) ? n : null
 }
 
 /** 对非空数值求均值; 全空返回 null (避免把"无数据"显示成 0)。 */
-function avg(list: (number | null)[]): number | null {
+export function avg(list: (number | null)[]): number | null {
   const vals = list.filter((v): v is number => v != null)
   if (!vals.length) return null
   return Number((vals.reduce((s, v) => s + v, 0) / vals.length).toFixed(1))
 }
 
-interface RawItem {
+export interface RawItem {
   [k: string]: unknown
 }
 
 /** 通用: 把后端某个设备数组映射为统一的 PowerDeviceView 列表。 */
-function toDevices(
+export function toDevices(
   list: RawItem[],
   room: string,
   prefix: string,

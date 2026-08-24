@@ -92,3 +92,49 @@ class IdcAlarmsOut(BaseModel):
     total: int
     items: list[IdcAlarmItem] = Field(default_factory=list)
     by_idc: dict[int, int] = Field(default_factory=dict)
+
+
+class IdcBatchDeleteIn(BaseModel):
+    ids: list[int] = Field(..., description="待删除数据中心 id 列表")
+
+
+class IdcBatchDeleteOut(BaseModel):
+    deleted: int
+    skipped: list[int] = Field(default_factory=list)
+
+
+class IdcToggleStatusOut(BaseModel):
+    id: int
+    status: str
+    isCurrent: bool
+
+
+class IdcRelatedService(BaseModel):
+    """关联服务（基于 external_devices 归集的运维子系统）。"""
+    key: str
+    name: str
+    deviceCount: int = 0
+    onlineCount: int = 0
+    alarmCount: int = 0
+
+
+class IdcServicesOut(BaseModel):
+    idcId: int
+    idcName: str
+    services: list[IdcRelatedService] = Field(default_factory=list)
+    totalDevices: int = 0
+    onlineDevices: int = 0
+
+
+class IdcOpLogItem(BaseModel):
+    id: int
+    ts: str
+    action: str
+    target: str
+    operator: str
+    detail: str = ""
+
+
+class IdcOpLogsOut(BaseModel):
+    total: int
+    items: list[IdcOpLogItem] = Field(default_factory=list)

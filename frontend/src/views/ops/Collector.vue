@@ -10,7 +10,15 @@
     </div>
 
     <!-- 概览指标 (容器层展示) -->
-    <div class="grid cols-4" v-if="list">
+    <LoadingState
+      v-if="loading && !list"
+      variant="skeleton"
+      :rows="1"
+      row-height="56px"
+      min-height="64px"
+      style="margin-bottom: 4px"
+    />
+    <div class="grid cols-4" v-else-if="list">
       <KpiCard :title="tl('已注册设备')" :value="list.total" unit="台" />
       <KpiCard :title="tl('在线')" :value="list.online" unit="台" status="normal" />
       <KpiCard :title="tl('离线')" :value="list.offline" unit="台" />
@@ -48,8 +56,31 @@
     </Panel>
 
     <!-- 设备表格 (Presentational 子组件) -->
+    <LoadingState
+      v-if="loading"
+      variant="skeleton"
+      :rows="6"
+      row-height="44px"
+      text="正在加载设备注册状态…"
+    />
+    <ErrorRetry
+      v-else-if="loadError"
+      :message="loadError"
+      :retrying="loading"
+      @retry="load"
+    />
+    <EmptyStateCard
+      v-else-if="!list || list.items.length === 0"
+      title="暂无注册设备"
+      desc="点击「添加设备」经外部契约端点注册第一台设备，采集器方可上报测点。"
+    >
+      <template #actions>
+        <button class="btn-sm primary" @click="openAdd">＋ 添加设备</button>
+      </template>
+    </EmptyStateCard>
     <CollectorDeviceTable
-      :items="list?.items ?? []"
+      v-else
+      :items="list.items"
       :selected-id="selected?.device_id"
       @select="selectDevice"
       @open-metrics="openMetrics"
@@ -149,10 +180,14 @@ import CollectorMetricDefsModal from './components/CollectorMetricDefsModal.vue'
 import CollectorDeviceForm from './components/CollectorDeviceForm.vue'
 import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
+import LoadingState from '@/components/common/LoadingState.vue'
+import ErrorRetry from '@/components/common/ErrorRetry.vue'
+import EmptyStateCard from '@/components/common/EmptyStateCard.vue'
 
 // ===================== 容器层: 状态 + 数据 + API =====================
 const list = ref<DeviceListResponse | null>(null)
 const loading = ref(false)
+const loadError = ref('')
 const lastRefresh = ref('--:--:--')
 const filters = reactive<{ domain: string; protocol: string }>({ domain: '', protocol: '' })
 const selected = ref<ExternalDeviceView | null>(null)
@@ -185,6 +220,7 @@ const refreshSec = Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000) / 1000
 
 async function load() {
   loading.value = true
+  loadError.value = ''
   try {
     list.value = await getExternalDevices({
       domain: filters.domain || undefined,
@@ -196,8 +232,11 @@ async function load() {
       if (still) loadModalMetrics()
       else closeMetrics()
     }
-  } catch {
-    /* 后端未就绪时静默 */
+  } catch (e: unknown) {
+    loadError.value =
+      (e as ErrorLike)?.detail ||
+      (e as ErrorLike)?.message ||
+      '设备列表加载失败，请检查外部契约端点是否就绪'
   } finally {
     loading.value = false
   }

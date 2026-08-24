@@ -7,16 +7,29 @@
       </div>
       <form @submit.prevent="handleLogin">
         <label>{{ tl('用户名') }}</label>
-        <input v-model="form.username" type="text" placeholder="admin" autocomplete="username" />
+        <input
+          v-model="form.username"
+          type="text"
+          placeholder="admin"
+          autocomplete="username"
+          :class="{ invalid: loginTouched.username && loginErrors.username }"
+          @blur="loginValidate('username', form)"
+        />
+        <FieldError :message="loginTouched.username ? loginErrors.username : ''" />
         <label>{{ tl('密码') }}</label>
         <input
           v-model="form.password"
           type="password"
           :placeholder="tl('请输入密码')"
           autocomplete="current-password"
+          :class="{ invalid: loginTouched.password && loginErrors.password }"
+          @blur="loginValidate('password', form)"
         />
+        <FieldError :message="loginTouched.password ? loginErrors.password : ''" />
         <p v-if="error" class="err">{{ error }}</p>
-        <button type="submit" :disabled="loading">{{ loading ? '登录中...' : '登 录' }}</button>
+        <button type="submit" :disabled="loading || !loginValid">
+          {{ loading ? '登录中...' : '登 录' }}
+        </button>
       </form>
 
       <!-- 5.4.1 自助注册 (后端 ALLOW_SELF_REGISTER 开关控制, 默认关闭) -->
@@ -25,11 +38,25 @@
           {{ showRegister ? '收起注册' : '注册新账号' }}
         </button>
         <form v-if="showRegister" @submit.prevent="handleRegister" class="register-form">
-          <input v-model="reg.username" type="text" placeholder="用户名 (2-64 位)" />
+          <input
+            v-model="reg.username"
+            type="text"
+            placeholder="用户名 (2-64 位)"
+            :class="{ invalid: regTouched.username && regErrors.username }"
+            @blur="regValidate('username', reg)"
+          />
+          <FieldError :message="regTouched.username ? regErrors.username : ''" />
           <input v-model="reg.display_name" type="text" placeholder="显示名 (可选)" />
-          <input v-model="reg.password" type="password" placeholder="密码 (至少 6 位)" />
+          <input
+            v-model="reg.password"
+            type="password"
+            placeholder="密码 (至少 6 位)"
+            :class="{ invalid: regTouched.password && regErrors.password }"
+            @blur="regValidate('password', reg)"
+          />
+          <FieldError :message="regTouched.password ? regErrors.password : ''" />
           <p v-if="regError" class="err">{{ regError }}</p>
-          <button type="submit" :disabled="regLoading">
+          <button type="submit" :disabled="regLoading || !regValid">
             {{ regLoading ? '提交中...' : '注册为只读账号' }}
           </button>
         </form>
@@ -44,9 +71,11 @@
 import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
-import { ref, reactive } from 'vue'
+import { ref, reactive, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/modules/auth'
+import FieldError from '@/components/common/FieldError.vue'
+import { useFormValidation, required, minLen, maxLen } from '@/composables/useFormValidation'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -55,14 +84,33 @@ const form = reactive({ username: 'admin', password: 'admin123' })
 const loading = ref(false)
 const error = ref('')
 
+const loginFV = useFormValidation({
+  rules: {
+    username: [required('请输入用户名'), maxLen(64)],
+    password: [required('请输入密码'), minLen(6, '密码至少 6 位')],
+  },
+})
+const { errors: loginErrors, touched: loginTouched, validate: loginValidate } = loginFV
+const loginValid = computed(() => loginFV.validateAll(form))
+
 const showRegister = ref(false)
 const reg = reactive({ username: '', display_name: '', password: '' })
 const regLoading = ref(false)
 const regError = ref('')
 
+const regFV = useFormValidation({
+  rules: {
+    username: [required('请输入用户名'), minLen(2, '用户名至少 2 位'), maxLen(64)],
+    password: [required('请输入密码'), minLen(6, '密码至少 6 位')],
+  },
+})
+const { errors: regErrors, touched: regTouched, validate: regValidate } = regFV
+const regValid = computed(() => regFV.validateAll(reg))
+
 async function handleLogin() {
-  if (!form.username || !form.password) {
-    error.value = '请输入用户名和密码'
+  if (!loginValid.value) {
+    loginFV.validate('username', form)
+    loginFV.validate('password', form)
     return
   }
   loading.value = true
@@ -78,8 +126,9 @@ async function handleLogin() {
 }
 
 async function handleRegister() {
-  if (!reg.username || !reg.password) {
-    regError.value = '请输入用户名和密码'
+  if (!regValid.value) {
+    regFV.validate('username', reg)
+    regFV.validate('password', reg)
     return
   }
   regLoading.value = true
@@ -150,6 +199,10 @@ input {
 }
 input:focus {
   border-color: #22e3ff;
+}
+input.invalid {
+  border-color: #ff6b6b;
+  background: rgba(255, 107, 107, 0.08);
 }
 .err {
   color: #ff6b6b;

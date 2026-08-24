@@ -9,6 +9,14 @@
         </p>
       </div>
       <div class="ai-head-right">
+        <div class="ai-model-select">
+          <label>{{ tl('模型') }}</label>
+          <select v-model="activeModel" :disabled="modelsLoading" @change="onModelChange">
+            <option v-for="m in models" :key="m.id" :value="m.id">
+              {{ m.name }} · {{ m.vendor }}
+            </option>
+          </select>
+        </div>
         <button class="ai-diag" :disabled="diagLoading" @click="runDiag">
           {{ diagLoading ? '诊断中…' : '诊断大模型' }}
         </button>
@@ -215,8 +223,8 @@ import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { ref, reactive, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { askAssistant, assistantStatus, submitAssistantFeedback } from '@/api'
-import type { AssistantAskResp, AssistantRef, AssistantStatusResp } from '@/types'
+import { askAssistant, submitAssistantFeedback, getAssistantModels, selectAssistantModel, assistantModelStatus } from '@/api'
+import type { AssistantAskResp, AssistantRef, AssistantStatusResp, AssistantModel } from '@/types'
 import { useToast } from '@/hooks/useToast'
 import { BookOpen, Sparkles, FileText, Server, Database, Wrench, AlertTriangle } from 'lucide-vue-next'
 
@@ -246,8 +254,41 @@ const sending = ref(false)
 const scrollRef = ref<HTMLElement | null>(null)
 const engineLabel = ref('知识库检索生成')
 
+// 自定义模型列表
+const models = ref<AssistantModel[]>([])
+const activeModel = ref('')
+const modelsLoading = ref(false)
+
+async function loadModels() {
+  modelsLoading.value = true
+  try {
+    const data = await getAssistantModels()
+    models.value = data.models || []
+    activeModel.value = data.active || (models.value[0] && models.value[0].id) || ''
+  } catch (e) {
+    models.value = []
+  } finally {
+    modelsLoading.value = false
+  }
+}
+
+async function onModelChange() {
+  if (!activeModel.value) return
+  try {
+    const res = await selectAssistantModel(activeModel.value)
+    activeModel.value = res.active || activeModel.value
+    toast.show('已切换模型：' + activeModel.value, 'success')
+  } catch (e: any) {
+    toast.show('切换模型失败：' + (e?.message || '未知错误'), 'error')
+    loadModels() // 还原
+  }
+}
+
 const diag = ref<AssistantStatusResp | null>(null)
 const diagLoading = ref(false)
+
+// 进入页面即加载自定义模型列表
+loadModels()
 
 interface Msg {
   role: 'user' | 'ai'
@@ -388,12 +429,13 @@ async function scroll() {
 async function runDiag() {
   diagLoading.value = true
   try {
-    diag.value = await assistantStatus()
+    const target = activeModel.value
+    diag.value = await assistantModelStatus(target || activeModel.value)
   } catch (e: unknown) {
     diag.value = {
       configured: false,
       base_url: '-',
-      model: '-',
+      model: activeModel.value || '-',
       reachable: false,
       http_status: null,
       latency: null,
@@ -444,6 +486,33 @@ async function runDiag() {
   align-items: center;
   gap: 10px;
   flex: none;
+}
+.ai-model-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg2);
+  color: var(--txt);
+  font-size: 12px;
+}
+.ai-model-select label {
+  color: var(--txt2);
+}
+.ai-model-select select {
+  background: transparent;
+  border: none;
+  color: var(--txt-strong);
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+  max-width: 200px;
+}
+.ai-model-select select option {
+  background: var(--bg2);
+  color: var(--txt);
 }
 .ai-diag {
   padding: 6px 14px;

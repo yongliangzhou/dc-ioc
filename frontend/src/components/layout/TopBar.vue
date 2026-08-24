@@ -34,6 +34,7 @@
       <button
         class="tbtn"
         :title="themeMode === 'dark' ? '切换浅色模式' : '切换深色模式'"
+        :aria-label="themeMode === 'dark' ? '切换浅色模式' : '切换深色模式'"
         @click="toggleTheme"
       >
         <svg
@@ -71,7 +72,7 @@
           <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
         </svg>
       </button>
-      <button class="tbtn" title="全屏" @click="toggleFull">⤢</button>
+      <button class="tbtn" title="全屏" aria-label="切换全屏" @click="toggleFull">⤢</button>
     </div>
     <div class="runmode"><span class="dot g"></span>主用1+备用1 自动模式</div>
     <div class="clock">

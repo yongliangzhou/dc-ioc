@@ -1,8 +1,8 @@
 import { onBeforeUnmount, onMounted, shallowRef, watch, type Ref } from 'vue'
-import * as echarts from 'echarts'
+import echarts, { type EChartsOption } from '@/utils/echarts'
 import { themeMode } from '@/theme'
 
-export type EChartsOption = echarts.EChartsOption
+export type { EChartsOption }
 
 /**
  * 通用 ECharts 组合式函数

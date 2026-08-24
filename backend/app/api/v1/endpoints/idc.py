@@ -20,7 +20,16 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, get_db, require_role
 from app.crud import idc as idc_crud
 from app.models.user import User
-from app.schemas.idc import IdcCreate, IdcOut, IdcUpdate
+from app.schemas.idc import (
+    IdcBatchDeleteIn,
+    IdcBatchDeleteOut,
+    IdcCreate,
+    IdcOpLogsOut,
+    IdcOut,
+    IdcServicesOut,
+    IdcToggleStatusOut,
+    IdcUpdate,
+)
 
 router = APIRouter(tags=["idc"])
 
@@ -67,6 +76,45 @@ def unified_alarms(db: Session = Depends(get_db), _u: User = Depends(get_current
     return idc_crud.unified_alarms(db)
 
 
+@router.get("/op-logs", response_model=IdcOpLogsOut, summary="操作日志")
+def op_logs(
+    limit: int = Query(50, ge=1, le=200),
+    db: Session = Depends(get_db),
+    _u: User = Depends(get_current_user),
+):
+    return {"total": idc_crud.list_op_logs(limit=limit).__len__(),
+            "items": idc_crud.list_op_logs(limit=limit)}
+
+
+@router.post("/batch-delete", response_model=IdcBatchDeleteOut, summary="批量删除数据中心")
+def batch_delete_idcs(
+    payload: IdcBatchDeleteIn,
+    db: Session = Depends(get_db),
+    _u: User = Depends(require_role("admin")),
+):
+    return idc_crud.batch_delete(db, payload.ids)
+
+
+@router.put("/{cid}/toggle-status", response_model=IdcToggleStatusOut, summary="启用/停用切换")
+def toggle_status_idc(
+    cid: int,
+    db: Session = Depends(get_db),
+    _u: User = Depends(require_role("admin")),
+):
+    row = idc_crud.toggle_status(db, cid)
+    if not row:
+        raise HTTPException(status_code=404, detail="数据中心不存在")
+    return row
+
+
+@router.get("/{cid}/services", response_model=IdcServicesOut, summary="关联服务")
+def services_idc(cid: int, db: Session = Depends(get_db), _u: User = Depends(get_current_user)):
+    row = idc_crud.related_services(db, cid)
+    if not row:
+        raise HTTPException(status_code=404, detail="数据中心不存在")
+    return row
+
+
 @router.get("/{cid}", response_model=IdcOut, summary="数据中心详情")
 def get_idc(cid: int, db: Session = Depends(get_db), _u: User = Depends(get_current_user)):
     row = idc_crud.get(db, cid)
@@ -82,9 +130,11 @@ def create_idc(
     _u: User = Depends(require_role("admin")),
 ):
     try:
-        return idc_crud.create(db, payload.model_dump())
+        row = idc_crud.create(db, payload.model_dump())
     except ValueError as e:
         raise HTTPException(status_code=409, detail=str(e))
+    idc_crud.add_op_log("create", f"数据中心 #{row['id']} {row['name']}")
+    return row
 
 
 @router.put("/{cid}", response_model=IdcOut, summary="更新数据中心")
@@ -101,6 +151,7 @@ def update_idc(
         raise HTTPException(status_code=409, detail=str(e))
     if not row:
         raise HTTPException(status_code=404, detail="数据中心不存在")
+    idc_crud.add_op_log("update", f"数据中心 #{cid} {row['name']}")
     return row
 
 

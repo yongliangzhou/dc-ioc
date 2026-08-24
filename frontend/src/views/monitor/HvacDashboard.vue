@@ -108,6 +108,36 @@
         </div>
       </router-link>
     </div>
+    <!-- 制冷链路可视化入口 -->
+    <div class="grid" v-if="overview" style="margin-top: 12px">
+      <router-link to="/monitor/hvac/linkage" class="entry-card linkage-entry">
+        <div class="card-head">
+          <span class="ct">{{ tl('制冷链路可视化') }}</span>
+          <span class="pill">{{ tl('一次系统') }}</span>
+        </div>
+        <div class="kvs">
+          <span class="k">{{ tl('循环') }}</span
+          ><span class="v">{{ tl('冷却水 / 冷冻水双循环') }}</span>
+          <span class="k">{{ tl('特性') }}</span
+          ><span class="v">{{ tl('水流方向 · 设备状态跳转') }}</span>
+        </div>
+      </router-link>
+    </div>
+    <!-- 温度云图入口 -->
+    <div class="grid" v-if="overview" style="margin-top: 12px">
+      <router-link to="/monitor/hvac/thermal" class="entry-card linkage-entry">
+        <div class="card-head">
+          <span class="ct">{{ tl('温度云图') }}</span>
+          <span class="pill">{{ tl('三层') }}</span>
+        </div>
+        <div class="kvs">
+          <span class="k">{{ tl('层级') }}</span
+          ><span class="v">{{ tl('机房 / 通道 / 机柜') }}</span>
+          <span class="k">{{ tl('特性') }}</span
+          ><span class="v">{{ tl('TOP5 热点 · 区间可调') }}</span>
+        </div>
+      </router-link>
+    </div>
 
     <!-- 加载 / 错误态 -->
     <Panel v-if="!overview && !error">

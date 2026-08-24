@@ -15,6 +15,7 @@ from app.api.v1.endpoints import (
     idc,
     equipment,
     external,
+    fault_impact,
     hvac,
     inspection,
     knowledge,
@@ -31,6 +32,8 @@ from app.api.v1.endpoints import (
     assistant,
     thing_model,
     dify_tools,
+    server,
+    tenant,
 )
 from app.core.deps import get_current_user
 
@@ -79,8 +82,15 @@ api_router.include_router(idc.router, prefix="/idc", tags=["idc"], dependencies=
 api_router.include_router(network.router, prefix="/network", tags=["network"], dependencies=_auth)
 api_router.include_router(domain.router, tags=["domain"], dependencies=_auth)
 
+# 故障影响分析 (复用 twin_graph 真实拓扑做链路 BFS 传播 + 业务域 SLA 风险)
+api_router.include_router(fault_impact.router, prefix="/ops/fault-impact", tags=["fault-impact"], dependencies=_auth)
 # 外部设备接入 (采集器标准数据契约: 注册 / 测点上报), 使用独立 X-Collector-Token 鉴权
 api_router.include_router(external.router, prefix="/external", tags=["external"])
+# 物理服务器 / U 位识别 (RFID 实测 + 电子工单台账融合)
+api_router.include_router(server.router, prefix="/servers", tags=["servers"], dependencies=_auth)
+api_router.include_router(server.cabinet_router, prefix="/cabinets", tags=["u-position"], dependencies=_auth)
+# 租户管理 (资源运营: 配额/用量明细 + 超阈值预警, 真实数据 CRUD)
+api_router.include_router(tenant.router, prefix="/ops/tenants", tags=["tenants"], dependencies=_auth)
 # 通用文件上传 (头像/附件/批量)
 api_router.include_router(uploads.router, tags=["uploads"], dependencies=_auth)
 # WebSocket 遥测在 main 中单独挂载于 /ws

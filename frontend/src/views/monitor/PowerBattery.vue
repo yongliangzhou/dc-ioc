@@ -1311,6 +1311,9 @@ tbody .row-warn {
   padding: 4px 2px;
   border-radius: 4px;
   cursor: pointer;
+  /* 480 色块: 屏外跳过布局/绘制, 降低渲染开销 */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 42px;
   transition:
     transform 0.12s,
     box-shadow 0.12s;

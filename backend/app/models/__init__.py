@@ -33,6 +33,8 @@ from app.models.assistant_feedback import AssistantFeedback  # noqa: F401
 from app.models.alarm_feedback import AlarmFeedback  # noqa: F401
 from app.models.energy_advice import EnergyAdviceAdopt  # noqa: F401
 from app.models.thing_model import ThingModel, ThingModelItem  # noqa: F401
+from app.models.tenant import Tenant  # noqa: F401
+from app.models.analysis_history import AnalysisHistory  # noqa: F401
 
 __all__ = [
     "Base",
@@ -66,6 +68,8 @@ __all__ = [
     "EnergyAdviceAdopt",
     "ThingModel",
     "ThingModelItem",
+    "Tenant",
+    "AnalysisHistory",
     "AlarmRule",
     "AlarmActiveState",
     "AlarmSuppressedDevice",

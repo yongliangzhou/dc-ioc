@@ -77,6 +77,21 @@
         </div>
       </router-link>
     </div>
+    <!-- 配电链路可视化入口 -->
+    <div class="grid" v-if="overview" style="margin-top: 12px">
+      <router-link to="/monitor/power/linkage" class="entry-card linkage-entry">
+        <div class="card-head">
+          <span class="ct">{{ tl('配电链路可视化') }}</span>
+          <span class="pill">{{ tl('端到端') }}</span>
+        </div>
+        <div class="kvs">
+          <span class="k">{{ tl('链路') }}</span
+          ><span class="v">{{ tl('市电 → 中压 → 变压器 → 低压 → UPS → 机柜') }}</span>
+          <span class="k">{{ tl('特性') }}</span
+          ><span class="v">{{ tl('实时状态 · 告警点击定位') }}</span>
+        </div>
+      </router-link>
+    </div>
     <div class="grid cols-3" v-if="overview" style="margin-top: 12px">
       <router-link to="/monitor/power/genset" class="entry-card">
         <div class="card-head">

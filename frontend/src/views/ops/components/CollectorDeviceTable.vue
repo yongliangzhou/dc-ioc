@@ -1,19 +1,26 @@
 <template>
   <Panel class="scroll-x">
     <table>
+      <caption class="sr-only">
+        {{ tl('外部注册设备列表') }}（{{ tl('状态') }}、{{ tl('设备') }} ID、{{ tl('名称') }}、{{
+          tl('型号')
+        }}、IP、{{ tl('协议') }}、{{ tl('业务域') }}、{{ tl('厂商') }}、{{ tl('最近上报') }}、{{
+          tl('测点数')
+        }}、{{ tl('操作') }}）
+      </caption>
       <thead>
         <tr>
-          <th>{{ tl('状态') }}</th>
-          <th>{{ tl('设备') }} ID</th>
-          <th>{{ tl('名称') }}</th>
-          <th>{{ tl('型号') }}</th>
-          <th>IP</th>
-          <th>{{ tl('协议') }}</th>
-          <th>{{ tl('业务域') }}</th>
-          <th>{{ tl('厂商') }}</th>
-          <th>{{ tl('最近上报') }}</th>
-          <th>{{ tl('测点数') }}</th>
-          <th style="min-width: 140px">{{ tl('操作') }}</th>
+          <th scope="col">{{ tl('状态') }}</th>
+          <th scope="col">{{ tl('设备') }} ID</th>
+          <th scope="col">{{ tl('名称') }}</th>
+          <th scope="col">{{ tl('型号') }}</th>
+          <th scope="col">IP</th>
+          <th scope="col">{{ tl('协议') }}</th>
+          <th scope="col">{{ tl('业务域') }}</th>
+          <th scope="col">{{ tl('厂商') }}</th>
+          <th scope="col">{{ tl('最近上报') }}</th>
+          <th scope="col">{{ tl('测点数') }}</th>
+          <th scope="col" style="min-width: 140px">{{ tl('操作') }}</th>
         </tr>
       </thead>
       <tbody>

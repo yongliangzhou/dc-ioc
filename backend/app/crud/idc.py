@@ -19,6 +19,10 @@ from sqlalchemy.orm import Session
 from app.models.external import ExternalDevice
 from app.models.idc import IDC
 
+# 操作日志 (内存态, 进程级别; 满足演示与审计闭环, 无需迁移 DB)
+_OP_LOGS: list[dict] = []
+_OP_SEQ = 0
+
 
 def _to_dict(c: IDC) -> dict:
     return {
@@ -121,6 +125,97 @@ def set_current(db: Session, cid: int) -> Optional[dict]:
     db.commit()
     db.refresh(c)
     return _to_dict(c)
+
+
+# --- 操作日志 (内存态) ---------------------------------------------------
+def add_op_log(action: str, target: str, operator: str = "admin", detail: str = "") -> dict:
+    global _OP_SEQ
+    _OP_SEQ += 1
+    entry = {
+        "id": _OP_SEQ,
+        "ts": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "action": action,
+        "target": target,
+        "operator": operator,
+        "detail": detail,
+    }
+    _OP_LOGS.insert(0, entry)
+    if len(_OP_LOGS) > 200:
+        del _OP_LOGS[200:]
+    return entry
+
+
+def list_op_logs(limit: int = 50) -> list[dict]:
+    return _OP_LOGS[:limit]
+
+
+# --- 批量删除 -------------------------------------------------------------
+def batch_delete(db: Session, ids: list[int]) -> dict:
+    deleted = 0
+    skipped: list[int] = []
+    for cid in ids:
+        obj = db.query(IDC).filter(IDC.id == cid).first()
+        if not obj:
+            skipped.append(cid)
+            continue
+        if obj.is_current:
+            skipped.append(cid)  # 当前中心不可删除
+            continue
+        db.delete(obj)
+        deleted += 1
+        add_op_log("delete", f"数据中心 #{cid} {obj.name}")
+    if deleted:
+        db.commit()
+    return {"deleted": deleted, "skipped": skipped}
+
+
+# --- 状态切换 (启用/停用) -------------------------------------------------
+def toggle_status(db: Session, cid: int) -> Optional[dict]:
+    obj = db.query(IDC).filter(IDC.id == cid).first()
+    if not obj:
+        return None
+    obj.status = "disabled" if obj.status == "enabled" else "enabled"
+    db.commit()
+    db.refresh(obj)
+    add_op_log("toggle_status", f"数据中心 #{cid} {obj.name}", detail=f"status={obj.status}")
+    d = _to_dict(obj)
+    d["isCurrent"] = obj.is_current
+    return d
+
+
+# --- 关联服务 -------------------------------------------------------------
+def related_services(db: Session, cid: int) -> Optional[dict]:
+    """基于 external_devices 按 category 归集, 派生该中心关联运维子系统。"""
+    obj = db.query(IDC).filter(IDC.id == cid).first()
+    if not obj:
+        return None
+    devices = db.query(ExternalDevice).filter(ExternalDevice.idc_id == cid).all()
+    buckets: dict[str, dict] = {}
+    for d in devices:
+        cat = (d.category or "other").lower()
+        b = buckets.setdefault(cat, {
+            "key": cat,
+            "name": (d.category or "Other").title(),
+            "deviceCount": 0,
+            "onlineCount": 0,
+            "alarmCount": 0,
+        })
+        b["deviceCount"] += 1
+        if (d.status or "").lower() in ("online", "ok", "running"):
+            b["onlineCount"] += 1
+        if (d.alarm or 0) > 0:
+            b["alarmCount"] += 1
+    order = ["power", "hvac", "security", "network", "fire", "it", "other"]
+    services = sorted(buckets.values(),
+                      key=lambda x: (order.index(x["key"]) if x["key"] in order else 99, x["key"]))
+    online = sum(1 for d in devices if (d.status or "").lower() in ("online", "ok", "running"))
+    return {
+        "idcId": cid,
+        "idcName": obj.name,
+        "services": services,
+        "totalDevices": len(devices),
+        "onlineDevices": online,
+    }
 
 
 def _device_stats_by_idc(db: Session) -> dict[int, dict]:

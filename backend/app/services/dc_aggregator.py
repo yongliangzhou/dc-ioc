@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, or_
 
+from app.core.config import settings
 from app.crud import external as ext_crud
 from app.crud.external import ONLINE_THRESHOLD_SEC
 from app.db.session import SessionLocal
@@ -22,6 +23,16 @@ from app.models.external import ExternalDevice, MetricRaw
 from app.services import dc_ioc_data as generated
 
 logger = logging.getLogger("dc_aggregator")
+
+
+class DataSourceNotReadyError(RuntimeError):
+    """[S-04] 真实数据源模式下, 真实外部设备数据缺失, 拒绝服务。
+
+    由 main.py 的全局异常处理器捕获, 返回 HTTP 503 + 结构化错误体,
+    避免生产环境把演示生成数据当真实数据展示。
+    """
+
+    status_code: int = 503
 
 # ---- 数据库会话获取 ----
 def _get_db():
@@ -65,9 +76,39 @@ def _latest_metric_for_device(device_id: str, metric_name: str, db=None, fallbac
     return fallback_val
 
 # ======================================================================
+#  [S-04] 数据源模式守卫
+# ======================================================================
+def _real_mode_requires_real_data() -> bool:
+    """当前是否处于 real 模式 (需要真实外部设备数据)。"""
+    return settings.DATA_SOURCE == "real"
+
+
+def _guard_real_source_has_devices() -> None:
+    """real 模式下, 若已注册外部设备数量为 0, 拒绝服务并报错。
+
+    在依赖真实设备的聚合入口调用 (驾驶舱总览 / 各域 _aggregate)。
+    纯生成类数据 (演练/工单/知识库等) 不依赖外部设备, 不受此约束。
+    """
+    if not _real_mode_requires_real_data():
+        return
+    db = _get_db()
+    try:
+        _, total, _, _ = ext_crud.list_devices(db, skip=0, limit=1)
+    finally:
+        if db is not None:
+            db.close()
+    if total == 0:
+        raise DataSourceNotReadyError(
+            "真实数据源模式 (DATA_SOURCE=real) 下未检测到任何已注册外部设备。"
+            "请确认采集器已接入并向 /api/external/* 推送数据, 或将 DATA_SOURCE 改回 mock。"
+        )
+
+
+# ======================================================================
 #  KPI / 驾驶舱总览 (从真实数据聚合)
 # ======================================================================
 def dashboard_overview() -> dict:
+    _guard_real_source_has_devices()
     db = _get_db()
     try:
         items, total, online, offline = ext_crud.list_devices(db, skip=0, limit=10000)
@@ -127,6 +168,7 @@ def _aggregate(domain: str, gen_fn, categories: list[str]) -> dict:
     - 无真实设备 → 直接返回生成器结果 (generated)。
     - 有真实设备 → 以生成器结构为骨架, 注入真实测点值 (aggregated)。
     """
+    _guard_real_source_has_devices()
     db = _get_db()
     try:
         devices_all, _, _, _ = ext_crud.list_devices(
@@ -1022,6 +1064,11 @@ def drill_plan(db):
 
     plans = suggestions + list(db_plans)
     stats = {"year": 12, "done": 8, "pass": 8, "next": "2026-08-05 全停演练"}
+    try:
+        from app.crud import drill as drill_crud
+        stats = drill_crud.stats(db)
+    except Exception:
+        pass
     return {"stats": stats, "plans": plans}
 
 

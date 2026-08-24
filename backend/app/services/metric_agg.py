@@ -201,8 +201,8 @@ def refresh_views(db: Session) -> bool:
         # CONCURRENTLY 不能在事务块内: 使用 autocommit 连接
         engine = db.get_bind()
         with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as conn:
-            conn.execute(text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {_PLAIN_5MIN}"))
-            conn.execute(text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {_PLAIN_1H}"))
+            conn.execute(text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {_PLAIN_5MIN}"))  # sql-guard-ignore
+            conn.execute(text(f"REFRESH MATERIALIZED VIEW CONCURRENTLY {_PLAIN_1H}"))  # sql-guard-ignore
         return True
     except Exception as e:  # noqa: BLE001
         logger.warning("[metric_agg] 物化视图刷新失败: %s", e)

@@ -5,7 +5,7 @@
         <tr>
           <th style="width: 65px">{{ tl('级别') }}</th>
           <th style="width: 80px">{{ tl('来源系统') }}</th>
-          <th>{{ tl('告警内容') }}</th>
+          <th scope="col">{{ tl('告警内容') }}</th>
           <th style="width: 130px">{{ tl('触发时间') }}</th>
           <th style="width: 70px">{{ tl('状态') }}</th>
           <th style="width: 70px">{{ tl('责任人') }}</th>

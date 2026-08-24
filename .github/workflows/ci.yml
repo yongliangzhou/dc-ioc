@@ -96,6 +96,10 @@ jobs:
           REDIS_HOST: localhost
           EXTERNAL_MOCK_COLLECTOR_ENABLED: "false"
 
+      - name: SQL injection guard [S-08]
+        # 禁止把外部输入拼进原生 SQL (f-string / 字符串拼接), 仅允许参数化查询。
+        run: python ../scripts/sql_guard.py app
+
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:

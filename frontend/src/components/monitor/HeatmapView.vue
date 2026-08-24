@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import echarts, { type EChartsOption, type EChartsType } from '@/utils/echarts'
 import SkeletonCard from './SkeletonCard.vue'
 import EmptyState from './EmptyState.vue'
 
@@ -53,7 +53,7 @@ const props = withDefaults(
 )
 
 const chartRef = ref<HTMLDivElement | null>(null)
-let chartInst: echarts.ECharts | null = null
+let chartInst: EChartsType | null = null
 let ro: ResizeObserver | null = null
 let pendingRender = false
 
@@ -89,7 +89,7 @@ const normData = computed<{ xLabels: string[]; yLabels: string[]; values: number
 
 const isEmpty = computed(() => !normData.value)
 
-function buildOption(): echarts.EChartsOption {
+function buildOption(): EChartsOption {
   const d = normData.value
   if (!d) return {}
   const { xLabels, yLabels, values } = d

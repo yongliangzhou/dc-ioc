@@ -122,6 +122,14 @@ class Settings(BaseSettings):
     EXTERNAL_MOCK_COLLECTOR_ENABLED: bool = False
     EXTERNAL_MOCK_COLLECTOR_BASE_URL: str = "http://127.0.0.1:8000"
 
+    # [S-04] 数据源开关 (mock | real)
+    # mock : 默认。无真实外部设备时静默回退到内置生成器 (_source="generated")，便于开发/演示。
+    # real : 生产接入真实采集器后设置。此时聚合层要求至少存在已注册外部设备，
+    #        若真实数据缺失则**拒绝服务并明确报错** (HTTP 503, _source="error")，
+    #        避免在生产环境误把演示数据当真实数据展示。
+    # 注意: real 模式与 EXTERNAL_MOCK_COLLECTOR_ENABLED=True 互斥，启动时会告警。
+    DATA_SOURCE: str = "mock"
+
     # 外部设备接入 · 测点保留策略 (按存储引擎分层, 见 P0-1)
     # interval/days 决定清理周期与 TTL; batch_size 为 plain 模式分批 DELETE 单批行数。
     EXTERNAL_METRIC_RETENTION_DAYS: int = 30

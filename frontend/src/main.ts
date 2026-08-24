@@ -14,4 +14,11 @@ app.use(router)
 app.use(i18n)
 app.component('Toast', Toast) // 全局挂载，任意页面 toast 反馈
 // 语言包为懒加载 chunk: 挂载前先加载当前语言, 避免闪 key
-setupI18nMessages().finally(() => app.mount('#app'))
+;(async () => {
+  try {
+    await setupI18nMessages()
+  } catch (e) {
+    console.error('[i18n] failed to load locale messages:', e)
+  }
+  app.mount('#app')
+})()

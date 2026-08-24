@@ -24,7 +24,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import echarts, {
+  type EChartsOption,
+  type EChartsType,
+  type YAXisComponentOption,
+  type SeriesOption,
+  type LineSeriesOption,
+} from '@/utils/echarts'
 import TimeRangePicker from './TimeRangePicker.vue'
 import SkeletonCard from './SkeletonCard.vue'
 import EmptyState from './EmptyState.vue'
@@ -57,7 +63,7 @@ const props = withDefaults(
   defineProps<{
     title?: string
     // 模式 A: 直接传 ECharts option
-    option?: echarts.EChartsOption | null
+    option?: EChartsOption | null
     // 模式 B: xAxisData + series（组件内部构建 option）
     xAxisData?: string[]
     series?: unknown[]
@@ -79,7 +85,7 @@ const emit = defineEmits<{
 }>()
 
 const chartRef = ref<HTMLDivElement | null>(null)
-let chartInst: echarts.ECharts | null = null
+let chartInst: EChartsType | null = null
 let resizeObserver: ResizeObserver | null = null
 let pendingRender = false
 const activeRange = ref('24h')
@@ -96,14 +102,14 @@ const isEmpty = computed(() => {
 })
 
 // 从 xAxisData + series 构建 ECharts option
-const builtOption = computed<echarts.EChartsOption>(() => {
+const builtOption = computed<EChartsOption>(() => {
   if (props.option) return props.option
   const xData = props.xAxisData ?? []
   const s = props.series ?? []
   if (!xData.length || !s.length) return { series: [] }
 
   const hasDualY = s.some((ser) => (ser as TrendSeries).yAxisIndex === 1)
-  const yAxis: echarts.YAXisComponentOption[] = [
+  const yAxis: YAXisComponentOption[] = [
     {
       ...baseYAxis(),
       nameTextStyle: { color: CHART_BASE.textColor },
@@ -124,7 +130,7 @@ const builtOption = computed<echarts.EChartsOption>(() => {
     '#ec4899',
   ]
 
-  const echartsSeries: echarts.SeriesOption[] = s.map((serRaw, i) => {
+  const echartsSeries: SeriesOption[] = s.map((serRaw, i) => {
     const ser = serRaw as TrendSeries
     const c = ser.color ?? colors[i % colors.length]
     const base: Record<string, unknown> = {
@@ -168,7 +174,7 @@ const builtOption = computed<echarts.EChartsOption>(() => {
                 { offset: 1, color: 'rgba(0,0,0,0)' },
               ]),
             }
-          : (ser.areaStyle as echarts.LineSeriesOption['areaStyle'])
+          : (ser.areaStyle as LineSeriesOption['areaStyle'])
     }
 
     return base
@@ -181,7 +187,7 @@ const builtOption = computed<echarts.EChartsOption>(() => {
     xAxis: baseXAxis({ data: xData }),
     yAxis,
     series: echartsSeries,
-  } as echarts.EChartsOption
+  } as EChartsOption
 })
 
 function onRangeChange(key: string) {
@@ -223,7 +229,7 @@ function applyOption() {
     return
   }
   const opt = builtOption.value
-  if (!opt.series || !(opt.series as echarts.SeriesOption[]).length) {
+  if (!opt.series || !(opt.series as SeriesOption[]).length) {
     nextTick(() => {
       chartInst?.clear()
     })

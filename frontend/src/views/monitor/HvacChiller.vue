@@ -851,7 +851,10 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
-import * as echarts from 'echarts'
+import echarts, {
+  type EChartsType,
+  type DefaultLabelFormatterCallbackParams,
+} from '@/utils/echarts'
 import {
   getChillerPlant,
   getChillerTrends,
@@ -897,8 +900,8 @@ const trendsLoading = ref(false)
 // Chart refs (for scatter charts not covered by TrendChart)
 const copChartEl = ref<HTMLDivElement | null>(null)
 const pumpChartEl = ref<HTMLDivElement | null>(null)
-let copChart: echarts.ECharts | null = null
-let pumpChart: echarts.ECharts | null = null
+let copChart: EChartsType | null = null
+let pumpChart: EChartsType | null = null
 let copRo: ResizeObserver | null = null
 let pumpRo: ResizeObserver | null = null
 
@@ -1178,7 +1181,7 @@ function renderCopRla() {
     {
       tooltip: {
         trigger: 'item',
-        formatter: (p: echarts.DefaultLabelFormatterCallbackParams) => {
+        formatter: (p: DefaultLabelFormatterCallbackParams) => {
           const v = (Array.isArray(p.value) ? p.value : []) as unknown[]
           return `${v[2]}<br/>RLA: ${v[0]}% | COP: ${v[1]}`
         },
@@ -1249,7 +1252,7 @@ function renderPumpFreqFlow() {
     {
       tooltip: {
         trigger: 'item',
-        formatter: (p: echarts.DefaultLabelFormatterCallbackParams) => {
+        formatter: (p: DefaultLabelFormatterCallbackParams) => {
           const v = (Array.isArray(p.value) ? p.value : []) as unknown[]
           return `${p.seriesName}<br/>频率: ${v[0]}Hz<br/>流量: ${v[1]}m³/h`
         },

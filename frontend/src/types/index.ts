@@ -1497,6 +1497,11 @@ export interface Maintain {
   }[]
   spares: { id: string; stock: number; min: number; state: string }[]
 }
+export interface DrillStep {
+  title: string
+  minutes: number
+  desc: string
+}
 export interface DrillPlan {
   id: number
   code: string
@@ -1505,11 +1510,63 @@ export interface DrillPlan {
   date: string
   state: string
   result: string
+  note?: string
+  level?: string
+  scope?: string
+  duration?: number
+  steps?: DrillStep[]
   source?: 'real' | 'db'
 }
 export interface Drill {
   stats: { year: number; done: number; pass: number; next: string }
   plans: DrillPlan[]
+}
+export interface DrillRecord {
+  id: number
+  planId: number
+  planName: string
+  date: string
+  participants: number
+  startAt: string
+  endAt: string
+  score: number
+  result: string
+  note: string
+}
+/* ===== 租户管理 (阶段三 A · 资源运营) — 真实数据驱动 ===== */
+export type TenantHealth = 'normal' | 'warn' | 'over'
+export interface TenantItem {
+  id: number
+  name: string
+  code: string
+  contact: string
+  phone: string
+  industry: string
+  contractNo: string
+  validFrom: string
+  validTo: string
+  status: string // active / pending / expired
+  rent: number
+  cabinets: number
+  quotaCabinets: number
+  quotaDevices: number
+  quotaPowerKw: number
+  quotaBandwidthMbps: number
+  usedDevices: number
+  usedPowerKw: number
+  usedBandwidthMbps: number
+  uOccupied: number
+  note: string
+  health: TenantHealth // 派生: 用量/配额 比值评估
+  source?: 'real' | 'db'
+}
+export interface TenantStats {
+  total: number
+  active: number
+  totalCabinets: number
+  totalPowerKw: number
+  warnCount: number
+  overCount: number
 }
 export interface Shift {
   teams: string[]
@@ -1797,6 +1854,15 @@ export interface AssistantStatusResp {
   dify?: AssistantDifyStatus | null
 }
 
+/** 自定义模型项（GET /api/ops/assistant/models） */
+export interface AssistantModel {
+  id: string
+  name: string
+  vendor: string
+  note: string
+  selected: boolean
+}
+
 /* ===== 2.3 值班排班 (GET /api/ops/shift) ===== */
 export interface ShiftMember {
   name: string
@@ -1921,4 +1987,197 @@ export interface CampusComparisonItem {
 }
 export interface CampusComparisonResponse {
   comparisons: CampusComparisonItem[]
+}
+
+/* ===== U 位识别 (RFID + 电子工单多源融合) ===== */
+export type UCellStatus = 'occupied' | 'empty' | 'conflict' | 'reserved'
+export type ServerSource = 'rfid' | 'ledger' | 'manual'
+
+/** 物理服务器 (RFID/资产标签实测 U 位) */
+export interface ServerItem {
+  id: number
+  cabinetId: number
+  assetNo: string
+  hostname: string
+  ip: string
+  brand: string
+  model: string
+  uStart: number
+  uEnd: number
+  uHeight: number
+  cpuModel: string
+  cpuCount: number
+  cpuCores: number
+  memoryGb: number
+  diskDesc: string
+  business: string
+  status: string
+  source: ServerSource
+}
+
+/** 机柜 U 位立面单个格子 */
+export interface UCell {
+  u: number
+  status: UCellStatus
+  sources: string[]
+  deviceRefs: number[]
+  confidence: number
+  note: string
+}
+
+export interface UConflict {
+  u: number
+  type: 'range_overlap' | 'ledger_mismatch' | 'reservation_clash'
+  detail: string
+  assetNos: string[]
+  severity: 'warn' | 'crit'
+}
+
+export interface UPositionView {
+  cabinetId: number
+  code: string
+  room: string
+  row: string
+  uTotal: number
+  cells: UCell[]
+  conflicts: UConflict[]
+  occupiedU: number
+  emptyU: number
+  conflictU: number
+  generatedAt: string
+}
+
+export interface RecognizeSource {
+  key: string
+  name: string
+  confidence: number
+  count: number
+}
+
+export interface RecognizeResp {
+  cabinetId: number
+  code: string
+  room: string
+  uTotal: number
+  sources: RecognizeSource[]
+  cells: UCell[]
+  conflicts: UConflict[]
+  summary: {
+    totalU: number
+    occupied: number
+    empty: number
+    conflict: number
+    avgConfidence: number
+    ledgerCount: number
+    rfidCount: number
+  }
+  recognizedAt: string
+}
+
+export interface CabinetOption {
+  id: number
+  code: string
+  room: string
+  row: string
+  uTotal: number
+}
+
+// 故障影响分析 (复用 twin_graph 真实拓扑做链路 BFS 传播 + 业务域 SLA 风险)
+export interface FaultSourceNode {
+  id: number
+  label: string
+  kind: string
+  domain: string
+  category: string
+  status?: string | null
+  health: number
+  loadPct: number
+  redundancy?: string | null
+  roomCode?: string | null
+  riskHint?: string | null
+}
+
+export interface FaultSourceList {
+  generatedAt: string
+  source: string
+  nodes: FaultSourceNode[]
+  edges: Array<Record<string, unknown>>
+}
+
+export interface FaultImpactScope {
+  power?: boolean
+  cool?: boolean
+  network?: boolean
+  business?: boolean
+}
+
+export interface FaultImpactReq {
+  faultIds: number[]
+  scope?: FaultImpactScope | null
+}
+
+export interface FaultImpactNode {
+  id: number
+  label: string
+  kind: string
+  domain: string
+  category: string
+  status?: string | null
+  health: number
+  roomCode?: string | null
+  state: 'fault' | 'affected' | 'normal'
+  hop: number
+  critical: boolean
+  business?: string | null
+  slaRisk?: string | null
+}
+
+export interface FaultImpactEdge {
+  source: number
+  target: number
+  type: string
+  label?: string | null
+}
+
+export interface AffectedBusiness {
+  business: string
+  criticalDevices: number
+  affectedDevices: number
+  severity: string
+  sla?: string | null
+  note?: string | null
+}
+
+export interface Mitigation {
+  seq: number
+  action: string
+  target: string
+  priority: 'P0' | 'P1' | 'P2'
+  detail: string
+}
+
+export interface AnalysisHistory {
+  id: number
+  title: string
+  faultIds: number[]
+  severity: string
+  summary: Record<string, number | string>
+  businesses: AffectedBusiness[]
+  mitigations: Mitigation[]
+  signers: string[]
+  pushed: boolean
+  createdBy: string
+  createdAt: string
+}
+
+export interface FaultImpactResp {
+  faultIds: number[]
+  generatedAt: string
+  nodes: FaultImpactNode[]
+  edges: FaultImpactEdge[]
+  affectedIds: number[]
+  summary: Record<string, number | string>
+  businesses: AffectedBusiness[]
+  suggestion: string
+  mitigations: Mitigation[]
 }

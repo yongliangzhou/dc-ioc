@@ -16,14 +16,14 @@
       <table>
         <thead>
           <tr>
-            <th>{{ tl('类别') }}</th>
-            <th>{{ tl('测点') }}</th>
-            <th>{{ tl('规则编码') }}</th>
-            <th>{{ tl('预警区间') }}</th>
-            <th>{{ tl('严重区间') }}</th>
-            <th>{{ tl('单位') }}</th>
-            <th>{{ tl('状态') }}</th>
-            <th>{{ tl('操作') }}</th>
+            <th scope="col">{{ tl('类别') }}</th>
+            <th scope="col">{{ tl('测点') }}</th>
+            <th scope="col">{{ tl('规则编码') }}</th>
+            <th scope="col">{{ tl('预警区间') }}</th>
+            <th scope="col">{{ tl('严重区间') }}</th>
+            <th scope="col">{{ tl('单位') }}</th>
+            <th scope="col">{{ tl('状态') }}</th>
+            <th scope="col">{{ tl('操作') }}</th>
           </tr>
         </thead>
         <tbody>
