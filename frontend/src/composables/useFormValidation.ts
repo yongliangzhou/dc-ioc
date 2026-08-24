@@ -14,7 +14,7 @@
  */
 import { reactive, ref, type Ref } from 'vue'
 
-export type Validator = (value: unknown, form: Record<string, unknown>) => string | true
+export type Validator = (value: unknown, form?: Record<string, unknown>) => string | true
 export type FormRules<T extends string = string> = Partial<Record<T, Validator[]>>
 
 export interface UseFormValidationOptions<T extends string = string> {

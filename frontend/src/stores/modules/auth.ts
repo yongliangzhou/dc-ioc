@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, watch } from 'vue'
 import request from '@/api/request'
 import type { UserInfo, TokenResponse } from '@/types'
 
@@ -24,8 +24,16 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = ref<string>(localStorage.getItem(REFRESH_KEY) || '')
   const user = ref<UserInfo | null>(loadUser())
 
-  const isLoggedIn = computed(() => !!token.value)
-  const isAdmin = computed(() => user.value?.is_superuser || user.value?.roles?.includes('admin'))
+  const isLoggedIn = ref(!!token.value)
+  const isAdmin = ref(user.value?.is_superuser || user.value?.roles?.includes('admin') || false)
+
+  // 同步更新
+  watch(token, (v) => {
+    isLoggedIn.value = !!v
+  })
+  watch(user, (u) => {
+    isAdmin.value = !!(u?.is_superuser || u?.roles?.includes('admin'))
+  })
 
   function loadUser(): UserInfo | null {
     try {

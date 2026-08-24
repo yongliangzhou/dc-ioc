@@ -9,6 +9,7 @@ import type {
   AssistantAskReq,
   AssistantAskResp,
   AssistantStatusResp,
+  AssistantModel,
   Cabinet,
   CabinetMetrics,
   CampusComparisonResponse,

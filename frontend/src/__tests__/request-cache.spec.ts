@@ -35,8 +35,8 @@ describe('request: GET 缓存', () => {
     const url = `/api/cache-${Date.now()}` // 唯一 URL 避免跨用例缓存干扰
     const r1 = await request.get(url)
     const r2 = await request.get(url)
-    expect(r1.n).toBe(1)
-    expect(r2.n).toBe(1) // 命中缓存, 返回同一份
+    expect(r1.data.n).toBe(1)
+    expect(r2.data.n).toBe(1) // 命中缓存, 返回同一份
     expect(getCalls()).toBe(1) // adapter 只调一次
   })
 

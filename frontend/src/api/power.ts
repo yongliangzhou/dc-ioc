@@ -8,21 +8,28 @@ import request from './request'
 // battery(): { groups:[{id,type,soc,u,i,state,maxT,...}], ... }
 
 export interface PowerDeviceView {
-  id: number
-  code: string
-  name: string
-  roomName: string
-  status: string
-  voltage: number | null
-  current: number | null
-  powerKw: number | null
-  loadPercent: number | null
-  powerFactor: number | null
-  fuelLevel: number | null
-  fuelConsumption: number | null
-  commissionedOn: string | null
-  healthScore: number | null
-}
+    /** 设备唯一标识，使用后端返回的 device_id 或自定义 code */
+    id: string
+    /** 兼容旧字段，保留 code 与 id 相同 */
+    code: string
+    name: string
+    /** 机房/区域名称 */
+    roomName: string
+    /** 新增字段：机房/区域 */
+    room: string
+    /** 设备编号（在同一机房内的顺序） */
+    no: number
+    status: string
+    voltage: number | null
+    current: number | null
+    powerKw: number | null
+    loadPercent: number | null
+    powerFactor: number | null
+    fuelLevel: number | null
+    fuelConsumption: number | null
+    commissionedOn: string | null
+    healthScore: number | null
+  }
 
 export interface PowerSystemSummary {
   total: number
@@ -658,7 +665,7 @@ export function toDevices(
   return list.map((d, i) => {
     const code = String(d.id ?? `${prefix}-${i + 1}`)
     return {
-      id: offset + i + 1,
+      id: code,
       code,
       name: String(d.name ?? d.id ?? `${prefix}-${i + 1}`),
       roomName: room,

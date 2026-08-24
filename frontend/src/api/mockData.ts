@@ -2589,6 +2589,7 @@ function faultImpactAnalyzeMock(req: FaultImpactReq): FaultImpactResp {
     generatedAt: new Date().toISOString(),
     nodes,
     edges: nodes.filter((n) => n.state === 'affected').map((n) => ({ source: faultNodes[0]?.id ?? 0, target: n.id, type: 'it_feed', label: '机房级冷量/电力丧失' })),
+    mitigations: [],
     affectedIds: Array.from(affected).filter((x) => !failed.has(x)),
     summary: { severity, faultCount: failed.size, affectedCount: affected.size - failed.size, criticalPaths: faultNodes.filter((n) => _FI_CRIT_CATS.has(n.category)).length, slaRisk: businesses.length ? 'high' : (linkHit ? 'medium' : 'low'), bizCount },
     businesses,
@@ -2628,7 +2629,7 @@ function drillMutations(method: string, u: string, data: any): any {
     const code = data.code || `DR-${String(id).padStart(3, '0')}`
     const plan = { id, code, name: data.name || '', type: data.type || '电力', date: data.date || '', state: data.state || '计划中', result: data.result || '—', note: data.note || '', level: data.level || '—', scope: data.scope || '', duration: data.duration || 0, steps: data.steps || [] }
     _memDrills.push(plan)
-    return plan
+    return plan as any
   }
   // PUT /api/ops/drill/:id
   if (method === 'PUT') {
@@ -2637,7 +2638,7 @@ function drillMutations(method: string, u: string, data: any): any {
       const id = Number(m[1])
       const p = _memDrills.find((x) => x.id === id)
       if (p) Object.assign(p, { ...data, id })
-      return p
+      return p as any
     }
   }
   // DELETE /api/ops/drill/:id
@@ -2654,7 +2655,7 @@ function drillMutations(method: string, u: string, data: any): any {
     const id = _memRecSeq++
     const rec = { id, planId: data.planId || 0, planName: data.planName || '', date: data.date || '', participants: data.participants || 0, startAt: data.startAt || '', endAt: data.endAt || '', score: data.score || 0, result: data.result || '—', note: data.note || '' }
     _memRecords.push(rec)
-    return rec
+    return rec as any
   }
   // PUT /api/ops/drill/records/:id
   if (method === 'PUT' && u.startsWith('/api/ops/drill/records/')) {
@@ -2697,7 +2698,7 @@ function tenantListMock(params?: MockQuery): { tenants: any[]; total: number } {
   if (kw) list = list.filter((t) => (t.name + t.code + t.contact).toLowerCase().includes(kw))
   const status = String(params?.status ?? '')
   if (status) list = list.filter((t) => t.status === status)
-  return { tenants: list.map((t) => ({ ...t, health: _deriveHealth(t) })), total: list.length }
+  return { tenants: list.map((t) => ({ ...t, health: _deriveHealth(t) })), total: list.length } as any
 }
 
 function tenantStatsMock(): any {
@@ -3477,7 +3478,7 @@ function wrShift(method: string, url: string, data: any): any {
         ...data,
       }
       STORE.handovers.push(newOne)
-      return { ...newOne }
+      return { ...newOne } as any
     }
     return undefined
   }
@@ -3505,7 +3506,7 @@ function wrShift(method: string, url: string, data: any): any {
       ...data,
     }
     STORE.shifts.push(newOne)
-    return { ...newOne }
+    return { ...newOne } as any
   }
   if (shiftId) {
     const id = Number(shiftId[1])
@@ -3546,7 +3547,7 @@ function wrExternal(method: string, url: string, data: any): any {
       registeredAt: new Date().toISOString(),
     }
     MOCK_REGISTERED.push(newDev)
-    return { status: 'created', device_id: did, message: '设备注册成功' }
+    return { status: 'created', device_id: did, message: '设备注册成功' } as any
   }
   const devM = url.match(/^\/api\/external\/devices\/([^/]+)$/)
   if (devM) {
@@ -3592,7 +3593,7 @@ function wrExternal(method: string, url: string, data: any): any {
       const id = nextIdFor(list)
       const newMd = { id, deviceId: did, enabled: true, dataType: 'number', ...data }
       list.push(newMd)
-      return { ...newMd }
+      return { ...newMd } as any
     }
     if (method === 'put' && mdId != null) {
       const idx = list.findIndex((m: any) => m.id === mdId)
