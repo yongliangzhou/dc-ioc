@@ -662,6 +662,8 @@ export function toDevices(
       code,
       name: String(d.name ?? d.id ?? `${prefix}-${i + 1}`),
       roomName: room,
+      room: room,
+      no: offset + i + 1,
       status: normStatus(d.state ?? d.breaker),
       voltage: null,
       current: null,
