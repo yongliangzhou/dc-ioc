@@ -54,7 +54,7 @@
     <div v-else class="dt-body">
       <div
         v-for="(row, ri) in rows"
-        :key="row._uid ?? ri"
+        :key="String(row._uid ?? ri)"
         class="dt-row"
         :class="getRowClass(row)"
         :style="gridStyle"

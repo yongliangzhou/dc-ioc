@@ -3257,12 +3257,39 @@ function normalizeUrl(url: string): string {
   return noQuery || '/'
 }
 
+interface ShiftRecord {
+  id: number
+  date?: string
+  shiftDate?: string
+  status?: string
+  [key: string]: unknown
+}
+
+interface HandoverRecord {
+  id: number
+  shiftDate?: string
+  status?: string
+  [key: string]: unknown
+}
+
+interface MetricDef {
+  id: number
+  deviceId: string
+  metricName: string
+  label?: string
+  unit?: string
+  dataType: string
+  description?: string
+  enabled: boolean
+  [key: string]: unknown
+}
+
 interface MockStore {
   alarmRules: AlarmRuleDef[]
   knowledge: KnowledgeItem[]
-  shifts: unknown[] // 排班记录 (结构见 rdShifts)
-  handovers: unknown[] // 交接班记录
-  metricDefs: Record<string, unknown[]> // deviceId → metricDef list
+  shifts: ShiftRecord[] // 排班记录 (结构见 rdShifts)
+  handovers: HandoverRecord[] // 交接班记录
+  metricDefs: Record<string, MetricDef[]> // deviceId → metricDef list
 }
 
 const STORE: MockStore = {
@@ -3301,7 +3328,7 @@ const STORE: MockStore = {
   })(),
   shifts: (() => {
     // 未来 7 天的初始排班
-    const arr: any[] = []
+    const arr: ShiftRecord[] = []
     const leaders = ['张伟', '李娜', '王强', '赵敏']
     for (let i = 0; i < 14; i++) {
       const day = new Date(Date.now() + i * 86400000).toISOString().slice(0, 10)
@@ -3591,7 +3618,7 @@ function wrExternal(method: string, url: string, data: any): any {
     }
     if (method === 'post') {
       const id = nextIdFor(list)
-      const newMd = { id, deviceId: did, enabled: true, dataType: 'number', ...data }
+      const newMd = { id, deviceId: did, metricName: data.metricName ?? data.label ?? '', enabled: true, dataType: 'number', ...data }
       list.push(newMd)
       return { ...newMd } as any
     }
@@ -3662,7 +3689,7 @@ function rdHandovers(params?: MockQuery): { items: any[]; total: number } {
   if (params?.status) list = list.filter((h) => h.status === String(params.status))
   return { items: list, total: list.length }
 }
-function rdKnowledge(params?: MockQuery & { q?: string; category?: string; page?: number; page_size?: number }): any {
+function rdKnowledge(params?: any): any {
   let list = STORE.knowledge.slice()
   if (params?.category) list = list.filter((k) => k.category === params.category)
   if (params?.q) {

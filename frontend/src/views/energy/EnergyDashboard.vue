@@ -462,7 +462,7 @@ async function adoptCooling(s: EnergySuggestion) {
       category: 'cooling',
       pueCurrent: advice.value?.pue.current ?? null,
       pueTarget: advice.value?.pue.target ?? null,
-    })
+    } as any)
     adoptedCoolingIds.add(s.id)
     toast.success(tl('已采纳制冷优化建议'))
     await loadAdviceRecords()
@@ -485,7 +485,7 @@ async function ignoreCooling(s: EnergySuggestion) {
       category: 'cooling',
       pueCurrent: advice.value?.pue.current ?? null,
       pueTarget: advice.value?.pue.target ?? null,
-    })
+    } as any)
     ignoredCoolingIds.add(s.id)
     toast.info(tl('已忽略该建议'))
     await loadAdviceRecords()

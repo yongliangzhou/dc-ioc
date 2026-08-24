@@ -133,7 +133,7 @@
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-xs" style="color:var(--txt2)">{{ t.severity }}</span>
-              <span class="tag" :class="sevClass(result.summary.severity)">{{ sevText(result.summary.severity) }}</span>
+              <span class="tag" :class="sevClass(String(result.summary.severity))">{{ sevText(String(result.summary.severity)) }}</span>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-xs" style="color:var(--txt2)">{{ t.affectedCount }}</span>

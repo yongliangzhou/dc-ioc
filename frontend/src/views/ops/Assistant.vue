@@ -277,9 +277,9 @@ async function onModelChange() {
   try {
     const res = await selectAssistantModel(activeModel.value)
     activeModel.value = res.active || activeModel.value
-    toast.show('已切换模型：' + activeModel.value, 'success')
+    toast.success('已切换模型：' + activeModel.value)
   } catch (e: any) {
-    toast.show('切换模型失败：' + (e?.message || '未知错误'), 'error')
+    toast.error('切换模型失败：' + (e?.message || '未知错误'))
     loadModels() // 还原
   }
 }

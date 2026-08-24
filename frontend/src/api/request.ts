@@ -53,7 +53,7 @@ export function abortPendingRequests(): void {
 }
 
 // ---- 请求拦截: 自动附加 Bearer token + 提取 File (for import mock) + 挂 AbortController ----
-request.interceptors.request.use((config) => {
+request.interceptors.request.use((config): any => {
   // GET 短时缓存命中: 在发起真实请求前短路返回, 减少重复后端调用
   const key = cacheKeyOf(config)
   if (key) {
