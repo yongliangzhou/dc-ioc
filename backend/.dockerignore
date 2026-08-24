@@ -1,0 +1,32 @@
+# Python 缓存/字节码
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# 虚拟环境与本地依赖
+venv/
+.venv/
+env/
+
+# 环境变量与密钥 (不要打进镜像)
+.env
+.env.*
+!.env.example
+
+# 测试与质量
+tests/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# 版本控制与日志
+.git/
+.gitignore
+*.log
+
+# 前端/无关产物
+node_modules/
+dist/
+*.md

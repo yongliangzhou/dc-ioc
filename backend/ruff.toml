@@ -1,0 +1,14 @@
+# Ruff 配置 (被 CI `ruff check app/` 自动读取)
+# 锁定只检查 E(代码风格/错误) 与 F(Pyflakes 逻辑) 两类规则,
+# 与历史 CI 行为一致, 避免新版 ruff 默认规则集升级导致 CI 意外失败。
+target-version = "py312"
+line-length = 100
+
+[lint]
+# 与历史 CI 一致: 仅检查 E4/E7/E9 (pycodestyle 错误) 与 F (Pyflakes),
+# 不含 E5(行长度)/E1(缩进)/E2(空白)/E3(空行) 等, 避免引入额外失败。
+select = ["E4", "E7", "E9", "F"]
+
+[lint.per-file-ignores]
+# 测试文件放宽
+"tests/**" = ["E"]

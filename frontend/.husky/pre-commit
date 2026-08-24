@@ -1,0 +1,5 @@
+npx lint-staged
+
+# 提交前 Vue 模板语法检查：捕获多行事件绑定、标签未闭合等会导致
+# `vite build` 失败（CI 才暴露）的模板语法错误，本地提前拦截。
+node scripts/check-templates.mjs

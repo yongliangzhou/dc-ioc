@@ -1,0 +1,13 @@
+{
+  "category_meta": {
+    "_comment": "新增 / 覆盖设备类别: category -> [中文名, 业务域, 协议]. 业务域见 dc_aggregator._count_devices_in_domain 取值.",
+    "liquid_cooling_cdu": ["液冷 CDU", "hvac_source", "modbus"],
+    "pdu": ["智能 PDU", "power_lv", "snmp"]
+  },
+  "metric_labels": {
+    "_comment": "新增 / 覆盖测点中文说明: metric_name -> 中文说明.",
+    "cooling_water_supply": "冷却水供水温度",
+    "cooling_water_return": "冷却水回水温度",
+    "rack_delta_t": "机柜进出风温差"
+  }
+}

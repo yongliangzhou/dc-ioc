@@ -1,0 +1,96 @@
+# =========================================================
+# DC-IOC 一体化编排: 一键 docker compose up 即可运行
+#   服务: postgres / redis / backend(uvicorn) / frontend(nginx)
+# =========================================================
+version: "3.9"
+
+services:
+  # ---------- 关系型数据库 ----------
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dcuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dcpass}
+      POSTGRES_DB: ${POSTGRES_DB:-dc_ioc}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./deploy/sql/init.sql:/docker-entrypoint-initdb.d/001_init.sql
+      - ./deploy/sql/006_seed_auth.sql:/docker-entrypoint-initdb.d/002_seed_auth.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dcuser}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------- 缓存 / 消息代理 ----------
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  # ---------- 后端 (FastAPI + Uvicorn) ----------
+  backend:
+    build:
+      context: ./backend
+      target: prod
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "false"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ${POSTGRES_USER:-dcuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dcpass}
+      POSTGRES_DB: ${POSTGRES_DB:-dc_ioc}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+      CELERY_BROKER_URL: redis://redis:6379/2
+      CELERY_RESULT_BACKEND: redis://redis:6379/3
+      # 前端经 Nginx(8080) 同源访问, 此处仅作兜底
+      CORS_ORIGINS: "http://localhost:8080,http://127.0.0.1:8080"
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ---------- 前端 (Nginx 托管 + 反向代理) ----------
+  frontend:
+    build:
+      context: .                          # 项目根目录 (需要访问 packages/)
+      dockerfile: ./frontend/Dockerfile
+      target: prod
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:

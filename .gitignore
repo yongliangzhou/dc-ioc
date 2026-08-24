@@ -1,0 +1,91 @@
+# ============================================================
+# DC-IOC Platform .gitignore
+# ============================================================
+
+# ---- 环境变量 (包含敏感信息, 仅保留 .example) ----
+.env
+.env.*
+!.env.example
+!.env.dev.example
+!.env.staging.example
+!.env.prod.example
+
+# ---- 备份文件 ----
+backups/
+*.sql.gz
+*.dump
+
+# ---- 日志 ----
+logs/
+*.log
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+.eggs/
+dist/
+# 保留 @dc-ioc/ui 的预构建产物 (含 index.d.ts), 避免前端类型检查依赖本地构建步骤
+!packages/dc-ioc-ui/dist/
+!packages/dc-ioc-ui/dist/**
+build/
+*.whl
+.venv/
+venv/
+
+# ---- 测试 ----
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+junit.xml
+bandit-report.json
+*.prof
+
+# ---- 前端 ----
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ---- Docker / Compose ----
+docker-compose.override.yml
+
+# ---- 操作系统 ----
+.DS_Store
+Thumbs.db
+
+# ---- Prometheus / Loki ----
+prometheus_data/
+loki_data/
+grafana_data/
+
+# ---- 临时 ----
+tmp/
+temp/
+
+# ---- 本地诊断 / 验收临时产物 (截图, 日志, 脚本) ----
+*.png
+*.err
+*.out
+*.cjs
+accept*.result.txt
+accept*.txt
+diag*.cjs
+diag*.txt
+vtsc_*.txt
+v5174.*
+router-nav.yaml
+router-page*.png
+firewall-*.png
+wireless-*.png
+.frontend/.playwright-cli/
+frontend/.playwright-cli/
