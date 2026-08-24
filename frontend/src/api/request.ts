@@ -1,7 +1,7 @@
 import axios, {
   AxiosError,
   AxiosInstance,
-  type AxiosResponse,
+  type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios'
 import router from '@/router'
@@ -53,22 +53,7 @@ export function abortPendingRequests(): void {
 }
 
 // ---- 请求拦截: 自动附加 Bearer token + 提取 File (for import mock) + 挂 AbortController ----
-request.interceptors.request.use((config): any => {
-  // GET 短时缓存命中: 在发起真实请求前短路返回, 减少重复后端调用
-  const key = cacheKeyOf(config)
-  if (key) {
-    const hit = getCache.get(key)
-    if (hit && Date.now() - hit.ts < GET_CACHE_TTL) {
-      return Promise.resolve({
-        data: hit.data,
-        status: 200,
-        statusText: 'cached',
-        headers: {},
-        config,
-      } as AxiosResponse)
-    }
-  }
-
+request.interceptors.request.use((config) => {
   const token = localStorage.getItem('dc_ioc_token')
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`
@@ -199,7 +184,7 @@ request.interceptors.response.use(
   (res) => {
     releaseController(res.config)
     // 写 GET 缓存 (成功响应后才写入)
-    const key = cacheKeyOf(res.config)
+    const key = res.config ? cacheKeyOf(res.config) : null
     if (key && res.status >= 200 && res.status < 300) {
       getCache.set(key, { data: res.data, ts: Date.now() })
     }
@@ -290,6 +275,19 @@ request.interceptors.response.use(
     return Promise.reject(err.response?.data ?? err)
   },
 )
+
+// ---- GET 短时缓存: 命中时在发起请求前返回缓存数据 (仅在 get 方法层生效) ----
+const rawGet = request.get.bind(request)
+request.get = ((url: string, config?: AxiosRequestConfig): Promise<any> => {
+  const key = cacheKeyOf({ url, method: 'get', params: config?.params })
+  if (key) {
+    const hit = getCache.get(key)
+    if (hit && Date.now() - hit.ts < GET_CACHE_TTL) {
+      return Promise.resolve(hit.data)
+    }
+  }
+  return rawGet(url, config)
+}) as typeof request.get
 
 export default request
 

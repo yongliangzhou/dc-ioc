@@ -2,6 +2,21 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 
+// jsdom 无 canvas: 提供最小可用的 2D context 桩, 避免 echarts/zrender 异步帧抛未处理异常
+const ctxStub = new Proxy(
+  {},
+  {
+    get: (_t, prop) => {
+      if (prop === 'measureText') return () => ({ width: 0 })
+      return () => undefined
+    },
+  },
+) as unknown as CanvasRenderingContext2D
+Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
+  configurable: true,
+  value: () => ctxStub,
+})
+
 // jsdom 无 canvas: mock echarts 避免 zrender 异步渲染帧抛未处理异常
 vi.mock('echarts', () => ({
   init: vi.fn(() => ({

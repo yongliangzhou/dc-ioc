@@ -39,13 +39,10 @@ export interface RtAlarm extends Alarm {
 type LinkRule = AlarmRuleDef
 
 export function toClock(iso: string): string {
-  try {
-    const d = new Date(iso)
-    const p = (n: number) => String(n).padStart(2, '0')
-    return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
-  } catch {
-    return iso
-  }
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  const p = (n: number) => String(n).padStart(2, '0')
+  return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
 }
 
 // 后端活动告警原始形状 (动态 JSON, 字段以 unknown 呈现)

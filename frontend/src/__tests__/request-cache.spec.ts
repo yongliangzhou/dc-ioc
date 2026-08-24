@@ -10,14 +10,14 @@ import request from '@/api/request'
 // 用 axios adapter 注入假响应并计数, 验证 GET 缓存命中后不重复发请求
 function installAdapter() {
   let calls = 0
-  const adapter = async () => {
+  const adapter = async (config: unknown) => {
     calls += 1
     return {
       data: { n: calls },
       status: 200,
       statusText: 'OK',
       headers: {},
-      config: {},
+      config,
     } as never
   }
   ;(request.defaults as { adapter?: unknown }).adapter = adapter
@@ -35,8 +35,8 @@ describe('request: GET 缓存', () => {
     const url = `/api/cache-${Date.now()}` // 唯一 URL 避免跨用例缓存干扰
     const r1 = await request.get(url)
     const r2 = await request.get(url)
-    expect(r1.data.n).toBe(1)
-    expect(r2.data.n).toBe(1) // 命中缓存, 返回同一份
+    expect((r1 as any).n).toBe(1)
+    expect((r2 as any).n).toBe(1) // 命中缓存, 返回同一份
     expect(getCalls()).toBe(1) // adapter 只调一次
   })
 
