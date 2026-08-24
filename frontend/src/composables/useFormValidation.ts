@@ -26,7 +26,7 @@ export interface UseFormValidationOptions<T extends string = string> {
 export function useFormValidation<T extends string = string>(
   options: UseFormValidationOptions<T>,
 ) {
-  const { rules, initial } = options
+  const { rules } = options
 
   const errors = reactive<Record<string, string>>({}) as Record<T, string>
   const touched = reactive<Record<string, boolean>>({}) as Record<T, boolean>

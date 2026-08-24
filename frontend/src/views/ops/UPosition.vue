@@ -143,7 +143,6 @@ import {
   DownloadIcon,
   FileTextIcon,
   RadioIcon,
-  type LucideIcon,
 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { getCabinetOptions, getServers, recognizeUPosition, getUPosition } from '@/api'
@@ -186,7 +185,6 @@ function cellStroke(cell: UCell): string {
   if (cell.status === 'reserved') return '#eab308'
   return '#1f2937'
 }
-const uLabel = (cell: UCell) => `U${cell.u}`
 function deviceLabel(cell: UCell): string {
   const s = servers.value.find((x) => x.id === cell.deviceRefs[0])
   if (!s) return ''

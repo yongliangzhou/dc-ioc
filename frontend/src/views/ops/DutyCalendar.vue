@@ -153,10 +153,6 @@ function openCreate(date?: string) {
   }
   membersText.value = ''
 }
-function openEdit(s: ShiftView) {
-  editing.value = { ...s }
-  membersText.value = (s.members || []).map((m) => (m.role ? `${m.name}|${m.role}` : m.name)).join('\n')
-}
 function closeEditor() {
   editing.value = null
 }

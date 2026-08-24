@@ -22,7 +22,7 @@
       <g :transform="`translate(${pan.x},${pan.y}) scale(${scale})`">
         <!-- 管道（带方向箭头 + 流动粒子 + 悬停高亮） -->
         <g class="pipes">
-          <g v-for="(p, idx) in pipes" :key="'p' + idx">
+          <g v-for="(p, idx) in pipeList" :key="'p' + idx">
             <path
               :id="'pipe' + idx" :d="p.d" fill="none"
               :class="['pipe', p.kind, { 'pipe-off': p.off, 'pipe-hi': isPipeLinked(idx) }]"
@@ -42,7 +42,7 @@
 
         <!-- 设备节点 -->
         <g
-          v-for="n in nodes" :key="n.id" class="dev-group"
+          v-for="n in nodeList" :key="n.id" class="dev-group"
           :transform="`translate(${n.x},${n.y})`"
           :class="{ selected: n.id === selectedId, ['st-' + n.status]: true, hi: isNodeLinked(n.id) }"
           @click="onClick(n)"
@@ -67,7 +67,7 @@
       <button @click="resetView" title="复位">{{ tl('复位') }}</button>
       <button @click="fitView" title="适配">{{ tl('适配') }}</button>
     </div>
-    <div v-if="!nodes.length" class="empty">{{ tl('暂无制冷链路数据') }}</div>
+    <div v-if="!nodeList.length" class="empty">{{ tl('暂无制冷链路数据') }}</div>
     <div class="hint">{{ tl('滚轮缩放 · 拖拽平移 · 点击查看详情') }}</div>
   </div>
 </template>
@@ -127,8 +127,8 @@ const wrap = ref<HTMLElement | null>(null)
 const dragging = ref(false)
 const hoverId = ref<string | null>(null)
 
-const nodes = ref<CoolingDevice[]>([])
-const pipes = ref<CoolingPipe[]>([])
+const nodeList = ref<CoolingDevice[]>([])
+const pipeList = ref<CoolingPipe[]>([])
 
 function buildFromRows() {
   const rows = props.rows ?? []
@@ -158,16 +158,16 @@ function buildFromRows() {
       built.push({ d: orthPath(a, b), kind: 'chw' })
     }
   }
-  nodes.value = all
-  pipes.value = built
+  nodeList.value = all
+  pipeList.value = built
 }
 function orthPath(a: { x: number; y: number }, b: { x: number; y: number }) {
   const midY = (a.y + b.y) / 2
   return `M ${a.x} ${a.y} L ${a.x} ${midY} L ${b.x} ${midY} L ${b.x} ${b.y}`
 }
 function syncFromProps() {
-  nodes.value = props.nodes ?? []
-  pipes.value = props.pipes ?? []
+  nodeList.value = props.nodes ?? []
+  pipeList.value = props.pipes ?? []
 }
 
 function init() {
@@ -183,12 +183,12 @@ function activeRef(): string | undefined { return hoverId.value ?? props.selecte
 function isNodeLinked(id: string) {
   const a = activeRef()
   if (!a || a === id) return false
-  return pipes.value.some((p) => p.d.includes(id))
+  return pipeList.value.some((p) => p.d.includes(id))
 }
 function isPipeLinked(idx: number) {
   const a = activeRef()
   if (!a) return false
-  return pipes.value[idx].d.includes(a)
+  return pipeList.value[idx].d.includes(a)
 }
 
 function onClick(n: CoolingDevice) { emit('device-click', n) }
@@ -196,12 +196,12 @@ function durMs(dur: string | undefined) { return parseFloat(dur ?? '3') * 1000 }
 function zoomBtn(f: number) { scale.value = clamp(scale.value * f, 0.4, 3) }
 function resetView() { scale.value = 1; pan.x = 0; pan.y = 0 }
 function fitView() {
-  const ids = nodes.value
+  const ids = nodeList.value
   if (!ids.length) return
   const xs = ids.map((n) => n.x)
   const ys = ids.map((n) => n.y)
-  const minX = Math.min(...xs) - (nodes.value[0].w ?? 140) - 30
-  const maxX = Math.max(...xs) + (nodes.value[0].w ?? 140) + 30
+  const minX = Math.min(...xs) - (nodeList.value[0].w ?? 140) - 30
+  const maxX = Math.max(...xs) + (nodeList.value[0].w ?? 140) + 30
   const minY = Math.min(...ys) - 40
   const maxY = Math.max(...ys) + 40
   const cw = maxX - minX

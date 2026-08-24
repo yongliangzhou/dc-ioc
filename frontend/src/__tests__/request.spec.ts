@@ -15,9 +15,7 @@ import { mockForUrl } from '@/api/mockData'
 
 // axios 拦截器内部 handlers (axios v1 稳定结构)
 interface AxiosHandler {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fulfilled: (arg: any) => any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   rejected: (arg: any) => any
 }
 const reqHandler = (request.interceptors.request as unknown as { handlers: AxiosHandler[] }).handlers[0]

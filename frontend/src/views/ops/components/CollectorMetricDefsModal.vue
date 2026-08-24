@@ -47,7 +47,7 @@
             </tbody>
           </table>
           <div v-else class="muted" style="text-align: center; padding: 22px">
-            {{ loading ? tl('加载中…') : tl('该设备暂无测点定义') }}
+            {{ loadingDefs ? tl('加载中…') : tl('该设备暂无测点定义') }}
           </div>
         </div>
 
@@ -128,10 +128,10 @@ const props = defineProps<{
   device: ExternalDeviceView | null
   loading?: boolean
 }>()
-const emit = defineEmits<{ (e: 'close'): void }>()
+defineEmits<{ (e: 'close'): void }>()
 
 const defs = ref<MetricDef[]>([])
-const loading = ref(false)
+const loadingDefs = ref(false)
 const formOpen = ref(false)
 const saving = ref(false)
 const err = ref('')
@@ -142,13 +142,13 @@ const form = ref<Partial<MetricDef>>({
 
 async function loadDefs() {
   if (!props.device) return
-  loading.value = true
+  loadingDefs.value = true
   try {
     defs.value = await getMetricDefs(props.device.device_id)
   } catch {
     defs.value = []
   } finally {
-    loading.value = false
+    loadingDefs.value = false
   }
 }
 

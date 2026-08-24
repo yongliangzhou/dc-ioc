@@ -53,7 +53,7 @@ const props = defineProps<{
   hotThreshold: number // 高温区间上限
   topIds?: string[] // TOP5 热点 id
 }>()
-const emit = defineEmits<{ (e: 'cell-click', cell: HeatCell): void }>()
+defineEmits<{ (e: 'cell-click', cell: HeatCell): void }>()
 
 const gap = 4
 const margin = 6

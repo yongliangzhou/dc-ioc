@@ -135,7 +135,6 @@ const topRoomIds = computed(() => topRooms.value.map((r) => r.id))
 
 // 算法生成机柜网格（基于房间温度，靠近热通道一侧更高）
 function genRackCells(room: RoomView, rowsR: number, colsR: number): HeatCell[] {
-  const base = (room.coldAisle + room.hotAisle) / 2
   const cells: HeatCell[] = []
   for (let r = 0; r < rowsR; r++) {
     // 行越靠下（热通道侧），温度越高

@@ -276,7 +276,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getDrills, createDrill, updateDrill, deleteDrill, getDrillRecords, createDrillRecord, updateDrillRecord, deleteDrillRecord, getFaultSources, analyzeFaultImpact } from '@/api'
 import type { DrillPlan, DrillRecord, DrillStep, FaultImpactResp, FaultSourceNode } from '@/types'

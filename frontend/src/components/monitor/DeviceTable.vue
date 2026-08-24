@@ -119,7 +119,7 @@ const props = withDefaults(
 /** 用 WeakMap 为每行生成稳定 uid (不修改 props 对象) */
 const _uidMap = new WeakMap<object, string>()
 let _uidSeq = 0
-function rowKey(row: Record<string, unknown>, i: number): string | number {
+function rowKey(row: Record<string, unknown>, _i: number): string | number {
   const r = row as object
   let id = _uidMap.get(r)
   if (id == null) {

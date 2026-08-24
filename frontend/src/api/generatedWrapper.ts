@@ -47,14 +47,11 @@ export * from './generated/index'
 // ─── Typed API helpers (replace generated fetch calls with axios) ───
 
 import type {
-  Alarm,
-  AlarmEvent,
   AlarmRuleDef,
   Cabinet,
   Equipment,
   Ticket,
   DashboardOverview,
-  ExternalDevice,
   GetApiCabinetsParams,
   GetApiCabinetsCabinetIdMetricsParams,
   GetApiCabinetsCabinetIdMetrics200,

@@ -157,7 +157,6 @@ function buildScene() {
   const cabGap = 4
   const rackGeo = new THREE.BoxGeometry(2.4, 5, 2.4)
   const devGeo = new THREE.BoxGeometry(1.6, 0.6, 1.6)
-  const floorGeo = new THREE.BoxGeometry(roomGap - 2, 0.4, 0)
   let rx = 0
   const roomCenters: { room: string; center: THREE.Vector3 }[] = []
 

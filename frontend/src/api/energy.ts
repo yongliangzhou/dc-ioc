@@ -1,5 +1,5 @@
 import request from './request'
-import type { EnergyAdvice, EnergySuggestion, EnergyEfficiency } from '@/types'
+import type { EnergyAdvice } from '@/types'
 
 // ===== Energy 能耗分析 =====
 

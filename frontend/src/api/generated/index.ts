@@ -4,7 +4,6 @@
  */
 export type AlarmLevel = (typeof AlarmLevel)[keyof typeof AlarmLevel]
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AlarmLevel = {
   crit: 'crit',
   warn: 'warn',
@@ -27,7 +26,6 @@ export interface Alarm {
 
 export type AlarmEventLevel = (typeof AlarmEventLevel)[keyof typeof AlarmEventLevel]
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AlarmEventLevel = {
   crit: 'crit',
   warn: 'warn',
@@ -36,7 +34,6 @@ export const AlarmEventLevel = {
 
 export type AlarmEventStatus = (typeof AlarmEventStatus)[keyof typeof AlarmEventStatus]
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AlarmEventStatus = {
   active: 'active',
   acknowledged: 'acknowledged',
@@ -74,7 +71,6 @@ export interface AlarmEvent {
 
 export type AlarmRuleDefStatus = (typeof AlarmRuleDefStatus)[keyof typeof AlarmRuleDefStatus]
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const AlarmRuleDefStatus = {
   enabled: 'enabled',
   disabled: 'disabled',
@@ -293,7 +289,6 @@ export type PostApiAlarmsActiveIdResolve200 = {
 export type PatchApiAlarmRulesIdStatusBodyStatus =
   (typeof PatchApiAlarmRulesIdStatusBodyStatus)[keyof typeof PatchApiAlarmRulesIdStatusBodyStatus]
 
-// eslint-disable-next-line @typescript-eslint/no-redeclare
 export const PatchApiAlarmRulesIdStatusBodyStatus = {
   enabled: 'enabled',
   disabled: 'disabled',

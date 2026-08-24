@@ -319,10 +319,6 @@ function fmtDate(d: string | null) {
   if (!d) return '-'
   return d
 }
-function isOverdue(d: string | null) {
-  if (!d) return false
-  return new Date(d) < new Date()
-}
 
 function openRecCreate() {
   recForm.value = {

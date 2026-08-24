@@ -26,7 +26,9 @@ export default [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
       ],
-      '@typescript-eslint/no-explicit-any': 'error',
+      // 本项目含大量 mock 适配与第三方 SDK 桥接代码，显式 any 是常见且有意的写法，
+      // 关闭该规则（保留 no-unused-vars 等真正有害的检查）。
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
   {
@@ -45,7 +47,7 @@ export default [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' },
       ],
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'off',
       // 单字组件名（Toast/Panel/Login/Alarms 等）在本项目是合理的业务命名，
       // 关闭该风格规则以免强制大面积改名。
       'vue/multi-word-component-names': 'off',

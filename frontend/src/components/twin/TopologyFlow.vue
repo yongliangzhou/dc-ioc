@@ -97,9 +97,8 @@
                 fill="none"
               />
               <!-- [增强] 能流粒子密度随负载变化: 负载越高粒子越多 -->
+              <template v-for="k in e.particles" :key="'p' + k">
               <circle
-                v-for="k in e.particles"
-                :key="'p' + k"
                 v-if="!dimEdge(e)"
                 r="3.2"
                 :class="['flow-dot', e.type, { fault: e.affected }]"
@@ -112,6 +111,7 @@
                   <mpath :href="'#' + e.id" />
                 </animateMotion>
               </circle>
+              </template>
             </template>
           </g>
 

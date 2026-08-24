@@ -2570,7 +2570,7 @@ function faultImpactAnalyzeMock(req: FaultImpactReq): FaultImpactResp {
   }
   const nodes: FaultImpactResp['nodes'] = [
     ...faultNodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, domain: n.domain, category: n.category, status: n.status, health: n.health, roomCode: n.roomCode, state: 'fault' as const, hop: 0, critical: _FI_CRIT_CATS.has(n.category), business: null, slaRisk: null })),
-    ...itBiz.map((d, idx) => {
+    ...itBiz.map((d, _idx) => {
       const biz = _FI_BIZ.find((b) => b.cats.includes(d.category))
       return { id: d.id, label: d.label, kind: d.category, domain: 'it', category: d.category, status: '在线', health: d.health, roomCode: 'A01', state: 'affected' as const, hop: 1, critical: false, business: biz?.business ?? null, slaRisk: biz ? 'medium' : null }
     }),
@@ -3369,7 +3369,7 @@ function nextIdFor(arr: { id: number }[]): number {
 }
 
 /* ---------- 告警规则写操作 ---------- */
-function wrAlarmRule(method: string, url: string, data: any, cfg: any): any {
+function wrAlarmRule(method: string, url: string, data: any, _cfg: any): any {
   const toggleM = url.match(/^\/api\/alarm-rules\/([^/]+)\/toggle$/)
   const silenceM = url.match(/^\/api\/alarm-rules\/([^/]+)\/silence$/)
   const idM = url.match(/^\/api\/alarm-rules\/([^/]+)$/)

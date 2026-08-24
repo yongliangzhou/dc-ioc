@@ -59,8 +59,6 @@ const loading = ref(false)
 const data = ref<ChillerSummary | null>(null)
 const selected = ref<CoolingDevice | null>(null)
 
-const W = 1120
-const COLS = ['tower', 'cwpump', 'chiller', 'chwPump', 'hex', 'tank'] as const
 const colX: Record<string, number> = {
   tower: 110,
   cwpump: 320,
