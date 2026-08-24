@@ -1,9 +1,8 @@
 """故障影响分析接口: 候选故障源 + 影响分析 + 历史存档会签。"""
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query
+
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 

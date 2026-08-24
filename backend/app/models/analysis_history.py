@@ -4,7 +4,7 @@ from __future__ import annotations
 import datetime
 import json
 
-from sqlalchemy import Column, Integer, String, Text, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Boolean, JSON
 
 from app.db.session import Base
 

@@ -117,7 +117,6 @@ def analyze(fault_ids: list[int], scope: dict | None = None) -> dict:
             for eq in room.get("equipments", []):
                 it_nodes.append(eq)
                 room_of[eq["id"]] = room
-    it_by_id = {e["id"]: e for e in it_nodes}
 
     # 生成 IT 业务承载设备 (twin 图仅含供电/制冷/安防, 这里按包间派生 server/switch/gpu,
     # 作为网络/业务域级联目标; id 用 100000+ 偏移避免与 twin 节点冲突)。
@@ -326,7 +325,6 @@ def _build_mitigations(failed, affected, all_nodes, businesses, critical_count, 
     if not failed:
         return mitig
 
-    fault_labels = [all_nodes[f].get("label", str(f)) for f in failed if f in all_nodes]
     # P0: 关键供电/制冷节点冲击 -> 冗余切换
     if critical_count:
         crit_faults = [f for f in failed if all_nodes.get(f, {}).get("category") in _CRITICAL_CATS]

@@ -313,7 +313,7 @@ def _call_llm(system_prompt: str, user_prompt: str) -> Dict[str, Any]:
         return {"text": None, "error": "未配置 LLM_API_KEY，无法调用大模型", "http_status": None, "latency": 0.0}
     url = cfg["base_url"] + "/chat/completions"
     payload = {
-        "model": target_model,
+        "model": cfg["model"],
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
@@ -392,7 +392,7 @@ def check_llm_status(model: Optional[str] = None) -> Dict[str, Any]:
         }
     url = cfg["base_url"] + "/chat/completions"
     payload = {
-        "model": target_model,
+        "model": cfg["model"],
         "messages": [{"role": "user", "content": "ping"}],
         "max_tokens": 1,
         "temperature": 0,
