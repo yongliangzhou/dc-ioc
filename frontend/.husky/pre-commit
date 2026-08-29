@@ -1,3 +1,7 @@
+# git 一律从「工作区根目录」执行钩子, 而本仓库的 package.json / scripts 都在 frontend/ 下,
+# 因此先切到 frontend, 否则 lint-staged 找不到配置、check-templates 找不到脚本路径。
+cd frontend || exit 1
+
 npx lint-staged
 
 # 提交前 Vue 模板语法检查：捕获多行事件绑定、标签未闭合等会导致

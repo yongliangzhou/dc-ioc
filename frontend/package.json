@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "generate:api": "orval",
-    "prepare": "husky || true"
+    "prepare": "cd .. && husky frontend/.husky || true"
   },
   "dependencies": {
     "@dc-ioc/ui": "file:../packages/dc-ioc-ui",
