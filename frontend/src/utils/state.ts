@@ -1,3 +1,5 @@
+import type { Alarm } from '@/types'
+
 /** 状态/级别 -> 设计系统样式类 的通用映射, 供各业务域视图复用。 */
 
 const GREEN = [
@@ -48,4 +50,31 @@ export function lvText(lv: string | undefined): string {
 /** 百分比 -> 进度条颜色 (默认 绿/青) */
 export function pctColor(v: number, warn = 70, alarm = 85): string {
   return v > alarm ? 'var(--red)' : v > warn ? 'var(--amber)' : 'var(--cyan)'
+}
+
+/** 告警状态 -> 中文 */
+export function alarmStateText(s: string | undefined): string {
+  return s === 'active'
+    ? '活跃'
+    : s === 'acknowledged'
+      ? '已确认'
+      : s === 'resolved'
+        ? '已解决'
+        : '已抑制'
+}
+
+interface RtAlarmLike extends Alarm {
+  rt?: boolean
+  id?: string
+}
+
+/**
+ * 告警行的稳定标识，用于复选/批量操作。
+ * - 实时联动告警 (rt=true) 用后端 id
+ * - 其余用内容指纹，避免依赖数组下标（列表排序/轮询刷新后下标会漂移）
+ */
+export function alarmKeyOf(a: Alarm): string {
+  const rt = a as RtAlarmLike
+  if (rt.rt && rt.id) return `rt:${rt.id}`
+  return `evt:${a.system ?? ''}|${a.message ?? ''}|${a.time ?? ''}`
 }

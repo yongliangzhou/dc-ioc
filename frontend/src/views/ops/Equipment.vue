@@ -11,15 +11,15 @@
 
     <!-- 筛选 -->
     <Panel class="toolbar">
-      <select v-model="domain" class="ipt" style="width: 150px" @change="reload()">
+      <select v-model="domain" class="ipt" style="width: 150px" @change="refresh()">
         <option value="">{{ tl('全部业务域') }}</option>
         <option v-for="d in domainOptions" :key="d" :value="d">{{ d }}</option>
       </select>
-      <select v-model="category" class="ipt" style="width: 150px" @change="reload()">
+      <select v-model="category" class="ipt" style="width: 150px" @change="refresh()">
         <option value="">{{ tl('全部类别') }}</option>
         <option v-for="c in categoryOptions" :key="c" :value="c">{{ c }}</option>
       </select>
-      <select v-model="status" class="ipt" style="width: 120px" @change="reload()">
+      <select v-model="status" class="ipt" style="width: 120px" @change="refresh()">
         <option value="">{{ tl('全部状态') }}</option>
         <option value="运行">{{ tl('运行') }}</option>
         <option value="待机">{{ tl('待机') }}</option>
@@ -32,67 +32,77 @@
         class="ipt"
         :placeholder="tl('搜索编码 / 名称 / 厂商')"
         style="width: 220px"
-        @keyup.enter="reload()"
+        @keyup.enter="refresh()"
       />
-      <button class="btn-sm primary" @click="reload()">{{ tl('查询') }}</button>
+      <button class="btn-sm primary" @click="refresh()">{{ tl('查询') }}</button>
+      <span
+        v-if="metaError"
+        class="muted"
+        style="margin-left: auto; font-size: 11px; color: var(--amber)"
+        >{{ metaError }}</span
+      >
     </Panel>
 
     <!-- 列表 -->
-    <Panel class="scroll-x">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">{{ tl('设备编码') }}</th>
-            <th scope="col">{{ tl('名称') }}</th>
-            <th scope="col">{{ tl('业务域') }}</th>
-            <th scope="col">{{ tl('类别') }}</th>
-            <th scope="col">{{ tl('厂商') }} / {{ tl('型号') }}</th>
-            <th scope="col">{{ tl('状态') }}</th>
-            <th scope="col">{{ tl('负载率') }}</th>
-            <th scope="col">{{ tl('运行小时') }}</th>
-            <th scope="col">{{ tl('操作') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="e in items" :key="e.id" @click="openEq(e)" style="cursor: pointer">
-            <td class="mono">{{ e.code }}</td>
-            <td>{{ e.name }}</td>
-            <td>{{ e.domain }}</td>
-            <td>
-              <span class="tag b">{{ e.category }}</span>
-            </td>
-            <td class="mono" style="font-size: 11px">{{ e.vendor }} / {{ e.model }}</td>
-            <td>
-              <span
-                class="tag"
-                :class="
-                  e.status === '运行'
-                    ? 'g'
-                    : e.status === '故障'
-                      ? 'r'
-                      : e.status === '维保'
-                        ? 'a'
-                        : e.status === '库房备件'
-                          ? 'p'
-                          : 'o'
-                "
-                >{{ e.status }}</span
-              >
-            </td>
-            <td class="mono">{{ e.load_pct }}%</td>
-            <td class="mono muted">{{ e.run_hours.toLocaleString() }}</td>
-            <td>
-              <button class="btn-sm" @click.stop="openEq(e)">{{ tl('遥测') }}</button>
-            </td>
-          </tr>
-          <tr v-if="!items.length">
-            <td colspan="9" class="muted" style="text-align: center; padding: 18px">
-              {{ tl('无匹配设备') }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </Panel>
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="!items.length"
+      @retry="refresh"
+      :empty-title="tl('无匹配设备')"
+      :empty-desc="tl('切换筛选条件或清空关键词后重试')"
+    >
+      <Panel class="scroll-x">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ tl('设备编码') }}</th>
+              <th scope="col">{{ tl('名称') }}</th>
+              <th scope="col">{{ tl('业务域') }}</th>
+              <th scope="col">{{ tl('类别') }}</th>
+              <th scope="col">{{ tl('厂商') }} / {{ tl('型号') }}</th>
+              <th scope="col">{{ tl('状态') }}</th>
+              <th scope="col">{{ tl('负载率') }}</th>
+              <th scope="col">{{ tl('运行小时') }}</th>
+              <th scope="col">{{ tl('操作') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="e in items" :key="e.id" @click="openEq(e)" style="cursor: pointer">
+              <td class="mono">{{ e.code }}</td>
+              <td>{{ e.name }}</td>
+              <td>{{ e.domain }}</td>
+              <td>
+                <span class="tag b">{{ e.category }}</span>
+              </td>
+              <td class="mono" style="font-size: 11px">{{ e.vendor }} / {{ e.model }}</td>
+              <td>
+                <span
+                  class="tag"
+                  :class="
+                    e.status === '运行'
+                      ? 'g'
+                      : e.status === '故障'
+                        ? 'r'
+                        : e.status === '维保'
+                          ? 'a'
+                          : e.status === '库房备件'
+                            ? 'p'
+                            : 'o'
+                  "
+                  >{{ e.status }}</span
+                >
+              </td>
+              <td class="mono">{{ e.load_pct }}%</td>
+              <td class="mono muted">{{ e.run_hours.toLocaleString() }}</td>
+              <td>
+                <button class="btn-sm" @click.stop="openEq(e)">{{ tl('遥测') }}</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </Panel>
+    </AsyncSection>
 
     <!-- 设备遥测弹窗 -->
     <teleport to="body">
@@ -188,6 +198,8 @@ import { useRouter } from 'vue-router'
 import { getEquipmentMetrics, listEquipment } from '@/api'
 import TrendChart, { type TrendMetric } from '@/components/charts/TrendChart.vue'
 import Panel from '@/components/common/Panel.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import type { Equipment, EquipmentMetrics, MetricHistoryPoint } from '@/types'
 
 const router = useRouter()
@@ -208,17 +220,26 @@ const allItems = ref<Equipment[]>([])
 const domainOptions = computed(() => [...new Set(allItems.value.map((e) => e.domain))])
 const categoryOptions = computed(() => [...new Set(allItems.value.map((e) => e.category))])
 
+/* 统一异步状态: 加载/错误/空态由 AsyncSection 托管, 错误不再静默 */
+const loading = ref(false)
+const error = ref('')
+const metaError = ref('')
+
 async function loadMeta() {
   try {
     const r = await listEquipment({ page_size: 10000 })
     allItems.value = r.items
-  } catch {
-    /* 忽略 */
+    metaError.value = ''
+  } catch (e) {
+    metaError.value = toErrorMessage(e) || '筛选选项加载失败'
   }
 }
 
-async function reload(resetPage = true) {
-  if (resetPage) page.value = 1
+async function fetchList(showLoading: boolean) {
+  if (showLoading) {
+    loading.value = true
+    error.value = ''
+  }
   try {
     const r = await listEquipment({
       domain: domain.value || undefined,
@@ -230,19 +251,31 @@ async function reload(resetPage = true) {
     })
     items.value = r.items
     total.value = r.total
-  } catch {
-    /* 静态 mock 兜底 */
+  } catch (e) {
+    // 轮询失败静默（保留上一次成功数据）；显式刷新才暴露错误
+    if (showLoading) error.value = toErrorMessage(e) || '设备列表加载失败'
+  } finally {
+    if (showLoading) loading.value = false
   }
+}
+/** 显式刷新（首屏 / 点击查询 / 改每页大小）：可见加载态与错误态 */
+function refresh(reset = true) {
+  if (reset) page.value = 1
+  return fetchList(true)
+}
+/** 后台轮询：静默更新列表 */
+async function poll() {
+  await fetchList(false)
 }
 
 function onPageSizeChange() {
-  reload(true)
+  refresh(true)
 }
 function goPage(p: number) {
   const target = Math.min(Math.max(1, p), totalPages.value)
   if (target === page.value) return
   page.value = target
-  reload(false)
+  fetchList(true)
 }
 
 const METRIC_LABELS: Record<string, { label: string; unit: string }> = {
@@ -298,7 +331,7 @@ async function openEq(e: Equipment) {
     eq.value = await getEquipmentMetrics(e.id, { minutes: 60, step_sec: 60 })
     if (eq.value.metrics.length) eqActive.value = eq.value.metrics[0]
   } catch {
-    /* mock 兜底 */
+    /* 遥测缺失：弹窗内显示「暂无数据」，不向列表注入误导性状态 */
   } finally {
     eqLoading.value = false
   }
@@ -311,9 +344,9 @@ function goTelemetry() {
 let timer = 0
 onMounted(() => {
   loadMeta()
-  reload()
+  refresh()
   timer = window.setInterval(
-    () => reload(false),
+    () => poll(),
     Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 15000),
   )
 })

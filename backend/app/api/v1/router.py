@@ -25,6 +25,7 @@ from app.api.v1.endpoints import (
     power,
     risk,
     runbooks,
+    workflow,
     security,
     shift,
     uploads,
@@ -77,6 +78,8 @@ api_router.include_router(thing_model.router, prefix="/thing-models", tags=["thi
 api_router.include_router(dify_tools.router, prefix="/ops", tags=["dify-tools"])
 # 多数据中心 (生命周期/切换/跨中心对比/统一告警)
 api_router.include_router(idc.router, prefix="/idc", tags=["idc"], dependencies=_auth)
+# 运维工作流 (D5 后端化): 流程数据服务端化, 审批权限基于角色
+api_router.include_router(workflow.router, tags=["workflows"], dependencies=_auth)
 
 # 网络监控 (交换机端口流量 / Ping / 带宽)
 api_router.include_router(network.router, prefix="/network", tags=["network"], dependencies=_auth)

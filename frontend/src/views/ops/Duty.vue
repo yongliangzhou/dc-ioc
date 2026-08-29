@@ -4,7 +4,8 @@
       <h1>{{ tl('nav.duty') }}</h1>
       <span class="sub">{{ tl('人员值班与交接班管理') }}</span>
     </div>
-    <div class="grid cols-3" v-if="stats">
+    <AsyncSection :page="page" @retry="page.reload">
+      <div class="grid cols-3" v-if="stats">
       <MetricCard metric-name="duty-total" :label="tl('总班次')" :value="stats.totalShifts" quality="good" :online="true" />
       <MetricCard metric-name="duty-today" :label="tl('今日班次')" :value="stats.todayShifts" quality="good" :online="true" />
       <MetricCard metric-name="duty-handover" :label="tl('交接记录')" :value="handovers.length" quality="good" :online="true" />
@@ -82,6 +83,7 @@
       </div>
       <div class="empty" v-else>{{ tl('暂无交接记录') }}</div>
     </Panel>
+    </AsyncSection>
 
     <!-- 排班抽屉 -->
     <div class="drawer-mask" v-if="shiftDrawer" @click.self="shiftDrawer = false">
@@ -151,27 +153,16 @@
         </div>
       </div>
     </div>
-
-    <Panel v-if="!shifts.length && !e"
-      ><div class="flex center" style="padding: 40px">
-        <span class="muted">{{ tl('common.loading') }}</span>
-      </div></Panel
-    >
-    <Panel v-if="e"
-      ><div class="flex center" style="padding: 40px">
-        <span class="muted" style="color: var(--red)">{{ e }}</span>
-      </div></Panel
-    >
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import MetricCard from '@/components/common/MetricCard.vue'
 import Panel from '@/components/common/Panel.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import {
   getDutyShifts,
   getDutyStats,
@@ -191,6 +182,7 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
+import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
 const toast = useToast()
 const { can, denyTip } = usePermission()
 function authState(action: PermAction) {
@@ -201,7 +193,6 @@ function authState(action: PermAction) {
 const shifts = ref<ShiftView[]>([])
 const handovers = ref<HandoverView[]>([])
 const stats = ref<DutyStats | null>(null)
-const e = ref('')
 const fromStr = ref('')
 const toStr = ref('')
 
@@ -273,11 +264,10 @@ async function saveShift() {
     if (shiftForm.value.id != null) await updateDutyShift(shiftForm.value.id, payload)
     else await createDutyShift(payload)
     shiftDrawer.value = false
-    e.value = ''
-    await refresh()
+    await page.reload()
     toast.success(tl('已保存'))
   } catch (ex: unknown) {
-    const raw = (ex as ErrorLike)?.detail || (ex as ErrorLike)?.response?.data?.detail || (ex as ErrorLike)?.message || ''
+    const raw = toErrorMessage(ex)
     // 对常见错误做翻译，便于用户理解为什么保存失败
     if (/404|405|Not Found|Method Not Allowed/.test(String(raw))) {
       shiftErr.value = tl('排班接口未实现') + ` (${tl('演示模式')})`
@@ -300,7 +290,7 @@ async function removeShift(s: ShiftView) {
     },
   })
   if (ok) {
-    await refresh()
+    await page.reload()
     toast.success(tl('已删除'))
   }
 }
@@ -352,11 +342,10 @@ async function saveHandover() {
     if (handoverForm.value.id != null) await updateHandover(handoverForm.value.id, payload)
     else await createHandover(payload)
     handoverDrawer.value = false
-    e.value = ''
-    await refresh()
+    await page.reload()
     toast.success(tl('已保存'))
   } catch (ex: unknown) {
-    const raw = (ex as ErrorLike)?.detail || (ex as ErrorLike)?.response?.data?.detail || (ex as ErrorLike)?.message || ''
+    const raw = toErrorMessage(ex)
     if (/404|405|Not Found|Method Not Allowed/.test(String(raw))) {
       handoverErr.value = tl('交接接口未实现') + ` (${tl('演示模式')})`
       console.warn('[duty-handover-save] 后端接口不可达，已降级使用前端演示内存存储：', raw)
@@ -378,13 +367,13 @@ async function removeHandover(h: HandoverView) {
     },
   })
   if (ok) {
-    await refresh()
+    await page.reload()
     toast.success(tl('已删除'))
   }
 }
 
-async function refresh() {
-  try {
+const page = useAsyncPage<ShiftView[]>(
+  async () => {
     const [s, st, h] = await Promise.all([
       getDutyShifts(fromStr.value || undefined, toStr.value || undefined),
       getDutyStats(),
@@ -393,15 +382,15 @@ async function refresh() {
     shifts.value = s
     stats.value = st
     handovers.value = h.items
-  } catch (ex: unknown) {
-    e.value = (ex as ErrorLike)?.message || String(ex)
-  }
-}
-watch([fromStr, toStr], refresh)
+    return shifts.value
+  },
+  { autoLoad: false, isEmpty: (d) => !d || d.length === 0 },
+)
+watch([fromStr, toStr], () => page.reload())
 onMounted(async () => {
   fromStr.value = new Date().toISOString().slice(0, 10)
   toStr.value = new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10)
-  await refresh()
+  await page.reload()
 })
 </script>
 

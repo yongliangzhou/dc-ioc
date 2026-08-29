@@ -1,5 +1,6 @@
 <template>
   <div>
+    <MockDataBanner v-if="usingMock" level="full" />
     <div class="view-head">
       <h1>{{ tl('智能运营') }} {{ tl('·') }} {{ tl('告警历史与持久化') }}</h1>
       <span class="sub"
@@ -237,7 +238,10 @@ import type { AlarmEvent, AlarmHistoryResponse } from '@/types'
 import Pagination from '@/components/Pagination.vue'
 import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 
+/** 后端不可达时曾静默回退为 mock 数据——现在显式标注，避免误判真实告警历史 */
+const usingMock = ref(false)
 const data = ref<AlarmHistoryResponse | null>(null)
 const fSys = ref('')
 const fLv = ref('')
@@ -313,6 +317,7 @@ async function resolve(e: AlarmEvent) {
 }
 
 async function reload() {
+  usingMock.value = false
   try {
     data.value = await getAlarmHistory({
       system: fSys.value || undefined,
@@ -322,7 +327,7 @@ async function reload() {
       limit: size.value,
     })
   } catch {
-    /* 静态 mock 兜底 */
+    usingMock.value = true
   }
 }
 

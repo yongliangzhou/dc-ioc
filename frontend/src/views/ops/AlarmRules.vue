@@ -5,69 +5,71 @@
       <div class="ar-engine">
         {{ tl('引擎状态') }}: {{ tl('已启用') }} <b>{{ engine.enabled }}</b> / {{ tl('共') }}
         <b>{{ engine.total }}</b> {{ tl('条') }}
-        <button class="btn-sm" @click="loadAll">{{ tl('刷新') }}</button>
+        <button class="btn-sm" :disabled="pageBusy" @click="page.reload">{{ tl('刷新') }}</button>
       </div>
       <button class="btn-sm primary" v-bind="authState('write')" @click="openCreate">
         {{ tl('新建规则') }}
       </button>
     </div>
 
-    <div class="ar-table">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">{{ tl('类别') }}</th>
-            <th scope="col">{{ tl('测点') }}</th>
-            <th scope="col">{{ tl('规则编码') }}</th>
-            <th scope="col">{{ tl('预警区间') }}</th>
-            <th scope="col">{{ tl('严重区间') }}</th>
-            <th scope="col">{{ tl('单位') }}</th>
-            <th scope="col">{{ tl('状态') }}</th>
-            <th scope="col">{{ tl('操作') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in rules" :key="r.id">
-            <td>{{ r.category }}</td>
-            <td class="mono">{{ r.metric }}</td>
-            <td class="mono small">{{ r.ruleCode || '—' }}</td>
-            <td class="mono">{{ band(r.warnLo, r.warnHi) }}</td>
-            <td class="mono">{{ band(r.critLo, r.critHi) }}</td>
-            <td>{{ r.unit || '—' }}</td>
-            <td>
-              <button
-                class="pill"
-                :class="r.enabled ? 'g' : 'a'"
-                v-bind="authState('write')"
-                :disabled="busy['t' + r.id]"
-                @click="toggle(r)"
-              >
-                {{ r.enabled ? tl('已启用') : tl('已禁用') }}
-              </button>
-            </td>
-            <td class="ops">
-              <button class="link" v-bind="authState('write')" @click="openEdit(r)">
-                {{ tl('编辑') }}
-              </button>
-              <button
-                class="link"
-                v-bind="authState('write')"
-                :disabled="busy['s' + r.id]"
-                @click="silence(r)"
-              >
-                {{ tl('静默30m') }}
-              </button>
-              <button class="link danger" v-bind="authState('write')" @click="remove(r)">
-                {{ tl('删除') }}
-              </button>
-            </td>
-          </tr>
-          <tr v-if="!rules.length">
-            <td colspan="8" class="empty">{{ tl('暂无可用的告警规则') }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <AsyncSection :page="page" @retry="page.reload">
+      <div class="ar-table">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ tl('类别') }}</th>
+              <th scope="col">{{ tl('测点') }}</th>
+              <th scope="col">{{ tl('规则编码') }}</th>
+              <th scope="col">{{ tl('预警区间') }}</th>
+              <th scope="col">{{ tl('严重区间') }}</th>
+              <th scope="col">{{ tl('单位') }}</th>
+              <th scope="col">{{ tl('状态') }}</th>
+              <th scope="col">{{ tl('操作') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in rules" :key="r.id">
+              <td>{{ r.category }}</td>
+              <td class="mono">{{ r.metric }}</td>
+              <td class="mono small">{{ r.ruleCode || '—' }}</td>
+              <td class="mono">{{ band(r.warnLo, r.warnHi) }}</td>
+              <td class="mono">{{ band(r.critLo, r.critHi) }}</td>
+              <td>{{ r.unit || '—' }}</td>
+              <td>
+                <button
+                  class="pill"
+                  :class="r.enabled ? 'g' : 'a'"
+                  v-bind="authState('write')"
+                  :disabled="busy['t' + r.id]"
+                  @click="toggle(r)"
+                >
+                  {{ r.enabled ? tl('已启用') : tl('已禁用') }}
+                </button>
+              </td>
+              <td class="ops">
+                <button class="link" v-bind="authState('write')" @click="openEdit(r)">
+                  {{ tl('编辑') }}
+                </button>
+                <button
+                  class="link"
+                  v-bind="authState('write')"
+                  :disabled="busy['s' + r.id]"
+                  @click="silence(r)"
+                >
+                  {{ tl('静默30m') }}
+                </button>
+                <button class="link danger" v-bind="authState('write')" @click="remove(r)">
+                  {{ tl('删除') }}
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!rules.length">
+              <td colspan="8" class="empty">{{ tl('暂无可用的告警规则') }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </AsyncSection>
 
     <div v-if="editing" class="drawer-mask" @click.self="editing = false">
       <div class="drawer">
@@ -122,7 +124,6 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { AlarmRuleDef } from '@/types'
@@ -137,6 +138,8 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
+import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 const { t: tl } = useI18n()
 const toast = useToast()
@@ -180,10 +183,16 @@ function band(lo: number | null | undefined, hi: number | null | undefined): str
   return `${f(lo)} ~ ${f(hi)}`
 }
 
-async function loadAll() {
-  const list = await getAlarmRules()
-  rules.value = Array.isArray(list) ? list : []
-}
+const page = useAsyncPage<AlarmRuleDef[]>(
+  async () => {
+    const list = await getAlarmRules()
+    const arr = Array.isArray(list) ? list : []
+    rules.value = arr
+    return arr
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
+const { busy: pageBusy } = page
 
 function openCreate() {
   form.value = blank()
@@ -218,10 +227,10 @@ async function save() {
     if (f.id != null) await updateAlarmRule(String(f.id), payload)
     else await createAlarmRule(payload)
     editing.value = false
-    await loadAll()
+    await page.reload()
     toast.success(tl('已保存'))
   } catch (e: unknown) {
-    const raw = (e as ErrorLike)?.response?.data?.message || (e as ErrorLike)?.detail || (e as ErrorLike)?.message || ''
+    const raw = toErrorMessage(e)
     if (/404|405|Not Found|Method Not Allowed/.test(String(raw))) {
       err.value = tl('后端告警规则接口未实现') + ` (${tl('演示模式')})`
       console.warn('[alarm-rule-save] 后端接口不可达，已降级使用前端演示内存存储：', raw)
@@ -243,13 +252,7 @@ async function toggle(r: AlarmRuleDef) {
     toast.success(r.enabled ? tl('已启用规则') : tl('已禁用规则'))
   } catch (e: unknown) {
     r.enabled = prevEnabled
-    toast.error(
-      (e as ErrorLike)?.detail ||
-        (e as ErrorLike)?.response?.data?.detail ||
-        (e as ErrorLike)?.response?.data?.message ||
-        (e as ErrorLike)?.message ||
-        tl('操作失败'),
-    )
+    toast.error(toErrorMessage(e) || tl('操作失败'))
   } finally {
     busy.value['t' + r.id] = false
   }
@@ -260,16 +263,10 @@ async function silence(r: AlarmRuleDef) {
   busy.value['s' + r.id] = true
   try {
     await silenceAlarmRule(String(r.id), 30)
-    await loadAll()
+    await page.reload()
     toast.success(tl('已静默 30 分钟'))
   } catch (e: unknown) {
-    toast.error(
-      (e as ErrorLike)?.detail ||
-        (e as ErrorLike)?.response?.data?.detail ||
-        (e as ErrorLike)?.response?.data?.message ||
-        (e as ErrorLike)?.message ||
-        tl('静默失败'),
-    )
+    toast.error(toErrorMessage(e) || tl('静默失败'))
   } finally {
     busy.value['s' + r.id] = false
   }
@@ -292,7 +289,7 @@ async function remove(r: AlarmRuleDef) {
   }
 }
 
-onMounted(loadAll)
+onMounted(() => page.reload())
 </script>
 
 <style scoped>

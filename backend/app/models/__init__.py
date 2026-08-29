@@ -21,6 +21,7 @@ from app.models.drill import DrillPlan  # noqa: F401
 from app.models.drill_record import DrillRecord  # noqa: F401
 from app.models.maintenance import MaintenanceRecord  # noqa: F401
 from app.models.risk import RiskItem  # noqa: F401
+from app.models.workflow import WorkflowItem  # noqa: F401
 from app.models.inspection import InspectionRoute, InspectionFinding, InspectionRobot  # noqa: F401
 from app.models.point_data import PointData  # noqa: F401
 from app.models.room import Room  # noqa: F401
@@ -35,6 +36,8 @@ from app.models.energy_advice import EnergyAdviceAdopt  # noqa: F401
 from app.models.thing_model import ThingModel, ThingModelItem  # noqa: F401
 from app.models.tenant import Tenant  # noqa: F401
 from app.models.analysis_history import AnalysisHistory  # noqa: F401
+from app.models.kpi_history import KpiHistory  # noqa: F401
+from app.models.control_log import ControlLog  # noqa: F401
 
 __all__ = [
     "Base",
@@ -51,6 +54,7 @@ __all__ = [
     "DrillRecord",
     "MaintenanceRecord",
     "RiskItem",
+    "WorkflowItem",
     "InspectionRoute",
     "InspectionFinding",
     "InspectionRobot",
@@ -70,7 +74,9 @@ __all__ = [
     "ThingModelItem",
     "Tenant",
     "AnalysisHistory",
+    "KpiHistory",
     "AlarmRule",
     "AlarmActiveState",
     "AlarmSuppressedDevice",
+    "ControlLog",
 ]

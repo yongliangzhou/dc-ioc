@@ -16,13 +16,8 @@
       </div>
     </div>
 
-    <!-- Loading skeleton -->
-    <div class="skel-row" v-if="loading && !data">
-      <SkeletonCard v-for="i in 4" :key="i" size="sm" />
-    </div>
-
     <!-- ========== KPI Row 1: Global ========== -->
-    <div class="kpi-row" v-if="data">
+    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="refresh" :min-height="'360px'">
       <KpiCard title="系统模式" :value="data.systemMode" dot="#8b5cf6" />
       <KpiCard
         title="室外温度"
@@ -442,6 +437,7 @@
       <span>CDI 温度 {{ data.avgCdiTemperature }}℃ · CDO {{ data.avgCdoTemperature }}℃</span>
       <span v-if="lastUpdate">更新: {{ lastUpdate }}</span>
     </div>
+    </AsyncSection>
   </div>
 </template>
 
@@ -458,12 +454,14 @@ import { AlarmBadge } from '@dc-ioc/ui'
 import GroupCard from '@/components/monitor/GroupCard.vue'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import DeviceTable from '@/components/monitor/DeviceTable.vue'
-import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import { formatVal, statusRow, formatTime } from '@/utils/format'
 
 // ===== State =====
 const data = ref<LiquidCoolingSummary | null>(null)
 const loading = ref(false)
+const error = ref('')
 const lastUpdate = ref('')
 const alarms = ref<Alarm[]>([])
 let timer: ReturnType<typeof setInterval> | null = null
@@ -487,7 +485,15 @@ const hasRejection = computed(() => {
 })
 
 // ===== Data Loading =====
-async function loadAll() {
+async function loadAll(reportError = false) {
+  // 首屏或显式刷新才置 loading（避免 30s 轮询闪烁骨架）；
+  // 轮询失败静默保留上一次成功数据，仅显式刷新暴露错误态
+  if (reportError) {
+    loading.value = true
+    error.value = ''
+  } else if (!data.value) {
+    loading.value = true
+  }
   try {
     const [summary, alarmResult] = await Promise.all([
       getLiquidCooling(),
@@ -497,19 +503,19 @@ async function loadAll() {
     alarms.value = alarmResult.items || []
     lastUpdate.value = new Date().toLocaleTimeString('zh-CN')
   } catch (e) {
-    console.error('Failed to load liquid cooling data:', e)
+    if (reportError) error.value = toErrorMessage(e) || '液冷系统加载失败'
+  } finally {
+    loading.value = false
   }
 }
 
-async function refresh() {
-  loading.value = true
-  await loadAll()
-  loading.value = false
+function refresh() {
+  loadAll(true)
 }
 
 onMounted(() => {
   refresh()
-  timer = setInterval(refresh, 30000)
+  timer = setInterval(() => loadAll(false), 30000)
 })
 
 onUnmounted(() => {

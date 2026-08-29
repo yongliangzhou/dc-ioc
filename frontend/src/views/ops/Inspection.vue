@@ -6,7 +6,8 @@
     </div>
 
     <!-- 统计卡片 -->
-    <div class="grid cols-5" v-if="stats">
+    <AsyncSection :page="page" @retry="page.reload">
+      <div class="grid cols-5" v-if="stats">
       <MetricCard
         metric-name="inspect-routes"
         :label="tl('巡检路线')"
@@ -143,6 +144,7 @@
         <div class="empty" v-else>{{ tl('暂无记录') }}</div>
       </Panel>
     </div>
+    </AsyncSection>
 
     <!-- 巡检项目详情模态 -->
     <div class="modal-overlay" v-if="detailRecord" @click.self="detailRecord = null">
@@ -224,26 +226,15 @@
         </div>
       </div>
     </div>
-
-    <!-- 加载 / 错误 -->
-    <Panel v-if="!routes.length && !error">
-      <div class="flex center" style="padding: 40px">
-        <span class="muted">{{ tl('common.loading') }}</span>
-      </div>
-    </Panel>
-    <Panel v-if="error">
-      <div class="flex center" style="padding: 40px">
-        <span class="muted" style="color: var(--red)">{{ tl('common.error') }}: {{ error }}</span>
-      </div>
-    </Panel>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
 import Panel from '@/components/common/Panel.vue'
 import {
   getInspectionRoutes,
@@ -275,7 +266,6 @@ const routes = ref<RouteView[]>([])
 const records = ref<RecordView[]>([])
 const items = ref<ItemView[]>([])
 const stats = ref<InspectionStats | null>(null)
-const error = ref('')
 const selectedRouteId = ref<number | null>(null)
 const selectedRouteName = ref('')
 const detailRecord = ref<RecordView | null>(null)
@@ -339,10 +329,10 @@ async function saveRoute() {
     if (f.id != null) await updateInspectionRoute(f.id, payload)
     else await createInspectionRoute(payload)
     routeDrawer.value = false
-    await load()
+    await page.reload()
     toast.success(tl('已保存'))
   } catch (e: unknown) {
-    routeErr.value = (e as ErrorLike)?.message || tl('保存失败')
+    routeErr.value = toErrorMessage(e) || tl('保存失败')
   } finally {
     routeSaving.value = false
   }
@@ -359,7 +349,7 @@ async function removeRoute(r: RouteView) {
     },
   })
   if (ok) {
-    await load()
+    await page.reload()
     toast.success(tl('已删除'))
   }
 }
@@ -393,9 +383,8 @@ async function openRecord(rec: RecordView) {
   }
 }
 
-async function load() {
-  error.value = ''
-  try {
+const page = useAsyncPage<RouteView[]>(
+  async () => {
     const [r, s] = await Promise.all([getInspectionRoutes(), getInspectionStats()])
     routes.value = r
     stats.value = s
@@ -406,12 +395,12 @@ async function load() {
       }
       await refreshRecords()
     }
-  } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
-  }
-}
+    return routes.value
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
 
-onMounted(load)
+onMounted(() => page.reload())
 </script>
 
 <style scoped>

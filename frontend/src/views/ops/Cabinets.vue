@@ -11,7 +11,7 @@
 
     <!-- 筛选 -->
     <Panel class="toolbar">
-      <select v-model="room" class="ipt" style="width: 130px" @change="reload">
+      <select v-model="room" class="ipt" style="width: 130px" @change="refresh">
         <option value="">{{ tl('全部机房') }}</option>
         <option v-for="r in rooms" :key="r" :value="r">{{ r }}</option>
       </select>
@@ -20,9 +20,9 @@
         class="ipt"
         :placeholder="tl('搜索机柜编码')"
         style="width: 200px"
-        @keyup.enter="reload"
+        @keyup.enter="refresh"
       />
-      <button class="btn-sm primary" @click="reload">{{ tl('查询') }}</button>
+      <button class="btn-sm primary" @click="refresh">{{ tl('查询') }}</button>
       <span class="muted" style="margin-left: auto; font-size: 11px"
         >{{ tl('第') }} {{ page }}/{{ pages }} {{ tl('页') }} {{ tl('·') }} {{ total }}
         {{ tl('台') }}</span
@@ -30,80 +30,76 @@
     </Panel>
 
     <!-- 列表 -->
-    <Panel class="scroll-x">
-      <table>
-        <thead>
-          <tr>
-            <th scope="col">{{ tl('机柜编码') }}</th>
-            <th scope="col">{{ tl('机房') }}</th>
-            <th scope="col">{{ tl('列') }}</th>
-            <th scope="col">U {{ tl('位使用') }}</th>
-            <th scope="col">{{ tl('功耗') }} ({{ tl('当前') }}/{{ tl('额定') }})</th>
-            <th scope="col">{{ tl('负载率') }}</th>
-            <th scope="col">{{ tl('状态') }}</th>
-            <th scope="col">{{ tl('操作') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="c in items" :key="c.id" @click="openCab(c)" style="cursor: pointer">
-            <td class="mono">{{ c.code }}</td>
-            <td>{{ c.room }}</td>
-            <td>{{ c.row }}</td>
-            <td>
-              <div class="flex gap6" style="align-items: center">
-                <div class="progress" style="width: 90px">
-                  <i :style="{ width: uPct(c) + '%', background: pctColor(uPct(c), 80, 95) }"></i>
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="!items.length"
+      @retry="refresh"
+      :empty-title="tl('无匹配机柜')"
+      :empty-desc="tl('切换机房或清空筛选后重试')"
+    >
+      <Panel class="scroll-x">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{{ tl('机柜编码') }}</th>
+              <th scope="col">{{ tl('机房') }}</th>
+              <th scope="col">{{ tl('列') }}</th>
+              <th scope="col">U {{ tl('位使用') }}</th>
+              <th scope="col">{{ tl('功耗') }} ({{ tl('当前') }}/{{ tl('额定') }})</th>
+              <th scope="col">{{ tl('负载率') }}</th>
+              <th scope="col">{{ tl('状态') }}</th>
+              <th scope="col">{{ tl('操作') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in items" :key="c.id" @click="openCab(c)" style="cursor: pointer">
+              <td class="mono">{{ c.code }}</td>
+              <td>{{ c.room }}</td>
+              <td>{{ c.row }}</td>
+              <td>
+                <div class="flex gap6" style="align-items: center">
+                  <div class="progress" style="width: 90px">
+                    <i :style="{ width: uPct(c) + '%', background: pctColor(uPct(c), 80, 95) }"></i>
+                  </div>
+                  <span class="mono muted" style="font-size: 10px"
+                    >{{ c.u_used }}/{{ c.u_total }}</span
+                  >
                 </div>
-                <span class="mono muted" style="font-size: 10px"
-                  >{{ c.u_used }}/{{ c.u_total }}</span
+              </td>
+              <td class="mono">{{ c.current_power_kw }}/{{ c.rated_power_kw }} kW</td>
+              <td class="mono" :style="{ color: pctColor(pwrPct(c), 80, 95) }">{{ pwrPct(c) }}%</td>
+              <td>
+                <span
+                  class="tag"
+                  :class="
+                    c.status === '正常'
+                      ? 'g'
+                      : c.status === '告警'
+                        ? 'r'
+                        : c.status === '高负载'
+                          ? 'a'
+                          : 'o'
+                  "
+                  >{{ c.status }}</span
                 >
-              </div>
-            </td>
-            <td class="mono">{{ c.current_power_kw }}/{{ c.rated_power_kw }} kW</td>
-            <td class="mono" :style="{ color: pctColor(pwrPct(c), 80, 95) }">{{ pwrPct(c) }}%</td>
-            <td>
-              <span
-                class="tag"
-                :class="
-                  c.status === '正常'
-                    ? 'g'
-                    : c.status === '告警'
-                      ? 'r'
-                      : c.status === '高负载'
-                        ? 'a'
-                        : 'o'
-                "
-                >{{ c.status }}</span
-              >
-            </td>
-            <td>
-              <button class="btn-sm" @click.stop="openCab(c)">{{ tl('遥测') }}</button>
-            </td>
-          </tr>
-          <tr v-if="!items.length">
-            <td colspan="8" class="muted" style="text-align: center; padding: 18px">
-              {{ tl('无匹配机柜') }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </Panel>
+              </td>
+              <td>
+                <button class="btn-sm" @click.stop="openCab(c)">{{ tl('遥测') }}</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </Panel>
+    </AsyncSection>
 
     <!-- 分页 -->
     <div v-if="pages > 1" class="flex center gap8" style="margin: 10px 0">
-      <button
-        class="btn-sm"
-        :disabled="page <= 1"
-        @click="page--; reload()"
-      >
+      <button class="btn-sm" :disabled="page <= 1" @click="page--; refresh()">
         {{ tl('上一页') }}
       </button>
       <span class="muted" style="font-size: 11px">{{ page }} / {{ pages }}</span>
-      <button
-        class="btn-sm"
-        :disabled="page >= pages"
-        @click="page = page + 1; reload()"
-      >
+      <button class="btn-sm" :disabled="page >= pages" @click="page = page + 1; refresh()">
         {{ tl('下一页') }}
       </button>
     </div>
@@ -161,6 +157,8 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { getCabinetMetrics, getCabinets } from '@/api'
 import TrendChart, { type TrendMetric } from '@/components/charts/TrendChart.vue'
 import Panel from '@/components/common/Panel.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import type { Cabinet, CabinetMetrics, MetricHistoryPoint, Paginated } from '@/types'
 
 const items = ref<Cabinet[]>([])
@@ -178,7 +176,15 @@ function pctColor(pct: number, warn = 80, crit = 95) {
   return pct >= crit ? 'var(--red)' : pct >= warn ? 'var(--amber)' : 'var(--green)'
 }
 
-async function reload() {
+/* 统一异步状态: 加载/错误/空态由 AsyncSection 托管, 错误不再静默 */
+const loading = ref(false)
+const error = ref('')
+
+async function fetchList(showLoading: boolean) {
+  if (showLoading) {
+    loading.value = true
+    error.value = ''
+  }
   try {
     const res: Paginated<Cabinet> = await getCabinets({
       page: page.value,
@@ -188,9 +194,21 @@ async function reload() {
     items.value = res.items
     total.value = res.total
     pages.value = Math.max(1, Math.ceil(res.total / pageSize))
-  } catch {
-    /* 静态 mock 兜底 */
+  } catch (e) {
+    // 轮询失败静默（保留上一次成功数据，避免每轮闪烁错误态）；
+    // 仅显式刷新/首屏才把错误暴露给 AsyncSection 的「重试」状态
+    if (showLoading) error.value = toErrorMessage(e) || '机柜列表加载失败'
+  } finally {
+    if (showLoading) loading.value = false
   }
+}
+/** 显式刷新（首屏 / 点击查询 / 翻页）：可见加载态与错误态 */
+function refresh() {
+  return fetchList(true)
+}
+/** 后台轮询：静默更新列表 */
+async function poll() {
+  await fetchList(false)
 }
 
 /* ---- 机柜遥测 ---- */
@@ -232,7 +250,7 @@ async function openCab(c: Cabinet) {
   try {
     cab.value = await getCabinetMetrics(c.id, { minutes: 60, step_sec: 60 })
   } catch {
-    /* mock 兜底 */
+    /* 遥测缺失：弹窗内显示「暂无数据」，不向列表注入误导性状态 */
   } finally {
     cabLoading.value = false
   }
@@ -240,8 +258,8 @@ async function openCab(c: Cabinet) {
 
 let timer = 0
 onMounted(() => {
-  reload()
-  timer = window.setInterval(reload, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 15000))
+  refresh()
+  timer = window.setInterval(poll, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 15000))
 })
 onBeforeUnmount(() => clearInterval(timer))
 </script>

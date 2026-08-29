@@ -6,6 +6,7 @@
       <span class="sub">{{
         tl('两路市电进线 · 母线 · 馈线回路 · 开关状态 · 电能质量 · 保护事件')
       }}</span>
+      <MockDataBanner :level="mockLevel" />
     </div>
 
     <!-- Loading -->
@@ -548,7 +549,6 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt, breakerCls, pfCls, tempCls, loadCls, genHours } from '@/utils/format'
@@ -563,7 +563,12 @@ import {
   type HvFeederView,
 } from '@/api/power'
 import Panel from '@/components/common/Panel.vue'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 const { t: tl } = useI18n()
+
+/** 后端无有效返回时页面会回退到本地 mockSummary()，必须让用户看见这是假的 */
+const { level: mockLevel, markMock, markReal } = useMockFlag()
 
 /** 电量格式化：原始值以 Wh 计，折算为 kWh 并以千分位整数展示 */
 const fmtEnergy = (v: number | null | undefined): string =>
@@ -1262,11 +1267,13 @@ async function loadData() {
     const data = await getPowerHvDetailed()
     if (data && (data.incomers?.length || data.feeders?.length)) {
       s.value = data
+      markReal()
     } else {
       s.value = mockSummary()
+      markMock()
     }
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   } finally {
     loading.value = false
   }

@@ -85,6 +85,7 @@ export function getEnergyOverview(): Promise<EnergyOverview> {
 export interface EnergyAdviceAdoptIn {
   suggestionId: string
   title: string
+  category?: string
   priority: string
   savingKw: number
   savingPct: number

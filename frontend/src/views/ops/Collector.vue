@@ -56,37 +56,26 @@
     </Panel>
 
     <!-- 设备表格 (Presentational 子组件) -->
-    <LoadingState
-      v-if="loading"
-      variant="skeleton"
-      :rows="6"
-      row-height="44px"
-      text="正在加载设备注册状态…"
-    />
-    <ErrorRetry
-      v-else-if="loadError"
-      :message="loadError"
-      :retrying="loading"
+    <AsyncSection
+      :loading="loading"
+      :error="loadError"
+      :empty="!list || (list?.items.length ?? 0) === 0"
+      empty-title="暂无注册设备"
+      empty-desc="点击「添加设备」经外部契约端点注册第一台设备，采集器方可上报测点。"
       @retry="load"
-    />
-    <EmptyStateCard
-      v-else-if="!list || list.items.length === 0"
-      title="暂无注册设备"
-      desc="点击「添加设备」经外部契约端点注册第一台设备，采集器方可上报测点。"
     >
-      <template #actions>
+      <CollectorDeviceTable
+        :items="list ? list.items : []"
+        :selected-id="selected?.device_id"
+        @select="selectDevice"
+        @open-metrics="openMetrics"
+        @open-edit="openEdit"
+        @confirm-delete="confirmDelete"
+      />
+      <template #empty-actions>
         <button class="btn-sm primary" @click="openAdd">＋ 添加设备</button>
       </template>
-    </EmptyStateCard>
-    <CollectorDeviceTable
-      v-else
-      :items="list.items"
-      :selected-id="selected?.device_id"
-      @select="selectDevice"
-      @open-metrics="openMetrics"
-      @open-edit="openEdit"
-      @confirm-delete="confirmDelete"
-    />
+    </AsyncSection>
 
     <!-- 查看测点弹窗 (Presentational) -->
     <CollectorMetricsModal
@@ -161,6 +150,7 @@ import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import {
   deleteDevice,
   getDeviceMetrics,
@@ -181,8 +171,7 @@ import CollectorDeviceForm from './components/CollectorDeviceForm.vue'
 import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 import LoadingState from '@/components/common/LoadingState.vue'
-import ErrorRetry from '@/components/common/ErrorRetry.vue'
-import EmptyStateCard from '@/components/common/EmptyStateCard.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 // ===================== 容器层: 状态 + 数据 + API =====================
 const list = ref<DeviceListResponse | null>(null)
@@ -234,9 +223,7 @@ async function load() {
     }
   } catch (e: unknown) {
     loadError.value =
-      (e as ErrorLike)?.detail ||
-      (e as ErrorLike)?.message ||
-      '设备列表加载失败，请检查外部契约端点是否就绪'
+      toErrorMessage(e) || '设备列表加载失败，请检查外部契约端点是否就绪'
   } finally {
     loading.value = false
   }

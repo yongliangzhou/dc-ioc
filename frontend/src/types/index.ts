@@ -36,6 +36,12 @@ export interface AlarmCount {
   warn: number
   info: number
 }
+export interface DomainOnline {
+  online: number
+  total: number
+  rate: number // 0-100
+}
+
 export interface DashboardOverview {
   total_devices: number
   online_devices: number
@@ -49,6 +55,7 @@ export interface DashboardOverview {
   availability?: number
   free_cool_hours?: number
   alarms?: AlarmCount
+  domain_online?: Record<string, DomainOnline> // 后端按业务域真实聚合: hvac/power/security
 }
 
 /* ===== 机柜 ===== */

@@ -117,6 +117,7 @@ import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
 import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission } from '@/hooks/usePermission'
 import {
   listThingModels,
@@ -323,9 +324,9 @@ function save() {
     .finally(() => (saving.value = false))
 }
 
-function remove() {
+async function remove() {
   if (!cur.value?.id) return
-  if (!confirm(tl('thingModel.confirmDelete'))) return
+  if (!(await useConfirm({ message: tl('thingModel.confirmDelete'), danger: true }))) return
   deleteThingModel(cur.value.id)
     .then(() => {
       toast.success(tl('thingModel.deleted'))

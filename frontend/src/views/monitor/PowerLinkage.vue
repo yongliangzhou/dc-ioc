@@ -17,6 +17,7 @@
       </div>
     </div>
 
+    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="() => load()" :min-height="'360px'">
     <!-- 概览 KPI -->
     <div class="kpi-row">
       <div class="kpi"><span class="k-label">{{ tl('链路节点') }}</span><span class="k-val">{{ nodes.length }}</span></div>
@@ -142,10 +143,12 @@
         <span class="ab-text">
           {{ tl('配电链路异常') }} · {{ activeAlarms.length }} {{ tl('条活动告警') }}
           <template v-if="topAlarm">（{{ topAlarm.system }}：{{ topAlarm.message }}）</template>
+          <span v-if="linkageError" style="color: var(--amber); margin-left: 6px;">· {{ tl('实时链路异常，数据可能过期') }}</span>
         </span>
         <button class="ab-btn" @click="goAlarms">{{ tl('前往处理') }} ›</button>
       </div>
     </transition>
+    </AsyncSection>
   </div>
 </template>
 
@@ -164,11 +167,14 @@ import {
 import { getCabinets, getActiveAlarms } from '@/api'
 import { realtimeLinkage } from '@/engine/realtimeLinkage'
 import type { Alarm } from '@/types'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 const { t: tl } = useI18n()
 const router = useRouter()
 
 const loading = ref(false)
+const error = ref('')
 const liveOn = ref(true)
 const hvData = ref<any>(null)
 const lvData = ref<any>(null)
@@ -453,8 +459,8 @@ const groups = computed<LinkGroup[]>(() => {
   const present = defs.filter((d) => byKindHas(d.kind))
   return present.map((d) => {
     const arr = nodes.value.filter((n) => n.group === d.key)
-    const xs = arr.map((n) => n.x)
-    const ys = arr.map((n) => n.y)
+    const xs = arr.map((n) => (n.x as number) ?? 0)
+    const ys = arr.map((n) => (n.y as number) ?? 0)
     const minX = Math.min(...xs) - 82
     const maxX = Math.max(...xs) + 82
     const minY = Math.min(...ys) - 56
@@ -553,6 +559,10 @@ const topAlarmLevel = computed(() => {
   if (!topAlarm.value) return 'info'
   return topAlarm.value.level === 'crit' ? 'fault' : topAlarm.value.level === 'warn' ? 'warning' : 'info'
 })
+
+// 实时联动引擎链路态（loading/lastError/rulesError）：告警列表基于 realtimeLinkage.active，
+// 引擎失败时该列表可能是陈旧快照，必须在告警条上显式提示，不可静默。
+const linkageError = computed(() => realtimeLinkage.lastError || realtimeLinkage.rulesError)
 
 const nodeAlarms = computed(() => {
   if (!selected.value?.meta?.system) return []
@@ -684,7 +694,10 @@ function stopTimer() {
 }
 
 async function load(showSpinner = true) {
-  if (showSpinner) loading.value = true
+  if (showSpinner) {
+    loading.value = true
+    error.value = ''
+  }
   try {
     const [h, l, g, b, c, a] = await Promise.all([
       getPowerHvDetailed(),
@@ -707,7 +720,8 @@ async function load(showSpinner = true) {
     }
     buildTrend()
   } catch (e) {
-    console.error('配电链路加载失败', e)
+    // 轮询静默（保留上一次成功数据）；仅显式刷新暴露错误态
+    if (showSpinner) error.value = toErrorMessage(e) || tl('配电链路加载失败')
   } finally {
     if (showSpinner) loading.value = false
   }

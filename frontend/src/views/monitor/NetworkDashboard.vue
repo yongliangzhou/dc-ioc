@@ -130,7 +130,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -161,7 +161,7 @@ async function load() {
   try {
     overview.value = await getNetworkOverview()
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   }
 }
 

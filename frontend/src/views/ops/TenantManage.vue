@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
 import {
   getTenants,
   getTenantStats,
@@ -10,6 +11,8 @@ import {
   deleteTenant,
 } from '../../api'
 import type { TenantItem, TenantStats } from '../../types'
+import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 const { t } = useI18n()
 const toast = useToast()
@@ -17,8 +20,6 @@ const toast = useToast()
 const tenants = ref<TenantItem[]>([])
 const stats = ref<TenantStats | null>(null)
 const total = ref(0)
-const loading = ref(false)
-const error = ref('')
 const kw = ref('')
 const statusFilter = ref('')
 
@@ -69,10 +70,8 @@ const totalRacks = computed(() => stats.value?.totalCabinets ?? 0)
 const totalCap = 60 // 机房机柜总容量 (演示基线)
 const occupancy = computed(() => (totalCap ? Math.round((totalRacks.value / totalCap) * 100) : 0))
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  try {
+const page = useAsyncPage<TenantItem[]>(
+  async () => {
     const [listRes, statRes] = await Promise.all([
       getTenants(kw.value, statusFilter.value),
       getTenantStats(),
@@ -80,12 +79,10 @@ async function load() {
     tenants.value = (listRes.tenants || []) as TenantItem[]
     total.value = listRes.total ?? tenants.value.length
     stats.value = statRes
-  } catch (e: any) {
-    error.value = e?.message || t('tenantManage.failed')
-  } finally {
-    loading.value = false
-  }
-}
+    return tenants.value
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
 
 function openAdd() {
   dialogMode.value = 'add'
@@ -117,22 +114,22 @@ async function save() {
       toast.success(t('tenantManage.updateSuccess'))
     }
     dialogVisible.value = false
-    await load()
+    await page.reload()
   } catch (e: any) {
-    toast.error(e?.message || 'error')
+    toast.error(toErrorMessage(e) || 'error')
   } finally {
     saving.value = false
   }
 }
 
 async function remove(tn: TenantItem) {
-  if (!window.confirm(t('tenantManage.confirmDelete'))) return
+  if (!(await useConfirm({ message: t('tenantManage.confirmDelete'), danger: true }))) return
   try {
     await deleteTenant(tn.id)
     toast.success(t('tenantManage.deleteSuccess'))
-    await load()
+    await page.reload()
   } catch (e: any) {
-    toast.error(e?.message || 'error')
+    toast.error(toErrorMessage(e) || 'error')
   }
 }
 
@@ -141,7 +138,7 @@ function openDetail(tn: TenantItem) {
   detailVisible.value = true
 }
 
-onMounted(load)
+onMounted(() => page.reload())
 </script>
 
 <template>
@@ -197,17 +194,14 @@ onMounted(load)
 
     <!-- 过滤 + 列表 -->
     <div class="tm-toolbar">
-      <input class="inp" :placeholder="t('tenantManage.search')" v-model="kw" @input="load" />
-      <select class="inp" v-model="statusFilter" @change="load">
+      <input class="inp" :placeholder="t('tenantManage.search')" v-model="kw" @input="page.reload" />
+      <select class="inp" v-model="statusFilter" @change="page.reload">
         <option v-for="o in statusOptions" :key="o.value" :value="o.value">{{ o.label }}</option>
       </select>
     </div>
 
-    <div v-if="loading" class="tm-loading">{{ t('tenantManage.loading') }}</div>
-    <div v-else-if="error" class="tm-error">{{ error }}</div>
-    <div v-else-if="!tenants.length" class="tm-empty">{{ t('tenantManage.empty') }}</div>
-
-    <div v-else class="tm-grid">
+    <AsyncSection :page="page" @retry="page.reload">
+      <div class="tm-grid">
       <div
         v-for="tn in tenants"
         :key="tn.id"
@@ -248,6 +242,7 @@ onMounted(load)
         </div>
       </div>
     </div>
+    </AsyncSection>
 
     <!-- 新增/编辑对话框 -->
     <div v-if="dialogVisible" class="modal-mask" @click.self="dialogVisible = false">

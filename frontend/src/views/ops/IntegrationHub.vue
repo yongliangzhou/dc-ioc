@@ -24,12 +24,8 @@
       </button>
     </div>
 
-    <div v-if="loading" class="empty-state">
-      <div class="spinner"></div><span>{{ t.loading }}</span>
-    </div>
-
-    <!-- 南向接入验证 -->
-    <div v-else-if="activeTab === 'south'">
+    <!-- 南向接入验证 (依赖外部设备/物模型加载) -->
+    <AsyncSection v-if="activeTab === 'south'" :loading="loading" :error="error" @retry="load">
       <!-- 概览统计 -->
       <div class="grid cols-4">
         <div class="card stat" v-for="s in stats" :key="s.k">
@@ -112,7 +108,7 @@
           </div>
         </div>
       </div>
-    </div>
+    </AsyncSection>
 
     <!-- 北向 ITSM 预集成 -->
     <div v-else>
@@ -199,6 +195,8 @@ import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getExternalDevices, getThingModels, getDeviceRealtime } from '@/api'
 import type { DeviceListResponse, ThingModelDef, ExternalDeviceView } from '@/types'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 
 const { t: raw } = useI18n()
 const t = new Proxy({} as any, {
@@ -214,6 +212,7 @@ const tabs = [
 ]
 const activeTab = ref<string>('south')
 const loading = ref(false)
+const error = ref('')
 const verifying = ref(false)
 const testing = ref(false)
 
@@ -297,14 +296,16 @@ function verifyTagCls(id: string) {
 
 async function load() {
   loading.value = true
+  error.value = ''
   try {
     const [dl, ms] = await Promise.all([getExternalDevices({ limit: 1000 }), getThingModels()])
     devList.value = dl
     models.value = ms
     ms.forEach(m => (modelMap.value[m.domain] = m))
-  } catch {
+  } catch (e: unknown) {
     devList.value = { total: 0, online: 0, offline: 0, total_metrics: 0, items: [] }
     models.value = []
+    error.value = toErrorMessage(e) || '加载接入数据失败'
   } finally {
     loading.value = false
   }

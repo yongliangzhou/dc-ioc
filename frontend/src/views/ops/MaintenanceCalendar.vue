@@ -24,29 +24,30 @@
       <span class="lg done"></span>{{ t.legendDone }}
     </div>
 
-    <div v-if="loading" class="loading-box"><div class="spinner"></div><span>{{ loadingText }}</span></div>
-    <div v-else class="cal">
-      <div class="cal-grid" :class="{ week: view === 'week' }">
-        <div v-for="d in weekHeads" :key="d" class="cal-dow">{{ d }}</div>
-        <div
-          v-for="cell in cells"
-          :key="cell.key"
-          class="cal-cell"
-          :class="{ outside: cell.outside, today: cell.isToday }"
-          @click="cell.isCurrent && openNew(cell.date)"
-        >
-          <div class="cell-date">
-            <span>{{ cell.day }}</span>
-            <span v-if="cell.isToday" class="today-dot"></span>
-          </div>
-          <div class="cell-events">
-            <div v-for="ev in cell.events" :key="ev.id" class="ev" :class="ev.kind" :title="ev.title" @click.stop="openEv(ev)">
-              <span class="ev-ic">{{ ev.kind === 'due' ? '!' : '✓' }}</span>{{ ev.title }}
+    <AsyncSection :loading="loading" :error="error" @retry="load">
+      <div class="cal">
+        <div class="cal-grid" :class="{ week: view === 'week' }">
+          <div v-for="d in weekHeads" :key="d" class="cal-dow">{{ d }}</div>
+          <div
+            v-for="cell in cells"
+            :key="cell.key"
+            class="cal-cell"
+            :class="{ outside: cell.outside, today: cell.isToday }"
+            @click="cell.isCurrent && openNew(cell.date)"
+          >
+            <div class="cell-date">
+              <span>{{ cell.day }}</span>
+              <span v-if="cell.isToday" class="today-dot"></span>
+            </div>
+            <div class="cell-events">
+              <div v-for="ev in cell.events" :key="ev.id" class="ev" :class="ev.kind" :title="ev.title" @click.stop="openEv(ev)">
+                <span class="ev-ic">{{ ev.kind === 'due' ? '!' : '✓' }}</span>{{ ev.title }}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </AsyncSection>
 
     <!-- 详情/新建抽屉 -->
     <div v-if="drawer" class="modal-mask" @click.self="drawer = null">
@@ -82,6 +83,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/modules/auth'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import { getMaintenancePlanList, getMaintenanceRecords, createMaintenanceRecord } from '@/api/maintenance'
 
 const { t: raw } = useI18n()
@@ -100,10 +103,7 @@ const me = computed(() => auth.user?.username || 'me')
 
 const view = ref<'month' | 'week'>('month')
 const loading = ref(false)
-const loadingText = (() => {
-  const kc = (raw('knowledgeCollab') || {}) as any
-  return (kc && typeof kc === 'object' && kc.loading) || 'Loading…'
-})()
+const error = ref('')
 const today = new Date()
 const cursor = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
 
@@ -142,6 +142,7 @@ const cells = computed(() => {
 
 async function load() {
   loading.value = true
+  error.value = ''
   try {
     const [plans, recs] = await Promise.all([getMaintenancePlanList(), getMaintenanceRecords()])
     const evs: CalEvent[] = []
@@ -155,8 +156,8 @@ async function load() {
       if (d) evs.push({ id: 'rec-' + r.id, kind: 'done', title: r.planName || r.actionDescription || '维保记录', date: d, meta: r })
     }
     events.value = evs
-  } catch {
-    events.value = []
+  } catch (e: unknown) {
+    error.value = toErrorMessage(e) || '加载维保日历失败'
   } finally {
     loading.value = false
   }

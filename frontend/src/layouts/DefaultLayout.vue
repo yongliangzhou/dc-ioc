@@ -6,23 +6,33 @@
     <div class="body">
       <!-- ===== 侧边导航 ===== -->
       <nav class="side">
-        <div v-for="g in nav" :key="g.title" class="nav-group">
-          <div class="gtitle">{{ g.title }}</div>
-          <template v-for="it in g.items" :key="it.path">
-            <router-link :to="it.path" class="nav-item" :class="{ active: isActive(it.path) }">
-              <NavIcon :name="it.ico" />{{ it.title }}
-              <span v-if="it.badge" class="badge" :class="{ alert: it.alert }">{{ it.badge }}</span>
-            </router-link>
-            <router-link
-              v-for="c in it.children ?? []"
-              :key="c.path"
-              :to="c.path"
-              class="nav-item sub"
-              :class="{ active: isActive(c.path) }"
-            >
-              <NavIcon :name="c.ico" />{{ c.title }}
-            </router-link>
-          </template>
+        <div v-for="g in nav" :key="g.id" class="nav-group">
+          <button
+            type="button"
+            class="gtitle"
+            :aria-expanded="!collapsed[g.id]"
+            @click="toggle(g.id)"
+          >
+            <span class="gtitle-text">{{ g.title }}</span>
+            <NavIcon class="gtitle-arrow" :name="collapsed[g.id] ? 'ChevronRight' : 'ChevronDown'" />
+          </button>
+          <div class="nav-items" v-show="!collapsed[g.id]">
+            <template v-for="it in g.items" :key="it.path">
+              <router-link :to="it.path" class="nav-item" :class="{ active: isActive(it.path) }">
+                <NavIcon :name="it.ico" />{{ it.title }}
+                <span v-if="it.badge" class="badge" :class="{ alert: it.alert }">{{ it.badge }}</span>
+              </router-link>
+              <router-link
+                v-for="c in it.children ?? []"
+                :key="c.path"
+                :to="c.path"
+                class="nav-item sub"
+                :class="{ active: isActive(c.path) }"
+              >
+                <NavIcon :name="c.ico" />{{ c.title }}
+              </router-link>
+            </template>
+          </div>
         </div>
       </nav>
 
@@ -37,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import TopBar from '@/components/layout/TopBar.vue'
@@ -58,62 +68,22 @@ interface NavItem {
   children?: NavItem[]
 }
 interface NavGroup {
+  /** 稳定标识: 折叠状态按 id 记忆, 避免语言切换导致 title 变化时折叠状态错位 */
+  id: string
   title: string
   items: NavItem[]
 }
 
 const nav = computed<NavGroup[]>(() => [
+  // G1 · 总览
   {
+    id: 'overview',
     title: t('nav.overview'),
     items: [{ path: '/overview', title: t('nav.dashboard'), ico: 'LayoutDashboard' }],
   },
+  // G2 · 设施监控（暖通 / 电力 / 安防消防 / 网络 / 设备健康度 / 数字可视）
   {
-    title: t('nav.opsPlatform'),
-    items: [
-      // 数字可视（保留直观展示能力：3D 视图 / 供配电联动 / 制冷联动 / 温度云图 / 大屏）
-      {
-        path: '/monitor/visual',
-        title: t('nav.digitalVisual'),
-        ico: 'Boxes',
-        children: [
-          { path: '/monitor/visual/3d', title: t('nav.scene3d'), ico: 'Box' },
-          { path: '/monitor/power/linkage', title: t('nav.powerLinkage'), ico: 'GitBranch' },
-          { path: '/monitor/hvac/linkage', title: t('nav.coolingLinkage'), ico: 'Snowflake' },
-          { path: '/monitor/hvac/thermal', title: t('nav.tempCloud'), ico: 'Thermometer' },
-          { path: '/monitor/visual/bigscreen', title: t('nav.bigScreen'), ico: 'Monitor' },
-          { path: '/monitor/visual/designer', title: t('nav.bigScreenDesigner'), ico: 'Settings2' },
-        ],
-      },
-      // 融合 2：容量与机位 + 容量管理 → 统一“容量管理”（机柜空间/电力/制冷维度）
-      {
-        path: '/ops/u-position',
-        title: t('nav.capacity'),
-        ico: 'BarChart3',
-        children: [
-          { path: '/ops/u-position', title: t('nav.uPosition'), ico: 'LayoutGrid' },
-          { path: '/ops/cabinets', title: t('nav.cabinets'), ico: 'ServerCog' },
-        ],
-      },
-      // 融合 3：制冷 AI 优化 + 能耗分析 → 统一“节能优化”（制冷策略 + 电量预测）
-      // 制冷 AI 优化已整合进电量预测与节能页面
-      { path: '/analysis/energy', title: t('nav.energy'), ico: 'Leaf' },
-      // 融合 6：多通道告警整合进告警历史页面
-      { path: '/ops/alarms', title: t('nav.alarms'), ico: 'Bell', badge: '7', alert: true },
-      { path: '/ops/alarm-rules', title: t('nav.alarmRules'), ico: 'SlidersHorizontal' },
-      { path: '/ops/alarm-history', title: t('nav.alarmHistory'), ico: 'Clock' },
-      {
-        path: '/ops/knowledge',
-        title: t('nav.knowledge'),
-        ico: 'BookOpen',
-        children: [
-          { path: '/ops/knowledge', title: t('nav.knowledge'), ico: 'BookOpen' },
-          { path: '/ops/knowledge-collab', title: t('nav.knowledgeCollab'), ico: 'Users' },
-        ],
-      },
-      { path: '/ops/assistant', title: t('nav.assistant'), ico: 'Bot' },
-    ],
-  },
-  {
+    id: 'facility',
     title: t('nav.facilityMonitoring'),
     items: [
       {
@@ -124,6 +94,8 @@ const nav = computed<NavGroup[]>(() => [
           { path: '/monitor/hvac/chiller', title: t('nav.chiller'), ico: 'Thermometer' },
           { path: '/monitor/hvac/crac', title: t('nav.crac'), ico: 'Wind' },
           { path: '/monitor/hvac/liquid', title: t('nav.liquidCooling'), ico: 'Droplets' },
+          { path: '/monitor/hvac/linkage', title: t('nav.coolingLinkage'), ico: 'Snowflake' },
+          { path: '/monitor/hvac/thermal', title: t('nav.tempCloud'), ico: 'Thermometer' },
         ],
       },
       {
@@ -133,6 +105,7 @@ const nav = computed<NavGroup[]>(() => [
         children: [
           { path: '/monitor/power/hv', title: t('nav.hv'), ico: 'PlugZap' },
           { path: '/monitor/power/lv', title: t('nav.lv'), ico: 'Gauge' },
+          { path: '/monitor/power/linkage', title: t('nav.powerLinkage'), ico: 'GitBranch' },
           { path: '/monitor/power/genset', title: t('nav.genset'), ico: 'Zap' },
           { path: '/monitor/power/fuel', title: t('nav.fuel'), ico: 'Fuel' },
           { path: '/monitor/power/battery', title: t('nav.battery'), ico: 'BatteryFull' },
@@ -161,9 +134,31 @@ const nav = computed<NavGroup[]>(() => [
         ],
       },
       { path: '/monitor/health', title: t('nav.health'), ico: 'HeartPulse' },
+      {
+        path: '/monitor/visual',
+        title: t('nav.digitalVisual'),
+        ico: 'Boxes',
+        children: [
+          { path: '/monitor/visual/3d', title: t('nav.scene3d'), ico: 'Box' },
+          { path: '/monitor/visual/bigscreen', title: t('nav.bigScreen'), ico: 'Monitor' },
+          { path: '/monitor/visual/designer', title: t('nav.bigScreenDesigner'), ico: 'Settings2' },
+        ],
+      },
     ],
   },
+  // G3 · 告警（告警中心 / 告警历史 / 告警规则引擎）
   {
+    id: 'alarm',
+    title: t('nav.alarmGroup'),
+    items: [
+      { path: '/ops/alarms', title: t('nav.alarms'), ico: 'Bell', badge: '7', alert: true },
+      { path: '/ops/alarm-history', title: t('nav.alarmHistory'), ico: 'Clock' },
+      { path: '/ops/alarm-rules', title: t('nav.alarmRules'), ico: 'SlidersHorizontal' },
+    ],
+  },
+  // G4 · 运维作业（巡检 / 维保 / 值班 / 工单 / 演练 / 故障 / 风险 / 隐患）
+  {
+    id: 'ops',
     title: t('nav.opsManagement'),
     items: [
       {
@@ -184,27 +179,6 @@ const nav = computed<NavGroup[]>(() => [
           { path: '/ops/maintenance-calendar', title: t('nav.mntCalendar'), ico: 'CalendarDays' },
         ],
       },
-      // 事件工单中心（维修工单已并入，统一入口）
-      {
-        path: '/ops/tickets',
-        title: t('nav.tickets'),
-        ico: 'ClipboardList',
-        badge: '6',
-        alert: true,
-      },
-      { path: '/ops/room-access', title: t('nav.roomAccess'), ico: 'LogIn' },
-      { path: '/ops/fault-impact', title: t('nav.faultImpact'), ico: 'GitBranch' },
-      // 应急演练（演练管理已并入）
-      {
-        path: '/ops/drill-plan',
-        title: t('nav.drillPlan'),
-        ico: 'ClipboardCheck',
-      },
-      { path: '/ops/supplier', title: t('nav.supplier'), ico: 'Truck' },
-      { path: '/ops/power-ai-hazards', title: t('nav.powerAi'), ico: 'Zap' },
-      { path: '/ops/health-report', title: t('nav.healthReport'), ico: 'HeartPulse' },
-      { path: '/ops/integration-hub', title: t('nav.integrationHub'), ico: 'Cable' },
-      { path: '/ops/risk', title: t('nav.risk'), ico: 'AlertTriangle' },
       {
         path: '/ops/duty',
         title: t('nav.duty'),
@@ -214,14 +188,54 @@ const nav = computed<NavGroup[]>(() => [
           { path: '/ops/duty-calendar', title: t('nav.dutyCalendar'), ico: 'CalendarDays' },
         ],
       },
-      {
-        path: '/ops/workflow',
-        title: t('nav.workflow'),
-        ico: 'Workflow',
-      },
+      { path: '/ops/tickets', title: t('nav.tickets'), ico: 'ClipboardList', badge: '6', alert: true },
+      { path: '/ops/room-access', title: t('nav.roomAccess'), ico: 'LogIn' },
+      { path: '/ops/fault-impact', title: t('nav.faultImpact'), ico: 'GitBranch' },
+      { path: '/ops/drill-plan', title: t('nav.drillPlan'), ico: 'ClipboardCheck' },
+      { path: '/ops/risk', title: t('nav.risk'), ico: 'AlertTriangle' },
+      { path: '/ops/power-ai-hazards', title: t('nav.powerAi'), ico: 'Zap' },
+      { path: '/ops/health-report', title: t('nav.healthReport'), ico: 'HeartPulse' },
+      { path: '/ops/supplier', title: t('nav.supplier'), ico: 'Truck' },
+    ],
+  },
+  // G5 · 资产（台账 / U 位 / 机柜 / 生命周期 / 租户）
+  {
+    id: 'asset',
+    title: t('nav.assetManagement'),
+    items: [
+      { path: '/ops/equipment', title: t('nav.equipment'), ico: 'FileText' },
+      { path: '/ops/u-position', title: t('nav.uPosition'), ico: 'LayoutGrid' },
+      { path: '/ops/cabinets', title: t('nav.cabinets'), ico: 'ServerCog' },
+      { path: '/ops/asset-lifecycle', title: t('nav.assetLifecycle'), ico: 'GitBranch' },
+      { path: '/ops/tenant-manage', title: t('nav.tenantManage'), ico: 'Building2' },
+    ],
+  },
+  // G6 · 能效
+  {
+    id: 'energy',
+    title: t('nav.energyGroup'),
+    items: [{ path: '/analysis/energy', title: t('nav.energy'), ico: 'Leaf' }],
+  },
+  // G7 · 知识与 AI
+  {
+    id: 'knowledge',
+    title: t('nav.knowledgeAi'),
+    items: [
+      { path: '/ops/knowledge', title: t('nav.knowledge'), ico: 'BookOpen' },
+      { path: '/ops/knowledge-collab', title: t('nav.knowledgeCollab'), ico: 'Users' },
+      { path: '/ops/assistant', title: t('nav.assistant'), ico: 'Bot' },
+    ],
+  },
+  // G8 · 平台集成（物模型 / 采集 / 遥测 / 流程 / 集成 / 多数据中心）
+  {
+    id: 'platform',
+    title: t('nav.platformIntegration'),
+    items: [
+      { path: '/ops/thing-model', title: t('nav.thingModel'), ico: 'Blocks' },
       { path: '/ops/collector', title: t('nav.collector'), ico: 'Antenna' },
       { path: '/ops/telemetry', title: t('nav.telemetry'), ico: 'Radio' },
-      { path: '/ops/thing-model', title: t('nav.thingModel'), ico: 'Blocks' },
+      { path: '/ops/workflow', title: t('nav.workflow'), ico: 'Workflow' },
+      { path: '/ops/integration-hub', title: t('nav.integrationHub'), ico: 'Cable' },
       {
         path: '/ops/datacenter',
         title: t('nav.datacenter'),
@@ -233,19 +247,29 @@ const nav = computed<NavGroup[]>(() => [
       },
     ],
   },
+  // G9 · 系统管理
   {
-    title: t('nav.assetManagement'),
-    items: [
-      { path: '/ops/equipment', title: t('nav.equipment'), ico: 'FileText' },
-      { path: '/ops/asset-lifecycle', title: t('nav.assetLifecycle'), ico: 'GitBranch' },
-      { path: '/ops/tenant-manage', title: t('nav.tenantManage'), ico: 'Building2' },
-    ],
-  },
-  {
+    id: 'system',
     title: t('admin.title'),
     items: [{ path: '/admin/audit', title: t('admin.audit'), ico: 'ScrollText' }],
   },
 ])
+
+/* ---- 分组折叠: 默认全部展开; 状态按分组 id 记忆, 语言切换不会错位 ---- */
+const collapsed = reactive<Record<string, boolean>>(
+  Object.fromEntries(nav.value.map((g): [string, boolean] => [g.id, false])),
+)
+const toggle = (id: string) => {
+  collapsed[id] = !collapsed[id]
+}
+/** 路由变化时展开当前页面所属分组, 避免跳转后菜单项"消失"(其余组保留用户的折叠选择) */
+const expandActiveGroup = () => {
+  const hit = nav.value.find((g) =>
+    g.items.some((it) => isActive(it.path) || (it.children ?? []).some((c) => isActive(c.path))),
+  )
+  if (hit) collapsed[hit.id] = false
+}
+watch(() => route.path, expandActiveGroup, { immediate: true })
 
 /* 实时联动 (应用级, 不在模板中使用, 不会驱动 router-view 重渲染) */
 onMounted(() => {
@@ -264,5 +288,47 @@ onBeforeUnmount(() => {
 }
 .nav-item.sub :deep(.nav-icon) {
   opacity: 0.7;
+}
+
+/* ---- 可折叠分组标题: button 化, 沿用全局 .gtitle 的 10px / 字间距 / 小写大写排版 ---- */
+.nav-group > .gtitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 8px 10px 4px;
+  background: transparent;
+  border: 0;
+  font-family: inherit;
+  color: var(--txt3);
+  text-align: left;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+.nav-group > .gtitle:hover {
+  background: var(--panel);
+  color: var(--txt2);
+}
+.nav-group > .gtitle:focus-visible {
+  outline: 1px solid var(--cyan);
+  outline-offset: 1px;
+}
+.gtitle-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gtitle-arrow {
+  display: inline-flex;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.18s ease;
+}
+.gtitle-arrow :deep(svg) {
+  width: 13px;
+  height: 13px;
 }
 </style>

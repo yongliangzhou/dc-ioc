@@ -22,8 +22,14 @@
       </div>
     </div>
 
+    <ErrorBanner
+      v-if="error"
+      :count="1"
+      :labels="[errorLabel]"
+      @retry="errorRetry"
+    />
     <div v-if="!result && loading" class="u-pos__hint">{{ t('ops.uPosition.loading') }}</div>
-    <div v-else-if="!result && !loading" class="u-pos__hint u-pos__hint--err">
+    <div v-else-if="!result && !loading && !error" class="u-pos__hint u-pos__hint--err">
       {{ t('ops.uPosition.failed') }}
     </div>
 
@@ -146,7 +152,10 @@ import {
 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { getCabinetOptions, getServers, recognizeUPosition, getUPosition } from '@/api'
-import type { CabinetOption, RecognizeResp, ServerItem, UCell } from '@/types'
+import type { CabinetOption, RecognizeResp, RecognizeSource, ServerItem, UCell } from '@/types'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { downloadText } from '@/utils/export'
 
 const { t } = useI18n()
 
@@ -157,6 +166,14 @@ const loading = ref(false)
 const recognizing = ref(false)
 const servers = ref<ServerItem[]>([])
 const selectedDevice = ref<ServerItem | null>(null)
+const error = ref('')
+const errorLabel = ref('')
+const errorRetry = ref<() => void>(() => loadCabinet())
+function fail(msg: string, label: string, retry: () => void) {
+  error.value = msg
+  errorLabel.value = label
+  errorRetry.value = retry
+}
 
 const uH = 16
 const pad = 14
@@ -214,27 +231,49 @@ async function onSelectCabinet() {
 
 async function loadCabinet() {
   loading.value = true
+  error.value = ''
   try {
     const [cab, srv] = await Promise.all([
       getUPosition(selectedCabinet.value),
       getServers(selectedCabinet.value),
     ])
     servers.value = srv
+    const cells = cab.cells
+    const cellSources = new Set<string>()
+    cells.forEach((c) => c.sources?.forEach((s) => cellSources.add(s)))
+    const sourceMeta: Record<string, string> = {
+      rfid: t('ops.uPosition.srcRfid'),
+      ledger: t('ops.uPosition.srcLedger'),
+    }
+    // 聚合为按来源维度的对象 (名称/台数/平均置信度), 而非裸字符串 —— 多源融合面板与导出均依赖此结构
+    const sources: RecognizeSource[] = [...cellSources].map((key) => {
+      const inSrc = cells.filter((c) => c.sources?.includes(key))
+      const conf = inSrc.length
+        ? inSrc.reduce((s, c) => s + (c.confidence ?? 0), 0) / inSrc.length
+        : 0
+      return { key, name: sourceMeta[key] ?? key, count: inSrc.length, confidence: conf }
+    })
+    const srcOrder = ['rfid', 'ledger']
+    sources.sort((a, b) => srcOrder.indexOf(a.key) - srcOrder.indexOf(b.key))
+    const avgConfidence = cells.length
+      ? cells.reduce((sum, c) => sum + (c.confidence ?? 0), 0) / cells.length
+      : 0
     result.value = {
       ...cab,
-      sources: [],
+      sources,
       summary: {
         totalU: cab.uTotal,
         occupied: cab.occupiedU,
         empty: cab.emptyU,
         conflict: cab.conflictU,
-        avgConfidence: 1,
-        ledgerCount: 0,
-        rfidCount: srv.length,
+        avgConfidence,
+        ledgerCount: cells.filter((c) => c.sources?.includes('ledger')).length,
+        rfidCount: cells.filter((c) => c.sources?.includes('rfid')).length,
       },
       recognizedAt: cab.generatedAt,
     } as unknown as RecognizeResp
   } catch (e) {
+    fail(toErrorMessage(e) || t('ops.uPosition.failed'), t('ops.uPosition.title'), loadCabinet)
     result.value = null
   } finally {
     loading.value = false
@@ -243,12 +282,13 @@ async function loadCabinet() {
 
 async function runRecognize() {
   recognizing.value = true
+  error.value = ''
   try {
     const r = await recognizeUPosition(selectedCabinet.value)
     result.value = r
     servers.value = await getServers(selectedCabinet.value)
   } catch (e) {
-    // 静默: 保留既有立面
+    fail(toErrorMessage(e) || '识别失败，请重试', t('ops.uPosition.recognize'), runRecognize)
   } finally {
     recognizing.value = false
   }
@@ -269,13 +309,7 @@ function exportReport() {
       ? result.value.conflicts.map((c) => `- [U${c.u}] ${conflictTypeLabel(c.type)}: ${c.detail} (${c.assetNos.join(', ')})`)
       : ['- 无冲突']),
   ]
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `u-position-${result.value.code}-${Date.now()}.txt`
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadText(`u-position-${result.value.code}-${Date.now()}.txt`, lines.join('\n'))
 }
 
 onMounted(async () => {

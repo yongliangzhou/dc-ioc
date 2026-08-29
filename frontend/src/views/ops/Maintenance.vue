@@ -5,7 +5,8 @@
       <span class="sub">{{ tl('维保计划与执行日历') }}</span>
     </div>
 
-    <div class="grid cols-5" v-if="stats">
+    <AsyncSection :page="page" @retry="page.reload">
+      <div class="grid cols-5" v-if="stats">
       <MetricCard
         metric-name="mnt-plans"
         :label="tl('维保计划')"
@@ -131,6 +132,7 @@
         <div class="empty" v-else>{{ tl('暂无记录') }}</div>
       </Panel>
     </div>
+    </AsyncSection>
 
     <!-- 执行记录抽屉 -->
     <div class="drawer-mask" v-if="recDrawer" @click.self="recDrawer = false">
@@ -177,17 +179,6 @@
         </div>
       </div>
     </div>
-
-    <Panel v-if="!plans.length && !error"
-      ><div class="flex center" style="padding: 40px">
-        <span class="muted">{{ tl('common.loading') }}</span>
-      </div></Panel
-    >
-    <Panel v-if="error"
-      ><div class="flex center" style="padding: 40px">
-        <span class="muted" style="color: var(--red)">{{ tl('common.error') }}: {{ error }}</span>
-      </div></Panel
-    >
 
     <!-- 计划抽屉 -->
     <div class="drawer-mask" v-if="planDrawer" @click.self="planDrawer = false">
@@ -247,11 +238,12 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
 import Panel from '@/components/common/Panel.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
 import {
   getMaintenancePlanList,
   getMaintenanceRecords,
@@ -282,7 +274,6 @@ function authState(action: PermAction) {
 const plans = ref<PlanView[]>([])
 const records = ref<RecordView[]>([])
 const stats = ref<MaintenanceStats | null>(null)
-const error = ref('')
 const selectedPlanId = ref<number | string | null>(null)
 const selectedPlanName = ref('')
 
@@ -364,10 +355,10 @@ async function saveRec() {
     else await createMaintenanceRecord(payload)
     recDrawer.value = false
     records.value = await getMaintenanceRecords(selectedPlanId.value ?? undefined)
-    await load()
+    await page.reload()
     toast.success(tl('已保存'))
   } catch (e: unknown) {
-    recErr.value = (e as ErrorLike)?.message || tl('保存失败')
+    recErr.value = toErrorMessage(e) || tl('保存失败')
   } finally {
     recSaving.value = false
   }
@@ -382,7 +373,7 @@ async function removeRec(r: RecordView) {
   })
   if (ok) {
     records.value = await getMaintenanceRecords(selectedPlanId.value ?? undefined)
-    await load()
+    await page.reload()
     toast.success(tl('已删除'))
   }
 }
@@ -431,10 +422,10 @@ async function savePlan() {
     if (f.id != null) await updateMaintenancePlan(Number(f.id), payload)
     else await createMaintenancePlan(payload)
     planDrawer.value = false
-    await load()
+    await page.reload()
     toast.success(tl('已保存'))
   } catch (e: unknown) {
-    planErr.value = (e as ErrorLike)?.message || tl('保存失败')
+    planErr.value = toErrorMessage(e) || tl('保存失败')
   } finally {
     planSaving.value = false
   }
@@ -448,7 +439,7 @@ async function removePlan(p: PlanView) {
     onConfirm: async () => { await deleteMaintenancePlan(Number(p.id)) },
   })
   if (ok) {
-    await load()
+    await page.reload()
     toast.success(tl('已删除'))
   }
 }
@@ -465,9 +456,8 @@ async function selectPlan(id: number | string) {
   records.value = await getMaintenanceRecords(selectedPlanId.value ?? undefined)
 }
 
-async function load() {
-  error.value = ''
-  try {
+const page = useAsyncPage<PlanView[]>(
+  async () => {
     const [p, s] = await Promise.all([getMaintenancePlanList(), getMaintenanceStats()])
     plans.value = p
     stats.value = s
@@ -478,11 +468,10 @@ async function load() {
       }
       records.value = await getMaintenanceRecords(`PM-${selectedPlanId.value}`)
     }
-  } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
-  }
-}
-onMounted(load)
+    return plans.value
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
 </script>
 
 <style scoped>

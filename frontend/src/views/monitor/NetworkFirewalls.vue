@@ -4,6 +4,7 @@
     <div class="view-head">
       <h1>{{ tl('防火墙') }}</h1>
       <span class="sub">{{ tl('策略命中 / 并发会话 / VPN / 威胁拦截 / 攻击分布') }}</span>
+      <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
     <!-- Loading -->
@@ -228,7 +229,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps, genHours } from '@/utils/format'
@@ -248,6 +250,9 @@ import type * as echarts from 'echarts'
 import type { EChartsOption } from '@/hooks/useECharts'
 
 const { t: tl } = useI18n()
+
+/** 本页真设备与模拟字段混排，必须分级提示 */
+const { level: mockLevel, reason: mockReason, markPartial, markFull } = useMockFlag()
 
 // ──────────────────────────────────────────
 // Local extended firewall type (adds disk_pct)
@@ -610,12 +615,14 @@ async function loadData() {
     const data = await getNetworkFirewallsDetailed()
     if (data && (data.firewalls?.length || data.total || data.concurrentSessions)) {
       fromApi(data)
+      markPartial('磁盘占用率等字段由本地随机生成，后端未提供')
     } else {
       // Fallback to full mock
       applyData(mockData())
+      markFull()
     }
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   } finally {
     loading.value = false
   }

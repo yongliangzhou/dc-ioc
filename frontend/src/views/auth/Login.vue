@@ -68,10 +68,10 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { ref, reactive, computed } from 'vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/modules/auth'
 import FieldError from '@/components/common/FieldError.vue'
@@ -119,7 +119,7 @@ async function handleLogin() {
     await authStore.login(form.username, form.password)
     router.replace('/overview')
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.detail || (e as ErrorLike)?.message || '登录失败'
+    error.value = toErrorMessage(e) || '登录失败'
   } finally {
     loading.value = false
   }
@@ -143,7 +143,7 @@ async function handleRegister() {
     regError.value = '注册成功，请使用新账号登录'
     showRegister.value = false
   } catch (e: unknown) {
-    regError.value = (e as ErrorLike)?.detail || (e as ErrorLike)?.message || '注册失败（可能未开放自助注册）'
+    regError.value = toErrorMessage(e) || '注册失败（可能未开放自助注册）'
   } finally {
     regLoading.value = false
   }

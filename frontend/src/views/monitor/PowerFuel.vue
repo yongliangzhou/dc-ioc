@@ -6,6 +6,7 @@
       <span class="sub">{{
         tl('储油罐液位 · 日用油箱 · 供回油泵 · 消耗趋势 · 续航预测 · 补给管理')
       }}</span>
+      <MockDataBanner :level="mockLevel" />
     </div>
 
     <!-- Loading -->
@@ -640,7 +641,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt } from '@/utils/format'
@@ -656,6 +658,9 @@ import Panel from '@/components/common/Panel.vue'
 import KnowledgePanels from '@/components/KnowledgePanels.vue'
 
 const { t: tl } = useI18n()
+
+/** 后端无有效返回时页面会回退到本地 mockSummary()，必须让用户看见这是假的 */
+const { level: mockLevel, markMock, markReal } = useMockFlag()
 
 // ──────────────────────────────────────────
 // 常量 / 布局
@@ -1433,12 +1438,14 @@ async function loadData() {
     const data = await getPowerFuelDetailed()
     if (data && (data.mainTanks?.length || data.dayTanks?.length || data.pumps?.length)) {
       s.value = data
+      markReal()
     } else {
       s.value = mockSummary()
+      markMock()
     }
     rebuildTrend()
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   } finally {
     loading.value = false
   }

@@ -1,324 +1,477 @@
 <template>
-  <div>
+  <div class="alarms-view">
     <div class="view-head">
-      <h1>{{ tl('智能运营') }} {{ tl('·') }} {{ tl('告警中心') }}</h1>
-      <span class="sub"
-        >{{ tl('规则引擎') }} / {{ tl('阈值基线') }} / {{ tl('告警持久化') }} {{ tl('·') }}
-        {{ tl('按业务系统') }}&{{ tl('等级分组') }}</span
-      >
-      <span class="pill">{{
-        activeTab === 'rules' ? '规则引擎' : activeTab === 'active' ? '活动告警' : '告警历史'
-      }}</span>
-      <button class="go-rule-btn" @click="goRuleEngine" title="进入告警规则引擎管理页面">
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
+      <div class="vh-left">
+        <h1>{{ tl('智能运营') }} {{ tl('·') }} {{ tl('告警中心') }}</h1>
+        <span class="sub"
+          >{{ tl('规则引擎') }} / {{ tl('阈值基线') }} / {{ tl('告警持久化') }} {{ tl('·') }}
+          {{ tl('按业务系统') }}&{{ tl('等级分组') }}</span
         >
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
-        </svg>
-        {{ tl('进入规则引擎') }}
-      </button>
+      </div>
+      <div class="vh-right">
+        <span class="pill">{{ tabLabel }}</span>
+        <button class="ph-btn" :disabled="refreshing" @click="refreshAll">
+          <RefreshCw :size="13" :class="{ 'is-spin': refreshing }" />
+          {{ refreshing ? '刷新中' : '刷新' }}
+        </button>
+        <button class="go-rule-btn" @click="goRuleEngine" title="进入告警规则引擎管理页面">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+          </svg>
+          {{ tl('进入规则引擎') }}
+        </button>
+      </div>
     </div>
 
-    <!-- KPI 行 -->
-    <div class="grid cols-5" v-if="a">
-      <MetricCard
-        metric-name="alarm-raw"
-        :label="tl('24h 原始告警')"
-        :value="a.convergence.raw"
-        unit="条"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="alarm-converged"
-        :label="tl('收敛后')"
-        :value="a.convergence.converged"
-        unit="条"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="alarm-rate"
-        :label="tl('收敛率')"
-        :value="a.convergence.rate"
-        unit="%"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="alarm-mtta"
-        label="MTTA"
-        :value="a.sla.mttaMin"
-        unit="min"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="alarm-mttr"
-        label="MTTR"
-        :value="a.sla.mttrMin"
-        unit="min"
-        quality="good"
-        :online="true"
-      />
-    </div>
+    <!-- 部分失败汇总: 绝不允许静默降级 -->
+    <ErrorBanner :count="failures.length" :labels="failureLabels" :retrying="refreshing" @retry="retryAllFailures" />
 
-    <!-- 规则引擎统计 -->
-    <div class="grid cols-4" v-if="engineState">
-      <MetricCard
-        metric-name="alarm-eng-rules"
-        :label="tl('规则总数')"
-        :value="engineState.totalRules"
-        unit="条"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="alarm-eng-enabled"
-        :label="tl('已启用')"
-        :value="engineState.enabledCount"
-        unit="条"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="alarm-eng-triggered"
-        :label="tl('已触发')"
-        :value="engineState.triggeredCount"
-        unit="条"
-        :quality="engineState.triggeredCount ? 'uncertain' : 'good'"
-        :online="true"
-        :severity="engineState.triggeredCount ? 'warn' : 'normal'"
-      />
-      <MetricCard
-        metric-name="alarm-eng-silenced"
-        :label="tl('静默中')"
-        :value="engineState.silencedCount"
-        unit="条"
-        :quality="engineState.silencedCount ? 'uncertain' : 'good'"
-        :online="true"
-      />
+    <!-- ===== KPI: 1 主（活动告警）+ 次（收敛/SLA）+ 引擎 ===== -->
+    <div class="kpi-band">
+      <div class="alarm-primary">
+        <div class="ap-head">
+          <span class="ap-label">活动告警</span>
+          <DataBadge
+            v-if="activeStale"
+            tone="stale"
+            :tip="`活动告警轮询失败：${realtimeLinkage.lastError}。当前展示的是上一次成功快照，可能已不反映最新状态`"
+          />
+        </div>
+        <div class="ap-value" :class="{ 'is-crit': levelCounts.crit > 0 }">
+          {{ realtimeLinkage.active.length }}
+        </div>
+        <div class="ap-break">
+          <span class="ap-lv crit">紧急 {{ levelCounts.crit }}</span>
+          <span class="ap-lv warn">重要 {{ levelCounts.warn }}</span>
+          <span class="ap-lv info">提示 {{ levelCounts.info }}</span>
+        </div>
+      </div>
+
+      <div class="kpi-side">
+        <AsyncSection
+          :page="centerPage"
+          skeleton-variant="skeleton"
+          :skeleton-rows="3"
+          min-height="110px"
+          empty-title="暂无告警中心指标"
+          empty-desc="后端未返回收敛 / SLA 统计"
+        >
+          <div class="grid cols-auto-sm">
+            <MetricCard
+              metric-name="alarm-raw"
+              :label="tl('24h 原始告警')"
+              :value="center?.convergence.raw"
+              unit="条"
+              quality="good"
+              :online="true"
+            />
+            <MetricCard
+              metric-name="alarm-converged"
+              :label="tl('收敛后')"
+              :value="center?.convergence.converged"
+              unit="条"
+              quality="good"
+              :online="true"
+            />
+            <MetricCard
+              metric-name="alarm-rate"
+              :label="tl('收敛率')"
+              :value="center?.convergence.rate"
+              unit="%"
+              quality="good"
+              :online="true"
+            />
+            <MetricCard
+              metric-name="alarm-mtta"
+              label="MTTA"
+              :value="center?.sla.mttaMin"
+              unit="min"
+              quality="good"
+              :online="true"
+            />
+            <MetricCard
+              metric-name="alarm-mttr"
+              label="MTTR"
+              :value="center?.sla.mttrMin"
+              unit="min"
+              quality="good"
+              :online="true"
+            />
+          </div>
+        </AsyncSection>
+
+        <AsyncSection
+          :page="rulesPage"
+          skeleton-variant="skeleton"
+          :skeleton-rows="3"
+          min-height="110px"
+          empty-title="暂无联动规则"
+          empty-desc="后端未返回告警规则配置"
+        >
+          <div class="grid cols-auto-sm">
+            <MetricCard
+              metric-name="alarm-eng-rules"
+              :label="tl('规则总数')"
+              :value="engineState.totalRules"
+              unit="条"
+              quality="good"
+              :online="true"
+            />
+            <MetricCard
+              metric-name="alarm-eng-enabled"
+              :label="tl('已启用')"
+              :value="engineState.enabledCount"
+              unit="条"
+              quality="good"
+              :online="true"
+            />
+            <MetricCard
+              metric-name="alarm-eng-triggered"
+              :label="tl('已触发')"
+              :value="engineState.triggeredCount"
+              unit="条"
+              :quality="engineState.triggeredCount ? 'uncertain' : 'good'"
+              :online="true"
+              :severity="engineState.triggeredCount ? 'warn' : 'normal'"
+            />
+            <MetricCard
+              metric-name="alarm-eng-silenced"
+              :label="tl('静默中')"
+              :value="engineState.silencedCount"
+              unit="条"
+              :quality="engineState.silencedCount ? 'uncertain' : 'good'"
+              :online="true"
+            />
+          </div>
+        </AsyncSection>
+      </div>
     </div>
 
     <!-- Tab 切换 -->
     <Panel style="margin-bottom: 12px">
       <div class="flex gap8 center wrap">
         <button class="tv-btn" :class="{ on: activeTab === 'rules' }" @click="activeTab = 'rules'">
-          {{ tl('规则引擎') }} ({{ engineState?.totalRules ?? 0 }})
+          {{ tl('规则引擎') }} ({{ engineState.totalRules }})
         </button>
         <button
           class="tv-btn"
           :class="{ on: activeTab === 'active' }"
           @click="activeTab = 'active'"
         >
-          {{ tl('活动告警') }} ({{ activeCount }})
+          {{ tl('活动告警') }} ({{ realtimeLinkage.active.length }})
         </button>
-        <button
-          class="tv-btn"
-          :class="{ on: activeTab === 'history' }"
-          @click="activeTab = 'history'; loadHistory()"
-        >
+        <button class="tv-btn" :class="{ on: activeTab === 'history' }" @click="switchHistory">
           {{ tl('告警历史') }}
         </button>
       </div>
     </Panel>
 
-    <!-- ===== Tab: 规则引擎 (Presentational 子组件) ===== -->
-    <AlarmRulePanel v-if="activeTab === 'rules'" :rules="localRules" @toggle="toggleRule" />
+    <!-- ===== Tab: 规则引擎 ===== -->
+    <AsyncSection
+      v-if="activeTab === 'rules'"
+      :page="rulesPage"
+      skeleton-variant="skeleton"
+      :skeleton-rows="6"
+      min-height="220px"
+      empty-title="暂无告警规则"
+      empty-desc="后端未返回规则配置，可在规则引擎页面新建"
+      @retry="retryRules"
+    >
+      <AlarmRulePanel :rules="realtimeLinkage.rules" @toggle="toggleRule" />
+    </AsyncSection>
 
     <!-- ===== Tab: 活动告警 ===== -->
     <template v-if="activeTab === 'active'">
-      <!-- 收敛策略 · 按收敛规则分组 -->
+      <!-- 收敛策略 · 预测告警 -->
       <div class="section-title">
         {{ tl('收敛策略与规则链') }} {{ tl('·') }} {{ tl('预测告警') }}
       </div>
-      <div class="grid cols-2" v-if="a">
-        <Panel>
-          <template #ct
-            >{{ tl('收敛规则链') }} ({{ tl('共') }} {{ a.rules.length }} {{ tl('条') }})</template
-          >
-          <div class="flex gap8 wrap" style="margin: 8px 0 12px">
-            <span v-for="r in a.rules" :key="r" class="tag p" style="padding: 6px 12px">{{
-              r
-            }}</span>
-          </div>
-          <div class="kvs">
-            <span class="k">{{ tl('自动闭环率') }}</span
-            ><span class="v" style="color: var(--green)">{{ a.sla.autoCloseRate }}%</span>
-            <span class="k">{{ tl('误报抑制') }}</span
-            ><span class="v" style="font-size: 11.5px"
-              >AI {{ tl('过滤小动物') }}/{{ tl('扬尘等') }} 38 {{ tl('条') }}/{{ tl('日') }}</span
+      <AsyncSection
+        :page="centerPage"
+        skeleton-variant="skeleton"
+        :skeleton-rows="5"
+        min-height="180px"
+        empty-title="暂无收敛策略数据"
+        empty-desc="后端未返回告警中心聚合数据"
+      >
+        <div class="grid cols-2">
+          <Panel>
+            <template #ct
+              >{{ tl('收敛规则链') }} ({{ tl('共') }} {{ center?.rules.length ?? 0 }}
+              {{ tl('条') }})</template
+            >
+            <div class="flex gap8 wrap" style="margin: 8px 0 12px">
+              <span v-for="r in center?.rules ?? []" :key="r" class="tag p" style="padding: 6px 12px">{{
+                r
+              }}</span>
+            </div>
+            <div class="kvs">
+              <span class="k">{{ tl('自动闭环率') }}</span
+              ><span class="v" style="color: var(--green)">{{ center?.sla.autoCloseRate }}%</span>
+              <span class="k">{{ tl('误报抑制') }}</span
+              ><span class="v" style="font-size: 11.5px"
+                >AI {{ tl('过滤小动物') }}/{{ tl('扬尘等') }} 38 {{ tl('条') }}/{{
+                  tl('日')
+                }}</span
+              >
+            </div>
+          </Panel>
+          <Panel>
+            <template #ct>AI {{ tl('趋势预测告警') }} ({{ tl('置信度排序') }})</template>
+            <div class="alarm" v-for="(t, i) in center?.trend ?? []" :key="i">
+              <span class="lv info">{{ lvText('info') }}</span>
+              <div class="txt">
+                {{ t.id }} {{ tl('—') }} {{ t.pred }}
+                <span class="tag" :class="t.conf > 85 ? 'g' : t.conf > 70 ? 'a' : 'b'"
+                  >{{ tl('置信') }} {{ t.conf }}%</span
+                >
+                <div class="meta">{{ tl('建议') }}: {{ t.sug }}</div>
+              </div>
+            </div>
+          </Panel>
+        </div>
+      </AsyncSection>
+
+      <!-- 实时越限联动引擎 -->
+      <div class="section-title">{{ tl('实时越限联动引擎') }}</div>
+      <AsyncSection
+        :page="rulesPage"
+        skeleton-variant="skeleton"
+        :skeleton-rows="4"
+        min-height="140px"
+        empty-title="暂无联动规则"
+        empty-desc="后端未返回联动规则，遥测越限将不会自动生成告警"
+        @retry="retryRules"
+      >
+        <Panel style="margin-bottom: 12px">
+          <div class="flex gap8 center wrap" style="margin-bottom: 10px">
+            <span class="pill g"><span class="dot g"></span>{{ tl('联动引擎在线') }}</span>
+            <span class="pill"
+              >{{ tl('活动联动告警') }} {{ realtimeLinkage.active.length }} {{ tl('条') }}</span
+            >
+            <span class="pill"
+              >{{ tl('规则') }} {{ engineState.enabledCount }}/{{ engineState.totalRules }}
+              {{ tl('启用') }}</span
+            >
+            <span class="muted" style="font-size: 11px"
+              >{{ tl('遥测测点越限') }} → {{ tl('自动生成告警') }} →
+              {{ tl('一键转工单') }}</span
             >
           </div>
-        </Panel>
-        <Panel>
-          <template #ct>AI {{ tl('趋势预测告警') }} ({{ tl('置信度排序') }})</template>
-          <div class="alarm" v-for="(t, i) in a.trend" :key="i">
-            <span class="lv info">{{ lvText('info') }}</span>
-            <div class="txt">
-              {{ t.id }} {{ tl('—') }} {{ t.pred }}
-              <span class="tag" :class="t.conf > 85 ? 'g' : t.conf > 70 ? 'a' : 'b'"
-                >{{ tl('置信') }} {{ t.conf }}%</span
-              >
-              <div class="meta">{{ tl('建议') }}: {{ t.sug }}</div>
+          <div class="grid cols-2">
+            <div v-for="r in realtimeLinkage.rules" :key="r.id" class="rule-row">
+              <div class="rule-info">
+                <div class="rule-name">
+                  <span class="dot" :class="r.enabled ? 'g' : 'a'"></span>
+                  <span>{{ r.ruleCode || r.metric }}</span>
+                </div>
+                <div class="rule-meta">
+                  <span class="mono">{{ r.metric }} {{ ruleBandLabel(r) }}</span>
+                  <span class="muted">{{ r.category }}</span>
+                </div>
+              </div>
+              <div class="rule-actions">
+                <button
+                  class="rule-btn"
+                  :class="r.status === 'enabled' ? 'on' : 'off'"
+                  @click="realtimeLinkage.toggleRule(String(r.id))"
+                  :title="r.status === 'enabled' ? '点击静默' : '点击启用'"
+                >
+                  {{ r.status === 'enabled' ? '已启用' : '已静默' }}
+                </button>
+              </div>
             </div>
           </div>
         </Panel>
-      </div>
+      </AsyncSection>
 
-      <!-- 活动告警 · 按系统/等级分组 -->
+      <!-- 筛选 + 批量 + 导出 -->
       <div class="section-title">
         {{ tl('活动告警') }} {{ tl('·') }} {{ tl('按业务系统') }} & {{ tl('等级分组') }} ({{
-          activeCount
+          sortedActive.length
         }}
         {{ tl('条') }})
       </div>
-
-      <!-- 实时越限联动引擎 -->
-      <Panel style="margin-bottom: 12px">
-        <div class="flex gap8 center wrap" style="margin-bottom: 10px">
-          <span class="pill g"><span class="dot g"></span>{{ tl('联动引擎在线') }}</span>
-          <span class="pill"
-            >{{ tl('活动联动告警') }} {{ realtimeLinkage.active.length }} {{ tl('条') }}</span
-          >
-          <span class="pill"
-            >{{ tl('规则') }}
-            {{ realtimeLinkage.rules.filter((r) => r.status === 'enabled').length }}/{{
-              realtimeLinkage.rules.length
-            }}
-            {{ tl('启用') }}</span
-          >
-          <span class="muted" style="font-size: 11px"
-            >{{ tl('遥测测点越限') }} → {{ tl('自动生成告警') }} → {{ tl('一键转工单') }}</span
-          >
-        </div>
-        <div class="grid cols-2">
-          <div v-for="r in realtimeLinkage.rules" :key="r.id" class="rule-row">
-            <div class="rule-info">
-              <div class="rule-name">
-                <span class="dot" :class="r.enabled ? 'g' : 'a'"></span>
-                <span>{{ r.ruleCode || r.metric }}</span>
-              </div>
-              <div class="rule-meta">
-                <span class="mono">{{ r.metric }} {{ ruleBandLabel(r) }}</span>
-                <span class="muted">{{ r.category }}</span>
-              </div>
-            </div>
-            <div class="rule-actions">
-              <button
-                class="rule-btn"
-                :class="r.status === 'enabled' ? 'on' : 'off'"
-                @click="realtimeLinkage.toggleRule(String(r.id))"
-                :title="r.status === 'enabled' ? '点击静默' : '点击启用'"
-              >
-                {{ r.status === 'enabled' ? '已启用' : '已静默' }}
-              </button>
-            </div>
+      <Panel class="toolbar">
+        <div class="tb-left">
+          <div class="seg">
+            <button
+              v-for="opt in levelOptions"
+              :key="opt.value"
+              class="seg-btn"
+              :class="{ on: levelFilter === opt.value }"
+              @click="levelFilter = opt.value"
+            >
+              {{ opt.label }}
+              <span class="seg-n" v-if="opt.count !== null">{{ opt.count }}</span>
+            </button>
           </div>
+          <input v-model="keyword" class="tb-input" placeholder="搜索告警内容 / 来源系统" />
+          <button v-if="levelFilter !== 'all' || keyword" class="tb-clear" @click="resetFilter">
+            清除筛选
+          </button>
+        </div>
+        <div class="tb-right">
+          <span v-if="selectedAlarms.length" class="sel-count">
+            已选 {{ selectedAlarms.length }} 条
+          </span>
+          <button
+            class="tb-btn ack"
+            :disabled="!ackableSelected.length || batching"
+            @click="batchAck"
+          >
+            批量确认{{ ackableSelected.length ? ` (${ackableSelected.length})` : '' }}
+          </button>
+          <button
+            class="tb-btn resolve"
+            :disabled="!resolvableSelected.length || batching"
+            @click="batchResolve"
+          >
+            批量关单{{ resolvableSelected.length ? ` (${resolvableSelected.length})` : '' }}
+          </button>
+          <button class="tb-btn" :disabled="!sortedActive.length" @click="exportActive">
+            导出 CSV
+          </button>
         </div>
       </Panel>
 
-      <AlarmListPanel
-        :alarms="sortedActive"
-        @ack="handleAck"
-        @resolve="handleResolve"
-        @runbook="openRunbooks"
-        @ticket="openTicketFromAlarm"
-        @feedback="openFeedback"
-        @goDevice="handleGoDevice"
-      />
+      <AsyncSection
+        :page="activePage"
+        skeleton-variant="skeleton"
+        :skeleton-rows="6"
+        min-height="200px"
+        empty-title="当前无活动告警"
+        empty-desc="所有监控对象运行正常，遥测未越限"
+        @retry="retryActive"
+      >
+        <template #empty-actions>
+          <button v-if="levelFilter !== 'all' || keyword" class="link-btn" @click="resetFilter">
+            清除筛选条件
+          </button>
+        </template>
+        <AlarmListPanel
+          :alarms="sortedActive"
+          selectable
+          :selected="selectedKeys"
+          @update:selected="selectedKeys = $event"
+          @ack="handleAck"
+          @resolve="handleResolve"
+          @runbook="openRunbooks"
+          @ticket="openTicketFromAlarm"
+          @feedback="openFeedback"
+          @goDevice="handleGoDevice"
+        />
+      </AsyncSection>
     </template>
 
     <!-- ===== Tab: 告警历史 ===== -->
     <template v-if="activeTab === 'history'">
-      <!-- 告警趋势 -->
-      <div class="section-title">24h 告警趋势 · 按系统分组</div>
-      <TrendChart
-        v-if="history"
-        :metrics="historyTrendMetrics"
-        :active="trendActive"
-        :series="trendSeries"
-        :loading="historyLoading"
-        @select="trendActive = $event"
-        @range-change="onRangeChange"
-      />
-
-      <!-- 历史统计 -->
-      <div class="section-title">告警历史 · 按业务系统统计</div>
-      <div class="grid cols-4" v-if="history">
-        <KpiCard
-          v-for="(cnt, sys) in history.stats.bySystem"
-          :key="sys"
-          :title="sys"
-          :value="cnt"
-          unit="条/24h"
-        />
-      </div>
-
-      <!-- 历史列表 (虚拟滚动, 千条数据不卡顿) -->
-      <div class="section-title">近期告警记录 ({{ history?.total ?? history?.items.length ?? 0 }})</div>
-      <Panel class="scroll-x" v-if="history">
-        <div class="hist-thead">
-          <div class="hc w-lv">级别</div>
-          <div class="hc w-sys">系统</div>
-          <div class="hc w-msg">告警内容</div>
-          <div class="hc w-time">触发时间</div>
-          <div class="hc w-st">状态</div>
-          <div class="hc w-time">解决时间</div>
-          <div class="hc w-auto">自动</div>
+      <AsyncSection
+        :page="historyPage"
+        skeleton-variant="skeleton"
+        :skeleton-rows="10"
+        min-height="320px"
+        empty-title="暂无告警历史"
+        empty-desc="所选时间范围内没有告警记录"
+        @retry="historyPage.reload"
+      >
+        <div class="flex gap8 center wrap" style="margin-bottom: 8px">
+          <div class="section-title" style="margin: 0">24h 告警趋势 · 按系统分组</div>
+          <DataBadge
+            tone="sample"
+            tip="趋势曲线由前端基于当前告警量合成示例数据（后端暂无告警时序接口），仅用于观察量级与形态，不可作为统计口径"
+          />
+          <button class="tb-btn" style="margin-left: auto" @click="exportHistory">
+            导出 CSV
+          </button>
         </div>
-        <VirtualList
-          class="hist-virtual"
-          :items="history.items"
-          :item-height="48"
-          :height="460"
-          key-field="id"
-        >
-          <template #default="{ item: evt }">
-            <div class="hist-row">
-              <div class="hc w-lv">
-                <span class="tag" :class="lvClass(evt.level)">{{ lvText(evt.level) }}</span>
-              </div>
-              <div class="hc w-sys">
-                <span class="sys-badge">{{ evt.system }}</span>
-              </div>
-              <div class="hc w-msg desc-cell">
-                {{ evt.message }}
-                <div class="meta mono" style="font-size: 9px">
-                  {{ evt.metric }}: {{ evt.value }}{{ evt.unit }} → 阈值 {{ evt.threshold
-                  }}{{ evt.unit }}
+        <TrendChart
+          :metrics="historyTrendMetrics"
+          :active="trendActive"
+          :series="trendSeries"
+          :loading="historyPage.loading.value"
+          @select="trendActive = $event"
+          @range-change="onRangeChange"
+        />
+
+        <div class="section-title">告警历史 · 按业务系统统计</div>
+        <div class="grid cols-auto-sm">
+          <KpiCard
+            v-for="(cnt, sys) in history?.stats.bySystem ?? {}"
+            :key="sys"
+            :title="String(sys)"
+            :value="cnt"
+            unit="条/24h"
+          />
+        </div>
+
+        <div class="section-title">
+          近期告警记录 ({{ history?.total ?? history?.items.length ?? 0 }})
+        </div>
+        <Panel class="scroll-x">
+          <div class="hist-thead">
+            <div class="hc w-lv">级别</div>
+            <div class="hc w-sys">系统</div>
+            <div class="hc w-msg">告警内容</div>
+            <div class="hc w-time">触发时间</div>
+            <div class="hc w-st">状态</div>
+            <div class="hc w-time">解决时间</div>
+            <div class="hc w-auto">自动</div>
+          </div>
+          <VirtualList
+            class="hist-virtual"
+            :items="history?.items ?? []"
+            :item-height="48"
+            :height="460"
+            key-field="id"
+          >
+            <template #default="{ item: evt }">
+              <div class="hist-row">
+                <div class="hc w-lv">
+                  <span class="tag" :class="lvClass(evt.level)">{{ lvText(evt.level) }}</span>
                 </div>
+                <div class="hc w-sys">
+                  <span class="sys-badge">{{ evt.system }}</span>
+                </div>
+                <div class="hc w-msg desc-cell">
+                  {{ evt.message }}
+                  <div class="meta mono" style="font-size: 9px">
+                    {{ evt.metric }}: {{ evt.value }}{{ evt.unit }} → 阈值 {{ evt.threshold
+                    }}{{ evt.unit }}
+                  </div>
+                </div>
+                <div class="hc w-time mono" style="font-size: 11px">{{ evt.triggeredAt }}</div>
+                <div class="hc w-st">
+                  <span class="tag" :class="stateTagClass(evt.status)">{{
+                    stateLabel(evt.status)
+                  }}</span>
+                </div>
+                <div class="hc w-time mono" style="font-size: 11px">
+                  {{ evt.resolvedAt ?? '—' }}
+                </div>
+                <div class="hc w-auto">{{ evt.autoResolved ? '是' : '否' }}</div>
               </div>
-              <div class="hc w-time mono" style="font-size: 11px">{{ evt.triggeredAt }}</div>
-              <div class="hc w-st">
-                <span class="tag" :class="stateTagClass(evt.status)">{{
-                  stateLabel(evt.status)
-                }}</span>
-              </div>
-              <div class="hc w-time mono" style="font-size: 11px">{{ evt.resolvedAt ?? '—' }}</div>
-              <div class="hc w-auto">{{ evt.autoResolved ? '是' : '否' }}</div>
-            </div>
-          </template>
-          <template #empty>暂无告警历史记录</template>
-        </VirtualList>
-      </Panel>
+            </template>
+            <template #empty>暂无告警历史记录</template>
+          </VirtualList>
+        </Panel>
+      </AsyncSection>
     </template>
 
-    <KnowledgePanels :knowledge="a?.knowledge" />
+    <KnowledgePanels :knowledge="center?.knowledge" />
 
     <div class="footer-note">
-      智能运营·告警中心 — 规则引擎 {{ engineState?.enabledCount ?? 0 }}/{{
-        engineState?.totalRules ?? 0
-      }}
-      启用 · 活动告警 {{ activeCount }} 条 (含联动 {{ realtimeLinkage.active.length }}) · 数据每
-      {{ refreshSec }}s 刷新
+      智能运营·告警中心 — 规则引擎 {{ engineState.enabledCount }}/{{ engineState.totalRules }}
+      启用 · 活动告警 {{ realtimeLinkage.active.length }} 条 · 数据每 {{ refreshSec }}s 刷新
     </div>
 
     <transition name="fade">
@@ -353,7 +506,8 @@
               </ol>
               <button class="btn primary sm" @click="linkToTicket(kb)">转工单并关联此预案</button>
             </div>
-            <div class="muted center" v-if="!relLoading && !relRunbooks.length">
+            <div class="muted center" v-if="relError">{{ relError }}</div>
+            <div class="muted center" v-else-if="!relLoading && !relRunbooks.length">
               未匹配到相关预案，可直接转工单
             </div>
             <div class="muted center" v-if="relLoading">加载中…</div>
@@ -440,20 +594,20 @@
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 
-interface RtAlarm extends Alarm {
+interface RtAlarmLike extends Alarm {
   rt?: boolean
   domain?: string
   metric?: string
+  id?: string
 }
 import { useRouter } from 'vue-router'
 import {
   getAlarms,
-  getAlarmRules,
   getAlarmHistory,
   acknowledgeAlarm,
   resolveAlarm,
-  toggleAlarmRule,
   getRelatedRunbooks,
   submitAlarmFeedback,
 } from '@/api'
@@ -464,14 +618,29 @@ import type { MetricHistoryPoint } from '@/types'
 import KnowledgePanels from '@/components/KnowledgePanels.vue'
 import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
-import { lvClass, lvText } from '@/utils/state'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import DataBadge from '@/components/common/DataBadge.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { lvClass, lvText, alarmKeyOf, alarmStateText } from '@/utils/state'
+import { sampleSeries } from '@/utils/sample'
+import { downloadCsv, stampedName } from '@/utils/export'
 import { useTicketsStore } from '@/stores/modules/tickets'
 import TicketFormModal from '@/components/business/TicketFormModal.vue'
 import AlarmRulePanel from './components/AlarmRulePanel.vue'
 import AlarmListPanel from './components/AlarmListPanel.vue'
 import VirtualList from '@/components/common/VirtualList.vue'
 import { matchScenario } from '@/engine/alarmNotifier'
-import type { TicketCreateRequest, KnowledgeItem } from '@/types'
+import { realtimeLinkage } from '@/engine/realtimeLinkage'
+import { useAsyncPage, useAsyncPageAll } from '@/composables/useAsyncPage'
+import type {
+  AlarmCenter,
+  Alarm,
+  AlarmRuleDef,
+  AlarmEngineState,
+  AlarmHistoryResponse,
+  TicketCreateRequest,
+  KnowledgeItem,
+} from '@/types'
 
 /** 按阈值带格式显示规则范围, 兼容 AlarmRuleDef 的可选字段类型 */
 function ruleBandLabel(r: AlarmRuleDef): string {
@@ -521,8 +690,8 @@ function openTicketFromAlarm(alarm: Alarm) {
 async function onTicketSubmit(data: TicketCreateRequest) {
   const t = await ticketsStore.create({ ...data, source: 'alarm' })
   // 联动告警转工单后标记为已确认, 形成闭环
-  if (currentAlarm.value && (currentAlarm.value as RtAlarm).rt) {
-    realtimeLinkage.ack((currentAlarm.value as RtAlarm).id ?? '')
+  if (currentAlarm.value && (currentAlarm.value as RtAlarmLike).rt) {
+    realtimeLinkage.ack((currentAlarm.value as RtAlarmLike).id ?? '')
   }
   ticketModalOpen.value = false
   currentAlarm.value = null
@@ -534,6 +703,7 @@ const relModalOpen = ref(false)
 const relRunbooks = ref<KnowledgeItem[]>([])
 const relAlarm = ref<Alarm | null>(null)
 const relLoading = ref(false)
+const relError = ref('')
 const KB_TYPE: Record<string, string> = {
   sop: '运行SOP',
   drawing: '竣工图纸',
@@ -550,15 +720,17 @@ async function openRunbooks(alarm: Alarm) {
   relAlarm.value = alarm
   relModalOpen.value = true
   relRunbooks.value = []
+  relError.value = ''
   relLoading.value = true
   try {
     relRunbooks.value = await getRelatedRunbooks({
       system: alarm.system,
-      domain: (alarm as RtAlarm).domain,
-      metric: (alarm as RtAlarm).metric,
+      domain: (alarm as RtAlarmLike).domain,
+      metric: (alarm as RtAlarmLike).metric,
     })
-  } catch (_) {
-    /* ignore */
+  } catch (e) {
+    // 静默吞错会让运维以为"真的没有预案", 必须显式说明是加载失败
+    relError.value = `预案加载失败：${e instanceof Error ? e.message : '未知错误'}`
   } finally {
     relLoading.value = false
   }
@@ -604,7 +776,9 @@ function fmtTs(ts: number) {
 }
 
 function openFeedback(alarm: Alarm) {
-  const id = (alarm as RtAlarm).rt ? ((alarm as RtAlarm).id ?? '') : `evt-${alarm.time}-${alarm.system}`
+  const id = (alarm as RtAlarmLike).rt
+    ? ((alarm as RtAlarmLike).id ?? '')
+    : `evt-${alarm.time}-${alarm.system}`
   fbAlarm.value = alarm
   fbScenario.value = matchScenario(alarm)
   fbTab.value = 'cause'
@@ -621,8 +795,8 @@ function gotoKb(query: string) {
 
 async function submitFeedback() {
   if (!fbAlarm.value || !fbResult.value) return
-  const id = (fbAlarm.value as RtAlarm).rt
-  ? ((fbAlarm.value as RtAlarm).id ?? '')
+  const id = (fbAlarm.value as RtAlarmLike).rt
+    ? ((fbAlarm.value as RtAlarmLike).id ?? '')
     : `evt-${fbAlarm.value.time}-${fbAlarm.value.system}`
   fbSaving.value = true
   try {
@@ -678,162 +852,306 @@ function handleGoDevice(payload: { sys: string; deviceId: string }) {
   if (payload.deviceId) path += `?device=${payload.deviceId}`
   router.push(path)
 }
-import { realtimeLinkage } from '@/engine/realtimeLinkage'
-import type {
-  AlarmCenter,
-  Alarm,
-  AlarmRuleDef,
-  AlarmEngineState,
-  AlarmHistoryResponse,
-} from '@/types'
 
-const a = ref<AlarmCenter | null>(null)
-const engineState = ref<AlarmEngineState | null>(null)
+/* ================================================================== */
+/* 数据源                                                              */
+/* ================================================================== */
+const all = useAsyncPageAll({ center: () => getAlarms() })
+const centerPage = all.pages.center
+const center = computed<AlarmCenter | undefined>(() => centerPage.data.value)
+
+/** 告警历史: 切到该 Tab 才加载, 不预取 */
+const historyPage = useAsyncPage<AlarmHistoryResponse | undefined>(() => getAlarmHistory({}), {
+  autoLoad: false,
+})
+const history = computed<AlarmHistoryResponse | undefined>(() => historyPage.data.value)
+
 const refreshSec = Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000) / 1000
 const activeTab = ref<'rules' | 'active' | 'history'>('rules')
 const trendActive = ref('alarm-total')
 
-/* ---- 规则列表: 判定统一在后端执行, 前端仅展示 + 启停 (onMounted 拉取) ---- */
-const localRules = ref<AlarmRuleDef[]>([])
+const tabLabel = computed(
+  () =>
+    ({
+      rules: '规则引擎',
+      active: '活动告警',
+      history: '告警历史',
+    })[activeTab.value],
+)
 
-async function toggleRule(rule: AlarmRuleDef) {
-  const idx = localRules.value.findIndex((r) => r.id === rule.id)
-  if (idx < 0) return
-  const next = rule.status === 'enabled' ? 'disabled' : 'enabled'
-  localRules.value[idx] = { ...rule, status: next, updated: new Date().toISOString().slice(0, 16) }
-  // 尝试同步远端
-  try {
-    await toggleAlarmRule(String(rule.id), next)
-  } catch (_) {
-    /* 本地已更新 */
+/* ---- 规则: 统一消费全局联动引擎 (不再重复 getAlarmRules 轮询) ---- */
+const engineState = computed<AlarmEngineState>(() => {
+  const rules = realtimeLinkage.rules
+  // 已触发 = 当前有活动告警的规则数 (真实派生, 不再硬编码 0)
+  const triggered = new Set(realtimeLinkage.active.map((a) => a.ruleId)).size
+  return {
+    totalRules: rules.length,
+    enabledCount: rules.filter((r) => r.status === 'enabled').length,
+    triggeredCount: triggered,
+    silencedCount: rules.filter((r) => r.status === 'silenced').length,
   }
-  refreshEngineState()
-}
-
-function refreshEngineState() {
-  engineState.value = {
-    totalRules: localRules.value.length,
-    enabledCount: localRules.value.filter((r) => r.enabled).length,
-    triggeredCount: 0,
-    silencedCount: localRules.value.filter((r) => r.status === 'silenced').length,
-  }
-}
-
-/* ---- 活动告警: 统一消费真实联动告警引擎 (B1: 不再混入 generated 假告警) ---- */
-const activeCount = computed(() => realtimeLinkage.active.length)
-
-const sortedActive = computed<Alarm[]>(() => {
-  const all = [...realtimeLinkage.active] as Alarm[]
-  const order = { crit: 0, warn: 1, info: 2 }
-  return all.sort((x, y) => (order[x.level as 'crit'] ?? 3) - (order[y.level as 'crit'] ?? 3))
 })
 
-/* ---- 告警操作 (兼容实时联动告警) ---- */
+function toggleRule(rule: AlarmRuleDef) {
+  realtimeLinkage.toggleRule(String(rule.id))
+}
+
+/** 联动规则区块的异步状态（引擎自己轮询，这里只做呈现映射） */
+const rulesPage = computed(() => {
+  const hasData = realtimeLinkage.rules.length > 0
+  const error = hasData ? '' : realtimeLinkage.rulesError
+  const settled = realtimeLinkage.rulesLoaded
+  return {
+    loading: !hasData && !error && !settled,
+    error,
+    empty: !hasData && !error && settled,
+    retrying: false,
+  }
+})
+
+/** 活动告警区块的异步状态：失败时若还有旧快照则降级为「陈旧」而非错误 */
+const activePage = computed(() => {
+  const hasData = realtimeLinkage.active.length > 0
+  const error = hasData ? '' : realtimeLinkage.lastError
+  return {
+    loading: realtimeLinkage.loading && !hasData,
+    error,
+    empty: !realtimeLinkage.loading && !error && !hasData,
+    retrying: false,
+  }
+})
+const activeStale = computed(
+  () => !!realtimeLinkage.lastError && realtimeLinkage.active.length > 0,
+)
+
+/* ================================================================== */
+/* 失败汇总                                                            */
+/* ================================================================== */
+interface Failure {
+  key: string
+  label: string
+  retry: () => Promise<unknown> | void
+}
+const historyVisited = ref(false)
+
+const failures = computed<Failure[]>(() => {
+  const out: Failure[] = []
+  if (centerPage.error.value) {
+    out.push({ key: 'center', label: '告警中心指标', retry: () => centerPage.reload() })
+  }
+  if (realtimeLinkage.rulesError && realtimeLinkage.rules.length === 0) {
+    out.push({ key: 'rules', label: '联动规则', retry: () => realtimeLinkage.refresh() })
+  }
+  if (realtimeLinkage.lastError) {
+    out.push({ key: 'active', label: '活动告警轮询', retry: () => realtimeLinkage.refresh() })
+  }
+  if (historyVisited.value && historyPage.error.value) {
+    out.push({ key: 'history', label: '告警历史', retry: () => historyPage.reload() })
+  }
+  return out
+})
+const failureLabels = computed(() => failures.value.map((f) => f.label))
+
+const refreshing = ref(false)
+async function retryAllFailures() {
+  refreshing.value = true
+  try {
+    await Promise.all(failures.value.map((f) => f.retry()))
+  } finally {
+    refreshing.value = false
+  }
+}
+async function refreshAll() {
+  refreshing.value = true
+  try {
+    await Promise.all([
+      centerPage.reload(),
+      realtimeLinkage.refresh(),
+      historyVisited.value ? historyPage.reload() : undefined,
+    ])
+  } finally {
+    refreshing.value = false
+  }
+}
+function retryRules() {
+  void realtimeLinkage.refresh()
+}
+function retryActive() {
+  void realtimeLinkage.refresh()
+}
+
+/* ================================================================== */
+/* 活动告警: 分级 / 筛选 / 批量 / 导出                                  */
+/* ================================================================== */
+const levelCounts = computed(() => {
+  const c = { crit: 0, warn: 0, info: 0 }
+  for (const a of realtimeLinkage.active) {
+    if (a.level === 'crit') c.crit += 1
+    else if (a.level === 'warn') c.warn += 1
+    else c.info += 1
+  }
+  return c
+})
+
+const levelFilter = ref<'all' | 'crit' | 'warn' | 'info'>('all')
+const keyword = ref('')
+
+const levelOptions = computed(() => [
+  { value: 'all' as const, label: '全部', count: realtimeLinkage.active.length },
+  { value: 'crit' as const, label: '紧急', count: levelCounts.value.crit },
+  { value: 'warn' as const, label: '重要', count: levelCounts.value.warn },
+  { value: 'info' as const, label: '提示', count: levelCounts.value.info },
+])
+
+const sortedActive = computed<Alarm[]>(() => {
+  const order: Record<string, number> = { crit: 0, warn: 1, info: 2 }
+  const kw = keyword.value.trim().toLowerCase()
+  return [...realtimeLinkage.active]
+    .filter((a) => levelFilter.value === 'all' || a.level === levelFilter.value)
+    .filter((a) => {
+      if (!kw) return true
+      return (
+        (a.message ?? '').toLowerCase().includes(kw) || (a.system ?? '').toLowerCase().includes(kw)
+      )
+    })
+    .sort((x, y) => (order[x.level] ?? 3) - (order[y.level] ?? 3)) as Alarm[]
+})
+
+function resetFilter() {
+  levelFilter.value = 'all'
+  keyword.value = ''
+}
+
+/* ---- 批量操作 ---- */
+const selectedKeys = ref<string[]>([])
+const batching = ref(false)
+
+const selectedAlarms = computed(() =>
+  sortedActive.value.filter((a) => selectedKeys.value.includes(alarmKeyOf(a))),
+)
+const ackableSelected = computed(() => selectedAlarms.value.filter((a) => a.status === 'active'))
+const resolvableSelected = computed(() =>
+  selectedAlarms.value.filter((a) => a.status !== 'resolved'),
+)
+
+async function batchAck() {
+  const list = ackableSelected.value
+  if (!list.length) return
+  batching.value = true
+  try {
+    for (const a of list) await handleAck(a)
+    showToast(`已批量确认 ${list.length} 条告警`)
+    selectedKeys.value = []
+  } finally {
+    batching.value = false
+  }
+}
+async function batchResolve() {
+  const list = resolvableSelected.value
+  if (!list.length) return
+  batching.value = true
+  try {
+    for (const a of list) await handleResolve(a)
+    showToast(`已批量关单 ${list.length} 条告警`)
+    selectedKeys.value = []
+  } finally {
+    batching.value = false
+  }
+}
+
+/* ---- 导出 ---- */
+const ACTIVE_HEADERS = ['级别', '来源系统', '告警内容', '触发时间', '状态', '责任人']
+function exportActive() {
+  const rows = sortedActive.value.map((a) => [
+    lvText(a.level),
+    a.system,
+    a.message,
+    a.time ?? '',
+    alarmStateText(a.status),
+    a.owner ?? '',
+  ])
+  downloadCsv(stampedName('活动告警'), ACTIVE_HEADERS, rows)
+  showToast(`已导出 ${rows.length} 条活动告警`)
+}
+
+const HISTORY_HEADERS = [
+  '级别',
+  '系统',
+  '告警内容',
+  '测点',
+  '实测值',
+  '阈值',
+  '触发时间',
+  '状态',
+  '解决时间',
+  '自动闭环',
+]
+function exportHistory() {
+  const rows = (history.value?.items ?? []).map((e) => [
+    lvText(e.level),
+    e.system,
+    e.message,
+    e.metric,
+    e.value,
+    e.threshold,
+    e.triggeredAt,
+    alarmStateText(e.status),
+    e.resolvedAt ?? '',
+    e.autoResolved ? '是' : '否',
+  ])
+  downloadCsv(stampedName('告警历史'), HISTORY_HEADERS, rows)
+  showToast(`已导出 ${rows.length} 条告警历史`)
+}
+
+/* ================================================================== */
+/* 告警操作 (兼容实时联动告警)                                          */
+/* ================================================================== */
 async function handleAck(alarm: Alarm) {
-  const rt = (alarm as RtAlarm).rt
+  const rt = (alarm as RtAlarmLike).rt
   if (rt) {
-    realtimeLinkage.ack((alarm as RtAlarm).id ?? '')
+    realtimeLinkage.ack((alarm as RtAlarmLike).id ?? '')
     return
   }
   try {
     await acknowledgeAlarm(`evt-${alarm.time}-${alarm.system}`, '运维人员')
-  } catch (_) {}
-  if (a.value) {
-    const idx = a.value.active.findIndex((x) => x === alarm)
-    if (idx >= 0) a.value.active[idx] = { ...alarm, status: 'acknowledged' }
+  } catch (e) {
+    showToast(`确认失败：${e instanceof Error ? e.message : '未知错误'}`)
   }
 }
 
 async function handleResolve(alarm: Alarm) {
-  const rt = (alarm as RtAlarm).rt
+  const rt = (alarm as RtAlarmLike).rt
   if (rt) {
-    realtimeLinkage.resolve((alarm as RtAlarm).id ?? '')
+    realtimeLinkage.resolve((alarm as RtAlarmLike).id ?? '')
     return
   }
   try {
     await resolveAlarm(`evt-${alarm.time}-${alarm.system}`, '运维人员')
-  } catch (_) {}
-  if (a.value) {
-    a.value.active = a.value.active.filter((x) => x !== alarm).concat({ ...alarm, status: 'resolved' })
+  } catch (e) {
+    showToast(`关单失败：${e instanceof Error ? e.message : '未知错误'}`)
   }
 }
 
-/* ---- 告警历史 ---- */
-const history = ref<AlarmHistoryResponse | null>(null)
-const historyLoading = ref(false)
-
-async function loadHistory() {
-  historyLoading.value = true
-  try {
-    history.value = await getAlarmHistory({})
-  } catch (_) {
-    // 模拟历史数据
-    history.value = {
-      items: (a.value?.active ?? []).map((x, i) => ({
-        id: `evt-hist-${i}`,
-        ruleId: `r-hist-${i}`,
-        ruleName: `规则-${x.system}`,
-        metric: x.system,
-        level: x.level,
-        system: x.system,
-        message: x.message,
-        value: 0,
-        threshold: 0,
-        unit: undefined,
-        status:
-          x.status === 'resolved'
-            ? ('resolved' as const)
-            : x.status === 'acknowledged'
-              ? ('acknowledged' as const)
-              : ('active' as const),
-        triggeredAt: x.time ?? '',
-        resolvedAt: x.status === 'resolved' ? '2026-07-25 14:30' : undefined,
-        autoResolved: false,
-        escalationCount: 0,
-      })),
-      total: a.value?.active.length ?? 0,
-      page: 1,
-      limit: 50,
-      stats: {
-        total24h: (a.value?.active.length ?? 0) + 12,
-        active24h: a.value?.active.filter((x) => x.status !== 'resolved').length ?? 0,
-        resolved24h: a.value?.active.filter((x) => x.status === 'resolved').length ?? 0,
-        mttaMin: a.value?.sla.mttaMin ?? 15,
-        mttrMin: a.value?.sla.mttrMin ?? 30,
-        bySystem:
-          a.value?.active.reduce(
-            (acc, x) => {
-              acc[x.system] = (acc[x.system] ?? 0) + 1
-              return acc
-            },
-            {} as Record<string, number>,
-          ) ?? {},
-        byLevel: {
-          crit: a.value?.active.filter((x) => x.level === 'crit').length ?? 0,
-          warn: a.value?.active.filter((x) => x.level === 'warn').length ?? 0,
-          info: a.value?.active.filter((x) => x.level === 'info').length ?? 0,
-        },
-      },
-    }
+/* ================================================================== */
+/* 告警历史                                                            */
+/* ================================================================== */
+function switchHistory() {
+  activeTab.value = 'history'
+  if (!historyVisited.value || historyPage.error.value) {
+    historyVisited.value = true
+    void historyPage.reload()
   }
-  historyLoading.value = false
 }
 
 function stateLabel(s: string) {
-  return s === 'active'
-    ? '活跃'
-    : s === 'acknowledged'
-      ? '已确认'
-      : s === 'resolved'
-        ? '已解决'
-        : '已抑制'
+  return alarmStateText(s)
 }
 function stateTagClass(s: string) {
   return s === 'active' ? 'r' : s === 'acknowledged' ? 'a' : 'g'
 }
 
-/* ---- 历史趋势 ---- */
-const historyTrendMetrics: TrendMetric[] = [
+/* ---- 历史趋势 (前端合成示例, 已挂角标) ---- */
+const historyTrendMetrics = computed<TrendMetric[]>(() => [
   {
     name: 'alarm-total',
     label: tl('告警总数'),
@@ -846,21 +1164,19 @@ const historyTrendMetrics: TrendMetric[] = [
     unit: '条',
     latest: history.value?.stats.active24h,
   },
-]
+])
 
 const trendSeries = computed(() => {
   const n = 24
+  const total = history.value?.stats.total24h ?? 12
+  const active = history.value?.stats.active24h ?? 5
+  const totalData = sampleSeries(total, Math.max(4, total * 0.5), n, total * 100)
+  const activeData = sampleSeries(active, Math.max(2, active * 0.4), n, active * 100 + 7)
+  const toPts = (data: number[]) =>
+    data.map((value, i) => ({ ts: `H-${n - i}`, quality: 'good' as const, value }))
   return {
-    'alarm-total': Array.from({ length: n }, (_, i) => ({
-      ts: `H-${n - i}`,
-      quality: 'good' as const,
-      value: Math.round(5 + Math.random() * 20),
-    })),
-    'alarm-active': Array.from({ length: n }, (_, i) => ({
-      ts: `H-${n - i}`,
-      quality: 'good' as const,
-      value: Math.round(2 + Math.random() * 8),
-    })),
+    'alarm-total': toPts(totalData),
+    'alarm-active': toPts(activeData),
   } as Record<string, MetricHistoryPoint[]>
 })
 
@@ -868,33 +1184,158 @@ function onRangeChange(_range: string) {
   /* 可选 */
 }
 
+/* ================================================================== */
+/* 生命周期                                                            */
+/* ================================================================== */
 let timer = 0
-async function load() {
-  try {
-    a.value = await getAlarms()
-  } catch (_) {
-    /* mock兜底 */
-  }
-}
 onMounted(() => {
-  refreshEngineState()
-  load()
-  timer = window.setInterval(load, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000))
-  // 规则配置统一由后端管理 (判定/收敛/升级均在服务端执行)
-  getAlarmRules()
-    .then((rules) => {
-      if (Array.isArray(rules) && rules.length) {
-        localRules.value = rules
-        refreshEngineState()
-      }
-    })
-    .catch(() => {})
+  timer = window.setInterval(() => void centerPage.reload(), Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000))
 })
 onBeforeUnmount(() => clearInterval(timer))
 </script>
 
 <style scoped>
-/* Tab 切换 */
+/* ===== Header ===== */
+.view-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.vh-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.vh-left h1 {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+.vh-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--cyan);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ph-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  color: var(--txt2);
+  background: transparent;
+  border: 1px solid var(--line);
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.ph-btn:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--cyan);
+}
+.ph-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.is-spin {
+  animation: ph-rotate 0.8s linear infinite;
+}
+@keyframes ph-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ===== KPI: 主 + 次 ===== */
+.kpi-band {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.alarm-primary {
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #16273a, #0f1923);
+  border: 1px solid #24405a;
+  border-radius: 10px;
+  padding: 12px 14px;
+  position: relative;
+  overflow: hidden;
+}
+.alarm-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.6), transparent);
+}
+.ap-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.ap-label {
+  font-size: 12px;
+  color: #94a3b8;
+  letter-spacing: 0.5px;
+}
+.ap-value {
+  font-size: 40px;
+  font-weight: 800;
+  line-height: 1;
+  color: #e6edf3;
+  font-variant-numeric: tabular-nums;
+}
+.ap-value.is-crit {
+  color: #ef4444;
+}
+.ap-break {
+  display: flex;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 10px;
+  flex-wrap: wrap;
+}
+.ap-lv {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.ap-lv.crit {
+  color: #ef4444;
+}
+.ap-lv.warn {
+  color: #f59e0b;
+}
+.ap-lv.info {
+  color: #8892b0;
+}
+.kpi-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* ===== Tab ===== */
 .tv-btn {
   padding: 6px 14px;
   border: 1px solid var(--line);
@@ -941,7 +1382,121 @@ onBeforeUnmount(() => clearInterval(timer))
   flex-shrink: 0;
 }
 
-/* 规则卡片 */
+/* ===== 工具栏 ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.tb-left,
+.tb-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.sel-count {
+  font-size: 11px;
+  color: var(--cyan);
+  font-weight: 600;
+}
+.seg {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seg-btn {
+  padding: 5px 11px;
+  border: none;
+  background: var(--bg2);
+  color: var(--txt2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.seg-btn + .seg-btn {
+  border-left: 1px solid var(--line);
+}
+.seg-btn:hover {
+  color: #fff;
+}
+.seg-btn.on {
+  background: rgba(34, 227, 255, 0.14);
+  color: var(--cyan);
+  font-weight: 600;
+}
+.seg-n {
+  font-size: 10px;
+  opacity: 0.75;
+  font-variant-numeric: tabular-nums;
+}
+.tb-input {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt);
+  font-size: 12px;
+  min-width: 180px;
+}
+.tb-input:focus {
+  outline: none;
+  border-color: var(--cyan);
+}
+.tb-clear {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--txt2);
+  font-size: 12px;
+  cursor: pointer;
+}
+.tb-clear:hover {
+  color: #fff;
+  border-color: var(--cyan);
+}
+.tb-btn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.tb-btn:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--cyan);
+}
+.tb-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.tb-btn.ack {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.tb-btn.ack:hover:not(:disabled) {
+  background: rgba(34, 227, 255, 0.12);
+}
+.tb-btn.resolve {
+  border-color: var(--green);
+  color: var(--green);
+}
+.tb-btn.resolve:hover:not(:disabled) {
+  background: rgba(43, 212, 122, 0.12);
+}
+
+/* ===== 规则卡片 ===== */
 .pwr-card {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -1126,7 +1681,7 @@ onBeforeUnmount(() => clearInterval(timer))
   background: rgba(43, 212, 122, 0.1);
 }
 
-/* 关联处置预案弹窗 */
+/* ===== 弹窗 ===== */
 .modal-mask {
   position: fixed;
   inset: 0;
@@ -1393,5 +1948,53 @@ onBeforeUnmount(() => clearInterval(timer))
 .fade-leave-to {
   opacity: 0;
   transform: translateX(-50%) translateY(8px);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1100px) {
+  .kpi-band {
+    grid-template-columns: 1fr;
+  }
+  .alarm-primary {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+  }
+  .ap-break {
+    margin-top: 0;
+    padding-top: 0;
+    margin-left: auto;
+  }
+}
+@media (max-width: 768px) {
+  .view-head {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .vh-right {
+    justify-content: flex-start;
+  }
+  .hist-thead,
+  .hist-row {
+    grid-template-columns: 56px 60px 1fr 90px 60px;
+  }
+  .hist-thead .w-time:last-of-type,
+  .hist-thead .w-auto,
+  .hist-row .w-time:last-of-type,
+  .hist-row .w-auto {
+    display: none;
+  }
+  .tb-input {
+    min-width: 0;
+    width: 100%;
+  }
+  .alarm-primary {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  .ap-break {
+    margin-left: 0;
+  }
 }
 </style>

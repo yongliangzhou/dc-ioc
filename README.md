@@ -1,6 +1,6 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.10.0** | 多模型 AI 运维助手 · iHealth 月度健康报告 · 运维页面美化与图表布局优化 | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
+> **v0.11.0** | 侧边导航按业务域重组为 9 组并支持折叠 · 菜单图标体系补全 · 原生弹窗收敛收口 | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
 
 ---
 
@@ -117,39 +117,55 @@ dc-ioc-platform/
 │   │   │   ├── security/              #   安防消防 (4 页面)
 │   │   │   │   ├── Cctv.vue / Acs.vue #     视频监控 / 门禁管理
 │   │   │   │   └── Fire.vue / Ids.vue #     消防报警 / 防入侵
-│   │   │   ├── monitor/               #   网络监控 (5 页面)
-│   │   │   │   ├── NetworkDashboard.vue #   网络总览
-│   │   │   │   ├── NetworkSwitches.vue  #   核心交换机
-│   │   │   │   ├── NetworkRouters.vue   #   路由器
-│   │   │   │   ├── NetworkFirewalls.vue #   防火墙
-│   │   │   │   └── NetworkWireless.vue  #   无线网络
-│   │   │   ├── ops/                   #   智能运营与运维 (20 页面)
-│   │   │       ├── ThingModelEditor.vue # 物模型图形化编辑器 (属性/服务/事件 + 实时预览 + 校验)
-│   │   │       ├── DataCenterManage.vue # 多数据中心管理 (增改删/启停/设为当前)
-│   │   │       ├── DataCenterCompare.vue # 跨中心对比仪表盘 + 统一告警视图
-│   │   │       ├── Twin.vue           #     数字孪生
-│   │   │       ├── Topology.vue       #     链路拓扑
-│   │   │       ├── Capacity.vue       #     容量管理
+│   │   │   ├── monitor/               #   设施监控 (27 页面: 暖通 / 电力 / 安防消防 / 网络 / 健康度 / 数字可视)
+│   │   │   │   ├── HvacDashboard.vue  #     暖通总览
+│   │   │   │   ├── HvacChiller.vue / HvacCrac.vue / HvacLiquid.vue  #   冷源 / 空调末端 / 液冷
+│   │   │   │   ├── HvacLinkage.vue / ThermalCloud.vue  #   制冷链路可视化 / 温度云图
+│   │   │   │   ├── PowerDashboard.vue #     电力总览
+│   │   │   │   ├── PowerHv.vue / PowerLv.vue / PowerLinkage.vue  #   10KV / 0.4KV / 配电链路
+│   │   │   │   ├── PowerGenset.vue / PowerFuel.vue / PowerBattery.vue  #   柴发 / 燃油 / 电池
+│   │   │   │   ├── SecurityDashboard.vue  #   安防消防总览
+│   │   │   │   ├── SecurityCctv.vue / SecurityAcs.vue / SecurityIds.vue / SecurityFire.vue  #   视频 / 门禁 / 入侵 / 消防
+│   │   │   │   ├── NetworkDashboard.vue  #   网络总览
+│   │   │   │   ├── NetworkSwitches.vue / NetworkRouters.vue  #   核心交换机 / 路由器
+│   │   │   │   ├── NetworkFirewalls.vue / NetworkWireless.vue  #   防火墙 / 无线网络
+│   │   │   │   ├── HealthDashboard.vue #     设备健康度
+│   │   │   │   └── Scene3D.vue / BigScreen.vue / BigScreenDesigner.vue  #   3D 视图 / 定制大屏 / 大屏定制
+│   │   │   ├── ops/                   #   运维 / 资产 / 知识AI / 平台集成 (32 页面)
 │   │   │       ├── Alarms.vue         #     告警中心
-│   │   │       ├── AlarmRules.vue     #     告警规则引擎
 │   │   │       ├── AlarmHistory.vue   #     告警历史
-│   │   │       ├── Energy.vue         #     电量预测与节能
+│   │   │       ├── AlarmRules.vue     #     告警规则引擎
 │   │   │       ├── Tickets.vue        #     事件工单中心
-│   │   │       ├── Inspect.vue        #     巡检管理
-│   │   │       ├── Maintain.vue       #     维保管理
-│   │   │       ├── Drill.vue          #     演练管理
-│   │   │       ├── Shift.vue          #     排班管理
-│   │   │       ├── Assistant.vue      #     AI 运维助手
+│   │   │       ├── Inspection.vue     #     巡检管理
+│   │   │       ├── InspectionTemplate.vue # 电子巡检
+│   │   │       ├── Maintenance.vue    #     维保管理
+│   │   │       ├── MaintenanceCalendar.vue # 维保日历
+│   │   │       ├── Duty.vue           #     值班管理
+│   │   │       ├── DutyCalendar.vue   #     排班日历
+│   │   │       ├── RoomAccess.vue     #     机房进出登记
+│   │   │       ├── FaultImpact.vue    #     故障影响分析
+│   │   │       ├── DrillPlan.vue      #     应急演练
 │   │   │       ├── Risk.vue           #     风险管理
-│   │   │       ├── Knowledge.vue      #     知识库
+│   │   │       ├── PowerAiHazards.vue #     供配电 AI 隐患
+│   │   │       ├── HealthReport.vue   #     iHealth 月度健康报告
+│   │   │       ├── Supplier.vue       #     供应商管理
+│   │   │       ├── Equipment.vue      #     统一设备台账
+│   │   │       ├── UPosition.vue      #     U 位识别
+│   │   │       ├── Cabinets.vue       #     机柜管理
+│   │   │       ├── AssetLifecycle.vue #     资产生命周期
+│   │   │       ├── TenantManage.vue   #     租户管理
+│   │   │       ├── KnowledgeCenter.vue #    知识库
+│   │   │       ├── KnowledgeCollaboration.vue # 知识协作
+│   │   │       ├── Assistant.vue      #     AI 运维助手
+│   │   │       ├── ThingModelEditor.vue #   物模型图形化编辑器 (属性/服务/事件 + 实时预览 + 校验)
 │   │   │       ├── Collector.vue      #     采集器接入
 │   │   │       ├── Telemetry.vue      #     设备遥测
-│   │   │       ├── Cabinets.vue       #     机柜管理
-│   │   │       ├── Equipment.vue      #     统一设备台账
-│   │   │       ├── HealthReport.vue   #     iHealth 月度健康报告
+│   │   │       ├── WorkflowCenter.vue #     ITIL 流程
 │   │   │       ├── IntegrationHub.vue #     集成验证中心
-│   │   │       ├── Supplier.vue       #     供应商管理
-│   │   │       └── PowerAiHazards.vue #     供配电 AI 隐患
+│   │   │       ├── DataCenterManage.vue #   多数据中心管理 (增改删/启停/设为当前)
+│   │   │       └── DataCenterCompare.vue #  跨中心对比仪表盘 + 统一告警视图
+│   │   │   ├── energy/
+│   │   │       └── EnergyDashboard.vue #   电量预测与节能 (含 iCooling 制冷策略优化)
 │   │   │   ├── twin/
 │   │   │       ├── TwinDashboard.vue  #   数字孪生总览 (Raptor/方舟)
 │   │   │       └── Twin3D.vue         #   3D 数字孪生拓扑 (three.js: 旋转/缩放/分层/实时映射)
@@ -161,8 +177,9 @@ dc-ioc-platform/
 │   │   ├── hooks/useWebSocket.ts      #   WebSocket 组合式函数 (自动重连)
 │   │   ├── engine/
 │   │   │   └── realtimeLinkage.ts     #   实时越限联动引擎
-│   │   ├── router/index.ts            #   路由 + Auth Guard (40+ 条路由)
-│   │   ├── layouts/DefaultLayout.vue   #   主布局 (7 组侧边栏菜单)
+│   │   ├── router/index.ts            #   路由 + Auth Guard (63 条路由)
+│   │   ├── layouts/DefaultLayout.vue   #   主布局 (9 组可折叠侧边栏菜单, 折叠态按分组 id 记忆)
+│   │   ├── components/layout/NavIcon.vue # 侧边栏图标 (内联 lucide SVG, 55+ 图标)
 │   │   ├── components/                #   通用/图表/业务组件
 │   │   │   ├── MetricCard.vue         #     指标卡片
 │   │   │   ├── KnowledgePanels.vue    #     知识库面板
@@ -233,90 +250,163 @@ dc-ioc-platform/
 
 ## 三、业务模块全景
 
-### 3.1 暖通监控系统（HVAC）
+### 3.0 侧边导航结构（9 组，可折叠）
+
+左侧栏由 `layouts/DefaultLayout.vue` 的 `nav` 计算属性驱动（**非路由自动生成**），按业务域划分为 9 组。
+组标题可点击折叠/展开（`ChevronDown` 展开 / `ChevronRight` 收起，默认全展开），折叠状态按分组 `id` 记忆
+（不随 i18n 语言切换丢失），路由变化时自动展开当前页所属分组，避免跳转后菜单项"消失"。
+
+| # | 分组 | 内容 |
+|---|---|---|
+| 1 | **总览** | IOC 驾驶舱 |
+| 2 | **设施监控** | 暖通空调（冷源/末端/液冷/制冷链路/温度云图）· 电力监控（10KV/0.4KV/配电链路/柴发/燃油/电池）· 物理安防与消防（视频/门禁/入侵/消防）· 网络监控（交换/路由/防火墙/无线）· 设备健康度 · 数字可视（3D/大屏/大屏定制） |
+| 3 | **告警** | 告警中心 · 告警历史 · 告警规则引擎 |
+| 4 | **运维作业** | 巡检（+电子巡检）· 维保（+维保日历）· 值班（+排班日历）· 事件工单中心 · 机房进出登记 · 故障影响分析 · 应急演练 · 风险管理 · 供配电 AI 隐患 · iHealth 报告 · 供应商管理 |
+| 5 | **资产** | 统一设备台账 · U 位识别 · 机柜管理 · 资产生命周期 · 租户管理 |
+| 6 | **能效** | 电量预测与节能 |
+| 7 | **知识与 AI** | 知识库 · 知识协作 · AI 运维助手 |
+| 8 | **平台集成** | 物模型 · 采集器接入 · 设备遥测 · ITIL 流程 · 集成验证中心 · 数据中心（管理/对比） |
+| 9 | **系统管理** | 操作审计 |
+
+> 约定：菜单项与路由一一对应（**63 条路由 ↔ 63 个菜单项**）。新增页面需**同时**在 `router/index.ts`
+> 注册路由并在 `DefaultLayout.vue` 的 `nav` 中登记入口，否则会成为无入口的孤儿页。
+
+### 3.1 总览（Overview）
+
+| 页面 | 路由 | 说明 |
+|---|---|---|
+| IOC 驾驶舱 | `/overview` | 园区/机房级 KPI 总览、PUE 迷你趋势、分域健康度与在线率、活跃告警；campus KPI 真实时序由 `/api/dashboard/overview/trends` 提供 |
+
+### 3.2 设施监控（Facility Monitoring）
+
+#### 暖通空调 `/monitor/hvac`
 
 | 页面 | 路由 | 规模 | 核心指标 |
 |---|---|---|---|
-| **冷源系统** | `/hvac/chiller` | **8台冷机 (4+2+N)**, 8冷却塔, 8冷冻泵/冷却泵/二次泵, 4板换, 8电动阀, 6000m³蓄冷罐 | 总装机 28MW, 供水温度, PLR, COP, 三级自然冷 |
-| **空调末端** | `/hvac/crac` | 精密空调群组 + 新风 + 恒湿 + 包间环境 | 送风温度, 回风温度, 能耗, 室内外温差 |
-| **液冷系统** | `/hvac/liquid-cooling` | 4台一次侧CDU, 8台二次侧CDU (A/B/C/D区), 冷板监控, 分集液管路, 漏液检测, 余热回收 | 供液35/45℃, ΔT, PUE贡献0.06, 自然冷4380h, 余热1.2MW |
+| 暖通总览 | `/monitor/hvac` | 4 张聚合 KPI + 冷源/末端/液冷入口卡 | 分域健康度、在线设备数 |
+| **冷源系统** | `/monitor/hvac/chiller` | **8台冷机 (4+2+N)**, 8冷却塔, 8冷冻泵/冷却泵/二次泵, 4板换, 8电动阀, 6000m³蓄冷罐 | 总装机 28MW, 供水温度, PLR, COP, 三级自然冷 |
+| **空调末端** | `/monitor/hvac/crac` | 精密空调群组 + 新风 + 恒湿 + 包间环境（12 列可显隐、包间卡片联动筛选） | 送风温度, 回风温度, 能耗, 室内外温差 |
+| **液冷系统** | `/monitor/hvac/liquid` | 4台一次侧CDU, 8台二次侧CDU (A/B/C/D区), 冷板监控, 分集液管路, 漏液检测, 余热回收 | 供液35/45℃, ΔT, PUE贡献0.06, 自然冷4380h, 余热1.2MW |
+| 制冷链路可视化 | `/monitor/hvac/linkage` | 冷机 → 水泵 → 板换 → 末端全链路 | 链路流向、节点状态、供回水温差 |
+| 温度云图 | `/monitor/hvac/thermal` | 通道层 / 机柜层温度场（响应式 1280/760 断点） | 温度分布、热点定位 |
 
 > 液冷系统架构：一次侧中温水 32/38℃ 经 CDU 板换 → 二次侧洁净冷却液 35/45℃ → 冷板直触 GPU。支持 GPU 节点级温度监控 (H800/H100/A800)，闭塔+干冷器自然冷覆盖率 >50%，N+1 冗余自动切换。
 
-### 3.2 电力监控系统（Power）
+#### 电力监控 `/monitor/power`
 
 | 页面 | 路由 | 规模 |
 |---|---|---|
-| **10KV 中压配电** | `/power/hv` | 两路市电 + 母联, 变压器群 |
-| **0.4KV 低压配电** | `/power/lv` | UPS 双总线, 列头柜, 机柜级 PDU |
-| **柴发并机系统** | `/power/genset` | N+1 柴发群, 并机逻辑, 自动切换 |
-| **燃油监控** | `/power/fuel` | 油罐液位, 日耗量, 补油周期 |
-| **电池监控** | `/power/battery` | 蓄电池组电压/内阻/温度, 放电测试 |
+| 电力总览 | `/monitor/power` | 4 张聚合 KPI + 5 个电力子系统入口卡（栅格已统一 `cols-2`） |
+| **10KV 中压配电** | `/monitor/power/hv` | 两路市电 + 母联, 变压器群 |
+| **0.4KV 低压配电** | `/monitor/power/lv` | UPS 双总线, 列头柜, 机柜级 PDU |
+| 配电链路可视化 | `/monitor/power/linkage` | 市电 → 变压器 → UPS → 列头柜 → 机柜 全链路 |
+| **柴发并机系统** | `/monitor/power/genset` | N+1 柴发群, 并机逻辑, 自动切换 |
+| **燃油监控** | `/monitor/power/fuel` | 油罐液位, 日耗量, 补油周期 |
+| **电池监控** | `/monitor/power/battery` | 蓄电池组电压/内阻/温度, 放电测试（含空态与错误重试） |
 
-### 3.3 安防消防（Security）
+#### 物理安防与消防 `/monitor/security`
 
-| 页面 | 路由 |
-|---|---|
-| 视频监控 | `/security/cctv` |
-| 门禁管理 | `/security/acs` |
-| 防入侵系统 | `/security/ids` |
-| 消防报警 | `/security/fire` |
-
-### 3.4 智能运营平台（Ops - 运营）
-
-| 页面 | 路由 | 权限 |
+| 页面 | 路由 | 功能 |
 |---|---|---|
-| 数字孪生 (Raptor) | `/ops/twin` | — |
-| 链路拓扑 | `/ops/topology` | — |
-| 容量管理 | `/ops/capacity` | — |
-| 告警中心 | `/ops/alarms` | — |
-| 告警规则引擎 | `/ops/alarm-rules` | admin/operator |
-| 告警历史 | `/ops/alarm-history` | — |
-| 电量预测与节能 | `/ops/energy` | — |
+| 安防消防总览 | `/monitor/security` | 4 张聚合 KPI + 视频/门禁/入侵/消防入口卡 |
+| 视频监控 | `/monitor/security/cctv` | 摄像头在线状态与画面轮巡 |
+| 门禁管理 | `/monitor/security/acs` | 门禁点、刷卡记录、授权管理 |
+| 防入侵系统 | `/monitor/security/ids` | 入侵探测与防区状态 |
+| 消防报警 | `/monitor/security/fire` | 消防主机、探测器、联动设备 |
 
-### 3.5 运维作业管理（Ops - 运维）
-
-| 页面 | 路由 | 权限 |
-|---|---|---|
-| 事件工单中心 | `/ops/tickets` | admin/operator |
-| AI 运维助手 | `/ops/assistant` | — |
-| 巡检管理 | `/ops/inspect` | admin/operator |
-| 维保管理 | `/ops/maintain` | admin/operator |
-| 演练管理 | `/ops/drill` | admin/operator |
-| 排班管理 | `/ops/shift` | admin/operator |
-| 风险管理 | `/ops/risk` | admin/operator |
-| 知识库 | `/ops/knowledge` | admin/operator |
-| 采集器接入 | `/ops/collector` | admin/operator |
-| 设备遥测 | `/ops/telemetry` | admin/operator |
-| iHealth 健康报告 | `/ops/health-report` | admin/operator |
-
-### 3.6 资产管理
-
-| 页面 | 路由 | 权限 |
-|---|---|---|
-| 机柜管理 | `/ops/cabinets` | admin/operator |
-| 统一设备台账 | `/ops/equipment` | admin/operator |
-
-### 3.7 网络监控
+#### 网络监控 `/monitor/net`
 
 | 页面 | 路由 | 权限 | 功能 |
 |---|---|---|---|
-| 网络总览 | `/monitor/network` | admin/operator/viewer | 全网拓扑概览与 KPI 仪表盘 |
-| 核心交换机 | `/monitor/network/switches` | admin/operator/viewer | 交换机运行状态、端口流量、CPU/内存 |
-| 路由器 | `/monitor/network/routers` | admin/operator/viewer | BGP 状态、吞吐量、会话数、路由表 |
-| 防火墙 | `/monitor/network/firewalls` | admin/operator/viewer | 并发会话、吞吐量、规则命中统计 |
-| 无线网络 | `/monitor/network/wireless` | admin/operator/viewer | AP 在线状态、2.4G/5G 信道利用率、客户端分布 |
+| 网络总览 | `/monitor/net` | admin/operator | 全网拓扑概览与 KPI 仪表盘 |
+| 核心交换机 | `/monitor/net/switches` | admin/operator | 交换机运行状态、端口流量、CPU/内存 |
+| 路由器 | `/monitor/net/routers` | admin/operator | BGP 状态、吞吐量、会话数、路由表 |
+| 防火墙 | `/monitor/net/firewalls` | admin/operator | 并发会话、吞吐量、规则命中统计（磁盘占用为模拟字段，页面已 `partial` 标注） |
+| 无线网络 | `/monitor/net/wireless` | admin/operator | AP 在线状态、2.4G/5G 信道利用率、客户端分布 |
 
-### 3.8 物模型与多数据中心（v0.9 新增）
+#### 设备健康度与数字可视
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 设备健康度 | `/monitor/health` | admin/operator | 全量设备健康评分分布与劣化趋势 |
+| 3D 视图 | `/monitor/visual/3d` | admin/operator | three.js 机房场景：按 location 分层（机房→机柜→设备）；OrbitControls 旋转/缩放；分层显隐；轮询实时染色（在线青 / 离线灰 / 高温红）；点击设备弹出指标卡 |
+| 定制大屏 | `/monitor/visual/bigscreen` | admin/operator | 大屏展示态 |
+| 大屏定制 | `/monitor/visual/designer` | admin/operator | 可视化拖拽编排大屏 |
+
+### 3.3 告警（Alarms）
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 告警中心 | `/ops/alarms` | — | 活跃告警（含实时联动引擎产生项）、确认 / 关单 / 一键转工单 |
+| 告警历史 | `/ops/alarm-history` | — | 历史告警回溯与趋势（多通道告警已并入） |
+| 告警规则引擎 | `/ops/alarm-rules` | admin/operator | 13 类设备阈值规则、5min 收敛窗口、设备抑制、规则启停 |
+
+### 3.4 运维作业（Ops）
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 巡检管理 | `/ops/inspection` | admin/operator | 巡检计划与执行记录 |
+| 电子巡检 | `/ops/inspection-template` | admin/operator | 巡检模板配置与移动端填报 |
+| 维保管理 | `/ops/maintenance` | admin/operator | 维保计划、工单与执行 |
+| 维保日历 | `/ops/maintenance-calendar` | admin/operator | 维保排期日历视图 |
+| 值班管理 | `/ops/duty` | admin/operator | 值班编排与交接 |
+| 排班日历 | `/ops/duty-calendar` | admin/operator | 排班日历视图 |
+| 事件工单中心 | `/ops/tickets` | admin/operator | 工单 CRUD + 状态机流转（`done→open` 等非法跳转返回 400）+ SLA 超时 |
+| 机房进出登记 | `/ops/room-access` | admin/operator | 进出登记与审批留痕 |
+| 故障影响分析 | `/ops/fault-impact` | admin/operator | 故障源 → 关键链路 → 受影响业务域；缓解建议、故障源遥测、报告存档与会签 |
+| 应急演练 | `/ops/drill-plan` | admin/operator | 演练计划（level/scope/duration/steps）与演练记录；「演练预演」可映射候选故障源 |
+| 风险管理 | `/ops/risk` | admin/operator | 风险清单 + P×I 风险矩阵（按等级着色、点击格筛选）+ 筛选/排序/分页/导出 |
+| 供配电 AI 隐患 | `/ops/power-ai-hazards` | admin/operator | 供配电隐患识别与处置跟踪 |
+| iHealth 健康报告 | `/ops/health-report` | admin/operator | 月度健康报告：7 大域评分 → 总分/等级/环形图 + 关键发现与改进建议 |
+| 供应商管理 | `/ops/supplier` | admin/operator | 供应商档案与多维度评分（滑块录入 + 删除二次确认） |
+
+### 3.5 资产（Asset）
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 统一设备台账 | `/ops/equipment` | admin/operator | 11 个域设备统一台账 |
+| U 位识别 | `/ops/u-position` | admin/operator | 电子工单台账（基准）+ RFID/资产标签（实测）双源融合；42U 立面冲突检测与来源置信度 |
+| 机柜管理 | `/ops/cabinets` | admin/operator | 机柜空间 / 电力 / 制冷容量 |
+| 资产生命周期 | `/ops/asset-lifecycle` | admin/operator | 资产从入库到退役全周期跟踪 |
+| 租户管理 | `/ops/tenant-manage` | admin/operator | 租户档案与配额（机柜/设备/功耗/带宽）+ 实时用量与健康状态 |
+
+### 3.6 能效（Energy）
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 电量预测与节能 | `/analysis/energy` | admin/operator | 能耗分析与电量预测；含 iCooling 制冷策略优化（策略卡 / 验证进度 / 收益） |
+
+### 3.7 知识与 AI（Knowledge & AI）
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 知识库 | `/ops/knowledge` | admin/operator | 知识条目管理、批量导入（PDF/Word，PyMuPDF 优先）、检索 |
+| 知识协作 | `/ops/knowledge-collab` | admin/operator | 知识评审与协作流程 |
+| AI 运维助手 | `/ops/assistant` | admin/operator | 本地知识库检索生成 + 可选大模型润色；多模型注册表运行时热切换与连通性诊断 |
+
+### 3.8 平台集成（Platform & Integration）
 
 | 能力 | 路由 | 权限 | 说明 |
 |---|---|---|---|
 | **物模型编辑器** | `/ops/thing-model` | admin/operator | 图形化编辑设备「属性/服务/事件」三要素模板；左列表 + 中表单 + 右实时 JSON 预览；保存前校验 key 唯一性/必填/标识符格式/重复 |
-| **3D 数字孪生拓扑** | `/twin/3d` | admin/operator | three.js 机房场景：按 location 分层（机房→机柜→设备）立体呈现；OrbitControls 旋转/滚轮缩放；分层显隐开关；轮询实时染色（在线青色 / 离线置灰 / 高温红色）；点击设备弹出指标卡 |
+| **采集器接入** | `/ops/collector` | admin/operator | 外部采集器注册与接入状态（消费 `/api/external/*`） |
+| **设备遥测** | `/ops/telemetry` | admin/operator | 设备测点实时/历史遥测（`/api/external/devices/{id}/metrics/realtime|history`） |
+| **ITIL 流程** | `/ops/workflow` | admin/operator | 服务端流程引擎：创建/推进/关闭/重开/审批/日志；审批权限按角色判定 |
+| **集成验证中心** | `/ops/integration-hub` | admin/operator | 外部系统对接与连通性验证 |
 | **多数据中心管理** | `/ops/datacenter` | admin/operator | 数据中心卡片网格（增改删/启停/设为当前）；切换写入 `/api/idc/current` 全局生效 |
 | **跨中心对比** | `/ops/datacenter/compare` | admin/operator | 各中心电力/制冷/机柜/告警并排 KPI 卡 + 对比柱状图 + 统一告警视图 |
 
 > **后端支撑**（v0.9 新增）：`thing_models` / `thing_model_items` 双表承接物模型全生命周期（接管原只读 `GET /thing-models`）；`IDC` 模型扩展 `capacity_kw` / `description` / `is_current` 字段，`ExternalDevice` 增加可空 `idc_id` 实现设备归属站点聚合。新增 `/api/thing-models`（CRUD）、`/api/idc`（CRUD + `/current` 切换 + `/compare` 对比 + `/alarms` 统一告警）。
+
+### 3.9 系统管理（System）
+
+| 页面 | 路由 | 权限 | 功能 |
+|---|---|---|---|
+| 操作审计 | `/admin/audit` | admin/operator | 审计日志查询（过滤/分页/CSV 导出，`/api/audit-logs`） |
+
+> **历史遗留（当前未接入路由）**：数字孪生 `/ops/twin`、链路拓扑 `/ops/topology`、容量管理 `/ops/capacity`、
+> 3D 数字孪生 `/twin/3d` 四条路由均已移除——3D 能力现由 `/monitor/visual/3d` 承载，容量类能力并入
+> 「3.5 资产」（U 位识别 / 机柜管理）。
 
 ---
 
@@ -349,34 +439,6 @@ MockCollector (模拟采集器) 或 真实采集器
 | TimescaleDB | `005_metric_raws_hypertable.sql` | 超表 → 7天压缩 → 90天保留 → 5min/1h 连续聚合 |
 | 告警引擎 | `alarm_engine.py` | 13 类设备阈值规则 + 5min 收敛窗口 + 设备抑制 + 通知回调 |
 | WebSocket 实时推送 | `ws_broadcaster.py` `useWebSocket.ts` | KPI 快照 (5s) + 告警实时推送到驾驶舱全客户端 |
-
-### API 域汇总
-
-后端统一挂载于 `/api`，共 28 个业务域 + 认证。主要分组：
-
-| 分组 | 典型端点 |
-|------|----------|
-| 认证 `auth` | `POST /api/auth/login`、`/refresh`、`/change-password`、`/users`、`/register`（v0.7 新增，受 `ALLOW_SELF_REGISTER` 控制） |
-| 驾驶舱 `dashboard` | `GET /api/dashboard/overview`、`/campuses`、`/campus-comparison`（均缓存 30s） |
-| 设备台账 `equipment` | 11 个域 CRUD（冷机/空调末端/配电/机柜/柴发/消防/动环/安防等） |
-| 暖通 `hvac` / 电力 `power` | 冷源/空调末端/液冷、10KV/0.4KV/柴发/燃油/电池 |
-| 安防消防 `security` | 视频监控/门禁/消防报警主机/探测器/联动设备 |
-| 运维作业 `ops` | 设备资产、维保计划、采集器接入、设备遥测 |
-| 告警 `alarms` / `alarm_history` / `alarm_rules` | 告警中心、历史、规则引擎 |
-| 工单 `tickets` | 事件工单 CRUD + 状态机流转（`done→open` 等非法跳转被拒，返回 400） |
-| 巡检/维保/排班/演练/风险/知识库 | 运维全流程管理 |
-| 预案 `runbooks`（v0.7 新增） | `GET /api/runbooks/related`（告警关联处置预案，对齐前端 `Alarms.vue`） |
-| 审计 `audit`（v0.7 确认） | `GET /api/audit-logs`（分页/过滤/CSV 导出，前端 `AuditLogs.vue` 已对接） |
-| 上传 `uploads`（v0.7 新增） | `POST /api/uploads/avatar` / `/attachment` / `/batch`（类型/大小校验） |
-| 网络 `network` / 域名 `domain` | 交换机/路由/防火墙/无线、域名路由监控 |
-| 外部接入 `external` | 采集器注册/测点上报/告警评估（独立 `X-Collector-Token` 鉴权） |
-| 物模型 `thing-models` (v0.9) | `GET/POST/PUT/DELETE /api/thing-models`（property/service/event 三要素，接管只读出口） |
-| 多数据中心 `idc` (v0.9) | `GET/POST/PUT/DELETE /api/idc`、`GET/PUT /api/idc/current`、`GET /api/idc/compare`、`GET /api/idc/alarms` |
-| AI 助手 `assistant` | 知识库问答 + NIM 诊断端点 `/api/ops/assistant/status` |
-
-> 完整端点清单（含方法/路径/鉴权）见 `backend/api_endpoints.md`（由 `gen_api.py` 静态反射生成）。
-
-
 
 ### v0.3 — Phase 3 (2026-07) 生产化
 
@@ -433,6 +495,89 @@ MockCollector (模拟采集器) 或 真实采集器
 | 索引/时序优化 | `backend/deploy/sql/009_index_optimization.sql` `013_timeseries_optimization.sql` | 高频查询复合索引 + TimescaleDB 超表/压缩/连续聚合 |
 | 种子数据 | `seed_admin.py`（重写幂等三角色） `seed_demo.py`（新建演示数据） | 一键初始化账号与演示环境 |
 | 运维文档 | `deploy/backup.sh`（新建） `deploy/README.md` `redis_backup.md` `cache_strategy.md` | 备份自动化+告警、迁移策略、Redis 持久化、缓存策略 |
+
+### v0.8 — 代码工程化 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **Type 系统统一** | `frontend/src/types/index.ts` `stores/modules/alarms.ts` `engine/realtimeLinkage.ts` | 告警类型字段重命名 (lv→level / sys→system / desc→message / state→status / ts→time)，消除 86+ vue-tsc 类型错误，`vue-tsc --noEmit` 零错误通过 |
+| **OpenAPI 代码生成** | `frontend/openapi.json` `orval.config.js` `src/api/generated/index.ts` `src/api/generatedWrapper.ts` | 后端 API 契约 (29 端点 / 9 Schema) → orval 自动生成 1604 行 TypeScript 客户端，含 axios 桥接层 (`import { api } from '@/api/generatedWrapper'`) |
+| **组件库化** | `packages/dc-ioc-ui/` | StatusBadge / AlarmBadge / KpiCard 抽取为独立内部 npm 包 `@dc-ioc/ui`，Vite library mode 构建 (ESM + UMD + CSS)，24 个引用文件批量迁移，自包含样式 (零外部 class 依赖) |
+| **Pre-commit 检查** | `frontend/scripts/check-templates.mjs` `.husky/pre-commit` | 提交前自动扫描 Vue SFC 模板语法 (多行 @click/@change 等)，从根源预防 CI 构建失败 |
+| **Docker HMR 修复** | `frontend/Dockerfile` `deploy/docker-compose.dev.yml` | Vite `--poll` 轮询模式解决 WSL2/Docker 卷挂载 inotify 不触发问题，`.vite` 缓存卷持久化，前后端热重载配置完整 |
+
+### v0.9 — 物模型 / 3D 数字孪生 / 多数据中心 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **物模型后端** | `models/thing_model.py` `schemas/thing_model.py` `crud/thing_model.py` `api/v1/endpoints/thing_model.py` | `thing_models` + `thing_model_items`（type 区分 property/service/event）双表；CRUD 接管原只读 `GET /thing-models`；写操作 `require_role("admin")` |
+| **物模型编辑器** | `frontend/src/views/ops/ThingModelEditor.vue` `api/thingModel.ts` | 三栏布局（列表 / 属性·服务·事件 Tab 表单 / 实时 JSON 预览）；保存前校验 key 唯一性、必填、标识符格式与重复 |
+| **3D 数字孪生** | `frontend/src/views/twin/Twin3D.vue` `api/twin.ts` | three.js 机房场景，按 location 分层（机房→机柜→设备）；OrbitControls 旋转/缩放；分层显隐开关；每 8s 轮询实时染色（在线青 / 离线灰 / 高温红）；点击设备信息卡；卸载 `dispose` 防泄漏 |
+| **多数据中心后端** | `models/idc.py`（扩展 `capacity_kw`/`description`/`is_current`）`models/external.py`（`idc_id` 软关联）`crud/idc.py` `api/v1/endpoints/idc.py` | IDC CRUD + `set_current`（全局唯一当前中心）+ `compare`（按 `idc_id` 聚合设备/在线/告警）+ `unified_alarms`（告警映射回归属中心） |
+| **多数据中心前端** | `views/ops/DataCenterManage.vue` `DataCenterCompare.vue` `stores/datacenter.ts` `api/idc.ts` | 中心卡片网格增改删/启停/设为当前（`PUT /api/idc/current` 全局生效）；跨中心对比 KPI 卡 + 电力/制冷/告警柱状图 + 统一告警视图 |
+| **CI 修复** | `.github/workflows/ci.yml` `frontend/Dockerfile` | `npm ci` 同步 `package-lock.json`（含 three）；Docker 前端构建显式 `--file frontend/Dockerfile`；复用已入库 `@dc-ioc-ui/dist` 避免 vite 清空 `.d.ts` 导致 TS7016 |
+
+### v0.10 — 多模型 AI / iHealth 报告 / 运维页面优化 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **AI 多模型注册表** | `backend/app/services/assistant_service.py` `api/v1/endpoints/assistant.py` | 模块级模型注册表 `_MODEL_REGISTRY` + 激活状态 `_ACTIVE_MODEL`；`LLM_MODELS` 环境变量覆盖默认列表；`get_models` / `set_active_model` / `check_model_status`；`_llm_config` 读取当前激活模型 |
+| **模型切换端点** | `backend/app/api/v1/endpoints/assistant.py` | `GET /api/ops/assistant/models`、`POST /api/ops/assistant/models/select` (`require_role admin/operator`)、`GET /api/ops/assistant/models/status` |
+| **模型选择前端** | `frontend/src/views/ops/Assistant.vue` `api/index.ts` `types/index.ts` | 模型下拉框 + 切换激活模型 + 当前模型诊断；新增 `getAssistantModels` / `selectAssistantModel` / `assistantModelStatus` 与 `AssistantModel` 类型 |
+| **iHealth 健康报告** | `frontend/src/views/ops/HealthReport.vue` | 新增月度健康报告页 (`/ops/health-report`)：聚合供配电/制冷/网络/隐患/演练/供应商/维修 7 大域评分 → 总分/等级/环形图；关键发现与改进建议；数据取自各模块 localStorage（隐患/供应商/演练/维修）按权重聚合 |
+| **i18n 补全** | `frontend/src/i18n/locales/zh-CN.json` `en-US.json` | 新增 `healthReport` 段（标题/域/说明/建议等 30+ 键）与 `assistant` 模型相关键 |
+| **运维页面美化** | 生命周期 / 供配电 AI 隐患 / 供应商管理 / 应急演练 / 故障影响分析 / 维保日历 / 集成验证中心 | 统一暗色科技风卡片、栅格与配色；ITIL 流程 SVG 渲染修复 |
+| **链路图布局优化** | `frontend/src/components/power/PowerLinkageDiagram.vue` `views/monitor/PowerLinkage.vue` `components/hvac/CoolingLinkageDiagram.vue` `views/monitor/HvacLinkage.vue` | 配电链路增大 viewBox / 层间 Y 间距 / 层内 gap，收紧组框 padding，消除组件堆叠；制冷链路放大容器并改保守 gap 公式，确保设备完整显示在边界内 |
+| **HealthReport 运行时防护** | `frontend/src/views/ops/HealthReport.vue` | `generate()` 中 i18n 取值统一经 `s()` 安全包装，缺失翻译时回退空串，避免 `Cannot read properties of undefined (reading 'replace')` 导致面板崩溃 |
+
+> 部署提示：改后端 `.py` 后若用 `uvicorn --reload` 已挂载则自动重载（必要时 `docker restart dc-ioc-platform-backend-1`）；改 `.env` 的 `LLM_*` 后必须**重建**后端容器而非 `restart`。前端改源码后在 Docker 挂载下 HMR 不生效，需清 `.vite` 缓存并 `restart` 前端容器 + 浏览器硬刷新。
+>
+> 大模型相关环境变量（`LLM_API_KEY` 等）见「七、环境变量 → AI 运维助手大模型接入」。
+
+### v0.11 — 侧边导航重组 / 图标补全 / 原生弹窗收敛 (2026-08)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **侧边栏 9 组重组** | `frontend/src/layouts/DefaultLayout.vue` | 一级分组由 6 组按业务域拆细为 **9 组**（总览 / 设施监控 / 告警 / 运维作业 / 资产 / 能效 / 知识与 AI / 平台集成 / 系统管理）；原 20+ 项的「运维作业管理」按职能拆开，告警、能效、知识 AI、平台集成各自独立成组；数字可视并入设施监控。详见「三、3.0 侧边导航结构」 |
+| **分组可折叠** | `layouts/DefaultLayout.vue` | 组标题由静态 `div` 改为可点击 `button`，带 `ChevronDown`/`ChevronRight` 箭头与 `:aria-expanded`；子项由 `v-show` 控制（默认全展开）；`watch(route.path)` 自动展开当前页所属分组。`NavGroup` 新增稳定 `id` 字段，折叠态按 `id` 记忆，中英切换不丢失 |
+| **图标体系补全** | `components/layout/NavIcon.vue` | 补齐 `ChevronDown`/`ChevronRight` 折叠箭头，以及此前**静默回退成通用圆圈**的 13 个图标（`Boxes`/`Box`/`Monitor`/`Settings2`/`GitBranch`/`GitCompare`/`Smartphone`/`CalendarDays`/`LogIn`/`Workflow`/`Blocks`/`Building2`/`Users`）；菜单用到的 55 个图标现已 0 缺失 |
+| **i18n 分组键** | `i18n/locales/zh-CN.json` `en-US.json` | 新增 `alarmGroup` / `energyGroup` / `knowledgeAi` / `platformIntegration` 四个分组标题键（中英同步） |
+| **原生弹窗收敛收口** | `views/ops/FaultImpact.vue` `views/ops/TenantManage.vue` | 补齐 D21 改造遗留的声明缺失：`FaultImpact` 补 `const toast = useToast()`（保存 / 会签 / 推送结果反馈），`TenantManage` 补 `import { useConfirm } from '@/hooks/useConfirm'`（删除二次确认）。此前两处会在用户点击时抛 `toast / useConfirm is not defined` **运行时异常** |
+
+> **校验结果**：菜单引用的 72 个 i18n 键中英 **0 缺失**；**63 条路由 ↔ 63 个菜单项** 一一对应（0 孤儿页 / 0 死链）；`vue-tsc --noEmit` **0 错误**（修复前 6 个）。
+>
+> **扩展约定**：新增页面需**同时**在 `router/index.ts` 注册路由、在 `DefaultLayout.vue` 的 `nav` 登记入口、
+> 并确认所用图标已存在于 `NavIcon.vue` 的 `ICONS` 映射（缺失会静默回退为通用圆圈图标）。
+>
+> **部署提示**：前端改 `.vue`/`.ts` 后在 Docker 挂载下 HMR 不生效，需
+> `docker exec dc-ioc-platform-frontend-1 rm -rf /app/node_modules/.vite` →
+> `docker restart dc-ioc-platform-frontend-1` → 浏览器硬刷新 (Ctrl+Shift+R)。
+
+### API 域汇总（附录）
+
+后端统一挂载于 `/api`，共 28 个业务域 + 认证。主要分组：
+
+| 分组 | 典型端点 |
+|------|----------|
+| 认证 `auth` | `POST /api/auth/login`、`/refresh`、`/change-password`、`/users`、`/register`（v0.7 新增，受 `ALLOW_SELF_REGISTER` 控制） |
+| 驾驶舱 `dashboard` | `GET /api/dashboard/overview`、`/campuses`、`/campus-comparison`、`/overview/trends`（均缓存 30s） |
+| 设备台账 `equipment` | 11 个域 CRUD（冷机/空调末端/配电/机柜/柴发/消防/动环/安防等） |
+| 暖通 `hvac` / 电力 `power` | 冷源/空调末端/液冷、10KV/0.4KV/柴发/燃油/电池 |
+| 安防消防 `security` | 视频监控/门禁/消防报警主机/探测器/联动设备 |
+| 运维作业 `ops` | 设备资产、维保计划、采集器接入、设备遥测 |
+| 告警 `alarms` / `alarm_history` / `alarm_rules` | 告警中心、历史、规则引擎 |
+| 工单 `tickets` | 事件工单 CRUD + 状态机流转（`done→open` 等非法跳转被拒，返回 400） |
+| 巡检/维保/排班/演练/风险/知识库 | 运维全流程管理 |
+| 预案 `runbooks`（v0.7 新增） | `GET /api/runbooks/related`（告警关联处置预案，对齐前端 `Alarms.vue`） |
+| 审计 `audit`（v0.7 确认） | `GET /api/audit-logs`（分页/过滤/CSV 导出，前端 `AuditLogs.vue` 已对接） |
+| 上传 `uploads`（v0.7 新增） | `POST /api/uploads/avatar` / `/attachment` / `/batch`（类型/大小校验） |
+| 网络 `network` / 域名 `domain` | 交换机/路由/防火墙/无线、域名路由监控 |
+| 外部接入 `external` | 采集器注册/测点上报/告警评估（独立 `X-Collector-Token` 鉴权） |
+| 物模型 `thing-models` (v0.9) | `GET/POST/PUT/DELETE /api/thing-models`（property/service/event 三要素，接管只读出口） |
+| 多数据中心 `idc` (v0.9) | `GET/POST/PUT/DELETE /api/idc`、`GET/PUT /api/idc/current`、`GET /api/idc/compare`、`GET /api/idc/alarms` |
+| AI 助手 `assistant` | 知识库问答 + 多模型端点 `/api/ops/assistant/models*` + NIM 诊断端点 `/api/ops/assistant/status` |
+
+> 完整端点清单（含方法/路径/鉴权）见 `backend/api_endpoints.md`（由 `gen_api.py` 静态反射生成）。
 
 ---
 
@@ -563,42 +708,6 @@ docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml up -d
 | `BACKUP_ALERT_WEBHOOK` | 备份成功/失败告警 webhook（可选） | 空 |
 
 > 缓存 TTL、连续聚合刷新周期等以代码内常量为准（dashboard 缓存 30s；详见 `deploy/cache_strategy.md`）。
-
-### v0.8 — 代码工程化 (2026-08)
-
-| 模块 | 文件 | 功能 |
-|------|------|------|
-| **Type 系统统一** | `frontend/src/types/index.ts` `stores/modules/alarms.ts` `engine/realtimeLinkage.ts` | 告警类型字段重命名 (lv→level / sys→system / desc→message / state→status / ts→time)，消除 86+ vue-tsc 类型错误，`vue-tsc --noEmit` 零错误通过 |
-| **OpenAPI 代码生成** | `frontend/openapi.json` `orval.config.js` `src/api/generated/index.ts` `src/api/generatedWrapper.ts` | 后端 API 契约 (29 端点 / 9 Schema) → orval 自动生成 1604 行 TypeScript 客户端，含 axios 桥接层 (`import { api } from '@/api/generatedWrapper'`) |
-| **组件库化** | `packages/dc-ioc-ui/` | StatusBadge / AlarmBadge / KpiCard 抽取为独立内部 npm 包 `@dc-ioc/ui`，Vite library mode 构建 (ESM + UMD + CSS)，24 个引用文件批量迁移，自包含样式 (零外部 class 依赖) |
-| **Pre-commit 检查** | `frontend/scripts/check-templates.mjs` `.husky/pre-commit` | 提交前自动扫描 Vue SFC 模板语法 (多行 @click/@change 等)，从根源预防 CI 构建失败 |
-| **Docker HMR 修复** | `frontend/Dockerfile` `deploy/docker-compose.dev.yml` | Vite `--poll` 轮询模式解决 WSL2/Docker 卷挂载 inotify 不触发问题，`.vite` 缓存卷持久化，前后端热重载配置完整 |
-
-### v0.9 — 物模型 / 3D 数字孪生 / 多数据中心 (2026-08)
-
-| 模块 | 文件 | 功能 |
-|------|------|------|
-| **物模型后端** | `models/thing_model.py` `schemas/thing_model.py` `crud/thing_model.py` `api/v1/endpoints/thing_model.py` | `thing_models` + `thing_model_items`（type 区分 property/service/event）双表；CRUD 接管原只读 `GET /thing-models`；写操作 `require_role("admin")` |
-| **物模型编辑器** | `frontend/src/views/ops/ThingModelEditor.vue` `api/thingModel.ts` | 三栏布局（列表 / 属性·服务·事件 Tab 表单 / 实时 JSON 预览）；保存前校验 key 唯一性、必填、标识符格式与重复 |
-| **3D 数字孪生** | `frontend/src/views/twin/Twin3D.vue` `api/twin.ts` | three.js 机房场景，按 location 分层（机房→机柜→设备）；OrbitControls 旋转/缩放；分层显隐开关；每 8s 轮询实时染色（在线青 / 离线灰 / 高温红）；点击设备信息卡；卸载 `dispose` 防泄漏 |
-| **多数据中心后端** | `models/idc.py`（扩展 `capacity_kw`/`description`/`is_current`）`models/external.py`（`idc_id` 软关联）`crud/idc.py` `api/v1/endpoints/idc.py` | IDC CRUD + `set_current`（全局唯一当前中心）+ `compare`（按 `idc_id` 聚合设备/在线/告警）+ `unified_alarms`（告警映射回归属中心） |
-| **多数据中心前端** | `views/ops/DataCenterManage.vue` `DataCenterCompare.vue` `stores/datacenter.ts` `api/idc.ts` | 中心卡片网格增改删/启停/设为当前（`PUT /api/idc/current` 全局生效）；跨中心对比 KPI 卡 + 电力/制冷/告警柱状图 + 统一告警视图 |
-| **CI 修复** | `.github/workflows/ci.yml` `frontend/Dockerfile` | `npm ci` 同步 `package-lock.json`（含 three）；Docker 前端构建显式 `--file frontend/Dockerfile`；复用已入库 `@dc-ioc/ui/dist` 避免 vite 清空 `.d.ts` 导致 TS7016 |
-
-### v0.10 — 多模型 AI / iHealth 报告 / 运维页面优化 (2026-08)
-
-| 模块 | 文件 | 功能 |
-|------|------|------|
-| **AI 多模型注册表** | `backend/app/services/assistant_service.py` `api/v1/endpoints/assistant.py` | 模块级模型注册表 `_MODEL_REGISTRY` + 激活状态 `_ACTIVE_MODEL`；`LLM_MODELS` 环境变量覆盖默认列表；`get_models` / `set_active_model` / `check_model_status`；`_llm_config` 读取当前激活模型 |
-| **模型切换端点** | `backend/app/api/v1/endpoints/assistant.py` | `GET /api/ops/assistant/models`、`POST /api/ops/assistant/models/select` (`require_role admin/operator`)、`GET /api/ops/assistant/models/status` |
-| **模型选择前端** | `frontend/src/views/ops/Assistant.vue` `api/index.ts` `types/index.ts` | 模型下拉框 + 切换激活模型 + 当前模型诊断；新增 `getAssistantModels` / `selectAssistantModel` / `assistantModelStatus` 与 `AssistantModel` 类型 |
-| **iHealth 健康报告** | `frontend/src/views/ops/HealthReport.vue` | 新增月度健康报告页 (`/ops/health-report`)：聚合供配电/制冷/网络/隐患/演练/供应商/维修 7 大域评分 → 总分/等级/环形图；关键发现与改进建议；数据取自各模块 localStorage（隐患/供应商/演练/维修）按权重聚合 |
-| **i18n 补全** | `frontend/src/i18n/locales/zh-CN.json` `en-US.json` | 新增 `healthReport` 段（标题/域/说明/建议等 30+ 键）与 `assistant` 模型相关键 |
-| **运维页面美化** | 生命周期 / 供配电 AI 隐患 / 供应商管理 / 应急演练 / 故障影响分析 / 维保日历 / 集成验证中心 | 统一暗色科技风卡片、栅格与配色；ITIL 流程 SVG 渲染修复 |
-| **链路图布局优化** | `frontend/src/components/power/PowerLinkageDiagram.vue` `views/monitor/PowerLinkage.vue` `components/hvac/CoolingLinkageDiagram.vue` `views/monitor/HvacLinkage.vue` | 配电链路增大 viewBox / 层间 Y 间距 / 层内 gap，收紧组框 padding，消除组件堆叠；制冷链路放大容器并改保守 gap 公式，确保设备完整显示在边界内 |
-| **HealthReport 运行时防护** | `frontend/src/views/ops/HealthReport.vue` | `generate()` 中 i18n 取值统一经 `s()` 安全包装，缺失翻译时回退空串，避免 `Cannot read properties of undefined (reading 'replace')` 导致面板崩溃 |
-
-> 部署提示：改后端 `.py` 后若用 `uvicorn --reload` 已挂载则自动重载（必要时 `docker restart dc-ioc-platform-backend-1`）；改 `.env` 的 `LLM_*` 后必须**重建**后端容器而非 `restart`。前端改源码后在 Docker 挂载下 HMR 不生效，需清 `.vite` 缓存并 `restart` 前端容器 + 浏览器硬刷新。
 
 ### AI 运维助手大模型接入 (`LLM_API_KEY` 等)
 
@@ -731,9 +840,9 @@ curl -X POST http://localhost:9090/-/reload
 └──────┬──────────┬──────────┬──────────┬──────────┬──────────────┘
        ▼          ▼          ▼          ▼          ▼
    dashboard   hvac      power    security     ops
-   (驾驶舱)  (暖通3页)  (电力5页)  (安防4页)  (运营运维20页)
+   (驾驶舱)  (暖通6页)  (电力7页)  (安防5页)  (运维32页)
        │     冷源/末端/液冷 10KV/0.4KV/柴发 CCTV/ACS/IDS/火警
-       │            燃油/电池
+       │     /制冷链路/温度云图 /配电链路/燃油/电池
        │
        ▼
 ┌──────────────────────────────────────────────────────────────────┐

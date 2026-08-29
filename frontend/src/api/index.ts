@@ -312,6 +312,27 @@ export const getCampusComparison = () =>
 export const getDashboardOverview = () =>
   request.get<unknown, DashboardOverview>('/api/dashboard/overview')
 
+export interface KpiTrendPoint {
+  ts: string | null
+  pue: number
+  wue: number
+  it_load_mw: number
+  total_load_mw: number
+  cool_load_mw: number
+  online_rate: number
+  availability: number
+}
+
+export interface KpiTrendsResponse {
+  hours: number
+  points: KpiTrendPoint[]
+  source: string
+}
+
+/** 驾驶舱 KPI 趋势 (后端 kpi_history 时序, 根治前端合成示例曲线) */
+export const getOverviewTrends = (hours = 48) =>
+  request.get<unknown, KpiTrendsResponse>('/api/dashboard/overview/trends', { params: { hours } })
+
 export const getAlarms = () => request.get<unknown, AlarmCenter>('/api/ops/alarms')
 
 export const getRelatedRunbooks = (

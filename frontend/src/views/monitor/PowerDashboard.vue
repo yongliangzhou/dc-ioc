@@ -46,7 +46,8 @@
       />
     </div>
 
-    <!-- 五子系统入口卡片 -->
+    <!-- 五子系统 + 配电链路入口卡片: 统一 cols-2 (3 行 × 2 列), 与 Security/Network 对齐;
+         行间距由全局 .grid 的 gap:12px 提供, 不再混用 cols-2 / 整行单列 / cols-3 -->
     <div class="grid cols-2" v-if="overview">
       <router-link to="/monitor/power/hv" class="entry-card">
         <div class="card-head">
@@ -76,23 +77,6 @@
           ><span class="v">{{ volt(overview.lv.avgVoltage) }}</span>
         </div>
       </router-link>
-    </div>
-    <!-- 配电链路可视化入口 -->
-    <div class="grid" v-if="overview" style="margin-top: 12px">
-      <router-link to="/monitor/power/linkage" class="entry-card linkage-entry">
-        <div class="card-head">
-          <span class="ct">{{ tl('配电链路可视化') }}</span>
-          <span class="pill">{{ tl('端到端') }}</span>
-        </div>
-        <div class="kvs">
-          <span class="k">{{ tl('链路') }}</span
-          ><span class="v">{{ tl('市电 → 中压 → 变压器 → 低压 → UPS → 机柜') }}</span>
-          <span class="k">{{ tl('特性') }}</span
-          ><span class="v">{{ tl('实时状态 · 告警点击定位') }}</span>
-        </div>
-      </router-link>
-    </div>
-    <div class="grid cols-3" v-if="overview" style="margin-top: 12px">
       <router-link to="/monitor/power/genset" class="entry-card">
         <div class="card-head">
           <span class="ct">{{ tl('nav.genset') }}</span
@@ -135,6 +119,19 @@
           ><span class="v">{{ volt(overview.battery.avgVoltage) }}</span>
         </div>
       </router-link>
+      <!-- 配电链路可视化入口 -->
+      <router-link to="/monitor/power/linkage" class="entry-card linkage-entry">
+        <div class="card-head">
+          <span class="ct">{{ tl('配电链路可视化') }}</span>
+          <span class="pill">{{ tl('端到端') }}</span>
+        </div>
+        <div class="kvs">
+          <span class="k">{{ tl('链路') }}</span
+          ><span class="v">{{ tl('市电 → 中压 → 变压器 → 低压 → UPS → 机柜') }}</span>
+          <span class="k">{{ tl('特性') }}</span
+          ><span class="v">{{ tl('实时状态 · 告警点击定位') }}</span>
+        </div>
+      </router-link>
     </div>
 
     <!-- 加载 / 错误态 -->
@@ -152,7 +149,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
@@ -183,7 +180,7 @@ async function load() {
   try {
     overview.value = await getPowerOverview()
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   }
 }
 

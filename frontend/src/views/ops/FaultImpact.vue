@@ -101,6 +101,11 @@
 
     <div v-if="loading" class="loading-box"><div class="spinner"></div><span>{{ t.analyzing }}</span></div>
 
+    <div v-if="analyzeError" class="result bad" style="margin-top:8px">
+      <span class="r-ic">!</span>{{ analyzeError }}
+      <button class="btn-ghost" style="margin-left:8px;padding:4px 10px" @click="analyze">{{ t.retry || '重试' }}</button>
+    </div>
+
     <template v-else-if="result">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- 影响链路图 (按 hop 分层) -->
@@ -236,6 +241,10 @@
           </button>
         </div>
         <div v-if="historyLoading" class="text-xs" style="color:var(--txt3)">{{ t.analyzing }}</div>
+        <div v-else-if="historyError" class="result bad" style="margin-top:8px">
+          <span class="r-ic">!</span>{{ historyError }}
+          <button class="btn-ghost" style="margin-left:8px;padding:4px 10px" @click="loadHistory">{{ t.retry || '重试' }}</button>
+        </div>
         <div v-else-if="!historyList.length" class="empty-box">{{ t.historyEmpty }}</div>
         <div v-else class="space-y-2">
           <div v-for="h in historyList" :key="h.id" class="card" style="padding:12px">
@@ -263,7 +272,10 @@
 
     <div v-else class="card empty-box">{{ t.emptyHint }}</div>
 
-    <div v-if="srcError" class="result bad" style="margin-top:8px"><span class="r-ic">!</span>{{ t.offlineMsg || '后端不可达, 已使用离线模拟数据。' }}</div>
+    <div v-if="srcError" class="result bad" style="margin-top:8px">
+      <span class="r-ic">!</span>{{ t.offlineMsg || '后端不可达, 已使用离线模拟数据。' }}
+      <button class="btn-ghost" style="margin-left:8px;padding:4px 10px" @click="loadSources">{{ t.retry || '重试' }}</button>
+    </div>
   </div>
 </template>
 
@@ -272,7 +284,11 @@ import { ref, reactive, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getFaultSources, analyzeFaultImpact, getFaultImpactHistory, saveFaultImpactHistory, signFaultImpactHistory, getDeviceRealtime } from '@/api'
 import type { FaultImpactResp, FaultSourceNode, AnalysisHistory } from '@/types'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import { downloadText } from '@/utils/export'
+import { useToast } from '@/hooks/useToast'
 
+const toast = useToast()
 const { t: raw } = useI18n()
 const t = new Proxy({} as any, {
   get(_t, key) {
@@ -286,7 +302,8 @@ const selectedIds = ref<number[]>([])
 const scope = reactive({ power: true, cool: true, network: true, business: true })
 const loading = ref(false)
 const result = ref<FaultImpactResp | null>(null)
-const srcError = ref(false)
+const srcError = ref(false)            // 仅拓扑(故障源)加载失败
+const analyzeError = ref('')          // 仅影响分析(analyze)失败, 与 srcError 解耦
 
 // ---- 故障源遥测可视化 ----
 const realtimePoints = ref<{ metric_name: string; value: number; unit?: string }[]>([])
@@ -324,19 +341,22 @@ const healthColor = (h: number) => (h <= 40 ? 'var(--red)' : h <= 70 ? 'var(--am
 const loadColor = (l: number) => (l >= 90 ? 'var(--red)' : l >= 75 ? 'var(--amber)' : 'var(--green)')
 const healthBar = (h: number) => (h <= 40 ? 'var(--red)' : h <= 70 ? 'var(--amber)' : 'var(--green)')
 const loadBar = (l: number) => (l >= 90 ? 'var(--red)' : l >= 75 ? 'var(--amber)' : 'var(--green)')
-const sevClass = (s: string) => (s === 'critical' ? 'r' : s === 'high' ? 'a' : '')
+const sevClass = (s: string | number) => { const k = String(s); return k === 'critical' ? 'r' : k === 'high' ? 'a' : '' }
 
 // ---- 分析报告存档 + 会签 ----
 const historyList = ref<AnalysisHistory[]>([])
 const historyLoading = ref(false)
+const historyError = ref('')
 const savingHistory = ref(false)
 const signerName = ref('')
 
 async function loadHistory() {
   historyLoading.value = true
+  historyError.value = ''
   try {
     historyList.value = await getFaultImpactHistory(50)
-  } catch {
+  } catch (e) {
+    historyError.value = toErrorMessage(e) || '历史报告加载失败'
     historyList.value = []
   } finally {
     historyLoading.value = false
@@ -357,9 +377,9 @@ async function saveReport() {
       createdBy: 'current_user',
     })
     await loadHistory()
-    alert(t.saveSuccess)
+    toast.success(t.saveSuccess)
   } catch {
-    alert('save failed')
+    toast.error('save failed')
   } finally {
     savingHistory.value = false
   }
@@ -370,36 +390,31 @@ async function signReport(id: number) {
   try {
     await signFaultImpactHistory(id, signerName.value.trim())
     await loadHistory()
-    alert(t.signSuccess)
+    toast.success(t.signSuccess)
   } catch {
-    alert('sign failed')
+    toast.error('sign failed')
   }
 }
 
 async function pushReport(h: AnalysisHistory) {
   // 分级推送占位: 按 severity 选择通道 (真实环境对接邮件/告警网关)
-  alert(`${t.pushSuccess} [${h.severity}]`)
+  toast.success(`${t.pushSuccess} [${h.severity}]`)
 }
 
-onMounted(async () => {
+async function loadSources() {
   try {
     const r = await getFaultSources()
     sources.value = r.nodes || []
+    srcError.value = false
   } catch {
     srcError.value = true
     sources.value = []
   }
-  loadHistory()
-})
+}
 
-onMounted(async () => {
-  try {
-    const r = await getFaultSources()
-    sources.value = r.nodes || []
-  } catch {
-    srcError.value = true
-    sources.value = []
-  }
+onMounted(() => {
+  // D7: 拓扑与历史无依赖, 并发发起避免串行瀑布 (原重复拉拓扑的第二处 onMounted 已移除)
+  void Promise.all([loadSources(), loadHistory()])
 })
 
 // ---- SVG 布局: 按 hop 分层, 每层最多 10 个, 其余折叠为 "+N" ----
@@ -476,11 +491,12 @@ const affectedNodes = computed(() =>
 async function analyze() {
   if (!selectedIds.value.length) return
   loading.value = true
+  analyzeError.value = ''
   try {
     const r = await analyzeFaultImpact({ faultIds: selectedIds.value, scope: { ...scope } })
     result.value = r
-  } catch {
-    srcError.value = true
+  } catch (e) {
+    analyzeError.value = toErrorMessage(e) || '影响分析失败'
   } finally {
     loading.value = false
   }
@@ -491,9 +507,10 @@ function reset() {
   result.value = null
 }
 
-function sevText(s: string) {
+function sevText(s: string | number) {
+  const key = String(s)
   const m: Record<string, string> = { critical: t.sevCritical, high: t.sevHigh, medium: t.sevMedium, low: t.sevLow }
-  return m[s] || s
+  return m[key] || key
 }
 
 function exportReport() {
@@ -521,12 +538,6 @@ function exportReport() {
     lines.push('--- 处置缓解措施清单 ---')
     r.mitigations.forEach((m) => lines.push(`  [${m.priority}] ${m.action} · ${m.target} — ${m.detail}`))
   }
-  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `fault-impact-${Date.now()}.txt`
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadText(`fault-impact-${Date.now()}.txt`, lines.join('\n'))
 }
 </script>

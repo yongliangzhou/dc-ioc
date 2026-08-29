@@ -45,7 +45,7 @@
         </div>
         <div class="row-right">
           <button v-if="!r.outAt" class="btn sm green" @click="signOut(r)">{{ t.leave }}</button>
-          <button class="btn sm ghost" @click="remove(r)">{{ t.delete }}</button>
+          <button class="btn sm ghost" @click="askRemove(r)">{{ t.del }}</button>
         </div>
       </article>
       <div v-if="!filtered.length" class="empty">{{ t.empty }}</div>
@@ -62,7 +62,7 @@
             <button class="seg-btn" :class="{ active: form.type === 'person' }" @click="form.type = 'person'">{{ t.person }}</button>
             <button class="seg-btn" :class="{ active: form.type === 'item' }" @click="form.type = 'item'">{{ t.item }}</button>
           </div>
-          <label class="fld"><span>{{ t.name }}</span><input v-model="form.name" class="inp" :placeholder="t.namePlaceholder" /></label>
+          <label class="fld"><span>{{ t.name }}</span><input v-model="form.name" class="inp" :class="{ invalid: touched.name && errors.name }" :placeholder="t.namePlaceholder" @blur="validate('name', form)" /></label>
           <label class="fld"><span>{{ t.org }}</span><input v-model="form.org" class="inp" :placeholder="t.orgPlaceholder" /></label>
           <label class="fld"><span>{{ t.purpose }}</span><input v-model="form.purpose" class="inp" :placeholder="t.purposePlaceholder" /></label>
           <label class="fld"><span>{{ t.area }}</span><input v-model="form.area" class="inp" :placeholder="t.areaPlaceholder" /></label>
@@ -70,10 +70,21 @@
           <label class="fld"><span>{{ t.carryIn }}</span><input v-model="form.carryIn" class="inp" :placeholder="t.carryPlaceholder" /></label>
           <label class="fld"><span>{{ t.carryOut }}</span><input v-model="form.carryOut" class="inp" :placeholder="t.carryPlaceholder" /></label>
           <label class="fld"><span>{{ t.inAt }}</span><input v-model="form.inAt" class="inp" type="datetime-local" /></label>
-          <div v-if="err" class="err">{{ err }}</div>
+          <div v-if="touched.name && errors.name" class="err">{{ errors.name }}</div>
           <div class="drawer-actions"><button class="btn green" :disabled="saving" @click="save">{{ t.save }}</button><button class="btn ghost" @click="editor = false">{{ t.cancel }}</button></div>
         </div>
       </aside>
+    </div>
+
+    <div v-if="showDel" class="confirm-mask" @click.self="showDel = false">
+      <div class="confirm-box">
+        <h3>{{ t.confirmDeleteTitle }}</h3>
+        <p>{{ t.confirmDelete }}</p>
+        <div class="confirm-actions">
+          <button class="btn ghost" @click="showDel = false">{{ t.cancel }}</button>
+          <button class="btn danger" @click="confirmRemove">{{ t.del }}</button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -82,6 +93,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/modules/auth'
+import { useFormValidation, required } from '@/composables/useFormValidation'
 
 type AType = 'person' | 'item'
 export interface AccessRecord {
@@ -127,18 +139,20 @@ const itemCount = computed(() => items.value.filter(r => r.type === 'item').leng
 
 const editor = ref(false)
 const saving = ref(false)
-const err = ref('')
+const { errors, touched, validate, validateAll, reset: resetForm } = useFormValidation({
+  rules: { name: [required(t.name + ' 不能为空')] },
+})
 const form = ref<Partial<AccessRecord>>({ type: 'person', name: '', org: '', purpose: '', area: '', carriedBy: '', carryIn: '', carryOut: '', inAt: '', outAt: '' })
 
 function openEditor() {
   const now = new Date()
   const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16)
   form.value = { type: 'person', name: '', org: '', purpose: '', area: '', carriedBy: me.value, carryIn: '', carryOut: '', inAt: local, outAt: '' }
-  err.value = ''; editor.value = true
+  resetForm(); editor.value = true
 }
 function genId() { return 'RA-' + Date.now().toString(36) }
 function save() {
-  if (!form.value.name?.trim()) { err.value = t.name + ' ×'; return }
+  if (!validateAll(form.value as unknown as Record<string, unknown>)) return
   const rec: AccessRecord = {
     id: genId(), type: (form.value.type as AType) || 'person', name: form.value.name!, org: form.value.org || '',
     purpose: form.value.purpose || '', area: form.value.area || '', carriedBy: form.value.carriedBy || '',
@@ -148,7 +162,13 @@ function save() {
   items.value = [rec, ...items.value]; persist(); editor.value = false
 }
 function signOut(r: AccessRecord) { r.outAt = new Date().toISOString().replace('T', ' ').slice(0, 16); persist() }
-function remove(r: AccessRecord) { if (!confirm(t.confirmDelete)) return; items.value = items.value.filter(x => x.id !== r.id); persist() }
+const showDel = ref(false)
+const delTarget = ref<AccessRecord | null>(null)
+function askRemove(r: AccessRecord) { delTarget.value = r; showDel.value = true }
+function confirmRemove() {
+  if (delTarget.value) { items.value = items.value.filter(x => x.id !== delTarget.value!.id); persist() }
+  showDel.value = false; delTarget.value = null
+}
 function fmt(d?: string) { return d ? String(d).replace('T', ' ') : '—' }
 
 function seedData(): AccessRecord[] {
@@ -198,5 +218,12 @@ onMounted(() => {})
 .drawer-actions { display: flex; gap: 10px; margin-top: 12px; }
 .btn { border: 1px solid var(--line); background: var(--panel-2); color: var(--text); border-radius: 8px; padding: 7px 12px; cursor: pointer; font-size: 13px; }
 .btn.sm { padding: 4px 10px; font-size: 12px; } .btn.ghost { background: transparent; } .btn.green { background: var(--green); color: #04121a; border-color: var(--green); font-weight: 600; } .btn:disabled { opacity: .6; }
+.btn.danger { background: #ef4444; color: #fff; border-color: #ef4444; font-weight: 600; }
+.inp.invalid { border-color: #f87171; }
+.confirm-mask { position: fixed; inset: 0; background: rgba(0,0,0,.5); display: flex; align-items: center; justify-content: center; z-index: 60; }
+.confirm-box { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; width: 320px; max-width: 90vw; }
+.confirm-box h3 { margin: 0 0 8px; font-size: 15px; color: var(--text); }
+.confirm-box p { color: var(--muted); font-size: 13px; margin: 0 0 14px; }
+.confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
 @media (max-width: 980px) { .kpi-row { grid-template-columns: repeat(2, 1fr); } }
 </style>

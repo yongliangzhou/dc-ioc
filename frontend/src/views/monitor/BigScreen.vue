@@ -9,6 +9,8 @@
       </div>
     </header>
 
+    <ErrorBanner v-if="error" :count="1" :labels="['实时数据']" @retry="refresh" />
+
     <div class="bs-grid" :style="gridStyle">
       <div
         v-for="w in widgets"
@@ -65,11 +67,14 @@ import {
   type DataSourceTemplate,
 } from '@/bigscreen/sources'
 import { themeMode, applyTheme } from '@/theme'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 
 const { t: tl } = useI18n()
 const cfg = ref<BigScreenConfig>(loadConfig())
 const refreshTime = ref('--:--:--')
 const values = ref<Record<string, number>>({})
+const error = ref('')
 
 const accent = computed(
   () => cfg.value.customColor || (SOURCE_POOL.find(() => false), SKIN_COLOR(cfg.value.skin)),
@@ -135,8 +140,9 @@ async function refresh() {
     }
     values.value = next
     refreshTime.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
-  } catch {
-    /* 后端不可达保持上次值 */
+    error.value = ''
+  } catch (e) {
+    error.value = toErrorMessage(e) || '实时数据刷新失败'
   }
 }
 

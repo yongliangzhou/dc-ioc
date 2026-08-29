@@ -102,7 +102,6 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
@@ -117,6 +116,7 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 const toast = useToast()
 const { can, denyTip } = usePermission()
 function authState(action: PermAction) {
@@ -187,7 +187,7 @@ async function save() {
     await loadDefs()
     toast.success(tl('已保存'))
   } catch (e: unknown) {
-    err.value = (e as ErrorLike)?.message || tl('保存失败')
+    err.value = toErrorMessage(e) || tl('保存失败')
   } finally {
     saving.value = false
   }

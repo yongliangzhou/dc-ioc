@@ -9,8 +9,7 @@
       </div>
     </div>
 
-    <div v-if="loading" class="empty">{{ tl('common.loading') }}</div>
-    <template v-else>
+    <AsyncSection :page="page" @retry="page.reload">
       <!-- 对比选择 -->
       <Panel class="pick">
         <div class="list-head">{{ tl('datacenter.cmpPick') }}
@@ -112,7 +111,7 @@
           <div v-if="!pickedAlarms.length" class="empty">{{ tl('datacenter.noAlarm') }}</div>
         </Panel>
       </template>
-    </template>
+    </AsyncSection>
   </div>
 </template>
 
@@ -121,10 +120,12 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
 import BaseChart from '@/components/charts/BaseChart.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { useAsyncPage } from '@/composables/useAsyncPage'
 import { compareIdcs, unifiedAlarms, type IdcCompare, type IdcAlarmResp, type IdcCompareItem } from '@/api/idc'
+import { downloadCsv, stampedName } from '@/utils/export'
 
 const { t: tl } = useI18n()
-const loading = ref(true)
 const cmp = ref<IdcCompare>({ centers: [], currentIdcId: null })
 const alarms = ref<IdcAlarmResp>({ total: 0, items: [], byIdc: {} })
 
@@ -144,8 +145,7 @@ const metricDefs = ref<MetricDef[]>([
   { key: 'onlineCount', label: tl('datacenter.kpiOnline'), on: true, fmt: (c) => String(c.onlineCount) },
   { key: 'onlineRate', label: tl('datacenter.cmpOnlineRate'), on: true, max: () => 100, fmt: (c) => (c.deviceCount ? Math.round((c.onlineCount / c.deviceCount) * 100) : 0) + '%' },
   { key: 'resourceUse', label: tl('datacenter.cmpResourceUse'), on: true, max: () => 100, fmt: (c) => (c.rackCapacity ? Math.round((c.rackUsed / c.rackCapacity) * 100) : 0) + '%' },
-  { key: 'netDelay', label: tl('datacenter.cmpNetDelay'), on: true, max: () => 100, better: 'low', fmt: (c) => (20 + (c.id % 5) * 6) + 'ms' },
-  { key: 'storage', label: tl('datacenter.cmpStorage'), on: true, max: () => 1, fmt: (c) => (c.rackCapacity * 2) + 'TB' },
+  // 原 netDelay / storage 由前端用 `20+(id%5)*6` 与 `rackCapacity*2` 虚构，后端 IdcCompareItem 无真实字段，属伪指标，已从对比中移除；待后端提供真实遥测再补回。
   { key: 'activeAlarmCount', label: tl('datacenter.cmpAlarm'), on: true, better: 'low', fmt: (c) => String(c.activeAlarmCount) },
 ])
 
@@ -156,8 +156,7 @@ const pickedCenters = computed(() => cmp.value.centers.filter((c) => picked.valu
 function metricVal(c: IdcCompareItem, m: MetricDef): number {
   if (m.key === 'onlineRate') return c.deviceCount ? (c.onlineCount / c.deviceCount) * 100 : 0
   if (m.key === 'resourceUse') return c.rackCapacity ? (c.rackUsed / c.rackCapacity) * 100 : 0
-  if (m.key === 'netDelay') return 20 + (c.id % 5) * 6
-  if (m.key === 'storage') return c.rackCapacity * 2
+  // netDelay / storage 为伪指标已移除（见 metricDefs 注释），此处不再虚构
   return (c as any)[m.key] ?? 0
 }
 
@@ -202,7 +201,7 @@ function resetCols() {
   metricDefs.value.forEach((m) => (m.on = true))
   metricDefs.value.sort((a, b) => metricOrder.indexOf(a.key) - metricOrder.indexOf(b.key))
 }
-const metricOrder = ['powerCapacityMw', 'coolingCapacityMw', 'rackUsed', 'deviceCount', 'onlineCount', 'onlineRate', 'resourceUse', 'netDelay', 'storage', 'activeAlarmCount']
+const metricOrder = ['powerCapacityMw', 'coolingCapacityMw', 'rackUsed', 'deviceCount', 'onlineCount', 'onlineRate', 'resourceUse', 'activeAlarmCount']
 
 const palette = ['#22d3ee', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#14b8a6']
 function colorOf(id: number) {
@@ -254,28 +253,23 @@ const radarOption = computed(() => {
 function exportCsv() {
   const headers = ['name', ...visibleMetrics.value.map((m) => m.label)]
   const rows = sortedPicked.value.map((c) => [c.name, ...visibleMetrics.value.map((m) => fmt(c, m))])
-  const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'datacenter-compare.csv'
-  a.click()
-  URL.revokeObjectURL(url)
+  downloadCsv(stampedName('机房对比'), headers, rows)
 }
 
-function load() {
-  loading.value = true
-  Promise.all([compareIdcs(), unifiedAlarms()])
-    .then(([c, a]) => {
-      cmp.value = c
-      alarms.value = a
-      picked.value = c.centers.map((x) => x.id).slice(0, 4)
-    })
-    .finally(() => (loading.value = false))
-}
+/** 双源并行拉取：原来 Promise.all 无 .catch，失败时 loading 卡死且报错被吞。
+ *  现统一由 useAsyncPage 管理加载/错误/空态，失败可见且可重试。 */
+const page = useAsyncPage<IdcCompare>(
+  async () => {
+    const [c, a] = await Promise.all([compareIdcs(), unifiedAlarms()])
+    cmp.value = c
+    alarms.value = a
+    picked.value = c.centers.map((x) => x.id).slice(0, 4)
+    return c
+  },
+  { isEmpty: (d) => !d || d.centers.length === 0 },
+)
 
-onMounted(load)
+onMounted(() => page.reload())
 </script>
 
 <style scoped>

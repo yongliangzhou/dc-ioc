@@ -39,32 +39,31 @@
     </Panel>
 
     <!-- 设备卡片网格 -->
-    <div class="grid cols-6" v-if="filtered.length">
-      <div
-        v-for="d in paginatedDevices"
-        :key="d.device_id"
-        class="dev-card"
-        :class="{ active: selected?.device_id === d.device_id }"
-        @click="selectDevice(d)"
-      >
-        <div class="dc-head">
-          <span class="dot" :class="d.online ? 'g' : 'o'"></span>
-          <span class="dc-id mono">{{ d.device_id }}</span>
-        </div>
-        <div class="dc-name">{{ d.name || d.device_id }}</div>
-        <div class="dc-meta">
-          <span class="tag b">{{ d.protocol || '—' }}</span>
-          <span class="tag">{{ d.domain || '—' }}</span>
-        </div>
-        <div class="dc-stats">
-          <span>{{ d.metric_count }} {{ tl('测点') }}</span>
-          <span class="mono muted" style="font-size: 10px">{{ d.ip }}</span>
+    <AsyncSection :loading="loading" :error="error" :empty="!filtered.length" @retry="refresh">
+      <div class="grid cols-6">
+        <div
+          v-for="d in paginatedDevices"
+          :key="d.device_id"
+          class="dev-card"
+          :class="{ active: selected?.device_id === d.device_id }"
+          @click="selectDevice(d)"
+        >
+          <div class="dc-head">
+            <span class="dot" :class="d.online ? 'g' : 'o'"></span>
+            <span class="dc-id mono">{{ d.device_id }}</span>
+          </div>
+          <div class="dc-name">{{ d.name || d.device_id }}</div>
+          <div class="dc-meta">
+            <span class="tag b">{{ d.protocol || '—' }}</span>
+            <span class="tag">{{ d.domain || '—' }}</span>
+          </div>
+          <div class="dc-stats">
+            <span>{{ d.metric_count }} {{ tl('测点') }}</span>
+            <span class="mono muted" style="font-size: 10px">{{ d.ip }}</span>
+          </div>
         </div>
       </div>
-    </div>
-    <Panel v-else class="muted" style="text-align: center; padding: 22px">
-      {{ loading ? '加载中…' : '暂无已注册设备' }}
-    </Panel>
+    </AsyncSection>
 
     <!-- 分页 -->
     <div v-if="totalPages > 1" class="flex center gap8" style="margin: 10px 0">
@@ -105,6 +104,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { getExternalDevices, getThingModels } from '@/api'
 import DeviceMonitor from '@/components/business/DeviceMonitor.vue'
 import Panel from '@/components/common/Panel.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import { THING_MODELS, type ThingModel } from '@/constants/thingModels'
 import type { DeviceListResponse, ExternalDeviceView, ThingModelDef } from '@/types'
 /* ---- 设备列表 ---- */
@@ -234,15 +235,27 @@ const kpiMetricNames = computed(() => {
 })
 
 /* ---- 数据加载 ---- */
-async function refresh() {
-  loading.value = true
+const error = ref<string>('')
+
+async function fetchDevices(showLoading: boolean) {
+  if (showLoading) loading.value = true
   try {
     list.value = await getExternalDevices()
-  } catch {
-    /* 静默 */
+    error.value = ''
+  } catch (e) {
+    // 仅显式加载（首次 / 手动刷新）暴露错误；后台轮询失败静默，避免每 5s 闪烁错误态
+    if (showLoading) error.value = toErrorMessage(e) || '加载设备列表失败'
   } finally {
-    loading.value = false
+    if (showLoading) loading.value = false
   }
+}
+// 首次加载 + 手动「刷新列表」：可见加载态与错误态（由 AsyncSection 呈现）
+function refresh() {
+  return fetchDevices(true)
+}
+// 后台轮询：静默更新列表，不触发骨架屏闪烁
+async function poll() {
+  await fetchDevices(false)
 }
 
 async function loadThingModels() {
@@ -261,7 +274,7 @@ let timer = 0
 onMounted(() => {
   refresh()
   loadThingModels()
-  timer = window.setInterval(refresh, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 5000))
+  timer = window.setInterval(poll, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 5000))
 })
 onBeforeUnmount(() => clearInterval(timer))
 </script>

@@ -55,7 +55,8 @@
     </Panel>
 
     <!-- 审计日志表格 (Presentational) -->
-    <Panel class="scroll-x">
+    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="reload" :min-height="'320px'">
+      <Panel class="scroll-x">
       <table>
         <thead>
           <tr>
@@ -113,7 +114,8 @@
           </tr>
         </tbody>
       </table>
-    </Panel>
+      </Panel>
+    </AsyncSection>
 
     <!-- 分页 -->
     <div class="flex gap8" style="align-items: center; margin-top: 12px">
@@ -153,6 +155,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 const { t: tl } = useI18n()
 import { onMounted, reactive, ref } from 'vue'
 import { getAuditLogs, type AuditLogItem } from '@/api'
@@ -160,6 +164,7 @@ import { getAuditLogs, type AuditLogItem } from '@/api'
 const rows = ref<AuditLogItem[]>([])
 const total = ref(0)
 const loading = ref(false)
+const error = ref('')
 const page = ref(1)
 const pageSize = ref(50)
 const filters = reactive<{ resource: string; action: string; username: string; keyword: string }>({
@@ -173,6 +178,7 @@ const totalPages = ref(1)
 
 async function reload() {
   loading.value = true
+  error.value = ''
   try {
     const res = await getAuditLogs({
       page: page.value,
@@ -185,8 +191,9 @@ async function reload() {
     rows.value = res?.items ?? []
     total.value = res?.total ?? 0
     totalPages.value = Math.max(1, Math.ceil(total.value / pageSize.value))
-  } catch {
+  } catch (e) {
     rows.value = []
+    error.value = toErrorMessage(e) || '审计日志加载失败'
   } finally {
     loading.value = false
   }

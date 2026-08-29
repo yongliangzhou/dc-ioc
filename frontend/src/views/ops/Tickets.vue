@@ -1,27 +1,72 @@
 <template>
   <div>
     <div class="view-head">
-      <h1>{{ tl('工单中心') }}</h1>
-      <span class="sub"
-        >{{ tl('维修工单') }} {{ tl('与') }} {{ tl('事件工单') }} {{ tl('统一创建') }} · {{ tl('派发') }} · {{ tl('跟踪') }} {{ tl('·') }}
-        {{ tl('告警自动转单') }} {{ tl('·') }} {{ tl('状态流转') }} {{ tl('·') }} SLA {{ tl('跟踪') }} {{ tl('·') }}
-        {{ tl('按看板分组') }}</span
-      >
+      <div class="vh-left">
+        <h1>{{ tl('工单中心') }}</h1>
+        <span class="sub"
+          >{{ tl('维修工单') }} {{ tl('与') }} {{ tl('事件工单') }} {{ tl('统一创建') }} · {{ tl('派发') }} · {{ tl('跟踪') }} {{ tl('·') }}
+          {{ tl('告警自动转单') }} {{ tl('·') }} {{ tl('状态流转') }} {{ tl('·') }} SLA {{ tl('跟踪') }} {{ tl('·') }}
+          {{ tl('按看板分组') }}</span
+        >
+      </div>
+      <button class="hdr-btn ghost" :disabled="store.loading" @click="reload">
+        <RefreshCw :size="13" :class="{ 'is-spin': store.loading }" />
+        {{ store.loading ? '刷新中' : '刷新' }}
+      </button>
       <button class="hdr-btn" v-bind="authState('write')" @click="openCreate">
         + {{ tl('新建工单') }}
       </button>
     </div>
 
-    <!-- KPI -->
-    <div class="grid cols-4" v-if="store">
-      <KpiCard :title="tl('待处理')" :value="stats.open" unit="单" status="warning" />
-      <KpiCard :title="tl('处理中')" :value="stats.doing" unit="单" />
-      <KpiCard :title="tl('待归档')" :value="stats.pending" unit="单" />
-      <KpiCard :title="tl('累计闭环')" :value="stats.done" unit="单" />
-    </div>
+    <!-- 内容区: 加载 / 失败可重试 / 空态 -->
+    <AsyncSection
+      :page="page"
+      skeleton-variant="skeleton"
+      :skeleton-rows="5"
+      min-height="240px"
+      empty-title="暂无工单"
+      empty-desc="后端未返回任何工单，可从告警直接转单，或手动创建一张"
+      @retry="reload"
+    >
+      <template #empty-actions>
+        <button class="link-btn" v-bind="authState('write')" @click="openCreate">
+          + {{ tl('新建工单') }}
+        </button>
+      </template>
 
-    <!-- 工具条 -->
-    <Panel class="toolbar">
+      <!-- KPI -->
+      <div class="grid cols-4">
+        <KpiCard :title="tl('待处理')" :value="stats.open" unit="单" status="warning" />
+        <KpiCard :title="tl('处理中')" :value="stats.doing" unit="单" />
+        <KpiCard :title="tl('待归档')" :value="stats.pending" unit="单" />
+        <KpiCard :title="tl('累计闭环')" :value="stats.done" unit="单" />
+      </div>
+
+      <!-- 批量操作条（选中后出现） -->
+      <Panel v-if="selectedTickets.length" class="batch-bar">
+        <span class="bb-count">已选 {{ selectedTickets.length }} 张</span>
+        <button
+          class="bb-btn primary"
+          :disabled="!advanceableSelected.length || batching"
+          v-bind="authState('write')"
+          @click="batchAdvance"
+        >
+          批量推进{{ advanceableSelected.length ? ` (${advanceableSelected.length})` : '' }}
+        </button>
+        <button
+          class="bb-btn danger"
+          :disabled="batching"
+          v-bind="authState('write')"
+          @click="batchDelete"
+        >
+          批量删除
+        </button>
+        <button class="bb-btn" @click="exportSelected">导出所选 CSV</button>
+        <button class="bb-btn" @click="selectedIds = []">取消选择</button>
+      </Panel>
+
+      <!-- 工具条 -->
+      <Panel class="toolbar">
       <input
         v-model.trim="kw"
         class="ipt"
@@ -39,6 +84,9 @@
         <option value="info">{{ tl('提示') }}</option>
       </select>
       <div class="flex1"></div>
+      <button class="tb-btn" :disabled="!tickets.length" @click="exportAll">
+        导出全部 CSV
+      </button>
       <div class="seg">
         <button :class="{ on: view === 'kanban' }" @click="view = 'kanban'">
           {{ tl('看板') }}
@@ -49,7 +97,7 @@
 
     <!-- 看板视图 -->
     <template v-if="view === 'kanban'">
-      <div class="kanban" v-if="store">
+      <div class="kanban">
         <div class="kcol" v-for="col in STATUS_ORDER" :key="col">
           <div class="kh">
             <span :style="{ color: colColor(col) }">{{ statusLabel(col) }}</span>
@@ -59,10 +107,19 @@
             class="kcard-i"
             v-for="x in filtered.filter((y) => y.state === col)"
             :key="x.id"
+            :class="{ 'is-sel': selectedIds.includes(x.id) }"
             @click="openDetail(x)"
           >
             <div class="flex between">
-              <b>{{ x.title }}</b>
+              <label class="ck-wrap" @click.stop>
+                <input
+                  type="checkbox"
+                  class="ck"
+                  :checked="selectedIds.includes(x.id)"
+                  @change="toggleRow(x.id)"
+                />
+              </label>
+              <b class="kcard-title">{{ x.title }}</b>
               <span class="tag" :class="lvClass(x.lv)">{{ lvText(x.lv) }}</span>
             </div>
             <div class="km">{{ x.id }} {{ tl('·') }} {{ x.sys }} {{ tl('·') }} {{ x.owner }}</div>
@@ -107,10 +164,21 @@
 
     <!-- 列表视图 -->
     <template v-else>
-      <Panel class="scroll-x" v-if="store">
+      <Panel class="scroll-x">
         <table>
           <thead>
             <tr>
+              <th style="width: 36px">
+                <input
+                  type="checkbox"
+                  class="ck"
+                  :checked="allSelected"
+                  :indeterminate.prop="someSelected && !allSelected"
+                  :disabled="!filtered.length"
+                  @change="toggleAll"
+                  title="全选 / 取消全选"
+                />
+              </th>
               <th scope="col">工单号</th>
               <th scope="col">标题</th>
               <th scope="col">系统</th>
@@ -124,7 +192,21 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="x in filtered" :key="x.id" @click="openDetail(x)" style="cursor: pointer">
+            <tr
+              v-for="x in filtered"
+              :key="x.id"
+              @click="openDetail(x)"
+              style="cursor: pointer"
+              :class="{ 'row-sel': selectedIds.includes(x.id) }"
+            >
+              <td @click.stop>
+                <input
+                  type="checkbox"
+                  class="ck"
+                  :checked="selectedIds.includes(x.id)"
+                  @change="toggleRow(x.id)"
+                />
+              </td>
               <td class="mono">{{ x.id }}</td>
               <td>{{ x.title }}</td>
               <td>{{ x.sys }}</td>
@@ -165,11 +247,13 @@
             </tr>
           </tbody>
         </table>
-        <div class="muted" style="text-align: center; padding: 18px" v-if="!filtered.length">
-          无匹配工单
+        <div class="tbl-empty" v-if="!filtered.length">
+          <span class="muted">当前筛选条件下无匹配工单</span>
+          <button class="link-btn" @click="resetFilter">清空筛选条件</button>
         </div>
       </Panel>
     </template>
+    </AsyncSection>
 
     <!-- 新建 / 编辑弹窗 -->
     <TicketFormModal
@@ -271,7 +355,7 @@
             <button
               class="tf-btn primary"
               v-if="detail.state !== 'done'"
-              @click="advance(detail); detail = store.getById(detail.id) ?? null"
+              @click="advance(detail)"
             >
               推进状态
             </button>
@@ -282,26 +366,31 @@
 
     <!-- 删除确认 -->
     <teleport to="body">
-      <div v-if="toDelete" class="tf-mask" @click.self="toDelete = null">
-        <div class="tf-modal" style="width: 380px">
+      <div v-if="toDelete.length" class="tf-mask" @click.self="toDelete = []">
+        <div class="tf-modal" style="width: 440px">
           <div class="tf-head">
-            <h3>确认删除工单</h3>
-            <button class="tf-x" @click="toDelete = null">✕</button>
+            <h3>确认删除工单（{{ toDelete.length }} 张）</h3>
+            <button class="tf-x" @click="toDelete = []">✕</button>
           </div>
           <div class="tf-body">
-            <p style="color: var(--txt); font-size: 13px; margin: 0">
-              确定删除工单 <b class="mono">{{ toDelete.id }}</b
-              >「{{ toDelete.title }}」？此操作不可恢复。
+            <p style="color: var(--txt); font-size: 13px; margin: 0 0 8px">
+              此操作不可恢复，确定删除以下工单？
             </p>
+            <ul class="del-list">
+              <li v-for="t in toDelete" :key="t.id">
+                <b class="mono">{{ t.id }}</b> 「{{ t.title }}」
+              </li>
+            </ul>
           </div>
           <div class="tf-foot">
-            <button class="tf-btn ghost" @click="toDelete = null">取消</button>
+            <button class="tf-btn ghost" @click="toDelete = []">取消</button>
             <button
               class="tf-btn primary"
               style="background: var(--red, #ff4d5e)"
+              :disabled="deleting"
               @click="doDelete"
             >
-              删除
+              {{ deleting ? '删除中…' : `删除 ${toDelete.length} 张` }}
             </button>
           </div>
         </div>
@@ -311,8 +400,8 @@
     <KnowledgePanels :knowledge="ticketKb" />
 
     <div class="footer-note">
-      运维作业·事件工单中心 — 全生命周期 CRUD · {{ store?.tickets.length ?? 0 }} 张工单 ·
-      数据存于本地 (localStorage)
+      运维作业·事件工单中心 — 全生命周期 CRUD · {{ tickets.length }} 张工单 ·
+      数据实时读写后端 /api/ops/tickets（离线时无法加载与提交）
     </div>
   </div>
 </template>
@@ -321,6 +410,7 @@
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, ref } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { storeToRefs } from 'pinia'
 import { useTicketsStore } from '@/stores/modules/tickets'
 import { lvClass, lvText, tagClass, pctColor } from '@/utils/state'
@@ -330,6 +420,9 @@ import KnowledgePanels from '@/components/KnowledgePanels.vue'
 import TicketFormModal from '@/components/business/TicketFormModal.vue'
 import { KpiCard } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import { downloadCsv, stampedName } from '@/utils/export'
 import { useToast } from '@/hooks/useToast'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
 
@@ -342,6 +435,30 @@ function authState(action: PermAction) {
 
 const store = useTicketsStore()
 const { stats, tickets } = storeToRefs(store)
+
+/**
+ * 呈现状态映射：store 自己管 loading/lastError，这里只做「失败 → 可见」。
+ * 离线时 tickets 为空且 lastError 非空 → 走 ErrorRetry，而不是原来的空白页。
+ * 形状与 useAsyncPage 的 AsyncPageResult 对齐，保证 AsyncSection 契约一致。
+ */
+function makePage(): {
+  loading: boolean
+  error: string
+  empty: boolean
+  retrying: boolean
+} {
+  const hasData = tickets.value.length > 0
+  const err = store.lastError ?? ''
+  return {
+    loading: store.loading && !hasData,
+    error: hasData ? '' : err,
+    empty: !store.loading && !err && !hasData,
+    retrying: store.loading,
+  }
+}
+const page = computed(makePage)
+/** 统一的重载入口：刷新按钮与失败重试都走它，与上架 useAsyncPage 的 reload 语义一致 */
+const reload = () => store.load()
 const ticketKb: PowerKnowledge = {
   thresholds: [
     { k: tl('闭环跟踪'), v: '告警→工单→问题→风险', note: 'EOP 覆盖 62 类事件' },
@@ -393,6 +510,94 @@ const filtered = computed(() => {
   })
 })
 
+function resetFilter() {
+  kw.value = ''
+  fStatus.value = ''
+  fLv.value = ''
+}
+
+/* ---- 批量选择 ---- */
+const selectedIds = ref<string[]>([])
+const batching = ref(false)
+const deleting = ref(false)
+
+const selectedTickets = computed(() => tickets.value.filter((t) => selectedIds.value.includes(t.id)))
+/** 可推进 = 未处于终态 done */
+const advanceableSelected = computed(() => selectedTickets.value.filter((t) => t.state !== 'done'))
+
+const allSelected = computed(
+  () => filtered.value.length > 0 && filtered.value.every((t) => selectedIds.value.includes(t.id)),
+)
+const someSelected = computed(() => filtered.value.some((t) => selectedIds.value.includes(t.id)))
+
+function toggleRow(id: string) {
+  selectedIds.value = selectedIds.value.includes(id)
+    ? selectedIds.value.filter((x) => x !== id)
+    : [...selectedIds.value, id]
+}
+function toggleAll() {
+  selectedIds.value = allSelected.value ? [] : filtered.value.map((t) => t.id)
+}
+
+async function batchAdvance() {
+  const list = advanceableSelected.value
+  if (!list.length) return
+  batching.value = true
+  try {
+    let ok = 0
+    for (const t of list) {
+      try {
+        await store.advance(t.id)
+        ok += 1
+      } catch (e: unknown) {
+        toast.error(`${t.id} 推进失败：${toErrorMessage(e)}`)
+      }
+    }
+    if (ok) toast.success(`已批量推进 ${ok} 张工单`)
+    selectedIds.value = []
+  } finally {
+    batching.value = false
+  }
+}
+
+/* ---- 导出 ---- */
+const EXPORT_HEADERS = [
+  '工单号',
+  '标题',
+  '系统',
+  '级别',
+  '状态',
+  '责任人',
+  '创建时间',
+  'SLA',
+  '进度(%)',
+  '来源',
+  '描述',
+]
+function toExportRows(list: Ticket[]) {
+  return list.map((t) => [
+    t.id,
+    t.title,
+    t.sys,
+    lvText(t.lv),
+    statusLabel(t.state),
+    t.owner,
+    t.created,
+    t.sla,
+    t.progress,
+    t.source === 'alarm' ? '告警转单' : '手动创建',
+    t.description ?? '',
+  ])
+}
+function exportAll() {
+  downloadCsv(stampedName('工单'), EXPORT_HEADERS, toExportRows(filtered.value))
+  toast.success(`已导出 ${filtered.value.length} 张工单`)
+}
+function exportSelected() {
+  downloadCsv(stampedName('工单-选中'), EXPORT_HEADERS, toExportRows(selectedTickets.value))
+  toast.success(`已导出 ${selectedTickets.value.length} 张工单`)
+}
+
 /* ---- 表单弹窗 ---- */
 const formOpen = ref(false)
 const editing = ref<Ticket | null>(null)
@@ -419,15 +624,26 @@ function closeForm() {
   formOpen.value = false
   editing.value = null
 }
-function onFormSubmit(data: TicketCreateRequest) {
-  if (editing.value) {
-    store.update(editing.value.id, data)
-    toast.success(tl('已更新工单'))
-  } else {
-    store.create(data)
-    toast.success(tl('已新建工单'))
+const saving = ref(false)
+async function onFormSubmit(data: TicketCreateRequest) {
+  if (saving.value) return // 防重复提交
+  const target = editing.value
+  saving.value = true
+  try {
+    if (target) {
+      await store.update(target.id, data)
+      toast.success(tl('已更新工单'))
+    } else {
+      await store.create(data)
+      toast.success(tl('已新建工单'))
+    }
+    closeForm()
+  } catch (e: unknown) {
+    // 关键: 后端写失败时必须报错, 不能先弹"已新建/已更新"再悄悄抛异常
+    toast.error(`${target ? tl('更新') : tl('新建')}失败：${toErrorMessage(e)}`)
+  } finally {
+    saving.value = false
   }
-  closeForm()
 }
 
 /* ---- 详情 / 生命周期 ---- */
@@ -435,29 +651,54 @@ const detail = ref<Ticket | null>(null)
 function openDetail(t: Ticket) {
   detail.value = store.getById(t.id) ?? t
 }
-function advance(t: Ticket) {
-  store.advance(t.id)
-  if (detail.value) detail.value = store.getById(t.id) ?? null
-  const after = store.getById(t.id)
-  if (after) toast.info(`${tl('已推进至')} ${statusLabel(after.state)}`)
+async function advance(t: Ticket) {
+  try {
+    await store.advance(t.id)
+    if (detail.value) detail.value = store.getById(t.id) ?? null
+    const after = store.getById(t.id)
+    if (after) toast.info(`${tl('已推进至')} ${statusLabel(after.state)}`)
+  } catch (e: unknown) {
+    toast.error(`${t.id} ${tl('推进')}失败：${toErrorMessage(e)}`)
+  }
 }
-function jumpState(t: Ticket, s: TicketStatus) {
-  store.transition(t.id, { state: s, operator: '运维人员' })
-  if (detail.value) detail.value = store.getById(t.id) ?? null
-  toast.info(`${tl('已流转至')} ${statusLabel(s)}`)
+async function jumpState(t: Ticket, s: TicketStatus) {
+  try {
+    await store.transition(t.id, { state: s, operator: '运维人员' })
+    if (detail.value) detail.value = store.getById(t.id) ?? null
+    toast.info(`${tl('已流转至')} ${statusLabel(s)}`)
+  } catch (e: unknown) {
+    toast.error(`${t.id} ${tl('流转')}失败：${toErrorMessage(e)}`)
+  }
 }
 
-/* ---- 删除 ---- */
-const toDelete = ref<Ticket | null>(null)
+/* ---- 删除（单张 / 批量共用一个确认弹窗） ---- */
+const toDelete = ref<Ticket[]>([])
 function askDelete(t: Ticket) {
-  toDelete.value = t
+  toDelete.value = [t]
 }
-function doDelete() {
-  if (toDelete.value) {
-    store.remove(toDelete.value.id)
-    toast.success(tl('已删除工单'))
+function batchDelete() {
+  toDelete.value = selectedTickets.value
+}
+async function doDelete() {
+  const list = toDelete.value
+  toDelete.value = []
+  if (!list.length) return
+  deleting.value = true
+  try {
+    let ok = 0
+    for (const t of list) {
+      try {
+        await store.remove(t.id)
+        ok += 1
+      } catch (e: unknown) {
+        toast.error(`${t.id} ${tl('删除')}失败：${toErrorMessage(e)}`)
+      }
+    }
+    if (ok) toast.success(`已删除 ${ok} 张工单`)
+    selectedIds.value = []
+  } finally {
+    deleting.value = false
   }
-  toDelete.value = null
 }
 
 /* ---- 日志着色 ---- */
@@ -699,5 +940,187 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   font-size: 10px;
   color: var(--txt3);
   margin-top: 2px;
+}
+
+/* ===== 本轮新增: 头部 / 批量 / 复选 / 空态 ===== */
+.view-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.vh-left {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.hdr-btn.ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--txt2);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 0;
+}
+.hdr-btn.ghost:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--cyan);
+}
+.hdr-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.is-spin {
+  animation: tk-rotate 0.8s linear infinite;
+}
+@keyframes tk-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--cyan, #22e3ff);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* 批量操作条 */
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  border-color: rgba(34, 227, 255, 0.35);
+}
+.bb-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cyan, #22e3ff);
+}
+.bb-btn,
+.tb-btn {
+  padding: 5px 12px;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.bb-btn:hover:not(:disabled),
+.tb-btn:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--cyan, #22e3ff);
+}
+.bb-btn:disabled,
+.tb-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.bb-btn.primary {
+  border-color: var(--cyan, #22e3ff);
+  color: var(--cyan, #22e3ff);
+}
+.bb-btn.primary:hover:not(:disabled) {
+  background: rgba(34, 227, 255, 0.12);
+}
+.bb-btn.danger {
+  border-color: rgba(255, 77, 94, 0.45);
+  color: var(--red, #ff4d5e);
+}
+.bb-btn.danger:hover:not(:disabled) {
+  background: rgba(255, 77, 94, 0.12);
+}
+
+/* 复选框 */
+.ck {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--cyan, #22e3ff);
+  vertical-align: middle;
+}
+.ck-wrap {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.kcard-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 选中态 */
+.row-sel {
+  background: rgba(34, 227, 255, 0.08);
+  box-shadow: inset 2px 0 0 var(--cyan, #22e3ff);
+}
+.kcard-i.is-sel {
+  border-color: var(--cyan, #22e3ff);
+  box-shadow: 0 0 0 1px rgba(34, 227, 255, 0.35);
+}
+
+/* 表格内空态（筛选无结果，区别于整页空态） */
+.tbl-empty {
+  text-align: center;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* 删除确认列表 */
+.del-list {
+  margin: 0;
+  padding-left: 18px;
+  max-height: 220px;
+  overflow: auto;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: var(--txt2);
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1100px) {
+  .kanban {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .toolbar {
+    flex-wrap: wrap;
+  }
+  .toolbar .ipt {
+    flex: 1 1 140px;
+    width: auto !important;
+  }
+  .flex1 {
+    display: none;
+  }
+}
+@media (max-width: 720px) {
+  .view-head {
+    flex-wrap: wrap;
+  }
+  .kanban {
+    grid-template-columns: 1fr;
+  }
+  .batch-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

@@ -114,9 +114,13 @@
     "bigScreen": "定制大屏",
     "bigScreenDesigner": "大屏定制",
     "knowledgeCollab": "知识协作",
-    "workflow": "ITIL 流程"
-  },
-  "admin": {
+    "workflow": "ITIL 流程",
+    "alarmGroup": "告警",
+    "energyGroup": "能效",
+    "knowledgeAi": "知识与 AI",
+    "platformIntegration": "平台集成"
+    },
+    "admin": {
     "title": "系统管理",
     "audit": "操作审计"
   },
@@ -2145,7 +2149,10 @@
     "confirmDelete": "确认删除该登记？",
     "deleted": "已删除",
     "saved": "已保存",
-    "stillIn": "在机房内"
+    "stillIn": "在机房内",
+    "cancel": "取消",
+    "del": "删除",
+    "confirmDeleteTitle": "删除登记"
   },
   "faultImpact": {
     "title": "故障影响分析",
@@ -2322,14 +2329,14 @@
     "del": "删除",
     "empty": "暂无供应商",
     "rateDims": "评分维度（0-100）",
+    "rateTitle": "供应商评分",
+    "confirmDelTitle": "删除供应商",
+    "confirmDelText": "确定要删除该供应商吗？此操作不可撤销。",
+    "confirmDelOk": "确认删除",
     "name": "名称",
     "namePlaceholder": "供应商名称",
     "categoryPlaceholder": "如 供配电运维",
-    "promptQuality": "质量评分(0-100)",
-    "promptResponse": "响应评分(0-100)",
-    "promptPrice": "价格评分(0-100)",
-    "promptSla": "SLA 履约评分(0-100)",
-    "promptCoop": "配合度评分(0-100)",
+
     "dim_quality": "质量",
     "dim_response": "响应",
     "dim_price": "价格",
@@ -2688,6 +2695,8 @@
     "conflict": "冲突",
     "avgConf": "平均置信度",
     "sources": "识别来源",
+    "srcRfid": "RFID 资产标签",
+    "srcLedger": "电子工单台账",
     "devices": "台",
     "sourceConf": "置信度 {n}%",
     "conflictList": "冲突清单",

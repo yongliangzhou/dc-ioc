@@ -4,8 +4,8 @@
       <h1>{{ tl('datacenter.title') }}</h1>
       <span class="sub">{{ tl('datacenter.sub') }}</span>
       <div class="head-actions">
-        <button class="btn-sm" @click="load" :disabled="loading">{{ tl('datacenter.refresh') }}</button>
-        <button class="btn-sm" @click="openOpLog" :disabled="loading">{{ tl('datacenter.opLog') }}</button>
+        <button class="btn-sm" @click="page.reload" :disabled="busy">{{ tl('datacenter.refresh') }}</button>
+        <button class="btn-sm" @click="openOpLog" :disabled="busy">{{ tl('datacenter.opLog') }}</button>
         <button class="btn-sm danger" @click="batchDelete" :disabled="!canAdmin || selectedIds.length === 0">{{ tl('datacenter.batchDelete') }} ({{ selectedIds.length }})</button>
         <button class="btn-sm primary" @click="openCreate" :disabled="!canAdmin">{{ tl('datacenter.newDc') }}</button>
       </div>
@@ -27,36 +27,37 @@
     </div>
 
     <!-- 卡片网格 -->
-    <div class="cards">
-      <div v-for="d in list" :key="d.id" class="card" :class="{ cur: d.isCurrent, sel: selectedIds.includes(d.id) }">
-        <div class="card-top">
-          <label v-if="canAdmin" class="chk card-chk"><input type="checkbox" :checked="selectedIds.includes(d.id)" @change="toggleOne(d.id)" /></label>
-          <div>
-            <div class="c-name">{{ d.name }}</div>
-            <div class="c-code mono">{{ d.code }}</div>
+    <AsyncSection :page="page" @retry="page.reload">
+      <div class="cards">
+        <div v-for="d in list" :key="d.id" class="card" :class="{ cur: d.isCurrent, sel: selectedIds.includes(d.id) }">
+          <div class="card-top">
+            <label v-if="canAdmin" class="chk card-chk"><input type="checkbox" :checked="selectedIds.includes(d.id)" @change="toggleOne(d.id)" /></label>
+            <div>
+              <div class="c-name">{{ d.name }}</div>
+              <div class="c-code mono">{{ d.code }}</div>
+            </div>
+            <span v-if="d.isCurrent" class="tag g">{{ tl('datacenter.current') }}</span>
+            <span v-else class="tag" :class="statusClass(d.status)">{{ statusLabel(d.status) }}</span>
           </div>
-          <span v-if="d.isCurrent" class="tag g">{{ tl('datacenter.current') }}</span>
-          <span v-else class="tag" :class="statusClass(d.status)">{{ statusLabel(d.status) }}</span>
-        </div>
-        <div class="c-region">{{ d.region }} · {{ d.address || '—' }}</div>
-        <div class="c-metrics">
-          <div><span>{{ d.powerCapacityMw.toFixed(1) }}</span><label>{{ tl('datacenter.kpiPower') }}</label></div>
-          <div><span>{{ d.coolingCapacityMw.toFixed(1) }}</span><label>{{ tl('datacenter.kpiCooling') }}</label></div>
-          <div><span>{{ d.rackCapacity }}</span><label>{{ tl('datacenter.kpiRack') }}</label></div>
-          <div><span>{{ d.capacityKw }}</span><label>{{ tl('datacenter.capKw') }}</label></div>
-        </div>
-        <div class="c-desc">{{ d.description || '—' }}</div>
-        <div class="c-actions">
-          <button v-if="!d.isCurrent" class="btn-sm" @click="setCurrent(d)" :disabled="!canAdmin">{{ tl('datacenter.setCurrent') }}</button>
-          <button class="btn-sm" @click="toggleStatus(d)" :disabled="!canAdmin">{{ d.status === 'disabled' || d.status === '下线' ? tl('datacenter.enable') : tl('datacenter.disable') }}</button>
-          <button class="btn-sm" @click="openServices(d)" :disabled="loading">{{ tl('datacenter.services') }}</button>
-          <button class="btn-sm" @click="openEdit(d)" :disabled="!canAdmin">{{ tl('common.edit') }}</button>
-          <button class="btn-sm danger" @click="remove(d)" :disabled="!canAdmin || d.isCurrent">{{ tl('datacenter.delete') }}</button>
-          <router-link class="btn-sm" :to="{ path: '/ops/datacenter/compare' }">{{ tl('datacenter.compare') }}</router-link>
+          <div class="c-region">{{ d.region }} · {{ d.address || '—' }}</div>
+          <div class="c-metrics">
+            <div><span>{{ d.powerCapacityMw.toFixed(1) }}</span><label>{{ tl('datacenter.kpiPower') }}</label></div>
+            <div><span>{{ d.coolingCapacityMw.toFixed(1) }}</span><label>{{ tl('datacenter.kpiCooling') }}</label></div>
+            <div><span>{{ d.rackCapacity }}</span><label>{{ tl('datacenter.kpiRack') }}</label></div>
+            <div><span>{{ d.capacityKw }}</span><label>{{ tl('datacenter.capKw') }}</label></div>
+          </div>
+          <div class="c-desc">{{ d.description || '—' }}</div>
+          <div class="c-actions">
+            <button v-if="!d.isCurrent" class="btn-sm" @click="setCurrent(d)" :disabled="!canAdmin">{{ tl('datacenter.setCurrent') }}</button>
+            <button class="btn-sm" @click="toggleStatus(d)" :disabled="!canAdmin">{{ d.status === 'disabled' || d.status === '下线' ? tl('datacenter.enable') : tl('datacenter.disable') }}</button>
+            <button class="btn-sm" @click="openServices(d)" :disabled="busy">{{ tl('datacenter.services') }}</button>
+            <button class="btn-sm" @click="openEdit(d)" :disabled="!canAdmin">{{ tl('common.edit') }}</button>
+            <button class="btn-sm danger" @click="remove(d)" :disabled="!canAdmin || d.isCurrent">{{ tl('datacenter.delete') }}</button>
+            <router-link class="btn-sm" :to="{ path: '/ops/datacenter/compare' }">{{ tl('datacenter.compare') }}</router-link>
+          </div>
         </div>
       </div>
-      <div v-if="!list.length" class="empty">{{ tl('common.error') }}</div>
-    </div>
+    </AsyncSection>
 
     <!-- 新建/编辑抽屉 -->
     <div class="drawer-mask" v-if="drawer" @click.self="drawer = false">
@@ -150,9 +151,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { useAsyncPage } from '@/composables/useAsyncPage'
 import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission } from '@/hooks/usePermission'
 import {
   listIdcs,
@@ -178,7 +182,6 @@ const canAdmin = computed(() => can('admin'))
 const dcStore = useDatacenterStore()
 
 const list = ref<Idc[]>([])
-const loading = ref(false)
 const drawer = ref(false)
 const editId = ref<number | null>(null)
 const saving = ref(false)
@@ -243,16 +246,16 @@ function actionLabel(a: string) {
   return a
 }
 
-function load() {
-  loading.value = true
-  listIdcs()
-    .then((r) => {
-      list.value = r || []
-      dcStore.setIdcList(list.value.map((i) => ({ id: i.id, name: i.name, region: i.region, status: i.status })))
-    })
-    .catch(() => toast.error('加载数据中心失败'))
-    .finally(() => (loading.value = false))
-}
+const page = useAsyncPage<Idc[]>(
+  async () => {
+    const r = await listIdcs()
+    list.value = r || []
+    dcStore.setIdcList(list.value.map((i) => ({ id: i.id, name: i.name, region: i.region, status: i.status })))
+    return list.value
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
+const { busy } = page
 
 function openCreate() {
   editId.value = null
@@ -280,7 +283,7 @@ function save() {
   op.then(() => {
     toast.success(tl('datacenter.saved'))
     drawer.value = false
-    load()
+    page.reload()
   })
     .catch((e: any) => toast.error(e?.detail || '保存失败'))
     .finally(() => (saving.value = false))
@@ -291,43 +294,43 @@ function setCurrent(d: Idc) {
     .then((r) => {
       toast.success(tl('datacenter.switchOk'))
       dcStore.setCurrentIdc(r.id)
-      load()
+      page.reload()
     })
     .catch((e: any) => toast.error(e?.detail || '切换失败'))
 }
 
-function toggleStatus(d: Idc) {
+async function toggleStatus(d: Idc) {
   const willDisable = d.status !== 'disabled' && d.status !== '下线'
   const act = willDisable ? tl('datacenter.disable') : tl('datacenter.enable')
-  if (!confirm(tl('datacenter.confirmToggle', { name: d.name, act }))) return
+  if (!(await useConfirm({ message: tl('datacenter.confirmToggle', { name: d.name, act }), danger: true }))) return
   toggleIdcStatus(d.id)
     .then((r) => {
       toast.success(tl('datacenter.toggleOk', { txt: r.status === 'disabled' ? tl('datacenter.disabled') : tl('datacenter.enabled') }))
-      load()
+      page.reload()
     })
     .catch((e: any) => toast.error(e?.detail || '操作失败'))
 }
 
-function remove(d: Idc) {
-  if (!confirm(tl('datacenter.confirmDelete'))) return
+async function remove(d: Idc) {
+  if (!(await useConfirm({ message: tl('datacenter.confirmDelete'), danger: true }))) return
   deleteIdc(d.id)
     .then(() => {
       toast.success(tl('datacenter.deleted'))
       selectedIds.value = selectedIds.value.filter((i) => i !== d.id)
-      load()
+      page.reload()
     })
     .catch((e: any) => toast.error(e?.detail || '删除失败'))
 }
 
-function batchDelete() {
+async function batchDelete() {
   if (!selectedIds.value.length) return
-  if (!confirm(tl('datacenter.confirmBatchDelete', { n: selectedIds.value.length }))) return
+  if (!(await useConfirm({ message: tl('datacenter.confirmBatchDelete', { n: selectedIds.value.length }), danger: true }))) return
   batchDeleteIdcs(selectedIds.value)
     .then((r) => {
       toast.success(tl('datacenter.batchDeleted', { n: r.deleted }))
       if (r.skipped.length) toast.warning(tl('datacenter.batchSkipped', { n: r.skipped.length }))
       selectedIds.value = []
-      load()
+      page.reload()
     })
     .catch((e: any) => toast.error(e?.detail || '批量删除失败'))
 }
@@ -348,7 +351,6 @@ function openServices(d: Idc) {
     .catch(() => toast.error('加载关联服务失败'))
 }
 
-onMounted(load)
 </script>
 
 <style scoped>

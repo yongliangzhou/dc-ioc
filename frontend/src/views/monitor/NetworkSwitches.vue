@@ -3,6 +3,7 @@
     <div class="view-head">
       <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('网络监控') }} {{ tl('·') }} {{ tl('核心交换机') }}</h1>
       <span class="sub">{{ tl('Spine-Leaf 拓扑 / 端口面板 / 链路聚合 / 流量监控') }}</span>
+      <MockDataBanner :level="mockLevel" />
     </div>
 
     <!-- 2.1.5 系统资源仪表区 KpiCard × 4 -->
@@ -261,7 +262,12 @@ import { StatusBadge } from '@dc-ioc/ui'
 import PortPanel from '@/components/monitor/PortPanel.vue'
 import { getNetworkSwitchesDetailed, type NetworkSwitchSummary, type SwitchView, type SwitchPortView } from '@/api/monitor'
 import Panel from '@/components/common/Panel.vue'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 const { t: tl } = useI18n()
+
+/** 后端无有效返回时页面会回退到本地 mockData()，必须让用户看见这是假的 */
+const { level: mockLevel, markReal, markFull } = useMockFlag()
 
 const s = ref<NetworkSwitchSummary | null>(null)
 const error = ref('')
@@ -452,12 +458,17 @@ function mockData(): NetworkSwitchSummary {
 
 async function load() {
   error.value = ''
-  const data = await getNetworkSwitchesDetailed()
-  if (!data || !data.switches?.length) {
-    console.warn('NetworkSwitches empty data, using mock fallback')
-    s.value = mockData()
-  } else {
-    s.value = data
+  try {
+    const data = await getNetworkSwitchesDetailed()
+    if (!data || !data.switches?.length) {
+      s.value = mockData()
+      markFull()
+    } else {
+      s.value = data
+      markReal()
+    }
+  } catch (e: unknown) {
+    error.value = toErrorMessage(e)
   }
 }
 onMounted(load)

@@ -14,12 +14,34 @@
       </div>
     </div>
 
-    <!-- 加载 / 错误态 -->
-    <Panel v-if="!s" class="center-box">
-      <span class="muted" :class="{ err: !!error }">{{ error || tl('加载中...') }}</span>
+    <!-- 加载态 -->
+    <Panel v-if="loading && !s" class="center-box">
+      <span class="muted">{{ tl('加载中...') }}</span>
     </Panel>
 
-    <template v-else>
+    <!-- 错误态（必须可重试） -->
+    <ErrorRetry
+      v-else-if="error && !s"
+      :title="tl('加载失败')"
+      :message="error"
+      :retrying="loading"
+      min-height="200px"
+      @retry="load"
+    />
+
+    <!-- 空态 -->
+    <EmptyStateCard
+      v-else-if="s && !hasData"
+      title="暂无电池组数据"
+      desc="后端已连接但未返回任何电池组，请确认电池采集器已接入"
+      min-height="200px"
+    >
+      <template #actions>
+        <button class="btn-refresh" :disabled="loading" @click="load">{{ tl('刷新') }}</button>
+      </template>
+    </EmptyStateCard>
+
+    <template v-else-if="s">
       <!-- ============ 3.5.1 电池组概况 KPI ============ -->
       <div class="section-title"><span class="bar"></span>{{ tl('电池组概况') }}</div>
       <div class="kpi-row">
@@ -509,7 +531,9 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import ErrorRetry from '@/components/common/ErrorRetry.vue'
+import EmptyStateCard from '@/components/common/EmptyStateCard.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt } from '@/utils/format'
@@ -531,6 +555,8 @@ const error = ref('')
 const loading = ref(false)
 
 const groups = computed(() => s.value?.groups ?? [])
+/** 后端连上了但一个电池组都没返回 —— 属于空态，不是加载中，也不是错误 */
+const hasData = computed(() => groups.value.length > 0)
 
 // 选中态
 const selectedGroupObj = ref<BatteryGroupView | null>(null)
@@ -983,7 +1009,7 @@ async function load() {
       selectedGroupObj.value = s.value.groups[0]
     }
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   } finally {
     loading.value = false
   }

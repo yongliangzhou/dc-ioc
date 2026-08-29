@@ -19,6 +19,7 @@ from app.core.config import settings
 from app.crud import external as ext_crud
 from app.crud.external import ONLINE_THRESHOLD_SEC
 from app.db.session import SessionLocal
+from app.models.control_log import ControlLog
 from app.models.external import ExternalDevice, MetricRaw
 from app.services import dc_ioc_data as generated
 
@@ -119,6 +120,30 @@ def dashboard_overview() -> dict:
     if total > 0:
         # 有真实设备数据 → 从真实链路聚合
         online_rate = round(online / total * 100, 2) if total > 0 else 0.0
+        # 分业务域在线率：按设备 domain 前缀聚合真实在线/总数，根治前端 ±1 派生
+        biz: dict[str, list[int]] = {}
+        for d in items:
+            dom = (getattr(d, "domain", "") or "").lower()
+            if dom.startswith("hvac"):
+                key = "hvac"
+            elif dom.startswith("power"):
+                key = "power"
+            elif dom.startswith("sec"):
+                key = "security"
+            else:
+                continue
+            bucket = biz.setdefault(key, [0, 0])
+            bucket[1] += 1
+            if getattr(d, "online", False):
+                bucket[0] += 1
+        domain_online = {
+            k: {
+                "online": v[0],
+                "total": v[1],
+                "rate": round(v[0] / v[1] * 100, 2) if v[1] else 0.0,
+            }
+            for k, v in biz.items()
+        }
         # PUE 等运营指标仍用生成器兜底（需真实传感器 + 计算逻辑）
         k = generated.kpi()
         return _stamp({
@@ -134,9 +159,21 @@ def dashboard_overview() -> dict:
             "availability": k["availability"],
             "free_cool_hours": k["freeCoolHours"],
             "alarms": {"crit": k["alarms"]["crit"], "warn": k["alarms"]["warn"], "info": k["alarms"]["info"]},
+            "domain_online": domain_online,
         }, "aggregated")
     # 无真实设备 → 回退生成器
     return _stamp(generated_dashboard_overview(), "generated")
+
+def kpi_trends(hours: int = 48) -> dict:
+    """驾驶舱 KPI 趋势 (后端 kpi_history 时序表, 根治前端合成示例曲线)。"""
+    from app.services import kpi_history as kh
+
+    return {
+        "hours": hours,
+        "points": kh.get_kpi_trends(hours=hours, max_points=60),
+        "source": "kpi_history",
+    }
+
 
 def generated_dashboard_overview() -> dict:
     """从旧版生成器构造总览（保持格式一致）。"""
@@ -200,8 +237,71 @@ def _devices_in_domain(db, domain: str) -> list[dict]:
         return []
 
 # ---- 暖通 ----
+# D6 持久化: 快控指令先记录到 ControlLog, 这里把"最新指令"作为覆盖项叠加到聚合结果,
+# 使下发在 30s 轮询刷新后依然生效 (真实执行器未接入, 演示态以留痕指令覆盖)。
+# 模式指令不便入独立列(feature), 以 value 的整数编码记录: 1=制冷模式 2=预冷模式 3=自然冷却
+_CONTROL_MODES = ["制冷模式", "预冷模式", "自然冷却"]
+
+
+def _apply_control_overrides(data: dict) -> dict:
+    if not isinstance(data, dict) or "chillerGroups" not in data:
+        return data
+
+    db = None
+    try:
+        db = SessionLocal()
+        logs = (
+            db.query(ControlLog)
+            .filter(ControlLog.result == "accepted")
+            .order_by(ControlLog.id.desc())
+            .all()
+        )
+    except Exception:
+        logger.exception("读取控制指令留痕失败, 跳过覆盖")
+        if db is not None:
+            db.close()
+        return data
+    finally:
+        if db is not None:
+            db.close()
+
+    state_by_chiller: dict[str, str] = {}
+    latest_mode: str | None = None
+    latest_temp: float | None = None
+
+    # logs 已按 id 倒序(最新在前), 各维度首次命中即采用
+    for log in logs:
+        if log.action in ("start", "stop"):
+            cid = str(log.chiller_id)
+            if cid not in state_by_chiller:
+                state_by_chiller[cid] = "运行" if log.action == "start" else "停机"
+        elif log.action == "mode":
+            if latest_mode is None and log.value is not None:
+                idx = int(log.value) - 1
+                if 0 <= idx < len(_CONTROL_MODES):
+                    latest_mode = _CONTROL_MODES[idx]
+        elif log.action == "temp":
+            if latest_temp is None and log.value is not None:
+                latest_temp = float(log.value)
+
+    for g in data.get("chillerGroups", []) or []:
+        if not isinstance(g, dict):
+            continue
+        c = g.get("chiller") or {}
+        cid = str(c.get("id", ""))
+        if cid in state_by_chiller:
+            c["state"] = state_by_chiller[cid]
+
+    if latest_mode is not None:
+        data["mode"] = latest_mode
+    if latest_temp is not None:
+        data["targetSupplyT"] = latest_temp
+    return data
+
+
 def chiller_plant() -> dict:
-    return _aggregate("hvac_source", generated.chiller_plant, ["chiller", "sec_pump", "storage_tank", "ambient"])
+    data = _aggregate("hvac_source", generated.chiller_plant, ["chiller", "sec_pump", "storage_tank", "ambient"])
+    return _apply_control_overrides(data)
 
 def crac() -> dict:
     return _aggregate("hvac_terminal", generated.crac, ["leak", "crac"])

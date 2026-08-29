@@ -214,6 +214,14 @@ tr:hover td{background:var(--row-hover)}
 .tbtn:hover{color:var(--txt-strong); border-color:var(--cyan); box-shadow:var(--glow)}
 .tbtn .n{position:absolute; top:-5px; right:-5px; background:var(--red); color:#fff; font-size:9px; padding:0 4px; border-radius:8px; min-width:15px; text-align:center; font-weight:700}
 
+/* 顶栏实时链路状态（消费 useRealtimeLinkage） */
+.linkage{display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:8px; border:1px solid var(--line); background:var(--panel); font-size:11px; color:var(--txt2); white-space:nowrap; cursor:default}
+.linkage .dot{width:7px; height:7px; border-radius:50%; flex-shrink:0}
+.linkage .dot.g{background:var(--green); box-shadow:0 0 6px var(--green)}
+.linkage .dot.r{background:var(--red); box-shadow:0 0 6px var(--red); animation:blink 1s infinite}
+.linkage .dot.y{background:var(--amber); box-shadow:0 0 6px var(--amber); animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.35}}
+
 /* ============ 弹窗/抽屉 ============ */
 .mask{position:fixed; inset:0; background:var(--mask); backdrop-filter:blur(3px); z-index:100; opacity:0; pointer-events:none; transition:opacity .2s}
 .mask.on{opacity:1; pointer-events:auto}
@@ -286,6 +294,8 @@ select.inp option{background:var(--bg2); color:var(--txt)}
 .inp::placeholder{color:var(--txt3)}
 .field{display:flex; flex-direction:column; gap:6px}
 .field > span{font-size:11.5px; color:var(--txt2)}
+.field-err{color:var(--red); font-size:12px; margin-top:2px}
+.inp.invalid{border-color:var(--red)}
 /* 状态徽章 (tag) 已存在于全局 .tag, 这里补充 pill 派生 */
 .pill{display:inline-flex; align-items:center; gap:6px; padding:4px 11px; border-radius:20px; font-size:11.5px; font-weight:600;
   background:var(--badge-bg); border:1px solid var(--line); color:var(--txt2)}
@@ -318,7 +328,12 @@ select.inp option{background:var(--bg2); color:var(--txt)}
 .grid.cols-3{grid-template-columns:repeat(3,1fr)}
 .grid.cols-4{grid-template-columns:repeat(4,1fr)}
 .grid.cols-5{grid-template-columns:repeat(5,1fr)}
+.grid.cols-6{grid-template-columns:repeat(6,1fr)}
+/* 自适应列: KPI 行首选, 加减指标无需改类名 */
+.grid.cols-auto{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.grid.cols-auto-sm{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 .grid.twin{grid-template-columns:1fr 1fr}
 .space-y{display:flex; flex-direction:column; gap:12px}
-@media(max-width:900px){.grid.cols-4,.grid.cols-5{grid-template-columns:repeat(2,1fr)}.grid.cols-3{grid-template-columns:1fr 1fr}}
-@media(max-width:720px){.grid.cols-2,.grid.cols-3,.grid.cols-4,.grid.cols-5,.grid.twin{grid-template-columns:1fr}}
+@media(max-width:1200px){.grid.cols-6{grid-template-columns:repeat(4,1fr)}.grid.cols-auto-sm{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}}
+@media(max-width:900px){.grid.cols-4,.grid.cols-5{grid-template-columns:repeat(2,1fr)}.grid.cols-3,.grid.cols-6{grid-template-columns:1fr 1fr}}
+@media(max-width:720px){.grid.cols-2,.grid.cols-3,.grid.cols-4,.grid.cols-5,.grid.cols-6,.grid.twin{grid-template-columns:1fr}.grid.cols-auto{grid-template-columns:1fr}}

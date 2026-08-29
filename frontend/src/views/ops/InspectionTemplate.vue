@@ -12,6 +12,7 @@
           <h3>{{ tl('巡检模板') }}</h3>
           <button class="btn-sm primary" v-bind="authState('write')" @click="openTpl()">{{ tl('新建模板') }}</button>
         </div>
+        <AsyncSection :page="routesPage" @retry="routesPage.reload" :empty-title="tl('暂无模板')" :empty-desc="tl('点击右上角新建第一个巡检模板')">
         <div class="tpl-list">
           <div v-for="r in routes" :key="r.id" class="tpl-item">
             <div class="tpl-main">
@@ -25,8 +26,8 @@
               <button class="link danger" v-bind="authState('write')" @click="delTpl(r)">{{ tl('删除') }}</button>
             </div>
           </div>
-          <div class="empty" v-if="!routes.length">{{ tl('暂无模板') }}</div>
         </div>
+        </AsyncSection>
       </section>
 
       <!-- 右：APP 巡检任务 -->
@@ -104,6 +105,8 @@ import {
   type RouteView,
 } from '@/api/inspection'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
+import { useAsyncPage } from '@/composables/useAsyncPage'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 const { t: tl } = useI18n()
 const { can, denyTip } = usePermission()
@@ -114,6 +117,11 @@ function authState(action: PermAction) {
 
 // ===== 巡检模板 =====
 const routes = ref<RouteView[]>([])
+async function loadRoutes() {
+  routes.value = await getInspectionRoutes()
+  return routes.value
+}
+const routesPage = useAsyncPage<RouteView[]>(loadRoutes, { isEmpty: (d) => !d.length })
 const editing = ref<RouteView | null>(null)
 
 function openTpl(r?: RouteView) {
@@ -129,12 +137,12 @@ async function saveTpl() {
   if (editing.value.id) await updateInspectionRoute(editing.value.id, payload)
   else await createInspectionRoute(payload)
   editing.value = null
-  loadRoutes()
+  await routesPage.reload()
 }
 async function delTpl(r: RouteView) {
   if (r.id) await deleteInspectionRoute(r.id)
   if (editing.value?.id === r.id) editing.value = null
-  loadRoutes()
+  await routesPage.reload()
 }
 
 // ===== APP 巡检任务 (localStorage 模拟移动端派发) =====
@@ -190,16 +198,7 @@ function statusText(s: string) {
   return { todo: tl('待接单'), doing: tl('执行中'), done: tl('已完成') }[s] || s
 }
 
-async function loadRoutes() {
-  try {
-    routes.value = await getInspectionRoutes()
-  } catch {
-    routes.value = []
-  }
-}
-
 onMounted(() => {
-  loadRoutes()
   loadTasks()
 })
 </script>

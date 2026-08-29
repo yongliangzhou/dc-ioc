@@ -23,6 +23,8 @@ from app.db.session import SessionLocal
 from app.models.equipment import Equipment
 from app.models.idc import Idc, Room, Cabinet, Server
 from app.models.knowledge import KnowledgeItem
+from app.models.workflow import WorkflowItem
+from datetime import datetime, timedelta
 
 DEMO_IDC_NAME = "演示数据中心 A"
 
@@ -101,6 +103,24 @@ def _seed_knowledge(db):
     db.commit()
 
 
+def _seed_workflow(db):
+    """演示工作流 (D5 后端化): 与前端原 seedData 对齐, 便于页面直接看到数据。"""
+    if db.query(WorkflowItem).count() > 0:
+        return
+    base = datetime.now()
+    ts = lambda h: (base - timedelta(hours=h)).strftime("%Y-%m-%d %H:%M:%S")
+    rows = [
+        WorkflowItem(id="INC-2026-0001", type="incident", title="B 区冷机 CH-02 高压报警", priority="P1", status="progress", owner="张伟", applicant="张伟", sla_hours=4, description="B 区冷机 CH-02 出水温度异常升高并触发高压报警，已切换至备用冷机。", approval=[{"approver": "一线主管", "status": "pending"}], logs=[{"user": "张伟", "text": "创建", "at": ts(3)}], knowledge_links=[], created_at=ts(3), updated_at=ts(1.5)),
+        WorkflowItem(id="INC-2026-0002", type="incident", title="UPS-A 旁路异常", priority="P2", status="approval", owner="李娜", applicant="李娜", sla_hours=8, description="UPS-A 模块显示旁路电压偏离，需主管确认是否现场处理。", approval=[{"approver": "一线主管", "status": "pending", "comment": ""}, {"approver": "运维经理", "status": "pending"}], logs=[{"user": "李娜", "text": "创建", "at": ts(10)}], knowledge_links=[], created_at=ts(10), updated_at=ts(10)),
+        WorkflowItem(id="PRB-2026-0001", type="problem", title="机房湿度周期性波动根因分析", priority="P3", status="new", owner="王强", applicant="王强", sla_hours=24, description="近两周机房相对湿度在 40%~55% 间周期性波动，需定位加湿系统控制逻辑。", approval=[{"approver": "技术专家", "status": "pending"}], logs=[{"user": "王强", "text": "创建", "at": ts(26)}], knowledge_links=[], created_at=ts(26), updated_at=ts(26)),
+        WorkflowItem(id="CHG-2026-0001", type="change", title="核心交换机固件升级", priority="P2", status="approved", owner="赵敏", applicant="赵敏", sla_hours=8, description="对核心交换机执行 9.3.2 固件升级，规避已知 ARP 表项溢出缺陷。", approval=[{"approver": "变更委员会", "status": "approved", "comment": "同意窗口期", "at": ts(30)}, {"approver": "运维经理", "status": "pending"}], logs=[{"user": "赵敏", "text": "创建", "at": ts(50)}], knowledge_links=[], created_at=ts(50), updated_at=ts(30)),
+        WorkflowItem(id="RSK-2026-0001", type="risk", title="市电双路单点隐患", priority="P2", status="closed", owner="陈昊", applicant="陈昊", sla_hours=24, risk_level="high", description="发现 10kV 进线 II 路 PT 柜端子氧化，已安排带电紧固。", approval=[{"approver": "安全负责人", "status": "approved", "at": ts(20)}], logs=[{"user": "陈昊", "text": "创建", "at": ts(200)}], knowledge_links=["KB-9001"], created_at=ts(200), updated_at=ts(20)),
+        WorkflowItem(id="INC-2026-0003", type="incident", title="动环采集器离线", priority="P3", status="closed", owner="孙磊", applicant="孙磊", sla_hours=24, description="采集器 COL-07 离线，重启后恢复，原因为网络端口协商异常。", approval=[{"approver": "一线主管", "status": "pending"}], logs=[{"user": "孙磊", "text": "创建", "at": ts(96)}], knowledge_links=["KB-9003"], created_at=ts(96), updated_at=ts(96)),
+    ]
+    db.add_all(rows)
+    db.commit()
+
+
 def seed(force: bool = False):
     db = SessionLocal()
     try:
@@ -116,6 +136,7 @@ def seed(force: bool = False):
         _seed_idc(db)
         _seed_equipment(db)
         _seed_knowledge(db)
+        _seed_workflow(db)
         print("seed_demo done.")
     finally:
         db.close()

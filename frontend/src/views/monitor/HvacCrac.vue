@@ -15,6 +15,14 @@
       </div>
     </div>
 
+    <!-- 部分数据源失败显式露出 (不再静默吞掉), 可一键重试失败项 -->
+    <ErrorBanner
+      v-if="all.anyError.value"
+      :count="all.errorCount.value"
+      :labels="failedLabels"
+      @retry="all.reloadFailed"
+    />
+
     <!-- ========== KPI Row 1 ========== -->
     <div class="kpi-row" v-if="cracData">
       <KpiCard
@@ -84,9 +92,32 @@
       <h3 class="section-title">
         <span class="section-dot" style="background: var(--cyan)"></span>
         设备全景列表
-        <span class="section-sum">{{ cracData.devices.length }} 台</span>
+        <span class="section-sum"
+          >{{ filteredDeviceRows.length }} / {{ cracData.devices.length }} 台</span
+        >
       </h3>
-      <DeviceTable :columns="deviceColumns" :rows="deviceRows" :count="cracData.devices.length" />
+      <div class="list-bar">
+        <span v-if="activeRoom" class="filter-chip">
+          已按包间 “{{ activeRoom }}” 筛选
+          <button class="chip-clear" @click="activeRoom = null" aria-label="清除筛选">✕</button>
+        </span>
+        <span v-else class="list-bar-hint">点击包间卡片的“列表筛选”可按间过滤本表</span>
+        <div class="col-menu-wrap">
+          <button class="col-toggle" @click="colMenuOpen = !colMenuOpen">列设置 ▾</button>
+          <div v-if="colMenuOpen" class="col-backdrop" @click="colMenuOpen = false"></div>
+          <div v-if="colMenuOpen" class="col-menu" @click.stop>
+            <label v-for="c in deviceColumns" :key="c.key" class="col-menu-item">
+              <input
+                type="checkbox"
+                :checked="visibleKeys.has(c.key)"
+                @change="toggleCol(c.key)"
+              />
+              <span>{{ c.label }}</span>
+            </label>
+          </div>
+        </div>
+      </div>
+      <DeviceTable :columns="visibleColumns" :rows="filteredDeviceRows" :count="filteredDeviceRows.length" />
     </div>
 
     <!-- ========== 包间温度热力图 ========== -->
@@ -126,7 +157,15 @@
               ? 'var(--red)'
               : 'var(--amber)'
         "
+        :class="{ 'active-room': activeRoom === rg.roomName }"
       >
+        <template #header-actions>
+          <button
+            class="room-filter-btn"
+            :class="{ active: activeRoom === rg.roomName }"
+            @click.stop="toggleRoom(rg.roomName)"
+          >{{ activeRoom === rg.roomName ? '取消筛选' : '列表筛选' }}</button>
+        </template>
         <!-- 环境传感器 -->
         <div class="rg-env">
           <h4 class="rg-subtitle">环境传感器</h4>
@@ -412,7 +451,14 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { getCrac, getCracTrends, mapCracRoomGroups } from '@/api/hvac'
 import { getActiveAlarms } from '@/api'
-import type { CracSummary, CracView, CracRoomGroupView, CracTrends } from '@/api/hvac'
+import type {
+  CracSummary,
+  CracView,
+  CracRoomGroupView,
+  CracTrends,
+  FilterDpPoint,
+  ShrWeeklyPoint,
+} from '@/api/hvac'
 import type { Alarm } from '@/types'
 import type { LineSeriesOption } from 'echarts'
 import { CHART_COLORS } from '@/assets/echarts-theme'
@@ -425,68 +471,48 @@ import DeviceTable from '@/components/monitor/DeviceTable.vue'
 import HeatmapView from '@/components/monitor/HeatmapView.vue'
 import QuickControl from '@/components/monitor/QuickControl.vue'
 import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { useAsyncPageAll } from '@/composables/useAsyncPage'
 import { numVal, formatVal, formatTime } from '@/utils/format'
 
-// ===== State =====
-const cracData = ref<CracSummary | null>(null)
-const trends = ref<CracTrends | null>(null)
-interface TrendPoint {
-  date?: string
-  value?: number
-  week?: string
-  [k: string]: unknown
-}
+// ===== State (多源并发: 单源失败不阻塞其它源, 由 ErrorBanner 显式露出) =====
+const all = useAsyncPageAll(
+  {
+    crac: () => getCrac(),
+    trends: () => getCracTrends(),
+    alarms: () => getActiveAlarms(),
+  },
+  { autoLoad: false, minLoadingMs: 0 },
+)
 
-const rawCrac = ref<CracSummary | null>(null)
-const loading = ref(false)
-const trendsLoading = ref(false)
+const cracData = computed<CracSummary | null>(() => all.pages.crac.data.value ?? null)
+const rawCrac = computed<CracSummary | null>(() => all.pages.crac.data.value ?? null)
+const trends = computed<CracTrends | null>(() => all.pages.trends.data.value ?? null)
+const alarms = computed<Alarm[]>(() => (all.pages.alarms.data.value as any)?.items ?? [])
+const loading = computed(() => all.allLoading.value)
+const trendsLoading = computed(() => all.pages.trends.loading.value)
 const lastUpdate = ref('')
 let timer: ReturnType<typeof setInterval> | null = null
 
-// ===== Alarm State =====
-const alarms = ref<Alarm[]>([])
+// ===== 部分失败汇总 (不再静默吞错) =====
+const SOURCE_LABELS: Record<string, string> = {
+  crac: '空调末端',
+  trends: '趋势诊断',
+  alarms: '活跃告警',
+}
+const failedLabels = computed(() => all.failedKeys.value.map((k) => SOURCE_LABELS[k] ?? k))
 
 // ===== Supply vs Cabinet period =====
 const svcPeriod = ref('1h')
 
 // ===== Data Loading =====
-async function loadCrac() {
-  try {
-    const [summary, alarmResult] = await Promise.all([
-      getCrac(),
-      getActiveAlarms().catch(() => ({ total: 0, items: [] })),
-    ])
-    cracData.value = summary
-    // Room groups come from mapCracRoomGroups — pass the summary directly
-    rawCrac.value = summary
-    alarms.value = alarmResult.items || []
-    lastUpdate.value = new Date().toLocaleTimeString('zh-CN')
-  } catch (e) {
-    console.error('Failed to load CRAC data:', e)
-  }
-}
-
-async function loadTrends() {
-  trendsLoading.value = true
-  try {
-    trends.value = await getCracTrends()
-    if (
-      Object.keys(trends.value || {}).length > 0 &&
-      trends.value?.supplyVsCabinet?.periods?.length
-    ) {
-      svcPeriod.value = trends.value.supplyVsCabinet.periods[0]
-    }
-  } catch {
-    /* trends optional */
-  } finally {
-    trendsLoading.value = false
-  }
-}
-
 async function refresh() {
-  loading.value = true
-  await Promise.all([loadCrac(), loadTrends()])
-  loading.value = false
+  await all.reloadAll()
+  const t = trends.value
+  if (t?.supplyVsCabinet?.periods?.length) {
+    svcPeriod.value = t.supplyVsCabinet.periods[0]
+  }
+  lastUpdate.value = new Date().toLocaleTimeString('zh-CN')
 }
 
 onMounted(() => {
@@ -566,6 +592,30 @@ function mapCracRows(devices: CracView[]) {
   }))
 }
 
+// ===== Column visibility (列显隐) =====
+const colMenuOpen = ref(false)
+const visibleKeys = ref(new Set<string>(deviceColumns.map((c) => c.key)))
+const visibleColumns = computed(() => deviceColumns.filter((c) => visibleKeys.value.has(c.key)))
+function toggleCol(key: string) {
+  const next = new Set(visibleKeys.value)
+  if (next.has(key)) {
+    if (next.size > 1) next.delete(key) // 至少保留一列
+  } else {
+    next.add(key)
+  }
+  visibleKeys.value = next
+}
+
+// ===== Group / List linkage (分组 ↔ 列表联动) =====
+const activeRoom = ref<string | null>(null)
+function toggleRoom(room: string) {
+  activeRoom.value = activeRoom.value === room ? null : room
+}
+const filteredDeviceRows = computed(() => {
+  if (!activeRoom.value) return deviceRows.value
+  return deviceRows.value.filter((r) => r.roomName === activeRoom.value)
+})
+
 // ===== Heatmap =====
 const heatColors = ['#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444']
 const heatXLabels = ['平均温度', '热通道', '冷通道', '露点']
@@ -616,7 +666,7 @@ const fdpXData = computed(() => {
   const u = trends.value?.filterDpSlope?.units
   if (!u?.length) return ['--']
   const u0 = u[0]
-  return u0.raw?.map((p: TrendPoint) => p.date ?? '') ?? ['--']
+  return u0.raw?.map((p: FilterDpPoint) => p.date ?? '') ?? ['--']
 })
 
 const fdpSeries = computed(() => {
@@ -626,13 +676,13 @@ const fdpSeries = computed(() => {
   units.forEach((u, i) => {
     series.push({
       name: `${u.label} 原始值`,
-      data: (u.raw ?? []).map((p: TrendPoint) => p.value ?? 0),
+      data: (u.raw ?? []).map((p: FilterDpPoint) => p.value ?? 0),
       type: 'line',
       lineStyle: { color: palette[i % palette.length], width: 1.5 },
     })
     series.push({
       name: `${u.label} 斜率(右轴)`,
-      data: (u.slope ?? []).map((p: TrendPoint) => p.value ?? 0),
+      data: (u.slope ?? []).map((p: FilterDpPoint) => p.value ?? 0),
       type: 'line',
       yAxisIndex: 1,
       lineStyle: { color: palette[i % palette.length], width: 2, type: 'dashed' as const },
@@ -645,7 +695,7 @@ const fdpSeries = computed(() => {
 const shrXData = computed<string[]>(() => {
   const units = trends.value?.shrTrend?.units ?? []
   if (!units.length) return ['--']
-  return units[0].data?.map((p: TrendPoint) => p.week ?? '') ?? ['--']
+  return units[0].data?.map((p: ShrWeeklyPoint) => p.week ?? '') ?? ['--']
 })
 
 const shrSeries = computed(() => {
@@ -653,7 +703,7 @@ const shrSeries = computed(() => {
   const palette = CHART_COLORS.palette as readonly string[]
   return units.map((u, i) => ({
     name: `${u.label} (${u.roomName})`,
-    data: u.data.map((p: TrendPoint) => p.value ?? 0) as number[],
+    data: u.data.map((p: ShrWeeklyPoint) => p.value ?? 0) as number[],
     type: 'line' as const,
     lineStyle: { color: palette[i % palette.length] },
     areaStyle: { opacity: 0.05 },
@@ -1097,5 +1147,113 @@ function onRoomTempChange(roomId: string, value: number) {
   flex-wrap: wrap;
   font-size: 11px;
   color: var(--txt3);
+}
+
+/* 列表工具条: 筛选 chip + 列设置 */
+.list-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0 8px;
+  flex-wrap: wrap;
+}
+.list-bar-hint {
+  font-size: 11px;
+  color: var(--txt3);
+}
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--txt2);
+  background: rgba(34, 227, 255, 0.08);
+  border: 1px solid rgba(34, 227, 255, 0.35);
+  border-radius: 12px;
+  padding: 3px 10px;
+}
+.chip-clear {
+  border: none;
+  background: transparent;
+  color: var(--cyan);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+  padding: 0 2px;
+}
+.col-menu-wrap {
+  position: relative;
+}
+.col-toggle {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--txt);
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.col-toggle:hover {
+  border-color: var(--cyan);
+}
+.col-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+.col-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+  background: var(--panel, var(--bg));
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 168px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.col-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--txt);
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.col-menu-item:hover {
+  background: var(--bg);
+}
+
+/* 分组卡片激活态 (联动高亮) */
+:deep(.group-card.active-room) {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--cyan);
+}
+.room-filter-btn {
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--txt2);
+  font-size: 11px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.room-filter-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.room-filter-btn.active {
+  background: rgba(34, 227, 255, 0.12);
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 </style>

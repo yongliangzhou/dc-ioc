@@ -7,14 +7,27 @@
         <button :class="{ on: layer === 'aisle' }" @click="selectRoom(rooms[0]?.id); layer = 'aisle'">{{ tl('通道层') }}</button>
         <button :class="{ on: layer === 'rack' }" @click="selectRoom(rooms[0]?.id); layer = 'rack'">{{ tl('机柜层') }}</button>
       </div>
-      <button class="refresh" @click="load" :disabled="loading">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        {{ tl('刷新') }}
+      <button class="refresh" @click="page.reload" :disabled="busy">
+        <RefreshCw :size="14" :class="{ 'is-spin': busy }" />
+        {{ busy ? tl('刷新中') : tl('刷新') }}
       </button>
     </div>
 
-    <!-- 区间可调 -->
-    <div class="ctrl">
+    <!-- 内容区: 加载 / 失败可重试 / 空态 -->
+    <AsyncSection
+      :page="page"
+      skeleton-variant="skeleton"
+      :skeleton-rows="6"
+      min-height="260px"
+      empty-title="暂无机房温度数据"
+      empty-desc="后端未返回任何包间，请确认暖通采集已接入"
+    >
+      <template #empty-actions>
+        <button class="link-btn" @click="page.reload">{{ tl('重新加载') }}</button>
+      </template>
+
+      <!-- 区间可调 -->
+      <div class="ctrl">
       <label>{{ tl('低温区间') }} <b>{{ coldThreshold }}℃</b></label>
       <input type="range" min="14" max="28" step="0.5" v-model.number="coldThreshold" />
       <label>{{ tl('高温区间') }} <b>{{ hotThreshold }}℃</b></label>
@@ -24,6 +37,11 @@
         <i class="s ok" /> {{ tl('正常') }}
         <i class="s hot" /> {{ tl('偏高/热点') }}
       </span>
+      <DataBadge
+        v-if="layer !== 'room'"
+        tone="sample"
+        tip="通道层 / 机柜层的温度为前端基于包间冷热通道温度合成的示例分布（后端暂无逐机柜测点），仅用于观察温场形态，不可作为热点判定依据"
+      />
     </div>
 
     <!-- 层1 机房层 -->
@@ -99,20 +117,38 @@
         </div>
       </div>
     </section>
+    </AsyncSection>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
+import { RefreshCw } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import TemperatureHeatmap, { HeatCell } from '@/components/hvac/TemperatureHeatmap.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import DataBadge from '@/components/common/DataBadge.vue'
+import { useAsyncPage } from '@/composables/useAsyncPage'
 import { getHvacOverview } from '@/api/hvac'
 import type { RoomView } from '@/api/hvac'
 
 const { t: tl } = useI18n()
 
-const loading = ref(false)
-const rooms = ref<RoomView[]>([])
+/** 数据源：暖通总览里的包间列表。失败时走 AsyncSection 的错误态，不再只 console.error */
+const page = useAsyncPage<RoomView[]>(
+  async () => {
+    const ov = await getHvacOverview()
+    return ov.crac.rooms ?? []
+  },
+  {
+    isEmpty: (list) => !list.length,
+    onSuccess: (list) => {
+      if (!currentRoomId.value && list[0]) currentRoomId.value = list[0].id
+    },
+  },
+)
+const { busy } = page
+const rooms = computed(() => page.data.value ?? [])
 const layer = ref<'room' | 'aisle' | 'rack'>('room')
 const currentRoomId = ref<string>('')
 const coldThreshold = ref(22)
@@ -166,25 +202,9 @@ const topRacks = computed(() =>
 )
 const topRackIds = computed(() => topRacks.value.map((c) => c.id))
 
-function onRackClick(c: HeatCell) {
-  // 机柜详情可在此扩展；当前以高亮为主
-  console.log('rack selected', c)
+function onRackClick(_c: HeatCell) {
+  // 机柜详情待后端提供逐机柜测点后接入；当前云图以高亮为主，不做无效 console
 }
-
-async function load() {
-  loading.value = true
-  try {
-    const ov = await getHvacOverview()
-    rooms.value = ov.crac.rooms ?? []
-    if (!currentRoomId.value && rooms.value[0]) currentRoomId.value = rooms.value[0].id
-  } catch (e) {
-    console.error('温度云图加载失败', e)
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(load)
 </script>
 
 <style scoped>
@@ -223,4 +243,80 @@ section h2 { color: #cbd5e1; font-size: 16px; margin: 18px 0 10px; }
 .aisle-card .lbl { display: block; color: #64748b; font-size: 12px; }
 .aisle-card .val { display: block; color: #e2e8f0; font-size: 24px; font-weight: 700; }
 .hint { color: #64748b; font-size: 12px; margin: 0 0 10px; }
+
+/* ===== 本轮新增 ===== */
+.is-spin {
+  animation: tc-rotate 0.8s linear infinite;
+}
+@keyframes tc-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 12px;
+  color: #22e3ff;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 1100px) {
+  /* 热力图 + TOP5 侧栏改为上下堆叠，避免热力图被压成窄条 */
+  .board {
+    grid-template-columns: 1fr;
+  }
+  .side {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 4px;
+  }
+  .side-title {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 860px) {
+  .view-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .refresh {
+    margin-left: 0;
+  }
+  .ctrl {
+    gap: 10px;
+  }
+  .ctrl input[type='range'] {
+    width: 100%;
+    min-width: 120px;
+  }
+  .ctrl label {
+    flex: 1 1 100%;
+  }
+  .aisle-bars {
+    flex-wrap: wrap;
+  }
+  .aisle-card {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+}
+@media (max-width: 560px) {
+  .thermal-view {
+    padding: 12px 12px 24px;
+  }
+  .layers {
+    width: 100%;
+  }
+  .layers button {
+    flex: 1;
+  }
+  .side {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

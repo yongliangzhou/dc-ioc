@@ -6,6 +6,7 @@
       <span class="sub">{{
         tl('N+1 并机机组 · 同期并车 · 负载母排 · 自动/手动控制 · 保护告警')
       }}</span>
+      <MockDataBanner :level="mockLevel" />
     </div>
 
     <!-- Loading -->
@@ -461,7 +462,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { pfCls, loadCls, tempCls, fmt, breakerCls, genHours } from '@/utils/format'
@@ -472,6 +474,9 @@ import TrendChart from '@/components/monitor/TrendChart.vue'
 import { getPowerGensetDetailed, type GensetSummary, type GensetUnitView } from '@/api/power'
 import Panel from '@/components/common/Panel.vue'
 const { t: tl } = useI18n()
+
+/** 后端无有效返回时页面会回退到本地 mockSummary()，必须让用户看见这是假的 */
+const { level: mockLevel, markMock, markReal } = useMockFlag()
 
 // ──────────────────────────────────────────
 // SVG 几何
@@ -895,13 +900,15 @@ async function loadData() {
     const data = await getPowerGensetDetailed()
     if (data && data.units?.length) {
       s.value = data
+      markReal()
     } else {
       s.value = mockSummary()
+      markMock()
     }
     if (s.value.units.length) selectedUnitId.value = s.value.units[0].id
     rebuildTrend()
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   } finally {
     loading.value = false
   }

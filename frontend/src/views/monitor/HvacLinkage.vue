@@ -3,23 +3,25 @@
     <div class="view-head">
       <h1>{{ tl('制冷链路可视化') }}</h1>
       <span class="sub">{{ tl('制冷一次系统 · 冷却水/冷冻水双循环') }}</span>
-      <button class="refresh" @click="load" :disabled="loading">
+      <button class="refresh" @click="() => load()" :disabled="loading">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         {{ tl('刷新') }}
       </button>
     </div>
 
-    <div class="legend">
-      <span><i class="dot normal" /> {{ tl('正常') }}</span>
-      <span><i class="dot warning" /> {{ tl('预警') }}</span>
-      <span><i class="dot fault" /> {{ tl('故障') }}</span>
-      <span><i class="dot off" /> {{ tl('离线/停机') }}</span>
-      <span class="pipe-key"><i class="line cw" /> {{ tl('冷却水') }}</span>
-      <span class="pipe-key"><i class="line chw" /> {{ tl('冷冻水') }}</span>
-      <span class="muted">{{ tl('点击设备查看状态 · 跳转对应监控页') }}</span>
-    </div>
+    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="() => load()" :min-height="'320px'">
+      <div class="legend">
+        <span><i class="dot normal" /> {{ tl('正常') }}</span>
+        <span><i class="dot warning" /> {{ tl('预警') }}</span>
+        <span><i class="dot fault" /> {{ tl('故障') }}</span>
+        <span><i class="dot off" /> {{ tl('离线/停机') }}</span>
+        <span class="pipe-key"><i class="line cw" /> {{ tl('冷却水') }}</span>
+        <span class="pipe-key"><i class="line chw" /> {{ tl('冷冻水') }}</span>
+        <span class="muted">{{ tl('点击设备查看状态 · 跳转对应监控页') }}</span>
+      </div>
 
-    <CoolingLinkageDiagram :nodes="nodes" :pipes="pipes" @device-click="onDeviceClick" />
+      <CoolingLinkageDiagram :nodes="nodes" :pipes="pipes" @device-click="onDeviceClick" />
+    </AsyncSection>
 
     <transition name="slide">
       <div v-if="selected" class="drawer" @click.self="selected = null">
@@ -51,11 +53,14 @@ import { useI18n } from 'vue-i18n'
 import CoolingLinkageDiagram, { CoolingDevice, CoolingPipe } from '@/components/hvac/CoolingLinkageDiagram.vue'
 import { getChillerPlant } from '@/api/hvac'
 import type { ChillerSummary } from '@/api/hvac'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 const { t: tl } = useI18n()
 const router = useRouter()
 
 const loading = ref(false)
+const error = ref('')
 const data = ref<ChillerSummary | null>(null)
 const selected = ref<CoolingDevice | null>(null)
 
@@ -183,14 +188,18 @@ function gotoDevice(n: CoolingDevice) {
   selected.value = null
 }
 
-async function load() {
-  loading.value = true
+async function load(showSpinner = true) {
+  if (showSpinner) {
+    loading.value = true
+    error.value = ''
+  }
   try {
     data.value = await getChillerPlant()
   } catch (e) {
-    console.error('制冷链路加载失败', e)
+    // 轮询静默（保留上一次成功数据）；仅显式刷新暴露错误态
+    if (showSpinner) error.value = toErrorMessage(e) || tl('制冷链路加载失败')
   } finally {
-    loading.value = false
+    if (showSpinner) loading.value = false
   }
 }
 

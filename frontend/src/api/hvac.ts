@@ -1,6 +1,58 @@
 import request from './request'
 
 // ============================================================
+//  派生指标计算 (COP / SHR)
+//
+//  这些指标后端只给到单机原始测点，聚合值此前缺失，
+//  导致驾驶舱"冷源 COP""空调 SHR"两张卡永远显示 '--'。
+//  在此统一派生，保证所有消费方拿到同一口径。
+// ============================================================
+
+/** 多台设备的加权/算术均值；无有效样本时返回 null（宁可显示"无数据"，也不填假值） */
+function meanOf(values: number[]): number | null {
+  const valid = values.filter((v) => Number.isFinite(v) && v > 0)
+  if (!valid.length) return null
+  return valid.reduce((a, b) => a + b, 0) / valid.length
+}
+
+/** 饱和水蒸气压 (Pa)，T 单位 ℃ —— Magnus 公式 */
+function saturationVaporPressure(tC: number): number {
+  return 610.78 * Math.exp((17.27 * tC) / (tC + 237.3))
+}
+
+/** 含湿量 (kg/kg 干空气) */
+function humidityRatio(tC: number, rhPct: number, pPa = 101325): number {
+  const pv = (rhPct / 100) * saturationVaporPressure(tC)
+  return (0.622 * pv) / Math.max(1, pPa - pv)
+}
+
+/** 湿空气比焓 (kJ/kg 干空气) */
+function enthalpy(tC: number, rhPct: number): number {
+  const w = humidityRatio(tC, rhPct)
+  return 1.006 * tC + w * (2501 + 1.86 * tC)
+}
+
+/**
+ * 显热比 SHR = 显热负荷 / 总热负荷（ASHRAE 简化式）。
+ * 由回风与送风的干球温度差、比焓差求得；
+ * 数据不合理（无温升 / 无焓差 / 结果越界）时返回 null。
+ */
+export function shrOf(
+  returnT: number,
+  supplyT: number,
+  returnRh: number,
+  supplyRh: number,
+): number | null {
+  if (![returnT, supplyT, returnRh, supplyRh].every(Number.isFinite)) return null
+  const dT = returnT - supplyT
+  const dh = enthalpy(returnT, returnRh) - enthalpy(supplyT, supplyRh)
+  if (dT <= 0 || dh <= 0.01) return null
+  const shr = (1.006 * dT) / dh
+  if (!Number.isFinite(shr) || shr <= 0 || shr > 1) return null
+  return shr
+}
+
+// ============================================================
 //  冷源系统 — 全量类型定义 (对齐 dc_ioc_data.chiller_plant)
 // ============================================================
 
@@ -123,6 +175,14 @@ export interface ChillerSummary {
   avgTemperatureIn: number
   avgTemperatureOut: number
 
+  /**
+   * 系统级 COP：运行中机组的平均性能系数（由单机 cop 派生）。
+   * 注意：后端 chiller_plant() 只返回 chillers，没有 chillerGroups，
+   * 所以 chillerGroups 恒为空 —— 早期驾驶舱从这里取 COP，导致永远算不出来。
+   * 无有效样本时为 null，由调用方决定如何呈现。
+   */
+  systemCop: number | null
+
   // 各子系统
   chillers: ChillerPlantView[]
   towers: TowerView[]
@@ -165,6 +225,9 @@ export interface CracView {
   power: number // 功率 kW
   dp: number | string // 压差 Pa
   filter: string // 滤网状态
+
+  /** 单机显热比，后端 dc_ioc_data.crac 直接提供；缺失时为 null（由 systemShr 走温湿度推导兜底） */
+  shr: number | null
 
   // 控制点位
   fanEnable: boolean
@@ -289,6 +352,13 @@ export interface CracSummary {
   avgTemperatureOut: number
   avgHumidityIn: number
   avgFanSpeed: number
+
+  /**
+   * 系统级显热比 SHR：运行机组的平均显热比。
+   * 由送/回风干球温度与相对湿度按 ASHRAE 简化式派生（见 shrOf）。
+   * 无有效样本时为 null。
+   */
+  systemShr: number | null
 }
 
 export interface LiquidCoolingView {
@@ -547,6 +617,11 @@ function mapChiller(raw: RawItem): ChillerSummary {
     ? devices.reduce((s, d) => s + d.temperatureOut, 0) / devices.length
     : 0
 
+  // 系统 COP: 只统计"运行中"的机组, 待机/检修机的 cop=0 会把它拉成假的低值
+  const systemCop = meanOf(
+    list.filter((d) => d.state === '运行').map((d) => Number(d.cop) || 0),
+  )
+
   // 泵组映射
   const mapPump = (p: RawItem): PumpView => ({
     code: String(p.id ?? ''),
@@ -671,6 +746,7 @@ function mapChiller(raw: RawItem): ChillerSummary {
     avgLoadPercent: avgLoad,
     avgTemperatureIn: avgIn,
     avgTemperatureOut: avgOut,
+    systemCop,
     chillers: devices,
     towers,
     pumpsChw,
@@ -747,6 +823,7 @@ function mapCrac(raw: RawItem): CracSummary {
     waterValve: Number(d.waterValve) || 0,
     power: Number(d.power) || 0,
     dp: d.dp === '-' ? '-' : Number(d.dp) || 0,
+    shr: d.shr === '-' || d.shr == null ? null : Number(d.shr) || null,
     filter: String(d.filter ?? '正常'),
     fanEnable: Boolean((d.control as RawItem | undefined)?.fanEnable ?? true),
     fanSpeedSet: Number((d.control as RawItem | undefined)?.fanSpeedSet) || 0,
@@ -764,6 +841,18 @@ function mapCrac(raw: RawItem): CracSummary {
   }))
 
   const onlineCount = devices.filter((d) => d.status === 'online').length
+
+  // 系统 SHR: 优先取后端单机 shr；缺失时按送/回风干球温度 + 相对湿度用 ASHRAE 简化式推导
+  const systemShr = meanOf(
+    devices
+      .filter((d) => d.status === 'online')
+      .map(
+        (d) =>
+          d.shr ??
+          shrOf(Number(d.returnT), Number(d.supplyT), Number(d.returnRh), Number(d.supplyRh)),
+      )
+      .filter((v): v is number => v !== null),
+  )
 
   // ---- 包间环境 ----
   const rooms: RoomView[] = asRawList(raw?.rooms).map((r) => ({
@@ -890,6 +979,7 @@ function mapCrac(raw: RawItem): CracSummary {
     avgTemperatureOut: dashAvgSupply,
     avgHumidityIn: dashAvgRh,
     avgFanSpeed: dashAvgFan,
+    systemShr,
   }
 }
 
@@ -1157,6 +1247,29 @@ export function getChillerPlant(): Promise<ChillerSummary> {
   return getChillerPlantRaw().then(mapChiller)
 }
 
+// ---- D6: 冷机机组控制指令 (后端已落地 /chiller-control) ----
+export interface ChillerControlResult {
+  status: string
+  chiller_id: string
+  action: string
+  value: number | null
+  operator: string
+  accepted_at: string
+  log_id: number
+}
+
+export function controlChiller(
+  chillerId: string,
+  action: 'start' | 'stop' | 'mode' | 'temp',
+  value?: number,
+): Promise<ChillerControlResult> {
+  return request.post<unknown, ChillerControlResult>('/api/hvac/chiller-control', {
+    chiller_id: chillerId,
+    action,
+    value,
+  })
+}
+
 export function getCrac(): Promise<CracSummary> {
   return getCracRaw().then(mapCrac)
 }
@@ -1293,52 +1406,39 @@ export interface CracRoomGroupView {
   leak: { status: string; level: string; position: number | null; zone: number }
 }
 
-export function mapCracRoomGroups(raw: RawItem): CracRoomGroupView[] {
-  return asRawList(raw?.roomGroups).map((g) => {
-    const es = (g.envSensors as RawItem) ?? {}
-    const fau = g.fau as RawItem | undefined
-    const hum = g.humidifier as RawItem | undefined
-    return {
-      roomId: String(g.roomId ?? ''),
-      roomName: String(g.roomName ?? ''),
-      status: String(g.status ?? '正常'),
-      cracRun: Number(g.cracRun) || 0,
-      cracN: Number(g.cracN) || 0,
-      envSensors: {
-        avgTemp: Number(es.avgTemp) || 0,
-        avgRh: Number(es.avgRh) || 0,
-        hotAisleTemp: Number(es.hotAisleTemp) || 0,
-        hotAisleRh: Number(es.hotAisleRh) || 0,
-        coldAisleTemp: Number(es.coldAisleTemp) || 0,
-        coldAisleRh: Number(es.coldAisleRh) || 0,
-        dewPoint: Number(es.dewPoint) || 0,
-        inOutDiff: Number(es.inOutDiff) || 0,
-        supplyStaticPressure: Number(es.supplyStaticPressure) || 0,
-      },
-      roomCracs: asRawList(g.roomCracs).map(mapCracView),
-      inRowCracs: asRawList(g.inRowCracs).map(mapCracView),
-      fau: fau
-        ? {
-            id: String(fau.id ?? ''),
-            state: String(fau.state ?? ''),
-            supplyT: fau.supplyT === '-' ? '-' : Number(fau.supplyT) || 0,
-            rh: fau.rh === '-' ? '-' : Number(fau.rh) || 0,
-            co2: fau.co2 === '-' ? '-' : Number(fau.co2) || 0,
-            filterDp: Number(fau.filterDp) || 0,
-          }
-        : null,
-      humidifier: hum
-        ? {
-            id: String(hum.id ?? ''),
-            name: String(hum.name ?? ''),
-            state: String(hum.state ?? ''),
-            rh: hum.rh === '-' ? '-' : Number(hum.rh) || 0,
-            mode: String(hum.mode ?? ''),
-          }
-        : null,
-      leak: (g.leak as CracRoomGroupView['leak']) ?? { status: '正常', level: '正常', position: null, zone: 0 },
-    }
-  })
+export function mapCracRoomGroups(summary: CracSummary): CracRoomGroupView[] {
+  // 真实数据源: 已映射的 CracSummary.rooms (包间环境) + .devices (按 roomName 归集到每间)。
+  // 旧实现读取后端原始 raw.roomGroups, 但当前后端契约 (见 mapCrac) 已扁平为 rooms/units,
+  // 不存在 roomGroups 字段 —— 旧实现恒返回 [], 导致机房热力图与"包间设备归集"长期空白。
+  // 注意: 当前扁平模型未提供逐间 FAU / 恒湿机 / 列间空调关联。
+  // 方案 2: 若全场仅单台 FAU / 单台恒湿机 (全局唯一), 作为兜底挂到各包间透出;
+  // 多台则不归属 (置 null), 避免把 A 间设备误标到 B 间。inRowCracs 始终置 [] (无列间数据)。
+  // 调用方 slot 均以 v-if 保护, 不会访问 null 而崩溃。
+  const globalFau = summary.freshAir.length === 1 ? summary.freshAir[0] : null
+  const globalHum = summary.humidifiers.length === 1 ? summary.humidifiers[0] : null
+  return summary.rooms.map((room) => ({
+    roomId: room.id,
+    roomName: room.name,
+    status: room.state,
+    cracRun: room.cracRun,
+    cracN: room.cracN,
+    envSensors: {
+      avgTemp: room.avgTemp,
+      avgRh: room.avgRh,
+      hotAisleTemp: room.hotAisle,
+      hotAisleRh: room.hotRh,
+      coldAisleTemp: room.coldAisle,
+      coldAisleRh: room.coldRh,
+      dewPoint: room.dewPoint,
+      inOutDiff: room.inOutDiff,
+      supplyStaticPressure: 0,
+    },
+    roomCracs: summary.devices.filter((d) => d.roomName === room.name),
+    inRowCracs: [],
+    fau: globalFau,
+    humidifier: globalHum,
+    leak: room.leak,
+  }))
 }
 
 function mapCracView(d: RawItem): CracView {
@@ -1362,6 +1462,7 @@ function mapCracView(d: RawItem): CracView {
     waterValve: Number(d.waterValve) || 0,
     power: Number(d.power) || 0,
     dp: d.dp === '-' ? '-' : Number(d.dp) || 0,
+    shr: d.shr === '-' || d.shr == null ? null : Number(d.shr) || null,
     filter: String(d.filter ?? '正常'),
     fanEnable: Boolean(control.fanEnable ?? true),
     fanSpeedSet: Number(control.fanSpeedSet) || 0,

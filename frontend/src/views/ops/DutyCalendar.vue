@@ -16,27 +16,29 @@
       <span><i class="dot night" /> {{ tl('夜班') }}</span>
     </div>
 
-    <div class="week-head">
-      <span v-for="w in weekNames" :key="w">{{ w }}</span>
-    </div>
-    <div class="cal-grid">
-      <div
-        v-for="cell in cells"
-        :key="cell.key"
-        class="cal-cell"
-        :class="{ muted: !cell.inMonth }"
-        @click="openCreate(cell.date)"
-      >
-        <div class="d-num">{{ cell.day }}</div>
-        <div class="shifts">
-          <div v-for="s in shiftsOf(cell.date)" :key="s.id" class="shift-pill" :class="s.shift">
-            <b>{{ s.shift === 'day' ? tl('白') : tl('夜') }}</b>
-            {{ leaderOf(s) }}
-            <span class="cnt">({{ (s.members || []).length }})</span>
+    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="() => load()" :min-height="'320px'">
+      <div class="week-head">
+        <span v-for="w in weekNames" :key="w">{{ w }}</span>
+      </div>
+      <div class="cal-grid">
+        <div
+          v-for="cell in cells"
+          :key="cell.key"
+          class="cal-cell"
+          :class="{ muted: !cell.inMonth }"
+          @click="openCreate(cell.date)"
+        >
+          <div class="d-num">{{ cell.day }}</div>
+          <div class="shifts">
+            <div v-for="s in shiftsOf(cell.date)" :key="s.id" class="shift-pill" :class="s.shift">
+              <b>{{ s.shift === 'day' ? tl('白') : tl('夜') }}</b>
+              {{ leaderOf(s) }}
+              <span class="cnt">({{ (s.members || []).length }})</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </AsyncSection>
 
     <!-- 编辑/新建抽屉 -->
     <transition name="slide">
@@ -80,6 +82,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getDutyShifts, createDutyShift, updateDutyShift, deleteDutyShift, type ShiftView, type ShiftMember } from '@/api/duty'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 const { t: tl } = useI18n()
 const { can, denyTip } = usePermission()
@@ -93,6 +97,8 @@ const now = new Date()
 const year = ref(now.getFullYear())
 const month = ref(now.getMonth())
 const shifts = ref<ShiftView[]>([])
+const loading = ref(false)
+const error = ref('')
 const editing = ref<ShiftView | null>(null)
 const membersText = ref('')
 
@@ -168,24 +174,31 @@ function save() {
     })
   const payload = { date: editing.value.date, shift: editing.value.shift, leader: editing.value.leader, note: editing.value.note, members }
   if (editing.value.id) {
-    updateDutyShift(editing.value.id, payload).then(load)
+    updateDutyShift(editing.value.id, payload).then(() => load())
   } else {
-    createDutyShift(payload).then(load)
+    createDutyShift(payload).then(() => load())
   }
   closeEditor()
 }
 function remove() {
-  if (editing.value?.id) deleteDutyShift(editing.value.id).then(load)
+  if (editing.value?.id) deleteDutyShift(editing.value.id).then(() => load())
   closeEditor()
 }
 
-async function load() {
+async function load(showSpinner = true) {
+  if (showSpinner) {
+    loading.value = true
+    error.value = ''
+  }
   const from = iso(new Date(year.value, month.value, 1))
   const to = iso(new Date(year.value, month.value + 1, 0))
   try {
     shifts.value = await getDutyShifts(from, to)
-  } catch {
+  } catch (e) {
+    if (showSpinner) error.value = toErrorMessage(e) || tl('排班加载失败')
     shifts.value = []
+  } finally {
+    if (showSpinner) loading.value = false
   }
 }
 

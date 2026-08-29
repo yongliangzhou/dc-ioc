@@ -88,49 +88,48 @@
     </div>
 
     <!-- 知识卡片列表 -->
-    <div class="kb-list" v-if="reviewTab !== 'pending' && items.length">
-      <article v-for="item in items" :key="item.id" class="kb-card" @click="openDetail(item)">
-        <div class="kb-card-head">
-          <span class="kb-type-tag" :class="'t-' + item.type">{{ typeLabel(item.type) }}</span>
-          <span class="kb-domain">{{ item.domain }}</span>
-          <span v-if="item.hot" class="kb-hot">🔥 {{ tl('热门') }}</span>
-          <span
-            v-if="item.reviewStatus && item.reviewStatus !== 'approved'"
-            class="kb-review-tag"
-            :class="item.reviewStatus === 'pending' ? 'p' : 'r'"
-            >{{ item.reviewStatus === 'pending' ? tl('待审核') : tl('已驳回') }}</span
-          >
+    <div v-if="reviewTab !== 'pending'">
+      <AsyncSection :page="listPage" @retry="listPage.reload">
+        <div class="kb-list">
+          <article v-for="item in items" :key="item.id" class="kb-card" @click="openDetail(item)">
+            <div class="kb-card-head">
+              <span class="kb-type-tag" :class="'t-' + item.type">{{ typeLabel(item.type) }}</span>
+              <span class="kb-domain">{{ item.domain }}</span>
+              <span v-if="item.hot" class="kb-hot">🔥 {{ tl('热门') }}</span>
+              <span
+                v-if="item.reviewStatus && item.reviewStatus !== 'approved'"
+                class="kb-review-tag"
+                :class="item.reviewStatus === 'pending' ? 'p' : 'r'"
+                >{{ item.reviewStatus === 'pending' ? tl('待审核') : tl('已驳回') }}</span
+              >
+            </div>
+            <h3 class="kb-card-title">{{ item.title }}</h3>
+            <p class="kb-card-summary">
+              {{ item.summary || (item.content || '').slice(0, 120) + '…' }}
+            </p>
+            <div class="kb-card-foot">
+              <div class="kb-tags">
+                <span v-for="t in item.tags?.slice(0, 4)" :key="t" class="kb-tag">{{ t }}</span>
+              </div>
+              <span class="kb-version">v{{ item.version }}</span>
+            </div>
+          </article>
         </div>
-        <h3 class="kb-card-title">{{ item.title }}</h3>
-        <p class="kb-card-summary">
-          {{ item.summary || (item.content || '').slice(0, 120) + '…' }}
-        </p>
-        <div class="kb-card-foot">
-          <div class="kb-tags">
-            <span v-for="t in item.tags?.slice(0, 4)" :key="t" class="kb-tag">{{ t }}</span>
-          </div>
-          <span class="kb-version">v{{ item.version }}</span>
-        </div>
-      </article>
-    </div>
-
-    <!-- 空态 -->
-    <div v-if="!loading && items.length === 0" class="kb-empty">
-      {{ searchQ ? tl('未找到匹配的知识条目') : tl('知识库暂无内容，请新建或导入指导书。') }}
+      </AsyncSection>
     </div>
 
     <!-- 分页 -->
     <div class="kb-pager" v-if="total > pageSize">
       <button
         :disabled="page <= 1"
-        @click="page = page - 1; load()"
+        @click="page = page - 1; listPage.reload()"
       >
         {{ tl('上一页') }}
       </button>
       <span>{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
       <button
         :disabled="page * pageSize >= total"
-        @click="page++; load()"
+        @click="page++; listPage.reload()"
       >
         {{ tl('下一页') }}
       </button>
@@ -285,7 +284,6 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { KnowledgeItem } from '@/types'
@@ -302,6 +300,8 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
+import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 
 const { t } = useI18n()
 const tl = (key: string) => t(key) || key
@@ -320,7 +320,6 @@ const categories = ref<{ name: string; count: number }[]>([])
 const total = ref(0)
 const page = ref(1)
 const pageSize = 20
-const loading = ref(false)
 const searchQ = ref('')
 const activeCat = ref('')
 
@@ -366,22 +365,19 @@ const typeLabel = (t: string) =>
     })
   )[t] || t
 
-// ---- load ----
-async function load() {
-  loading.value = true
-  try {
+// ---- load (统一由 useAsyncPage 管理加载/错误/空态；失败时可见且可重试，不再静默清空) ----
+const listPage = useAsyncPage<KnowledgeItem[]>(
+  async () => {
     const params: Record<string, unknown> = { page: page.value, page_size: pageSize }
     if (activeCat.value) params.category = activeCat.value
     if (searchQ.value) params.q = searchQ.value
     const r = await getKnowledgeItems(params)
     items.value = r.items || []
     total.value = r.total || 0
-  } catch {
-    items.value = []
-  } finally {
-    loading.value = false
-  }
-}
+    return items.value
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
 
 async function loadCats() {
   try {
@@ -394,12 +390,12 @@ async function loadCats() {
 
 function doSearch() {
   page.value = 1
-  load()
+  listPage.reload()
 }
 function filterCat(cat: string) {
   activeCat.value = cat
   page.value = 1
-  load()
+  listPage.reload()
 }
 
 // ---- 人工审核 ----
@@ -436,9 +432,9 @@ async function approve(item: KnowledgeItem) {
     pending.value = pending.value.filter((x) => x.id !== item.id)
     pendingCount.value = Math.max(0, pendingCount.value - 1)
     reviewItem.value = null
-    load()
+    listPage.reload()
   } catch (e: unknown) {
-    toast.error((e as ErrorLike)?.message || tl('审核失败'))
+    toast.error(toErrorMessage(e) || tl('审核失败'))
   }
 }
 async function reject(item: KnowledgeItem) {
@@ -448,9 +444,9 @@ async function reject(item: KnowledgeItem) {
     pending.value = pending.value.filter((x) => x.id !== item.id)
     pendingCount.value = Math.max(0, pendingCount.value - 1)
     reviewItem.value = null
-    load()
+    listPage.reload()
   } catch (e: unknown) {
-    toast.error((e as ErrorLike)?.message || tl('审核失败'))
+    toast.error(toErrorMessage(e) || tl('审核失败'))
   }
 }
 
@@ -509,9 +505,9 @@ async function saveItem() {
       toast.success(tl('已新建知识条目'))
     }
     closeCreate()
-    load()
+    listPage.reload()
   } catch (e: unknown) {
-    toast.error((e as ErrorLike)?.detail || (e as ErrorLike)?.response?.data?.detail || (e as ErrorLike)?.message || tl('保存失败'))
+    toast.error(toErrorMessage(e) || tl('保存失败'))
   } finally {
     saving.value = false
   }
@@ -531,7 +527,7 @@ async function handleDelete(item: KnowledgeItem) {
   if (ok) {
     detailItem.value = null
     toast.success(tl('已删除'))
-    load()
+    listPage.reload()
   }
 }
 
@@ -550,16 +546,12 @@ async function handleImport(e: Event) {
     importMsg.value =
       tl('导入完成') + '：' + imported + ' ' + tl('条新增') +
       (skipped ? '，' + skipped + ' ' + tl('条重复跳过') : '') + '（' + tl('待审核') + '）'
-    load()
+    listPage.reload()
     loadCats()
     loadPending()
     toast.success(tl('导入完成') + '，' + tl('请前往待审核确认'))
   } catch (e: unknown) {
-    const rawDetail =
-      (e as ErrorLike)?.detail ||
-      (e as ErrorLike)?.response?.data?.detail ||
-      (e as ErrorLike)?.message ||
-      ''
+    const rawDetail = toErrorMessage(e)
     // 对常见错误原因做友好翻译 (知识库导入失败的根因诊断)
     let cause: string
     if (/404|405|Not Found|Method Not Allowed/.test(String(rawDetail))) {
@@ -579,7 +571,6 @@ async function handleImport(e: Event) {
 }
 
 onMounted(() => {
-  load()
   loadCats()
   loadPending()
 })

@@ -17,7 +17,12 @@
       <div v-else-if="isEmpty" class="tc-empty">
         <EmptyState :text="emptyText" />
       </div>
-      <div ref="chartRef" class="tc-canvas" v-show="!isEmpty && !loading"></div>
+      <div
+        ref="chartRef"
+        class="tc-canvas"
+        :class="{ 'tc-clickable': clickable }"
+        v-show="!isEmpty && !loading"
+      ></div>
     </div>
   </div>
 </template>
@@ -71,18 +76,54 @@ const props = withDefaults(
     showRangePicker?: boolean
     loading?: boolean
     emptyText?: string
+    /** 开启数据点点击（默认关闭，不影响既有页面） */
+    clickable?: boolean
   }>(),
   {
     title: '',
     showRangePicker: false,
     loading: false,
     emptyText: '暂无趋势数据',
+    clickable: false,
   },
 )
 
+export interface TrendPointClick {
+  seriesName: string
+  seriesIndex: number
+  /** 数据点在 x 轴上的下标 */
+  dataIndex: number
+  /** x 轴类目值（如 "14:00"） */
+  x: string
+  value: number
+}
+
 const emit = defineEmits<{
   rangeChange: [key: string]
+  /** 仅在 clickable=true 时触发 */
+  pointClick: [payload: TrendPointClick]
 }>()
+
+/** 绑定数据点点击（opt-in，避免影响既有页面） */
+function bindClick() {
+  if (!chartInst || !props.clickable) return
+  chartInst.on('click', (raw: unknown) => {
+    const p = raw as {
+      seriesName?: string
+      seriesIndex?: number
+      dataIndex?: number
+      name?: string
+      value?: number | string
+    }
+    emit('pointClick', {
+      seriesName: p.seriesName ?? '',
+      seriesIndex: p.seriesIndex ?? 0,
+      dataIndex: p.dataIndex ?? 0,
+      x: String(p.name ?? ''),
+      value: Number(p.value ?? 0),
+    })
+  })
+}
 
 const chartRef = ref<HTMLDivElement | null>(null)
 let chartInst: EChartsType | null = null
@@ -210,6 +251,7 @@ function initChart() {
     }
   })
   resizeObserver.observe(el)
+  bindClick()
   nextTick(() => {
     // 若挂载时容器已可见则直接渲染，否则等待 ResizeObserver 在显示后触发
     if (el.clientWidth > 0 && el.clientHeight > 0) {
@@ -286,6 +328,9 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   min-height: 200px;
+}
+.tc-clickable {
+  cursor: pointer;
 }
 .tc-loader,
 .tc-empty {

@@ -7,7 +7,7 @@
       </div>
       <div class="page-actions">
         <input v-model="kw" class="inp" :placeholder="t.search" />
-        <button class="btn ghost" :disabled="loading" @click="load">↻</button>
+        <button class="btn ghost" :disabled="busy" @click="page.reload">↻</button>
       </div>
     </header>
 
@@ -26,8 +26,8 @@
       </button>
     </nav>
 
-    <div v-if="loading" class="empty">{{ t.loading || 'Loading…' }}</div>
-    <div v-else class="grid cards">
+    <AsyncSection :page="page" @retry="page.reload">
+      <div class="grid cards">
       <article v-for="it in filtered" :key="it.id" class="card" :class="{ shared: isShared(it.id) }">
         <div class="card-top">
           <span class="badge" :class="statusCls(it.reviewStatus)">{{ reviewLabel(it.reviewStatus) }}</span>
@@ -58,6 +58,7 @@
       </article>
       <div v-if="!filtered.length" class="empty">{{ t.empty }}</div>
     </div>
+    </AsyncSection>
 
     <!-- 详情抽屉 -->
     <div v-if="detail" class="mask" @click.self="detail = null">
@@ -135,12 +136,15 @@
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/modules/auth'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { useAsyncPage } from '@/composables/useAsyncPage'
 import {
   getKnowledgeItems,
   reviewKnowledge,
   deleteKnowledgeItem,
 } from '@/api/knowledge'
 import type { KnowledgeItem } from '@/types'
+import { useConfirm } from '@/hooks/useConfirm'
 
 const { t: rawT } = useI18n()
 const t = rawT('knowledgeCollab') as any
@@ -148,7 +152,6 @@ const auth = useAuthStore()
 const me = computed(() => auth.user?.username || 'me')
 
 const items = ref<KnowledgeItem[]>([])
-const loading = ref(false)
 const kw = ref('')
 const activeTab = ref<string>('all')
 
@@ -233,22 +236,20 @@ function sendComment(id: number) {
   commentText.value = ''
 }
 async function remove(it: KnowledgeItem) {
-  if (!confirm(t.confirmDelete)) return
+  if (!(await useConfirm({ message: t.confirmDelete, danger: true }))) return
   try { await deleteKnowledgeItem(it.id) } catch { /* 离线也允许本地移除 */ }
   items.value = items.value.filter(x => x.id !== it.id)
 }
 
-async function load() {
-  loading.value = true
-  try {
+const page = useAsyncPage<KnowledgeItem[]>(
+  async () => {
     const r = await getKnowledgeItems({ page: 1, page_size: 200 })
     items.value = r.items || []
-  } catch (e) {
-    items.value = []
-  } finally {
-    loading.value = false
-  }
-}
+    return items.value
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
+const { busy } = page
 
 // 评审
 function openReview(it: KnowledgeItem) { reviewing.value = it; reviewNote.value = '' }
@@ -269,7 +270,7 @@ function statusCls(s?: string) { return { pending: 'amber', approved: 'green', r
 function reviewLabel(s?: string) { return ({ pending: t.pendingReview, approved: t.approved, rejected: t.rejected } as any)[s || 'pending'] || t.pendingReview }
 function fmt(d?: string) { return d ? new Date(d).toLocaleString() : '—' }
 
-onMounted(load)
+onMounted(() => page.reload())
 </script>
 
 <style scoped>

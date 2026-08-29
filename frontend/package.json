@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "vue-tsc -b && vite build --emptyOutDir=false",
     "preview": "vite preview",
     "type-check": "vue-tsc --noEmit",
     "test": "vitest",
@@ -48,6 +48,9 @@
     "vite-plugin-compression2": "^2.5.3",
     "vitest": "^3.0.5",
     "vue-tsc": "^2.2.8"
+  },
+  "optionalDependencies": {
+    "@esbuild/win32-x64": "0.25.12"
   },
   "lint-staged": {
     "*.{ts,vue}": [

@@ -46,17 +46,15 @@ describe('power: toDevices', () => {
   ]
   it('映射为统一 PowerDeviceView 并补编号', () => {
     const out = toDevices(list, '高压配电', 'HV', (d) => ({
-      id: String(d.device_id),
       status: normStatus(d.state),
       voltage: num(d.u),
       current: num(d.i),
       loadPercent: num(d.load),
     }))
     expect(out).toHaveLength(2)
-    expect(out[0].id).toBe('A1')
-    expect(out[0].room).toBe('高压配电')
-    expect(out[0].no).toBe(1)
+    expect(out[0].id).toBe(1)
+    expect(out[0].roomName).toBe('高压配电')
     expect(out[1].status).toBe('fault')
-    expect(out[1].no).toBe(2)
+    expect(out[1].id).toBe(2)
   })
 })

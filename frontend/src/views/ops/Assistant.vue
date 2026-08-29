@@ -218,10 +218,10 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { ref, reactive, nextTick } from 'vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 import { useRouter } from 'vue-router'
 import { askAssistant, submitAssistantFeedback, getAssistantModels, selectAssistantModel, assistantModelStatus } from '@/api'
 import type { AssistantAskResp, AssistantRef, AssistantStatusResp, AssistantModel } from '@/types'
@@ -279,7 +279,7 @@ async function onModelChange() {
     activeModel.value = res.active || activeModel.value
     toast.success('已切换模型：' + activeModel.value)
   } catch (e: any) {
-    toast.error('切换模型失败：' + (e?.message || '未知错误'))
+    toast.error('切换模型失败：' + (toErrorMessage(e) || '未知错误'))
     loadModels() // 还原
   }
 }
@@ -365,7 +365,7 @@ async function send(q?: string) {
     }
   } catch (e: unknown) {
     aiMsg.loading = false
-    aiMsg.text = '调用 AI 助手失败：' + ((e as ErrorLike)?.message || '服务异常，请稍后重试。')
+    aiMsg.text = '调用 AI 助手失败：' + (toErrorMessage(e) || '服务异常，请稍后重试。')
   } finally {
     sending.value = false
     await scroll()
@@ -440,7 +440,7 @@ async function runDiag() {
       http_status: null,
       latency: null,
       model_available: null,
-      detail: '诊断失败：' + ((e as ErrorLike)?.message || '无法连接后端'),
+      detail: '诊断失败：' + (toErrorMessage(e) || '无法连接后端'),
     }
   } finally {
     diagLoading.value = false

@@ -20,10 +20,9 @@
       </div>
     </div>
 
-    <div v-if="loading" class="loading-box"><div class="spinner"></div><span>{{ t.loading }}</span></div>
-
+    <AsyncSection :page="page" @retry="page.reload">
     <!-- 生命周期 -->
-    <div v-else-if="activeTab === 'life'">
+    <div v-if="activeTab === 'life'">
       <div class="grid cols-5">
         <div v-for="s in stages" :key="s.key" class="card" style="padding:14px">
           <div class="text-xs" :class="s.cls">{{ s.label }}</div>
@@ -130,14 +129,17 @@
         </div>
       </div>
     </div>
+    </AsyncSection>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { listEquipment } from '@/api'
 import type { Equipment } from '@/types'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { useAsyncPage } from '@/composables/useAsyncPage'
 
 const { tm } = useI18n()
 const t = (tm('assetLifecycle') || {}) as Record<string, any>
@@ -147,7 +149,6 @@ const tabs = [
   { k: 'lib', label: '' },
 ]
 const activeTab = ref<string>('life')
-const loading = ref(false)
 
 interface Row extends Equipment {
   runHours: number
@@ -263,18 +264,12 @@ function remove(id: string) {
 }
 
 async function load() {
-  loading.value = true
-  try {
-    const res = await listEquipment({ size: 1000 })
-    rows.value = (res.items || []).map(derive)
-    if (!localStorage.getItem(KEY_LIB)) loadLib()
-    else modelLib.value = JSON.parse(localStorage.getItem(KEY_LIB) || '[]')
-  } catch {
-    rows.value = []
-  } finally {
-    loading.value = false
-  }
+  const res = await listEquipment({ size: 1000 })
+  rows.value = (res.items || []).map(derive)
+  if (!localStorage.getItem(KEY_LIB)) loadLib()
+  else modelLib.value = JSON.parse(localStorage.getItem(KEY_LIB) || '[]')
+  return rows.value
 }
 
-onMounted(load)
+const page = useAsyncPage<Row[]>(load)
 </script>

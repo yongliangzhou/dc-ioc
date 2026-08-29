@@ -109,9 +109,13 @@
     "dutyCalendar": "Duty Calendar",
     "electronicInspection": "Electronic Inspection",
     "knowledgeCollab": "Knowledge Collab",
-    "workflow": "ITIL Workflow"
-  },
-  "admin": {
+    "workflow": "ITIL Workflow",
+    "alarmGroup": "Alarms",
+    "energyGroup": "Energy",
+    "knowledgeAi": "Knowledge & AI",
+    "platformIntegration": "Platform & Integration"
+    },
+    "admin": {
     "title": "System Admin",
     "audit": "Operation Audit"
   },
@@ -2081,7 +2085,10 @@
     "confirmDelete": "Delete this entry?",
     "deleted": "Deleted",
     "saved": "Saved",
-    "stillIn": "Inside"
+    "stillIn": "Inside",
+    "cancel": "Cancel",
+    "del": "Delete",
+    "confirmDeleteTitle": "Delete Entry"
   },
   "faultImpact": {
     "title": "Fault Impact Analysis",
@@ -2260,11 +2267,7 @@
     "name": "Name",
     "namePlaceholder": "Supplier name",
     "categoryPlaceholder": "e.g. Power O&M",
-    "promptQuality": "Quality score (0-100)",
-    "promptResponse": "Response score (0-100)",
-    "promptPrice": "Price score (0-100)",
-    "promptSla": "SLA score (0-100)",
-    "promptCoop": "Cooperation score (0-100)",
+
     "dim_quality": "Quality",
     "dim_response": "Response",
     "dim_price": "Price",
@@ -2623,6 +2626,8 @@
     "conflict": "Conflict",
     "avgConf": "Avg Confidence",
     "sources": "Recognition Sources",
+    "srcRfid": "RFID Asset Tag",
+    "srcLedger": "Work-Order Ledger",
     "devices": "units",
     "sourceConf": "Confidence {n}%",
     "conflictList": "Conflict List",

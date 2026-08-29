@@ -22,6 +22,7 @@ import {
   toggleAlarmRule,
 } from '@/api'
 import { notifyNew } from '@/engine/alarmNotifier'
+import { toErrorMessage } from '@/composables/useAsyncPage'
 
 /** 联动产生的活动告警 (在 Alarm 基础上附加定位字段) */
 export interface RtAlarm extends Alarm {
@@ -73,8 +74,19 @@ class RealtimeLinkage {
   active: RtAlarm[] = []
   running = false
 
+  // ---- 可观测性 (供消费方呈现加载/失败态, 不允许静默吞错) ----
+  /** 首轮尚未返回: loading=true */
+  loading = true
+  /** 最近一次轮询失败的中文文案; 空串 = 正常 */
+  lastError = ''
+  /** 最近一次成功拉取的时间戳; 0 = 从未成功 */
+  lastLoadedAt = 0
+  /** 规则列表拉取失败的文案; 空串 = 正常 */
+  rulesError = ''
+
   private timer = 0
-  private rulesLoaded = false
+  /** 规则是否已成功拉取过（供消费方区分「加载中」与「确实没有规则」） */
+  rulesLoaded = false
   private initialized = false
 
   /** 启动全局引擎 (幂等) — 仅启动轮询, 评估在后端 */
@@ -82,6 +94,8 @@ class RealtimeLinkage {
     if (this.running) return
     this.running = true
     this.initialized = false
+    this.loading = true
+    this.lastError = ''
     void this.refreshRules()
     void this.tick()
     // 轮询间隔下限 3s, 避免高频打后端
@@ -94,6 +108,11 @@ class RealtimeLinkage {
     this.timer = 0
   }
 
+  /** 立即刷新一次（供 UI 的「重试」按钮调用，不必等下一个轮询周期） */
+  async refresh() {
+    await Promise.all([this.refreshRules(), this.tick()])
+  }
+
   /** 拉取后端规则配置 (启停状态以后端为准) */
   async refreshRules() {
     try {
@@ -101,9 +120,12 @@ class RealtimeLinkage {
       if (Array.isArray(rules)) {
         this.rules = rules as LinkRule[]
         this.rulesLoaded = true
+        this.rulesError = ''
       }
-    } catch {
-      /* 后端不可达: 保持现有列表 (可能为空), 不做本地评估降级 */
+    } catch (e) {
+      // 后端不可达: 保持现有列表 (可能为空), 不做本地评估降级, 但必须把失败暴露出去
+      const msg = toErrorMessage(e)
+      if (msg) this.rulesError = msg
     }
   }
 
@@ -129,9 +151,15 @@ class RealtimeLinkage {
       }
 
       this.active = next
+      this.lastLoadedAt = Date.now()
+      this.lastError = ''
+      this.loading = false
       if (!this.rulesLoaded) void this.refreshRules()
-    } catch {
-      /* 后端不可达: 保持上次快照 */
+    } catch (e) {
+      // 后端不可达: 保持上次快照, 但记录失败原因供 UI 呈现 (陈旧数据 + 错误横幅)
+      const msg = toErrorMessage(e)
+      if (msg) this.lastError = msg
+      this.loading = false
     }
   }
 
@@ -155,6 +183,8 @@ class RealtimeLinkage {
     const prev = r.status
     const next = prev === 'enabled' ? ('silenced' as const) : ('enabled' as const)
     r.status = next
+    // 部分视图（AlarmRulePanel）按 enabled 展示，需与 status 保持同步，否则点了没反应
+    r.enabled = next === 'enabled'
     r.updated = new Date().toISOString().slice(0, 16)
     toggleAlarmRule(id, next).catch(() => {
       r.status = prev // 后端拒绝 (如权限不足) 时回滚

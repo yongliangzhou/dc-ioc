@@ -41,46 +41,47 @@
         <div class="card-title">{{ t.plans }}</div>
         <input v-model="kw" @input="debouncedLoad" :placeholder="t.search || '搜索'" class="inp" style="width:200px" />
       </div>
-      <div class="table-wrap">
-        <table class="w-full">
-          <thead>
-            <tr>
-              <th>{{ t.type }}</th>
-              <th>{{ t.plans }}</th>
-              <th>{{ t.level }}</th>
-              <th>{{ t.scope }}</th>
-              <th>{{ t.estDuration }}</th>
-              <th>{{ t.steps }}</th>
-              <th>状态</th>
-              <th>{{ t.result }}</th>
-              <th style="width:112px"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="p in plans" :key="p.id">
-              <td><span class="tag b">{{ p.type }}</span></td>
-              <td class="cell-strong">
-                {{ p.name }}
-                <span v-if="p.source === 'real'" class="pill g" style="margin-left:4px">{{ t.suggest || '建议' }}</span>
-              </td>
-              <td>{{ p.level || '—' }}</td>
-              <td>{{ p.scope || '—' }}</td>
-              <td>{{ p.duration ? p.duration + 'min' : '—' }}</td>
-              <td>{{ (p.steps || []).length }}</td>
-              <td><span class="tag" :class="stateClass(p.state)">{{ p.state }}</span></td>
-              <td><span class="tag" :class="resultClass(p.result)">{{ p.result }}</span></td>
-              <td>
-                <div class="flex gap-1">
-                  <button class="btn-sm btn-primary" @click="openPreview(p)">{{ t.preview || '演练预演' }}</button>
-                  <button class="btn-sm" @click="openEdit(p)">{{ t.edit }}</button>
-                  <button class="btn-sm btn-danger" @click="remove(p)">{{ t.del }}</button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!plans.length"><td colspan="9" class="empty-box">{{ t.empty }}</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <AsyncSection :loading="plansLoading" :error="plansError" :empty="!plans.length" empty-title="暂无演练计划" @retry="loadPlans">
+        <div class="table-wrap">
+          <table class="w-full">
+            <thead>
+              <tr>
+                <th>{{ t.type }}</th>
+                <th>{{ t.plans }}</th>
+                <th>{{ t.level }}</th>
+                <th>{{ t.scope }}</th>
+                <th>{{ t.estDuration }}</th>
+                <th>{{ t.steps }}</th>
+                <th>状态</th>
+                <th>{{ t.result }}</th>
+                <th style="width:112px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="p in plans" :key="p.id">
+                <td><span class="tag b">{{ p.type }}</span></td>
+                <td class="cell-strong">
+                  {{ p.name }}
+                  <span v-if="p.source === 'real'" class="pill g" style="margin-left:4px">{{ t.suggest || '建议' }}</span>
+                </td>
+                <td>{{ p.level || '—' }}</td>
+                <td>{{ p.scope || '—' }}</td>
+                <td>{{ p.duration ? p.duration + 'min' : '—' }}</td>
+                <td>{{ (p.steps || []).length }}</td>
+                <td><span class="tag" :class="stateClass(p.state)">{{ p.state }}</span></td>
+                <td><span class="tag" :class="resultClass(p.result)">{{ p.result }}</span></td>
+                <td>
+                  <div class="flex gap-1">
+                    <button class="btn-sm btn-primary" @click="openPreview(p)">{{ t.preview || '演练预演' }}</button>
+                    <button class="btn-sm" @click="openEdit(p)">{{ t.edit }}</button>
+                    <button class="btn-sm btn-danger" @click="remove(p)">{{ t.del }}</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </AsyncSection>
     </div>
 
     <!-- 执行记录 -->
@@ -95,40 +96,41 @@
           <button class="btn-ghost" @click="openRecord">{{ t.startDrill }}</button>
         </div>
       </div>
-      <div class="table-wrap">
-        <table class="w-full">
-          <thead>
-            <tr>
-              <th>{{ t.colPlan }}</th>
-              <th>{{ t.colDate }}</th>
-              <th>{{ t.colOwner }}</th>
-              <th>{{ t.colDuration }}</th>
-              <th>{{ t.colResult }}</th>
-              <th>{{ t.colScore }}</th>
-              <th>{{ t.colNote }}</th>
-              <th style="width:96px"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in records" :key="r.id">
-              <td class="cell-strong">{{ planName(r.planId) }}</td>
-              <td>{{ r.date }}</td>
-              <td>{{ r.participants }} 人</td>
-              <td>{{ r.startAt }}-{{ r.endAt }}</td>
-              <td><span class="tag" :class="resultClass(r.result)">{{ r.result }}</span></td>
-              <td>{{ r.score }}</td>
-              <td class="clip">{{ r.note }}</td>
-              <td>
-                <div class="flex gap-1">
-                  <button class="btn-sm" @click="openRecordEdit(r)">{{ t.edit }}</button>
-                  <button class="btn-sm btn-danger" @click="removeRecord(r)">{{ t.del }}</button>
-                </div>
-              </td>
-            </tr>
-            <tr v-if="!records.length"><td colspan="8" class="empty-box">{{ t.empty }}</td></tr>
-          </tbody>
-        </table>
-      </div>
+      <AsyncSection :loading="recordsLoading" :error="recordsError" :empty="!records.length" empty-title="暂无执行记录" @retry="loadRecords">
+        <div class="table-wrap">
+          <table class="w-full">
+            <thead>
+              <tr>
+                <th>{{ t.colPlan }}</th>
+                <th>{{ t.colDate }}</th>
+                <th>{{ t.colOwner }}</th>
+                <th>{{ t.colDuration }}</th>
+                <th>{{ t.colResult }}</th>
+                <th>{{ t.colScore }}</th>
+                <th>{{ t.colNote }}</th>
+                <th style="width:96px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="r in records" :key="r.id">
+                <td class="cell-strong">{{ planName(r.planId) }}</td>
+                <td>{{ r.date }}</td>
+                <td>{{ r.participants }} 人</td>
+                <td>{{ r.startAt }}-{{ r.endAt }}</td>
+                <td><span class="tag" :class="resultClass(r.result)">{{ r.result }}</span></td>
+                <td>{{ r.score }}</td>
+                <td class="clip">{{ r.note }}</td>
+                <td>
+                  <div class="flex gap-1">
+                    <button class="btn-sm" @click="openRecordEdit(r)">{{ t.edit }}</button>
+                    <button class="btn-sm btn-danger" @click="removeRecord(r)">{{ t.del }}</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </AsyncSection>
     </div>
 
     <!-- 计划 编辑抽屉 -->
@@ -280,6 +282,9 @@ import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getDrills, createDrill, updateDrill, deleteDrill, getDrillRecords, createDrillRecord, updateDrillRecord, deleteDrillRecord, getFaultSources, analyzeFaultImpact } from '@/api'
 import type { DrillPlan, DrillRecord, DrillStep, FaultImpactResp, FaultSourceNode } from '@/types'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import { useConfirm } from '@/hooks/useConfirm'
 
 const { t: raw } = useI18n()
 const t = new Proxy({} as any, {
@@ -292,6 +297,10 @@ const t = new Proxy({} as any, {
 const stats = reactive({ year: 0, done: 0, pass: 0, next: '—' })
 const plans = ref<DrillPlan[]>([])
 const records = ref<DrillRecord[]>([])
+const plansLoading = ref(false)
+const plansError = ref('')
+const recordsLoading = ref(false)
+const recordsError = ref('')
 const kw = ref('')
 const offline = ref(false)
 const saving = ref(false)
@@ -364,29 +373,37 @@ async function runPreview() {
       scope: { power: true, cool: true, network: true, business: true },
     })
   } catch (e: any) {
-    previewError.value = (e && e.message) || '分析失败'
+    previewError.value = toErrorMessage(e) || '分析失败'
   } finally {
     previewLoading.value = false
   }
 }
 
 async function loadPlans() {
+  plansLoading.value = true
+  plansError.value = ''
   try {
     const r = await getDrills()
     plans.value = (r.plans || []).filter((p) => !kw.value || (p.name + p.code).includes(kw.value))
     Object.assign(stats, r.stats || stats)
     offline.value = false
-  } catch {
-    offline.value = true
+  } catch (e: unknown) {
+    plansError.value = toErrorMessage(e) || '加载演练计划失败'
+  } finally {
+    plansLoading.value = false
   }
 }
 
 async function loadRecords() {
+  recordsLoading.value = true
+  recordsError.value = ''
   try {
     const r = await getDrillRecords(recFilter.value ?? undefined)
     records.value = r.records || []
-  } catch {
-    /* 离线: 不影响计划展示 */
+  } catch (e: unknown) {
+    recordsError.value = toErrorMessage(e) || '加载执行记录失败'
+  } finally {
+    recordsLoading.value = false
   }
 }
 
@@ -446,7 +463,7 @@ async function remove(p: DrillPlan) {
     plans.value = plans.value.filter((x) => x.id !== p.id)
     return
   }
-  if (!confirm('确认删除该演练计划？')) return
+  if (!(await useConfirm({ message: '确认删除该演练计划？', danger: true }))) return
   try {
     await deleteDrill(p.id)
     await loadPlans()
@@ -496,7 +513,7 @@ async function saveRecord() {
 }
 
 async function removeRecord(r: DrillRecord) {
-  if (!confirm('确认删除该执行记录？')) return
+  if (!(await useConfirm({ message: '确认删除该执行记录？', danger: true }))) return
   try {
     await deleteDrillRecord(r.id)
     await loadRecords()

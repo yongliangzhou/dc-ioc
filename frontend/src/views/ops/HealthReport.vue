@@ -16,6 +16,14 @@
       </div>
     </div>
 
+    <!-- 部分数据源失败显式露出 (不再静默吞掉), 可一键重试失败项 -->
+    <ErrorBanner
+      v-if="anyHealthError"
+      :count="healthErrorCount"
+      :labels="failedSourceLabels"
+      @retry="health.reloadFailed"
+    />
+
     <div v-if="!report" class="bg-white rounded-lg shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">
       {{ t.emptyHint }}
     </div>
@@ -142,7 +150,18 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getActiveAlarms, getExternalDevices, getTickets, getDrills, getDrillRecords, getCabinets, listEquipment, getTenantStats } from '@/api'
+import {
+  getActiveAlarms,
+  getExternalDevices,
+  getTickets,
+  getDrills,
+  getDrillRecords,
+  getCabinets,
+  listEquipment,
+  getTenantStats,
+} from '@/api'
+import { useAsyncPageAll } from '@/composables/useAsyncPage'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 
 const { t: raw } = useI18n()
 const t = new Proxy({} as any, {
@@ -164,6 +183,36 @@ const month = ref('')
 const report = ref<Report | null>(null)
 const loading = ref(false)
 const detail = ref<Domain | null>(null)
+
+// 8 路并发数据源：单个失败不再静默吞掉，失败项由 ErrorBanner 显式露出且可一键重试
+const SOURCE_LABELS: Record<string, string> = {
+  alarms: '活跃告警',
+  devices: '外部设备',
+  tickets: '工单',
+  drills: '演练计划',
+  drillRecs: '演练记录',
+  cabinets: '机柜台账',
+  equip: '设备台账',
+  tenantStats: '租户统计',
+}
+const health = useAsyncPageAll(
+  {
+    alarms: () => getActiveAlarms(),
+    devices: () => getExternalDevices({ limit: 200 }),
+    tickets: () => getTickets({}),
+    drills: () => getDrills(),
+    drillRecs: () => getDrillRecords(),
+    cabinets: () => getCabinets({ size: 200 }),
+    equip: () => listEquipment({ size: 200 }),
+    tenantStats: () => getTenantStats(),
+  },
+  { autoLoad: false },
+)
+const anyHealthError = computed(() => health.anyError.value)
+const healthErrorCount = computed(() => health.errorCount.value)
+const failedSourceLabels = computed(() =>
+  health.failedKeys.value.map((k) => SOURCE_LABELS[k] ?? k),
+)
 
 function initMonths() {
   const now = new Date()
@@ -208,17 +257,18 @@ async function generate() {
   loading.value = true
   const sources = new Set<string>(['local'])
   try {
-    // 并行拉取真实数据
-    const [alarms, devices, tickets, drills, drillRecs, cabinets, equip, tenantStats] = await Promise.all([
-      getActiveAlarms().catch(() => null),
-      getExternalDevices({ limit: 200 }).catch(() => null),
-      getTickets({}).catch(() => null),
-      getDrills().catch(() => null),
-      getDrillRecords().catch(() => null),
-      getCabinets({ size: 200 }).catch(() => null),
-      listEquipment({ size: 200 }).catch(() => null),
-      getTenantStats().catch(() => null),
-    ])
+    // 并发拉取真实数据；单个失败由 useAsyncPageAll 记录到 failedKeys，不再被 .catch(() => null) 吞掉
+    await health.reloadAll()
+    const pages = health.pages as any
+    const d = (k: string) => pages[k]?.data?.value ?? null
+    const alarms = d('alarms')
+    const devices = d('devices')
+    const tickets = d('tickets')
+    const drills = d('drills')
+    const drillRecs = d('drillRecs')
+    const cabinets = d('cabinets')
+    const equip = d('equip')
+    const tenantStats = d('tenantStats')
     if (alarms || devices || tickets || drills || drillRecs || cabinets || equip || tenantStats) sources.add('realtime')
 
     const hazards: any[] = readLs('w10_hazards', [])

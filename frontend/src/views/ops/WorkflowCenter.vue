@@ -11,6 +11,8 @@
       </div>
     </header>
 
+    <ErrorBanner v-if="knowledgeError" :count="1" :labels="['知识库']" @retry="loadKnowledge" />
+
     <!-- KPI -->
     <section class="kpi-row">
       <div class="kpi"><span class="kpi-v">{{ stats.open }}</span><span class="kpi-l">{{ t.openCount }}</span></div>
@@ -213,20 +215,25 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/modules/auth'
 import { getKnowledgeItems } from '@/api/knowledge'
 import type { KnowledgeItem } from '@/types'
+import { toErrorMessage, useAsyncPage } from '@/composables/useAsyncPage'
+import {
+  getWorkflows,
+  createWorkflow,
+  deleteWorkflow,
+  advanceWorkflow as advanceWorkflowApi,
+  closeWorkflow as closeWorkflowApi,
+  reopenWorkflow as reopenWorkflowApi,
+  approveNode as approveNodeApi,
+  addWorkflowLog,
+  linkKnowledge,
+  unlinkKnowledge,
+} from '@/api/workflow'
+import type { WorkflowItem, WNode, WType, WPriority, NodeStatus } from '@/api/workflow'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
 
-type WType = 'incident' | 'problem' | 'change' | 'risk'
-type WStatus = 'new' | 'progress' | 'approval' | 'approved' | 'rejected' | 'closed'
-type WPriority = 'P1' | 'P2' | 'P3' | 'P4'
-type NodeStatus = 'approved' | 'rejected' | 'pending' | 'skipped'
 
-interface WNode { approver: string; status: NodeStatus; comment?: string; at?: string }
-interface WLog { user: string; text: string; at: string }
-export interface WorkflowItem {
-  id: string; type: WType; title: string; description: string; priority: WPriority
-  status: WStatus; owner: string; applicant: string; createdAt: string; updatedAt: string
-  slaHours: number; riskLevel?: 'high' | 'medium' | 'low'
-  approval: WNode[]; logs: WLog[]; knowledgeLinks: string[]
-}
 
 const { t: raw } = useI18n()
 const t = new Proxy({} as any, {
@@ -236,21 +243,19 @@ const t = new Proxy({} as any, {
   },
 })
 const auth = useAuthStore()
+const toast = useToast()
 const me = computed(() => auth.user?.username || 'me')
 
-const LS = 'wf_items'
-function load(): WorkflowItem[] {
-  const seed = seedData()
-  try {
-    const saved = JSON.parse(localStorage.getItem(LS) || 'null')
-    if (saved && Array.isArray(saved) && saved.length) return saved
-  } catch {}
-  localStorage.setItem(LS, JSON.stringify(seed))
-  return seed
-}
-function persist() { localStorage.setItem(LS, JSON.stringify(items.value)) }
-
-const items = ref<WorkflowItem[]>(load())
+const items = ref<WorkflowItem[]>([])
+const page = useAsyncPage<WorkflowItem[]>(
+  async () => {
+    const resp = await getWorkflows()
+    const data = resp.items || []
+    items.value = data
+    return data
+  },
+  { isEmpty: (d) => !d || d.length === 0 },
+)
 const kw = ref('')
 const fType = ref<string>('all')
 const fStatus = ref<string>('all')
@@ -327,8 +332,16 @@ const form = ref<Partial<WorkflowItem>>({ type: 'incident', priority: 'P3', titl
 const logText = ref('')
 const linkPick = ref('')
 const knowledgeItems = ref<KnowledgeItem[]>([])
+const knowledgeError = ref('')
 async function loadKnowledge() {
-  try { const r = await getKnowledgeItems({ page: 1, page_size: 200 }); knowledgeItems.value = r.items || [] } catch { knowledgeItems.value = [] }
+  knowledgeError.value = ''
+  try {
+    const r = await getKnowledgeItems({ page: 1, page_size: 200 })
+    knowledgeItems.value = r.items || []
+  } catch (e) {
+    knowledgeItems.value = []
+    knowledgeError.value = toErrorMessage(e) || '知识库加载失败'
+  }
 }
 onMounted(() => { loadKnowledge() })
 
@@ -336,58 +349,77 @@ function openEditor() { editor.value = true; editingId.value = null; form.value 
 function openDetail(w: WorkflowItem) { detail.value = w; editor.value = false }
 function closeDrawer() { editor.value = false; detail.value = null; editingId.value = null }
 
-function genId(type: WType, existingCount = 0): string {
-  const p = { incident: 'INC', problem: 'PRB', change: 'CHG', risk: 'RSK' }[type]
-  const n = String(existingCount + 1).padStart(4, '0')
-  return `${p}-2026-${n}`
-}
-function defaultApproval(type: WType): WNode[] {
-  if (type === 'change') return [{ approver: '变更委员会', status: 'pending' }, { approver: '运维经理', status: 'pending' }]
-  if (type === 'risk') return [{ approver: '安全负责人', status: 'pending' }]
-  if (type === 'problem') return [{ approver: '技术专家', status: 'pending' }]
-  return [{ approver: '一线主管', status: 'pending' }]
-}
-function save() {
-  if (!form.value.title?.trim()) { alert(t.titlePlaceholder); return }
+
+async function save() {
+  if (!form.value.title?.trim()) { toast.warning(t.titlePlaceholder); return }
   const type = form.value.type as WType
-  const now = new Date().toISOString()
-  const item: WorkflowItem = {
-    id: genId(type, items.value.filter(w => w.type === type).length), type, title: form.value.title!, description: form.value.description || '',
-    priority: (form.value.priority as WPriority) || 'P3', status: 'new', owner: form.value.owner || me.value,
-    applicant: me.value, createdAt: now, updatedAt: now,
-    slaHours: { P1: 4, P2: 8, P3: 24, P4: 72 }[form.value.priority as WPriority] || 24,
+  const created = await createWorkflow({
+    type,
+    title: form.value.title!,
+    description: form.value.description || '',
+    priority: (form.value.priority as WPriority) || 'P3',
+    owner: form.value.owner || me.value,
+    applicant: me.value,
     riskLevel: type === 'risk' ? (form.value.riskLevel as any) : undefined,
-    approval: defaultApproval(type), logs: [{ user: me.value, text: t.new, at: now }], knowledgeLinks: [],
-  }
-  items.value = [item, ...items.value]
-  persist(); closeDrawer()
+  })
+  items.value = [created, ...items.value]
+  closeDrawer()
 }
 
-function advance(w: WorkflowItem) {
-  if (w.status === 'new') w.status = w.approval.length ? 'approval' : 'progress'
-  else if (w.status === 'progress') w.status = 'closed'
-  w.updatedAt = new Date().toISOString()
-  addLogInternal(w, t.next)
-  persist()
+async function advance(w: WorkflowItem) {
+  const u = await advanceWorkflowApi(w.id)
+  replaceItem(u)
 }
-function closeWorkflow(w: WorkflowItem) { w.status = 'closed'; w.updatedAt = new Date().toISOString(); addLogInternal(w, t.close); persist() }
-function reopen(w: WorkflowItem) { w.status = 'progress'; w.updatedAt = new Date().toISOString(); addLogInternal(w, t.reopen); persist() }
-function remove(w: WorkflowItem) { if (!confirm(t.confirmDelete)) return; items.value = items.value.filter(x => x.id !== w.id); persist(); detail.value = null }
-
-function canApprove(node: WNode) { return node.status === 'pending' && (node.approver.includes(me.value) || me.value === 'admin') }
-function approveNode(w: WorkflowItem, idx: number, result: 'approved' | 'rejected') {
-  const node = w.approval[idx]; node.status = result; node.at = new Date().toISOString()
-  addLogInternal(w, `${t.approveNode} ${idx + 1}: ${result}`)
-  if (result === 'rejected') { w.status = 'rejected' }
-  else if (w.approval.every(n => n.status === 'approved')) { w.status = 'progress' }
-  w.updatedAt = new Date().toISOString(); persist()
+async function closeWorkflow(w: WorkflowItem) {
+  const u = await closeWorkflowApi(w.id)
+  replaceItem(u)
+}
+async function reopen(w: WorkflowItem) {
+  const u = await reopenWorkflowApi(w.id)
+  replaceItem(u)
+}
+async function remove(w: WorkflowItem) {
+  if (!(await useConfirm({ message: t.confirmDelete, danger: true }))) return
+  await deleteWorkflow(w.id)
+  items.value = items.value.filter((x) => x.id !== w.id)
+  if (detail.value?.id === w.id) detail.value = null
 }
 
-function addLogInternal(w: WorkflowItem, text: string) { w.logs = [...w.logs, { user: me.value, text, at: new Date().toISOString() }] }
-function addLog(w: WorkflowItem) { const x = logText.value.trim(); if (!x) return; addLogInternal(w, x); logText.value = ''; persist() }
-
-function link(w: WorkflowItem) { if (!linkPick.value) return; w.knowledgeLinks = [...new Set([...w.knowledgeLinks, linkPick.value])]; linkPick.value = ''; persist() }
-function unlink(w: WorkflowItem, k: string) { w.knowledgeLinks = w.knowledgeLinks.filter(x => x !== k); persist() }
+function canApprove(node: WNode) {
+  // 审批权限基于角色: 超管放行; 否则要求当前用户角色集合包含该节点审批角色
+  if (node.status !== 'pending') return false
+  if (auth.isAdmin) return true
+  const roles = auth.user?.roles || []
+  const approvers = node.approver.split(/[、,，/]/).map((s) => s.trim()).filter(Boolean)
+  return approvers.some((a) => roles.includes(a))
+}
+function replaceItem(u: WorkflowItem) {
+  const i = items.value.findIndex((x) => x.id === u.id)
+  if (i >= 0) items.value.splice(i, 1, u)
+  else items.value = [u, ...items.value]
+  if (detail.value && detail.value.id === u.id) detail.value = u
+}
+async function approveNode(w: WorkflowItem, idx: number, result: 'approved' | 'rejected') {
+  const u = await approveNodeApi(w.id, idx, result, w.approval[idx]?.comment || '')
+  replaceItem(u)
+}
+async function addLog(w: WorkflowItem) {
+  const x = logText.value.trim()
+  if (!x) return
+  const u = await addWorkflowLog(w.id, x)
+  logText.value = ''
+  replaceItem(u)
+}
+async function link(w: WorkflowItem) {
+  if (!linkPick.value) return
+  const u = await linkKnowledge(w.id, linkPick.value)
+  linkPick.value = ''
+  replaceItem(u)
+}
+async function unlink(w: WorkflowItem, k: string) {
+  const u = await unlinkKnowledge(w.id, k)
+  replaceItem(u)
+}
 
 // ---- SLA ----
 function isBreached(w: WorkflowItem) {
@@ -415,35 +447,7 @@ function nodeCls(s: NodeStatus) { return { approved: 'green', rejected: 'red', p
 function nodeLabel(s: NodeStatus) { return ({ approved: t.approved, rejected: t.rejected, pending: t.approval, skipped: t.closed } as any)[s] || s }
 function fmt(d?: string) { return d ? new Date(d).toLocaleString() : '—' }
 
-// ---- 种子数据 ----
-function seedData(): WorkflowItem[] {
-  const now = Date.now()
-  const list: WorkflowItem[] = []
-  const mk = (o: Partial<WorkflowItem> & { type: WType; title: string; priority: WPriority; status: WStatus; owner: string; agoH: number; slaHours: number; approval: WNode[] }): WorkflowItem => {
-    const item: WorkflowItem = {
-      id: genId(o.type, list.filter(w => w.type === o.type).length), description: o.description || '', applicant: o.owner, riskLevel: o.riskLevel,
-      createdAt: new Date(now - o.agoH * 36e5).toISOString(), updatedAt: new Date(now - (o.agoH / 2) * 36e5).toISOString(),
-      knowledgeLinks: o.knowledgeLinks || [], logs: [{ user: o.owner, text: t.new, at: new Date(now - o.agoH * 36e5).toISOString() }],
-      ...o,
-    }
-    list.push(item)
-    return item
-  }
-  return [
-    mk({ type: 'incident', title: 'B 区冷机 CH-02 高压报警', priority: 'P1', status: 'progress', owner: '张伟', agoH: 3, slaHours: 4,
-      description: 'B 区冷机 CH-02 出水温度异常升高并触发高压报警，已切换至备用冷机。', approval: defaultApproval('incident') }),
-    mk({ type: 'incident', title: 'UPS-A 旁路异常', priority: 'P2', status: 'approval', owner: '李娜', agoH: 10, slaHours: 8,
-      description: 'UPS-A 模块显示旁路电压偏离，需主管确认是否现场处理。', approval: [{ approver: '一线主管', status: 'pending', comment: '' }, { approver: '运维经理', status: 'pending' }] }),
-    mk({ type: 'problem', title: '机房湿度周期性波动根因分析', priority: 'P3', status: 'new', owner: '王强', agoH: 26, slaHours: 24,
-      description: '近两周机房相对湿度在 40%~55% 间周期性波动，需定位加湿系统控制逻辑。', approval: defaultApproval('problem') }),
-    mk({ type: 'change', title: '核心交换机固件升级', priority: 'P2', status: 'approved', owner: '赵敏', agoH: 50, slaHours: 8,
-      description: '对核心交换机执行 9.3.2 固件升级，规避已知 ARP 表项溢出缺陷。', approval: [{ approver: '变更委员会', status: 'approved', comment: '同意窗口期', at: new Date(now - 20 * 36e5).toISOString() }, { approver: '运维经理', status: 'pending' }] }),
-    mk({ type: 'risk', title: '市电双路单点隐患', priority: 'P2', status: 'closed', owner: '陈昊', agoH: 200, slaHours: 24, riskLevel: 'high',
-      description: '发现 10kV 进线 II 路 PT 柜端子氧化，已安排带电紧固。', approval: [{ approver: '安全负责人', status: 'approved', at: new Date(now - 180 * 36e5).toISOString() }], knowledgeLinks: ['KB-2026-001'] }),
-    mk({ type: 'incident', title: '动环采集器离线', priority: 'P3', status: 'closed', owner: '孙磊', agoH: 96, slaHours: 24,
-      description: '采集器 COL-07 离线，重启后恢复，原因为网络端口协商异常。', approval: defaultApproval('incident'), knowledgeLinks: ['KB-2026-003'] }),
-  ]
-}
+
 </script>
 
 <style scoped>

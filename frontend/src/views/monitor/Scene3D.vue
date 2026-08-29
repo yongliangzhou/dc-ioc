@@ -54,7 +54,10 @@
     </div>
 
     <div class="canvas-host" ref="host"></div>
-    <div class="loading" v-if="loading">{{ tl('common.loading') }}</div>
+    <div class="loading" v-if="loading && !error">{{ tl('common.loading') }}</div>
+    <div class="loaderr" v-if="error">
+      <ErrorBanner :count="1" :labels="['3D 设备']" @retry="load" />
+    </div>
   </div>
 </template>
 
@@ -65,6 +68,8 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { fetchTwinDevices, type TwinDevice } from '@/api/twin'
 import { useDatacenterStore } from '@/stores/datacenter'
+import { toErrorMessage } from '@/composables/useAsyncPage'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 
 const { t: tl } = useI18n()
 const dcStore = useDatacenterStore()
@@ -80,6 +85,7 @@ const levels: { key: LevelKey; label: string }[] = [
 const root = ref<HTMLElement | null>(null)
 const host = ref<HTMLElement | null>(null)
 const loading = ref(true)
+const error = ref('')
 const mode = ref<'2d' | '3d'>('3d')
 const level = ref<LevelKey>('campus')
 const selectedRoom = ref<string>('')
@@ -380,12 +386,14 @@ function animate() {
 
 async function load() {
   loading.value = true
+  error.value = ''
   try {
     const r = await fetchTwinDevices({ idcId: dcStore.currentIdcId || undefined })
     devices.value = r.items || []
     buildScene()
-  } catch {
+  } catch (e) {
     devices.value = []
+    error.value = toErrorMessage(e) || '3D 设备加载失败'
   } finally {
     loading.value = false
   }
@@ -474,4 +482,5 @@ onBeforeUnmount(() => {
 .ic-row b.off { color: #94a3b8; }
 .x { position: absolute; top: 8px; right: 10px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
 .loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+.loaderr { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 24px; z-index: 7; }
 </style>

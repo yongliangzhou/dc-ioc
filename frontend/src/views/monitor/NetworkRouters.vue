@@ -4,6 +4,7 @@
     <div class="view-head">
       <h1>{{ tl('路由器') }}</h1>
       <span class="sub">{{ tl('路由转发 / BGP·OSPF / 会话统计 / 接口吞吐') }}</span>
+      <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
     <!-- Loading -->
@@ -285,7 +286,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps, utilCls, genHours } from '@/utils/format'
@@ -296,6 +298,9 @@ import TrendChart from '@/components/monitor/TrendChart.vue'
 import Panel from '@/components/common/Panel.vue'
 import { getNetworkRoutersDetailed, type RouterView } from '@/api/monitor'
 const { t: tl } = useI18n()
+
+/** 本页真设备与模拟字段混排，必须分级提示 */
+const { level: mockLevel, reason: mockReason, markPartial, markFull } = useMockFlag()
 
 // ──────────────────────────────────────────
 // Local extended types (API returns RouterView without interfaces)
@@ -877,6 +882,8 @@ async function loadData() {
       const protocolViews = buildProtocols(routerList)
       // API doesn't provide interface data, so we generate mock interfaces
       const mock = mockData()
+      // 真路由器 + 模拟接口表/吞吐趋势混排, 必须提示
+      markPartial('接口表与吞吐趋势由本地生成，后端未提供')
       applyData(
         routerList,
         mock.allInterfaces,
@@ -900,9 +907,10 @@ async function loadData() {
         mock.newSessionRate,
         mock.peakSessionRate,
       )
+      markFull()
     }
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   } finally {
     loading.value = false
   }

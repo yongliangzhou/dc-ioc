@@ -3,6 +3,17 @@
     <table>
       <thead>
         <tr>
+          <th v-if="selectable" style="width: 38px">
+            <input
+              type="checkbox"
+              class="ck"
+              :checked="allSelected"
+              :indeterminate.prop="someSelected && !allSelected"
+              :disabled="!alarms.length"
+              @change="toggleAll"
+              title="全选 / 取消全选"
+            />
+          </th>
           <th style="width: 65px">{{ tl('级别') }}</th>
           <th style="width: 80px">{{ tl('来源系统') }}</th>
           <th scope="col">{{ tl('告警内容') }}</th>
@@ -15,10 +26,18 @@
       </thead>
       <tbody>
         <tr
-          v-for="(x, i) in alarms"
-          :key="i"
-          :class="{ 'row-crit': x.level === 'crit', 'row-warn': x.level === 'warn' }"
+          v-for="x in alarms"
+          :key="alarmKeyOf(x)"
+          :class="{ 'row-crit': x.level === 'crit', 'row-warn': x.level === 'warn', 'row-sel': isSelected(x) }"
         >
+          <td v-if="selectable">
+            <input
+              type="checkbox"
+              class="ck"
+              :checked="isSelected(x)"
+              @change="toggleRow(alarmKeyOf(x))"
+            />
+          </td>
           <td>
             <AlarmBadge :level="mapLevel(x.level)" />
           </td>
@@ -69,16 +88,15 @@
         </tr>
       </tbody>
     </table>
-    <div class="muted" style="text-align: center; padding: 20px" v-if="!alarms.length">
-      {{ tl('当前无活动告警') }}
-    </div>
   </Panel>
 </template>
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
+import { computed } from 'vue'
 import type { Alarm } from '@/types'
+import { alarmKeyOf } from '@/utils/state'
 
 interface AlarmWithDevice extends Alarm {
   deviceId?: string
@@ -88,8 +106,19 @@ import { AlarmBadge } from '@dc-ioc/ui'
 import { StatusBadge } from '@dc-ioc/ui'
 import Panel from '@/components/common/Panel.vue'
 
-defineProps<{ alarms: Alarm[] }>()
+const props = withDefaults(
+  defineProps<{
+    alarms: Alarm[]
+    /** 是否显示复选框（批量操作） */
+    selectable?: boolean
+    /** 已选中的行标识（alarmKeyOf 的结果） */
+    selected?: string[]
+  }>(),
+  { selectable: false, selected: () => [] },
+)
+
 const emit = defineEmits<{
+  (e: 'update:selected', keys: string[]): void
   (e: 'ack', x: Alarm): void
   (e: 'resolve', x: Alarm): void
   (e: 'runbook', x: Alarm): void
@@ -97,6 +126,27 @@ const emit = defineEmits<{
   (e: 'feedback', x: Alarm): void
   (e: 'goDevice', payload: { sys: string; deviceId: string }): void
 }>()
+
+/* ---- 选择 ---- */
+const keys = computed(() => props.alarms.map(alarmKeyOf))
+const allSelected = computed(
+  () => props.alarms.length > 0 && keys.value.every((k) => props.selected.includes(k)),
+)
+const someSelected = computed(() => keys.value.some((k) => props.selected.includes(k)))
+
+function isSelected(a: Alarm) {
+  return props.selected.includes(alarmKeyOf(a))
+}
+function toggleRow(key: string) {
+  const next = props.selected.includes(key)
+    ? props.selected.filter((k) => k !== key)
+    : [...props.selected, key]
+  emit('update:selected', next)
+}
+function toggleAll() {
+  // 全选时只补当前列表, 取消时只清掉当前列表里的项, 不影响筛选外的选择
+  emit('update:selected', allSelected.value ? [] : Array.from(new Set(keys.value)))
+}
 
 // ===== Level Mapping =====
 function mapLevel(level: string): string {
@@ -356,8 +406,25 @@ function goDevice(alarm: Alarm) {
 .row-warn {
   background: linear-gradient(90deg, rgba(255, 176, 32, 0.04), transparent);
 }
+.row-sel {
+  background: rgba(34, 227, 255, 0.08);
+  box-shadow: inset 2px 0 0 var(--cyan);
+}
 .desc-cell {
   max-width: 260px;
+}
+
+/* 复选框 */
+.ck {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: var(--cyan);
+  vertical-align: middle;
+}
+.ck:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 /* Action buttons — keep existing styles */

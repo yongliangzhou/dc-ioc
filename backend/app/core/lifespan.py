@@ -110,6 +110,14 @@ async def kpi_broadcast_loop():
         kpi_pue, kpi_wue, kpi_it_load_mw, kpi_total_load_mw,
         kpi_online_rate, ws_connections_active, alarms_active,
     )
+    # 首次启动回填 campus KPI 历史 (幂等: 表空才写; DB 不可用则静默跳过)
+    try:
+        from app.services import kpi_history as _kh
+
+        _kh.seed_kpi_history(hours=48)
+    except Exception:  # noqa: BLE001
+        pass
+
     while True:
         try:
             overview = agg.dashboard_overview()
@@ -135,6 +143,14 @@ async def kpi_broadcast_loop():
             kpi_total_load_mw.set(float(overview.get("total_load_mw", 0)))
             kpi_online_rate.set(float(overview.get("online_rate", 0)))
             ws_connections_active.set(len(ws_broadcaster._connections))
+
+            # 周期写入 campus KPI 滚动历史 (供 overview 趋势, 5 分钟节流在 service 内)
+            try:
+                from app.services import kpi_history as _kh
+
+                await asyncio.to_thread(_kh.record_kpi_snapshot, overview)
+            except Exception:  # noqa: BLE001
+                pass
 
             # [P2-8] 活跃告警数 (按 severity 分维度) 同步到 Prometheus Gauge
             try:

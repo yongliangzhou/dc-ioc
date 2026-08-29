@@ -65,7 +65,7 @@
         <div class="mt-3 flex gap-2">
           <button class="btn-primary flex-1" @click="rate(s)">{{ t.rate }}</button>
           <button class="btn-ghost" @click="edit(s)">{{ t.edit }}</button>
-          <button class="btn-danger" @click="remove(s.id)">{{ t.del }}</button>
+          <button class="btn-danger" @click="askRemove(s.id)">{{ t.del }}</button>
         </div>
       </div>
     </div>
@@ -77,7 +77,8 @@
         <h3>{{ editing ? t.editSupplier : t.newSupplier }}</h3>
         <div class="space-y">
           <div class="grid cols-2" style="gap:12px">
-            <div class="field"><span>{{ t.name }}</span><input v-model="form.name" class="inp" :placeholder="t.namePlaceholder" /></div>
+            <div class="field"><span>{{ t.name }}</span><input v-model="form.name" class="inp" :class="{ invalid: touched.name && errors.name }" :placeholder="t.namePlaceholder" @blur="validate('name', form)" /></div>
+            <div v-if="touched.name && errors.name" class="field-err">{{ errors.name }}</div>
             <div class="field"><span>{{ t.category }}</span><input v-model="form.category" class="inp" :placeholder="t.categoryPlaceholder" /></div>
           </div>
           <div class="grid cols-2" style="gap:12px">
@@ -106,12 +107,44 @@
         </div>
       </div>
     </div>
+
+    <!-- 评分弹窗 -->
+    <div v-if="showRate" class="modal-mask" @click.self="showRate = false">
+      <div class="modal">
+        <h3>{{ t.rateTitle || t.rate }}</h3>
+        <label class="block text-xs" style="margin-bottom:8px;color:var(--txt2)">{{ t.rateDims }}</label>
+        <div class="space-y-2">
+          <div v-for="dim in dims" :key="dim.k" class="flex items-center gap-2" style="color:var(--txt2)">
+            <span style="width:80px;font-size:12px">{{ t['dim_' + dim.k] || dim.k }}</span>
+            <input type="range" min="0" max="100" v-model.number="rateDetail[dim.k]" class="flex-1 inp" style="padding:0" />
+            <span style="width:32px;text-align:right;font-size:12px">{{ rateDetail[dim.k] }}</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-ghost" @click="showRate = false">{{ t.cancel }}</button>
+          <button class="btn-primary" @click="saveRate">{{ t.save }}</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 删除确认 -->
+    <div v-if="showDel" class="modal-mask" @click.self="showDel = false">
+      <div class="modal">
+        <h3>{{ t.confirmDelTitle || t.del }}</h3>
+        <p style="color:var(--txt2);font-size:14px">{{ t.confirmDelText || t.confirmDel }}</p>
+        <div class="modal-actions">
+          <button class="btn-ghost" @click="showDel = false">{{ t.cancel }}</button>
+          <button class="btn-danger" @click="confirmRemove">{{ t.confirmDelOk || t.del }}</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useFormValidation, required } from '@/composables/useFormValidation'
 
 const { t: raw } = useI18n()
 const t = new Proxy({} as any, {
@@ -139,13 +172,22 @@ const suppliers = ref<Supplier[]>([])
 const showModal = ref(false)
 const editing = ref(false)
 const form = ref<Supplier>(blank())
+const { errors, touched, validate, validateAll, reset: resetForm } = useFormValidation({
+  rules: { name: [required(t.name + ' 不能为空')] },
+})
 
 function blank(): Supplier {
   return { id: '', name: '', category: '', contact: '', phone: '', contractNo: '', validTo: '', sla: '', score: 0, detail: { quality: 80, response: 80, price: 80, sla: 80, cooperation: 80 } }
 }
 
 function load() {
-  suppliers.value = JSON.parse(localStorage.getItem(KEY) || 'null') || seed()
+  let data: Supplier[] | null = null
+  try {
+    data = JSON.parse(localStorage.getItem(KEY) || 'null')
+  } catch {
+    data = null
+  }
+  suppliers.value = data || seed()
   localStorage.setItem(KEY, JSON.stringify(suppliers.value))
 }
 function seed(): Supplier[] {
@@ -168,14 +210,17 @@ function scoreColor(s: number) {
 function openCreate() {
   editing.value = false
   form.value = blank()
+  resetForm()
   showModal.value = true
 }
 function edit(s: Supplier) {
   editing.value = true
   form.value = { ...s, detail: { ...s.detail } }
+  resetForm()
   showModal.value = true
 }
 function save() {
+  if (!validateAll(form.value as unknown as Record<string, unknown>)) return
   const d = form.value.detail
   form.value.score = Math.round((d.quality + d.response + d.price + d.sla + d.cooperation) / 5)
   if (editing.value) {
@@ -191,15 +236,35 @@ function remove(id: string) {
   suppliers.value = suppliers.value.filter(s => s.id !== id)
   localStorage.setItem(KEY, JSON.stringify(suppliers.value))
 }
+const showRate = ref(false)
+const rateTarget = ref<Supplier | null>(null)
+const rateDetail = ref<Record<string, number>>({})
 function rate(s: Supplier) {
-  const q = Number(prompt(t.promptQuality, String(s.detail.quality))) || s.detail.quality
-  const r = Number(prompt(t.promptResponse, String(s.detail.response))) || s.detail.response
-  const p = Number(prompt(t.promptPrice, String(s.detail.price))) || s.detail.price
-  const sl = Number(prompt(t.promptSla, String(s.detail.sla))) || s.detail.sla
-  const c = Number(prompt(t.promptCoop, String(s.detail.cooperation))) || s.detail.cooperation
-  s.detail = { quality: q, response: r, price: p, sla: sl, cooperation: c }
-  s.score = Math.round((q + r + p + sl + c) / 5)
+  rateTarget.value = s
+  rateDetail.value = { ...s.detail }
+  showRate.value = true
+}
+function saveRate() {
+  const s = rateTarget.value
+  if (!s) return
+  const d = rateDetail.value
+  s.detail = { ...d }
+  s.score = Math.round((d.quality + d.response + d.price + d.sla + d.cooperation) / 5)
   localStorage.setItem(KEY, JSON.stringify(suppliers.value))
+  showRate.value = false
+  rateTarget.value = null
+}
+
+const showDel = ref(false)
+const delId = ref<string | null>(null)
+function askRemove(id: string) {
+  delId.value = id
+  showDel.value = true
+}
+function confirmRemove() {
+  if (delId.value) remove(delId.value)
+  showDel.value = false
+  delId.value = null
 }
 
 onMounted(load)

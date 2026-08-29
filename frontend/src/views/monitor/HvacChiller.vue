@@ -20,7 +20,7 @@
       </h2>
       <div class="topbar-actions">
         <TimeRangePicker v-model="activeRange" />
-        <button class="btn-refresh" @click="loadData" :disabled="loading">
+        <button class="btn-refresh" @click="refresh" :disabled="loading">
           <svg
             width="14"
             height="14"
@@ -37,6 +37,14 @@
         </button>
       </div>
     </div>
+
+    <!-- 部分数据源失败显式露出 (不再静默吞掉), 可一键重试失败项 -->
+    <ErrorBanner
+      v-if="all.anyError.value"
+      :count="all.errorCount.value"
+      :labels="failedLabels"
+      @retry="all.reloadFailed"
+    />
 
     <!-- ========== KPI 指标卡片行 ========== -->
     <div class="kpi-row">
@@ -858,6 +866,7 @@ import echarts, {
 import {
   getChillerPlant,
   getChillerTrends,
+  controlChiller,
   type ChillerSummary,
   type ChillerGroupView,
   type ChillerTrends,
@@ -887,15 +896,57 @@ import { getActiveAlarms } from '@/api/index'
 import { GroupCard, TrendChart, DeviceTable, HeatmapView, TimeRangePicker, QuickControl, EmptyState, SkeletonCard,  } from '@/components/monitor'
 import { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 import { CHART_COLORS } from '@/assets/echarts-theme'
+import { useToast } from '@/hooks/useToast'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { useAsyncPageAll } from '@/composables/useAsyncPage'
 
-// ---- State ----
-const chiller = ref<ChillerSummary | null>(null)
-const chillerGroups = ref<ChillerGroupView[]>([])
-const trends = ref<ChillerTrends | null>(null)
-const activeAlarms = ref<{ level: string; ts: string; msg: string; status: string }[]>([])
+// ---- State (多源并发: 单源失败不阻塞其它源, 由 ErrorBanner 显式露出) ----
+const all = useAsyncPageAll(
+  {
+    plant: () => getChillerPlant(),
+    trends: () => getChillerTrends(),
+    alarms: () => getActiveAlarms(),
+  },
+  { autoLoad: false, minLoadingMs: 0 },
+)
+const chiller = computed<ChillerSummary | null>(() => all.pages.plant.data.value ?? null)
+const chillerGroups = computed<ChillerGroupView[]>(
+  () => (all.pages.plant.data.value as ChillerSummary | undefined)?.chillerGroups ?? [],
+)
+const trends = computed<ChillerTrends | null>(() => all.pages.trends.data.value ?? null)
 const activeRange = ref('24h')
-const loading = ref(false)
-const trendsLoading = ref(false)
+const loading = computed(() => all.allLoading.value)
+const trendsLoading = computed(() => all.pages.trends.loading.value)
+
+function mapActiveAlarms(res: unknown): { level: string; ts: string; msg: string; status: string }[] {
+  const items = (res as { items?: AlarmLite[] } | undefined)?.items ?? []
+  return items
+    .filter(
+      (a) =>
+        (a.system === 'hvac' || a.domain === 'hvac' || a.source === '冷源系统') &&
+        a.level &&
+        a.level !== 'info' &&
+        a.status !== 'acknowledged',
+    )
+    .slice(0, 10)
+    .map((a) => ({
+      level: a.level ?? 'warning',
+      ts: a.timestamp ? new Date(a.timestamp).toLocaleTimeString('zh-CN') : '',
+      msg: a.message ?? a.title ?? a.summary ?? '-',
+      status: a.status ?? 'active',
+    }))
+}
+const activeAlarms = computed(() => mapActiveAlarms(all.pages.alarms.data.value))
+
+// 部分失败汇总 (不再静默吞错)
+const SOURCE_LABELS: Record<string, string> = {
+  plant: '冷源系统',
+  trends: '趋势数据',
+  alarms: '活跃告警',
+}
+const failedLabels = computed(() =>
+  all.failedKeys.value.map((k) => SOURCE_LABELS[k as keyof typeof SOURCE_LABELS] ?? k),
+)
 
 // Chart refs (for scatter charts not covered by TrendChart)
 const copChartEl = ref<HTMLDivElement | null>(null)
@@ -976,43 +1027,9 @@ function onFlowClick(e: MouseEvent) {
 }
 
 // ---- Data Load ----
-async function loadData() {
-  loading.value = true
-  try {
-    const [plantRes, trendsRes] = await Promise.all([getChillerPlant(), getChillerTrends()])
-    chiller.value = plantRes
-    chillerGroups.value = plantRes?.chillerGroups ?? []
-    trends.value = trendsRes
-    renderEChartsAfterLoad()
-  } catch {
-    /* silent */
-  }
-  loading.value = false
-}
-
-async function loadAlarms() {
-  try {
-    const res = await getActiveAlarms()
-    const items = res.items ?? []
-    const lite = items as unknown as AlarmLite[]
-    activeAlarms.value = lite
-      .filter(
-        (a) =>
-          (a.system === 'hvac' || a.domain === 'hvac' || a.source === '冷源系统') &&
-          a.level &&
-          a.level !== 'info' &&
-          a.status !== 'acknowledged',
-      )
-      .slice(0, 10)
-      .map((a) => ({
-        level: a.level ?? 'warning',
-        ts: a.timestamp ? new Date(a.timestamp).toLocaleTimeString('zh-CN') : '',
-        msg: a.message ?? a.title ?? a.summary ?? '-',
-        status: a.status ?? 'active',
-      }))
-  } catch {
-    /* silent */
-  }
+async function refresh() {
+  await all.reloadAll()
+  renderEChartsAfterLoad()
 }
 
 // ---- TrendChart data formatting ----
@@ -1393,17 +1410,46 @@ const allPumpRows = computed<Record<string, unknown>[]>(() => {
   return rows as unknown as Record<string, unknown>[]
 })
 
-// ---- Controls ----
-function onToggleChiller(i: number) {
+// ---- Controls (D6: 后端已落地 /api/hvac/chiller-control, 动作变为真实下发) ----
+const toast = useToast()
+async function onToggleChiller(i: number) {
   const g = chillerGroups.value[i]
-  if (!g) return
-  console.log('Toggle chiller:', g.chiller?.id)
+  if (!g?.chiller?.id) return
+  const nextRunning = g.chiller.state !== '运行'
+  const nextState = nextRunning ? '运行' : '停机'
+  try {
+    await controlChiller(g.chiller.id, nextRunning ? 'start' : 'stop')
+    const plant = all.pages.plant.data.value
+    if (plant?.chillerGroups?.[i]) plant.chillerGroups[i].chiller.state = nextState
+    toast.success(`控制指令已下发：${g.chiller.id} → ${nextState}`)
+  } catch {
+    toast.error('控制指令下发失败，请稍后重试')
+  }
 }
-function onModeChange(i: number, mode: string) {
-  console.log('Mode change for chiller', i, 'to', mode)
+async function onModeChange(i: number, mode: string) {
+  const g = chillerGroups.value[i]
+  if (!g?.chiller?.id || !chiller.value) return
+  // 模式以 1/2/3 编码下发, 与后端 _CONTROL_MODES 顺序一致
+  const code = ['制冷模式', '预冷模式', '自然冷却'].indexOf(mode) + 1
+  if (code < 1) return
+  try {
+    await controlChiller(g.chiller.id, 'mode', code)
+    chiller.value.mode = mode
+    toast.success(`控制指令已下发：运行模式 → ${mode}`)
+  } catch {
+    toast.error('控制指令下发失败，请稍后重试')
+  }
 }
-function onTempSet(i: number, val: number) {
-  console.log('Temp set for chiller', i, 'to', val)
+async function onTempSet(i: number, val: number) {
+  const g = chillerGroups.value[i]
+  if (!g?.chiller?.id || !chiller.value) return
+  try {
+    await controlChiller(g.chiller.id, 'temp', val)
+    chiller.value.targetSupplyTemp = val
+    toast.success(`控制指令已下发：设定温度 → ${val}℃`)
+  } catch {
+    toast.error('控制指令下发失败，请稍后重试')
+  }
 }
 
 // ---- Lifecycle ----
@@ -1412,8 +1458,7 @@ onMounted(() => {
     if (copChartEl.value) initCopChart(copChartEl.value)
     if (pumpChartEl.value) initPumpChart(pumpChartEl.value)
   })
-  loadData()
-  loadAlarms()
+  refresh()
 })
 
 onUnmounted(() => {
@@ -1429,8 +1474,7 @@ watch(activeRange, () => {
 
 // Auto refresh 30s
 const refreshTimer = setInterval(() => {
-  loadData()
-  loadAlarms()
+  refresh()
 }, 30000)
 onUnmounted(() => clearInterval(refreshTimer))
 </script>

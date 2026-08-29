@@ -4,6 +4,7 @@
     <div class="view-head">
       <h1>{{ tl('无线网络') }}</h1>
       <span class="sub">{{ tl('AP 射频 / 信号热力 / 终端统计 / 信道干扰') }}</span>
+      <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
     <!-- Loading -->
@@ -167,7 +168,8 @@
 </template>
 
 <script setup lang="ts">
-import type { ErrorLike } from '@/utils/error'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps } from '@/utils/format'
@@ -183,6 +185,9 @@ import type * as echarts from 'echarts'
 import type { EChartsOption } from '@/hooks/useECharts'
 
 const { t: tl } = useI18n()
+
+/** 本页真 AP 与模拟字段混排，必须分级提示 */
+const { level: mockLevel, reason: mockReason, markPartial, markFull } = useMockFlag()
 
 // ──────────────────────────────────────────
 // Local extended wireless type
@@ -567,11 +572,13 @@ async function loadData() {
     const data = await getNetworkWirelessDetailed()
     if (data && (data.aps?.length || data.total || data.users)) {
       fromApi(data)
+      markPartial('干扰值 / 终端类型 / 热力图 / 信道分布由本地生成，后端未提供')
     } else {
       applyData(mockData())
+      markFull()
     }
   } catch (e: unknown) {
-    error.value = (e as ErrorLike)?.message || String(e)
+    error.value = toErrorMessage(e)
   } finally {
     loading.value = false
   }
