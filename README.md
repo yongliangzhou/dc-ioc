@@ -543,6 +543,7 @@ MockCollector (模拟采集器) 或 真实采集器
 | **图标体系补全** | `components/layout/NavIcon.vue` | 补齐 `ChevronDown`/`ChevronRight` 折叠箭头，以及此前**静默回退成通用圆圈**的 13 个图标（`Boxes`/`Box`/`Monitor`/`Settings2`/`GitBranch`/`GitCompare`/`Smartphone`/`CalendarDays`/`LogIn`/`Workflow`/`Blocks`/`Building2`/`Users`）；菜单用到的 55 个图标现已 0 缺失 |
 | **i18n 分组键** | `i18n/locales/zh-CN.json` `en-US.json` | 新增 `alarmGroup` / `energyGroup` / `knowledgeAi` / `platformIntegration` 四个分组标题键（中英同步） |
 | **原生弹窗收敛收口** | `views/ops/FaultImpact.vue` `views/ops/TenantManage.vue` | 补齐 D21 改造遗留的声明缺失：`FaultImpact` 补 `const toast = useToast()`（保存 / 会签 / 推送结果反馈），`TenantManage` 补 `import { useConfirm } from '@/hooks/useConfirm'`（删除二次确认）。此前两处会在用户点击时抛 `toast / useConfirm is not defined` **运行时异常** |
+| **pre-commit 钩子修复** | `frontend/.husky/pre-commit` `frontend/package.json` | husky 此前**从未激活**（`core.hooksPath` 为空）：`package.json` 在 `frontend/` 而 git 根在上一级，husky 按 cwd 写出的路径 git 无法解析，且 `prepare` 的 `\|\| true` 把失败静默吞掉，导致模板语法/lint 问题只能等 CI 暴露。现改为 `cd .. && husky frontend/.husky`，并让钩子先 `cd frontend`（git 一律从工作区根执行钩子） |
 
 > **校验结果**：菜单引用的 72 个 i18n 键中英 **0 缺失**；**63 条路由 ↔ 63 个菜单项** 一一对应（0 孤儿页 / 0 死链）；`vue-tsc --noEmit` **0 错误**（修复前 6 个）。
 >
