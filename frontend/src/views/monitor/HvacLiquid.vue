@@ -44,7 +44,7 @@
         :subtitle="`自然冷却 ${data.freeCoolingHours}h`"
         :detail="`余热回收 ${data.heatRecoveryMW} MW`"
       />
-    </div>
+    </AsyncSection>
 
     <!-- ========== KPI Row 2: 一次侧 ========== -->
     <div class="kpi-row" v-if="data">
@@ -437,7 +437,6 @@
       <span>CDI 温度 {{ data.avgCdiTemperature }}℃ · CDO {{ data.avgCdoTemperature }}℃</span>
       <span v-if="lastUpdate">更新: {{ lastUpdate }}</span>
     </div>
-    </AsyncSection>
   </div>
 </template>
 
