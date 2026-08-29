@@ -11,7 +11,6 @@ from __future__ import annotations
 import datetime
 from typing import Optional
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.workflow import WorkflowItem

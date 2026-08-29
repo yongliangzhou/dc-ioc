@@ -7,8 +7,6 @@
 
 from __future__ import annotations
 
-from datetime import datetime
-
 from sqlalchemy import Column, DateTime, Float, Index, Integer
 
 from app.db.session import Base
