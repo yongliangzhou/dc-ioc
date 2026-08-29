@@ -52,9 +52,10 @@ describe('power: toDevices', () => {
       loadPercent: num(d.load),
     }))
     expect(out).toHaveLength(2)
-    expect(out[0].id).toBe(1)
+    expect(out[0].id).toBe('HV-1') // id 为设备编码(无 d.id 时用 prefix-序号)
+    expect(out[0].no).toBe(1) // no 为列表序号(支持 offset 续编)
     expect(out[0].roomName).toBe('高压配电')
     expect(out[1].status).toBe('fault')
-    expect(out[1].id).toBe(2)
+    expect(out[1].no).toBe(2)
   })
 })

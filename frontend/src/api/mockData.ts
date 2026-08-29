@@ -2593,7 +2593,6 @@ function faultImpactAnalyzeMock(req: FaultImpactReq): FaultImpactResp {
     affectedIds: Array.from(affected).filter((x) => !failed.has(x)),
     summary: { severity, faultCount: failed.size, affectedCount: affected.size - failed.size, criticalPaths: faultNodes.filter((n) => _FI_CRIT_CATS.has(n.category)).length, slaRisk: businesses.length ? 'high' : (linkHit ? 'medium' : 'low'), bizCount },
     businesses,
-    mitigations: [],
     suggestion: faultNodes.length
       ? `故障源 ${faultNodes.length} 个: ${faultNodes.map((n) => n.label).join('、')}。${linkHit ? '已冲击关键供电/制冷节点, 优先切换冗余链路。' : ''}${businesses.length ? `业务域「${businesses[0].business}」(SLA ${businesses[0].sla}) 受影响最重, 建议立即启动容灾切换。` : '未直接波及核心业务域, 按常规工单处置。'}`
       : '未选择故障源, 请指定一个或多个候选故障节点后分析。',

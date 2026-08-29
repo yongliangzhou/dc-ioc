@@ -1,4 +1,5 @@
 import { createPinia, setActivePinia } from 'pinia'
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useAuthStore } from '@/stores/modules/auth'
 import { usePermission } from '@/hooks/usePermission'
@@ -8,9 +9,10 @@ describe('usePermission', () => {
     setActivePinia(createPinia())
   })
 
-  it('admin 仅管理员可执行', () => {
+  it('admin 仅管理员可执行', async () => {
     const auth = useAuthStore()
     auth.user = { roles: ['admin'] } as never
+    await nextTick() // isAdmin 由 watcher 异步派生, 需等一轮刷新
     const { can } = usePermission()
     expect(can('admin')).toBe(true)
     expect(can('write')).toBe(true)
@@ -33,9 +35,11 @@ describe('usePermission', () => {
     expect(denyTip('admin')).toBe('请先登录')
   })
 
-  it('普通运维可 write 但不可 admin', () => {
+  it('普通运维可 write 但不可 admin', async () => {
     const auth = useAuthStore()
+    auth.token = 'test-token' // isLoggedIn 由 token 派生, 需先置为已登录
     auth.user = { roles: ['operator'] } as never
+    await nextTick()
     const { can, denyTip } = usePermission()
     expect(can('write')).toBe(true)
     expect(can('admin')).toBe(false)
