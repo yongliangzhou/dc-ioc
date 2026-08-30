@@ -2540,6 +2540,8 @@
     "loading": "加载中…",
     "allStage": "全部阶段",
     "allDomain": "全部业务域",
+    "tabLife": "资产生命周期",
+    "tabLib": "型号库",
     "search": "搜索编码 / 名称 / 型号",
     "empty": "暂无数据",
     "colCode": "编码",

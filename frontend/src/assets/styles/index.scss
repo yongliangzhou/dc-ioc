@@ -17,6 +17,8 @@
      它们并非主题正式变量(正式为 --txt / --txt2 / --panel2)。未定义时 var() 失效,
      导致按钮/下拉框文字颜色或背景丢失(表现为"按钮看不到字")。此处统一映射到正式 token。 */
   --text:var(--txt); --muted:var(--txt2); --panel-2:var(--panel2);
+  /* 让浏览器把原生控件(下拉弹层 / 复选框 / 单选 / 日期选择器 / 滚动条)按暗色渲染 */
+  color-scheme:dark;
 }
 :root[data-theme="light"]{
   --bg:#eef2f8; --bg2:#f7f9fc; --panel:#ffffff; --panel2:#eef3fa;
@@ -34,6 +36,7 @@
   --row-hover:rgba(8,145,178,.06);
   --td-line:rgba(212,222,236,.8);
   --text:var(--txt); --muted:var(--txt2); --panel-2:var(--panel2);
+  color-scheme:light;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}
@@ -296,6 +299,11 @@ body.kiosk .side{display:none}
 .inp:focus{border-color:var(--cyan); box-shadow:var(--glow)}
 select.inp{appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237e93b8' d='M3 4.5L6 8l3-3.5z'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 10px center; padding-right:28px}
 select.inp option{background:var(--bg2); color:var(--txt)}
+/* 原生下拉弹层由系统渲染(默认浅底), 而 option 文字继承主题浅色 → 浅字白底不可见。
+   对所有 select 统一兜底, 不依赖页面是否挂了 .inp 类(项目里还有 ipt/sel/kb-input/dc-input 等多种写法)。 */
+select option{background:var(--bg2); color:var(--txt)}
+select optgroup{background:var(--bg2); color:var(--txt2)}
+input,select,textarea,button{font-family:inherit}
 .inp::placeholder{color:var(--txt3)}
 .field{display:flex; flex-direction:column; gap:6px}
 .field > span{font-size:11.5px; color:var(--txt2)}

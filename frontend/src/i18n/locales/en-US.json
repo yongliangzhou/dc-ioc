@@ -2471,6 +2471,8 @@
     "loading": "Loading…",
     "allStage": "All Stages",
     "allDomain": "All Domains",
+    "tabLife": "Asset Lifecycle",
+    "tabLib": "Model Library",
     "search": "Search code / name / model",
     "empty": "No data",
     "colCode": "Code",
