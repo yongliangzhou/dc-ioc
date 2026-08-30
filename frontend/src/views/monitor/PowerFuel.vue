@@ -96,7 +96,7 @@
         </template>
         <div class="schematic-wrap">
           <svg
-            :viewBox="`0 0 ${SVG_W} ${SVG_H}`"
+            :viewBox="`0 0 ${svgW} ${SVG_H}`"
             class="fuel-svg"
             preserveAspectRatio="xMidYMid meet"
           >
@@ -203,7 +203,7 @@
               <line
                 :x1="mainX(ti) + TANK_W / 2"
                 :y1="PIPE_Y"
-                :x2="PUMP_X"
+                :x2="pumpX"
                 :y2="PIPE_Y"
                 class="pipe"
               />
@@ -211,7 +211,7 @@
 
             <!-- ── 供油主管 + 泵 ── -->
             <rect
-              :x="PUMP_X - 40"
+              :x="pumpX - 40"
               :y="PIPE_Y - 16"
               width="80"
               height="32"
@@ -219,16 +219,10 @@
               class="pump-box"
               @click="selectPump()"
             />
-            <text :x="PUMP_X" :y="PIPE_Y + 4" class="pump-text">{{ tl('供油泵组') }}</text>
-            <line :x1="PUMP_X + 40" :y1="PIPE_Y" :x2="DAY_BUS_X" :y2="PIPE_Y" class="pipe active" />
-            <line
-              :x1="DAY_BUS_X"
-              :y1="PIPE_Y"
-              :x2="DAY_BUS_X"
-              :y2="DAY_Y - 26"
-              class="pipe active"
-            />
-            <text :x="PUMP_X + 100" :y="PIPE_Y - 8" class="pipe-label">
+            <text :x="pumpX" :y="PIPE_Y + 4" class="pump-text">{{ tl('供油泵组') }}</text>
+            <line :x1="pumpX + 40" :y1="PIPE_Y" :x2="dayBusX" :y2="PIPE_Y" class="pipe active" />
+            <line :x1="dayBusX" :y1="PIPE_Y" :x2="dayBusX" :y2="DAY_Y - 26" class="pipe active" />
+            <text :x="pumpX + 100" :y="PIPE_Y - 8" class="pipe-label">
               {{ fmt(s.pipeline?.pressure ?? 0, 2) }} MPa
             </text>
 
@@ -240,7 +234,7 @@
               @click="selectTank(d, 'day')"
             >
               <line
-                :x1="DAY_BUS_X"
+                :x1="dayBusX"
                 :y1="DAY_Y - 26"
                 :x2="dayX(di) + DAY_W / 2"
                 :y2="DAY_Y - 26"
@@ -646,7 +640,7 @@ import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt } from '@/utils/format'
-import { SkeletonCard, TrendChart, ProgressGauge,  } from '@/components/monitor'
+import { SkeletonCard, TrendChart, ProgressGauge } from '@/components/monitor'
 import { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 import {
   getPowerFuelDetailed,
@@ -670,17 +664,38 @@ const WARN_LEVEL = 30 // 低位预警
 const HIGH_LEVEL = 90 // 高位溢流
 const FULL_LOAD_RATE = 660 // 满载耗油 L/h (3×1000kW 机组约 660 L/h)
 
-const SVG_W = 1000
-const SVG_H = 380
+const SVG_H = 400
 const TANK_Y = 40
 const TANK_H = 150
 const TANK_W = 110
+const GAP_M = 40
 const PIPE_Y = 232
-const PUMP_X = 500
-const DAY_BUS_X = 640
 const DAY_Y = 292
 const DAY_H = 56
 const DAY_W = 72
+const GAP_D = 30
+const PAD_X = 56
+const MID = 200 // 主罐区与日用油箱区之间的「泵 + 汇管」区宽度
+
+// 布局随罐数量动态计算, 保证内容永远落在 viewBox 内 (避免固定 1000 宽时罐多溢出边界)
+const layout = computed(() => {
+  const nMain = Math.max(1, mainTanks.value.length)
+  const nDay = Math.max(1, dayTanks.value.length)
+  const mainW = nMain * TANK_W + (nMain - 1) * GAP_M
+  const dayW = nDay * DAY_W + (nDay - 1) * GAP_D
+  const mainStart = PAD_X
+  const mainEnd = mainStart + mainW
+  const px = mainEnd + MID / 2
+  const dbx = mainEnd + MID
+  const dayStart = dbx - dayW / 2
+  const contentW = dayStart + dayW + PAD_X
+  return { mainStart, pumpX: px, dayBusX: dbx, dayStart, svgW: Math.max(1000, contentW) }
+})
+const svgW = computed(() => layout.value.svgW)
+const pumpX = computed(() => layout.value.pumpX)
+const dayBusX = computed(() => layout.value.dayBusX)
+const mainStartX = computed(() => layout.value.mainStart)
+const dayStartX = computed(() => layout.value.dayStart)
 
 const RANGES = [
   { key: 'day', label: '日 (24h)' },
@@ -733,18 +748,10 @@ const pumpFaultCount = computed(
 // 3.4.1 SVG 液位
 // ──────────────────────────────────────────
 function mainX(i: number): number {
-  const n = mainTanks.value.length || 1
-  const gap = 40
-  const totalW = n * TANK_W + (n - 1) * gap
-  const startX = Math.max(60, (SVG_W - totalW) / 2 - 120)
-  return Math.round(startX + i * (TANK_W + gap))
+  return Math.round(mainStartX.value + i * (TANK_W + GAP_M))
 }
 function dayX(i: number): number {
-  const n = dayTanks.value.length || 1
-  const gap = 30
-  const totalW = n * DAY_W + (n - 1) * gap
-  const startX = DAY_BUS_X - totalW / 2
-  return Math.round(startX + i * (DAY_W + gap))
+  return Math.round(dayStartX.value + i * (DAY_W + GAP_D))
 }
 function oilH(level: number, h: number): number {
   return Math.max(0, Math.min(h, (h * (level || 0)) / 100))
@@ -1524,9 +1531,11 @@ onUnmounted(() => {
   background: rgba(15, 23, 42, 0.5);
   border-radius: 8px;
   padding: 8px;
+  overflow-x: auto;
 }
 .fuel-svg {
   width: 100%;
+  min-width: 760px;
   height: auto;
   display: block;
 }
