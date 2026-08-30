@@ -13,6 +13,10 @@
   --grid-line:rgba(34,227,255,.05);
   --row-hover:rgba(34,227,255,.04);
   --td-line:rgba(29,47,79,.55);
+  /* 兼容别名: 部分页面 scoped 样式引用了 --text / --muted / --panel-2,
+     它们并非主题正式变量(正式为 --txt / --txt2 / --panel2)。未定义时 var() 失效,
+     导致按钮/下拉框文字颜色或背景丢失(表现为"按钮看不到字")。此处统一映射到正式 token。 */
+  --text:var(--txt); --muted:var(--txt2); --panel-2:var(--panel2);
 }
 :root[data-theme="light"]{
   --bg:#eef2f8; --bg2:#f7f9fc; --panel:#ffffff; --panel2:#eef3fa;
@@ -29,6 +33,7 @@
   --grid-line:rgba(8,145,178,.08);
   --row-hover:rgba(8,145,178,.06);
   --td-line:rgba(212,222,236,.8);
+  --text:var(--txt); --muted:var(--txt2); --panel-2:var(--panel2);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%}

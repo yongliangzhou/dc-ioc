@@ -17,7 +17,13 @@
     </div>
 
     <!-- ========== KPI Row 1: Global ========== -->
-    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="refresh" :min-height="'360px'">
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="!data"
+      @retry="refresh"
+      :min-height="'360px'"
+    >
       <KpiCard title="系统模式" :value="data.systemMode" dot="#8b5cf6" />
       <KpiCard
         title="室外温度"
