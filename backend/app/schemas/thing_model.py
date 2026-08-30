@@ -10,9 +10,11 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import CamelModel
+
 
 # ------------------------------------------------------------------ 子项
-class ThingModelItemBase(BaseModel):
+class ThingModelItemBase(CamelModel):
     item_type: str = Field("property", description="property/service/event")
     identifier: str = Field(..., max_length=64, description="标识符 (蛇形命名)")
     name: str = Field("", max_length=128, description="中文名")
@@ -32,7 +34,7 @@ class ThingModelItemOut(ThingModelItemBase):
 
 
 # ------------------------------------------------------------------ 模型
-class ThingModelCreate(BaseModel):
+class ThingModelCreate(CamelModel):
     model_key: str = Field(..., max_length=64, description="模型唯一 key (设备类别语义)")
     name: str = Field("", max_length=128, description="模型中文名")
     category: str = Field("", max_length=64, description="设备类别")
@@ -43,7 +45,7 @@ class ThingModelCreate(BaseModel):
     items: list[ThingModelItemCreate] = Field(default_factory=list, description="属性/服务/事件定义")
 
 
-class ThingModelUpdate(BaseModel):
+class ThingModelUpdate(CamelModel):
     name: Optional[str] = None
     category: Optional[str] = None
     domain: Optional[str] = None
@@ -53,7 +55,7 @@ class ThingModelUpdate(BaseModel):
     items: Optional[list[ThingModelItemCreate]] = None
 
 
-class ThingModelOut(BaseModel):
+class ThingModelOut(CamelModel):
     id: int
     model_key: str
     name: str
