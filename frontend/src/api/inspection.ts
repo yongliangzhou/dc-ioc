@@ -7,8 +7,11 @@ export interface RouteView {
   code: string
   name: string
   description: string | null
-  frequency: string
-  status: string
+  freq: string
+  state: string
+  frequency?: string
+  status?: string
+  note?: string
 }
 
 export interface RecordView {

@@ -302,8 +302,6 @@ def _seed_default_users():
         return  # 数据库不可用，静默跳过
 
     try:
-        from app.models import Base  # 触发 metadata 收集
-
         logger.info("已确保 ORM 表结构就绪")
         # 兜底: 对已存在但缺列的旧表补齐 (create_all 不改已有表结构)
         _ensure_missing_columns(db)
@@ -372,7 +370,6 @@ def _seed_knowledge_and_shift():
     from datetime import datetime, timedelta
 
     from app.db.session import SessionLocal
-    from app.models import Base
 
     db = None
     try:
@@ -609,7 +606,6 @@ def _seed_drill_risk_inspection():
     from datetime import datetime, timedelta
 
     from app.db.session import SessionLocal
-    from app.models import Base
 
     db = None
     try:
@@ -714,7 +710,6 @@ def _seed_tenants():
     import logging
     logger = logging.getLogger("seed")
     from app.db.session import SessionLocal
-    from app.models import Base
 
     db = None
     try:
@@ -758,7 +753,6 @@ def _seed_external_devices():
     from datetime import datetime, timedelta
 
     from app.db.session import SessionLocal
-    from app.models import Base
 
     db = None
     try:
@@ -842,7 +836,6 @@ def _seed_idc():
     import logging
     logger = logging.getLogger("seed")
     from app.db.session import SessionLocal
-    from app.models import Base
 
     db = None
     try:
@@ -895,7 +888,6 @@ def _seed_alarm_rules():
     import logging
     logger = logging.getLogger("seed")
     from app.db.session import SessionLocal
-    from app.models import Base
     from app.services import alarm_engine
 
     db = None
@@ -931,7 +923,6 @@ def _seed_maintenance():
     from datetime import datetime, timedelta
 
     from app.db.session import SessionLocal
-    from app.models import Base
 
     db = None
     try:

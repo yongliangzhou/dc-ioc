@@ -20,7 +20,7 @@ def _to_snake(d: dict) -> dict:
 # ---------- 路线 ----------
 def _route_dict(r: InspectionRoute) -> dict:
     return {
-        "id": r.id, "code": r.code, "name": r.name or "", "description": r.description or "",
+        "id": r.id, "code": r.code, "name": r.name or "", "description": r.description or "", "note": r.note or "",
         "freq": r.freq, "frequency": r.freq, "items": r.items,
         "last": r.last, "next": r.next, "state": r.state, "status": r.state,
     }
