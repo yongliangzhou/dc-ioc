@@ -98,21 +98,32 @@ if /i not "%MODE%"=="dev" (
 
 REM ---- 构建共享 UI 组件库 (@dc-ioc/ui) ----
 echo.
-echo [UI库] 安装并构建 @dc-ioc/ui...
+echo [UI库] 安装并构建 @dc-ioc/ui (dist 已存在则跳过, 避免每次重复 build)...
 cd packages\dc-ioc-ui
 if not exist "node_modules" (
     echo   npm install...
     call npm install
 )
-echo   vite build...
-call npx vite build
+if not exist "dist" (
+    echo   vite build...
+    call npx vite build
+) else (
+    echo   跳过: dist 已存在, UI 库有改动请手动 cd packages\dc-ioc-ui ^&^& npx vite build
+)
 cd ..\..
 
 REM ---- 启动 ----
 echo.
-echo [启动] docker compose %COMPOSE_FILES% up -d --build --force-recreate
+REM dev 模式后端经 ./backend:/app 卷挂载源码 + --reload 热更新, 无需每次重建镜像/容器;
+REM   仅当 requirements.txt / Dockerfile 变更时才需手动加 --build。
+REM staging/prod 仍每次 --build 以确保镜像与配置最新。
+echo [启动] docker compose %COMPOSE_FILES% up -d (dev 跳过镜像重建)
 echo.
-docker compose %COMPOSE_FILES% up -d --build --force-recreate
+if /i "%MODE%"=="dev" (
+    docker compose %COMPOSE_FILES% up -d
+) else (
+    docker compose %COMPOSE_FILES% up -d --build
+)
 if %errorlevel% neq 0 (
     echo [错误] 启动失败, 请查看上方日志。
     pause

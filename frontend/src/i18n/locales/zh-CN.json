@@ -28,7 +28,21 @@
     "edit": "编辑",
     "cancel": "取消",
     "saved": "已保存",
-    "deleted": "已删除"
+    "deleted": "已删除",
+    "save": "保存",
+    "delete": "删除",
+    "close": "关闭",
+    "refresh": "刷新",
+    "remove": "移除",
+    "unlink": "取消关联",
+    "removeStep": "删除该步骤",
+    "rateN": "评 {n} 分",
+    "tooltipClose": "关闭",
+    "tooltipDelete": "删除",
+    "tooltipRemove": "移除",
+    "tooltipRefresh": "刷新数据",
+    "tooltipUnlink": "取消关联",
+    "tooltipSignOut": "签离"
   },
   "nav": {
     "overview": "总览",
@@ -1794,6 +1808,7 @@
     "save": "保存",
     "delete": "删除",
     "empty": "请选择或新建一个物模型",
+    "listEmpty": "暂无物模型，点击右上角新建",
     "saved": "物模型已保存",
     "deleted": "物模型已删除",
     "confirmDelete": "确认删除该物模型？",
@@ -1969,8 +1984,15 @@
     "citeTotal": "总引用",
     "topRated": "高评分知识",
     "recentShared": "最近共享",
+    "delete": "删除",
+    "status": "状态",
     "empty": "暂无满足条件的知识条目",
-    "loading": "加载中…"
+    "loading": "加载中…",
+    "ratingLabel": "评分",
+    "commentLabel": "评论",
+    "citeLabel": "引用",
+    "ratingCount": "{n} 人评分",
+    "noRating": "暂无评分"
   },
   "workflow": {
     "title": "ITIL 流程中心",
@@ -2041,6 +2063,13 @@
     "byType": "按类型分布",
     "byStatus": "按状态分布",
     "byPriority": "按优先级分布",
+    "totalLabel": "总数",
+    "unitTicket": "单位：单",
+    "trendCreated": "创建",
+    "trendClosed": "关闭",
+    "trendSum": "近 12 周合计",
+    "trendEmpty": "近 12 周暂无数据",
+    "clickFilter": "点击筛选",
     "avgResolve": "平均解决时长(h)",
     "breachRate": "SLA 超时率",
     "openCount": "进行中",
@@ -2049,7 +2078,9 @@
     "confirmDelete": "确认删除该流程单？",
     "deleted": "已删除",
     "saved": "已保存",
-    "empty": "暂无流程单"
+    "empty": "暂无流程单",
+    "cancel": "取消",
+    "delete": "删除"
   },
   "mntCalendar": {
     "title": "维保日历",
@@ -2057,13 +2088,19 @@
     "month": "月",
     "week": "周",
     "today": "今天",
+    "prev": "上一月",
+    "next": "下一月",
     "duePlans": "到期计划",
     "records": "执行记录",
     "noPlan": "本月无到期计划",
     "noRecord": "当日无执行记录",
     "legendDue": "计划到期",
     "legendDone": "已执行",
-    "clickNew": "点击日期新建维保记录"
+    "clickNew": "点击日期新建维保记录",
+    "emptyCalendar": "当前视图暂无维保计划与执行记录",
+    "partialFailed": "{name} 加载失败，已显示其余数据",
+    "planCount": "到期计划 {n} 项",
+    "recordCount": "执行记录 {n} 条"
   },
   "repair": {
     "title": "维修工单",
@@ -2152,7 +2189,8 @@
     "stillIn": "在机房内",
     "cancel": "取消",
     "del": "删除",
-    "confirmDeleteTitle": "删除登记"
+    "confirmDeleteTitle": "删除登记",
+    "save": "保存"
   },
   "faultImpact": {
     "title": "故障影响分析",
@@ -2186,6 +2224,11 @@
     "faultNode": "故障节点",
     "affectedNode": "受影响节点",
     "normalNode": "正常节点",
+    "edgeItFeed": "IT 馈电链路",
+    "edgeCritical": "关键链路",
+    "edgeNormal": "普通链路",
+    "hopLabel": "第 {n} 跳",
+    "moreNodes": "另有 {n} 个节点未展示",
     "affectedList": "受影响资产清单",
     "bizDomain": "受影响业务域",
     "bizSla": "SLA 目标",
@@ -2241,7 +2284,8 @@
     "previewTitle": "演练预演 - 链路影响",
     "previewClose": "关闭",
     "previewFromDrill": "演练来源",
-    "previewRun": "运行预演分析"
+    "previewRun": "运行预演分析",
+    "retry": "重试"
   },
   "drillPlan": {
     "title": "应急演练",
@@ -2305,7 +2349,14 @@
     "criticalPaths": "关键链路",
     "affectedBiz": "受影响业务域",
     "suggestActions": "建议处置措施",
-    "offlineMsg": "后端不可达, 已使用离线模拟数据 (刷新后端后重试)。"
+    "offlineMsg": "后端不可达, 已使用离线模拟数据 (刷新后端后重试)。",
+    "done": "已完成",
+    "next": "下次演练",
+    "result": "结果",
+    "sevCritical": "严重",
+    "sevHigh": "高",
+    "sevMedium": "中",
+    "sevLow": "低"
   },
   "supplier": {
     "title": "供应商管理",
@@ -2330,6 +2381,7 @@
     "empty": "暂无供应商",
     "rateDims": "评分维度（0-100）",
     "rateTitle": "供应商评分",
+    "confirmDel": "确定要删除该供应商吗？此操作不可撤销。",
     "confirmDelTitle": "删除供应商",
     "confirmDelText": "确定要删除该供应商吗？此操作不可撤销。",
     "confirmDelOk": "确认删除",
@@ -2343,7 +2395,10 @@
     "dim_sla": "SLA",
     "dim_cooperation": "配合度",
     "cancel": "取消",
-    "save": "保存"
+    "save": "保存",
+    "scoreScale": "/100",
+    "excellentHint": "评分 ≥ 85 分",
+    "improveHint": "评分 < 70 分"
   },
   "powerAiHazards": {
     "title": "供配电 AI 隐患识别库",
@@ -2474,7 +2529,11 @@
     "sAlarm": "按告警等级派单，缩短平均处置时长。",
     "sCapacity": "关注高出租率机房扩容与负载均衡。",
     "fCapHigh": "机房出租率超 90%，存在容量风险。",
-    "weightHint": "权重：供配电/制冷/网络各 18%，隐患/演练/供应商/维修各 9%，容量 10%"
+    "weightHint": "权重：供配电/制冷/网络各 18%，隐患/演练/供应商/维修各 9%，容量 10%",
+    "radarHint": "各域满分 100 分，越靠外圈越健康",
+    "radarScale": "满分 100",
+    "clickDetail": "点击卡片查看评分构成",
+    "scoreTooltip": "{name}：{score} 分"
   },
   "integrationHub": {
     "title": "集成验证中心",

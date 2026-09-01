@@ -9,9 +9,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-dcuser}
+      POSTGRES_USER: dcuser
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dcpass}
-      POSTGRES_DB: ${POSTGRES_DB:-dc_ioc}
+      POSTGRES_DB: dc_ioc   # 唯一创建的数据库
     ports:
       - "5432:5432"
     volumes:
@@ -19,7 +19,7 @@ services:
       - ./deploy/sql/init.sql:/docker-entrypoint-initdb.d/001_init.sql
       - ./deploy/sql/006_seed_auth.sql:/docker-entrypoint-initdb.d/002_seed_auth.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dcuser}"]
+      test: ["CMD-SHELL", "pg_isready -U dcuser"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -50,9 +50,9 @@ services:
       APP_DEBUG: "false"
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER:-dcuser}
+      POSTGRES_USER: dcuser
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dcpass}
-      POSTGRES_DB: ${POSTGRES_DB:-dc_ioc}
+      POSTGRES_DB: dc_ioc
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_DB: 0

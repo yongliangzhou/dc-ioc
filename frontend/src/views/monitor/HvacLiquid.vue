@@ -16,99 +16,126 @@
       </div>
     </div>
 
-    <!-- ========== KPI Row 1: Global ========== -->
+    <!-- ========== KPI Row 1: 系统概览 ========== -->
     <AsyncSection
       :loading="loading"
       :error="error"
       :empty="!data"
       @retry="refresh"
-      :min-height="'360px'"
+      :min-height="'132px'"
     >
-      <KpiCard title="系统模式" :value="data.systemMode" dot="#8b5cf6" />
-      <KpiCard
-        title="室外温度"
-        :value="data.outdoorT"
-        unit="℃"
-        :decimals="1"
-        dot="#f97316"
-        :subtitle="`RH ${data.outdoorRH}%`"
-      />
-      <KpiCard
-        title="总制冷能力"
-        :value="data.totalCoolingCap"
-        unit="kW"
-        dot="#06b6d4"
-        :detail="`使用 ${data.coolingCapUsed} kW · 率 ${data.capRate}%`"
-        :barValue="data.capRate"
-        barColor="linear-gradient(90deg, var(--cyan), var(--blue))"
-      />
-      <KpiCard
-        title="PUE 贡献"
-        :value="data.pueContribution"
-        :decimals="3"
-        dot="#22c55e"
-        :subtitle="`自然冷却 ${data.freeCoolingHours}h`"
-        :detail="`余热回收 ${data.heatRecoveryMW} MW`"
-      />
+      <div class="kpi-group">
+        <div class="kpi-group-head">
+          <span class="kpi-group-dot" style="background: var(--purple)"></span>
+          <span class="kpi-group-name">系统概览</span>
+          <span class="kpi-group-meta">
+            制冷负载率 {{ data.capRate }}% · 自然冷却 {{ data.freeCoolingHours }}h
+          </span>
+        </div>
+        <div class="kpi-row">
+          <KpiCard title="系统模式" :value="data.systemMode" dot="#8b5cf6" />
+          <KpiCard
+            title="室外温度"
+            :value="data.outdoorT"
+            unit="℃"
+            :decimals="1"
+            dot="#f97316"
+            :subtitle="`RH ${data.outdoorRH}%`"
+          />
+          <KpiCard
+            title="总制冷能力"
+            :value="data.totalCoolingCap"
+            unit="kW"
+            dot="#06b6d4"
+            :detail="`使用 ${data.coolingCapUsed} kW · 率 ${data.capRate}%`"
+            :barValue="data.capRate"
+            barColor="linear-gradient(90deg, var(--cyan), var(--blue))"
+          />
+          <KpiCard
+            title="PUE 贡献"
+            :value="data.pueContribution"
+            :decimals="3"
+            dot="#22c55e"
+            :subtitle="`自然冷却 ${data.freeCoolingHours}h`"
+            :detail="`余热回收 ${data.heatRecoveryMW} MW`"
+          />
+        </div>
+      </div>
     </AsyncSection>
 
     <!-- ========== KPI Row 2: 一次侧 ========== -->
-    <div class="kpi-row" v-if="data">
-      <KpiCard
-        title="一次侧供水温度"
-        :value="data.primarySupplyTemp"
-        unit="℃"
-        :decimals="1"
-        dot="#3b82f6"
-      />
-      <KpiCard
-        title="一次侧回水温度"
-        :value="data.primaryReturnTemp"
-        unit="℃"
-        :decimals="1"
-        dot="#f97316"
-      />
-      <KpiCard
-        title="一次侧流量"
-        :value="data.primaryFlow"
-        unit="m³/h"
-        :decimals="1"
-        dot="#06b6d4"
-      />
-      <KpiCard
-        title="一次侧压力"
-        :value="data.primaryPressure"
-        unit="bar"
-        :decimals="1"
-        dot="#8b5cf6"
-      />
+    <div class="kpi-group" v-if="data">
+      <div class="kpi-group-head">
+        <span class="kpi-group-dot" style="background: var(--blue)"></span>
+        <span class="kpi-group-name">一次侧回路</span>
+        <span class="kpi-group-meta">冷源侧 · 供/回水温度与流量压力</span>
+      </div>
+      <div class="kpi-row">
+        <KpiCard
+          title="一次侧供水温度"
+          :value="data.primarySupplyTemp"
+          unit="℃"
+          :decimals="1"
+          dot="#3b82f6"
+        />
+        <KpiCard
+          title="一次侧回水温度"
+          :value="data.primaryReturnTemp"
+          unit="℃"
+          :decimals="1"
+          dot="#f97316"
+        />
+        <KpiCard
+          title="一次侧流量"
+          :value="data.primaryFlow"
+          unit="m³/h"
+          :decimals="1"
+          dot="#06b6d4"
+        />
+        <KpiCard
+          title="一次侧压力"
+          :value="data.primaryPressure"
+          unit="bar"
+          :decimals="1"
+          dot="#8b5cf6"
+        />
+      </div>
     </div>
 
     <!-- ========== KPI Row 3: 二次侧 ========== -->
-    <div class="kpi-row" v-if="data">
-      <KpiCard
-        title="二次侧供水温度"
-        :value="data.secSupplyTemp"
-        unit="℃"
-        :decimals="1"
-        dot="#3b82f6"
-      />
-      <KpiCard
-        title="二次侧回水温度"
-        :value="data.secReturnTemp"
-        unit="℃"
-        :decimals="1"
-        dot="#f97316"
-      />
-      <KpiCard title="二次侧流量" :value="data.secFlow" unit="m³/h" :decimals="1" dot="#06b6d4" />
-      <KpiCard
-        title="温差 ΔT"
-        :value="data.deltaT"
-        unit="℃"
-        :decimals="1"
-        dot="#eab308"
-        :status="Math.abs(data.deltaT) > 8 ? 'warning' : 'normal'"
-      />
+    <div class="kpi-group" v-if="data">
+      <div class="kpi-group-head">
+        <span class="kpi-group-dot" style="background: var(--orange)"></span>
+        <span class="kpi-group-name">二次侧回路</span>
+        <span class="kpi-group-meta">
+          末端侧 · 温差 ΔT {{ data.deltaT }}℃{{ Math.abs(data.deltaT) > 8 ? ' · 偏大' : '' }}
+        </span>
+      </div>
+      <div class="kpi-row">
+        <KpiCard
+          title="二次侧供水温度"
+          :value="data.secSupplyTemp"
+          unit="℃"
+          :decimals="1"
+          dot="#3b82f6"
+        />
+        <KpiCard
+          title="二次侧回水温度"
+          :value="data.secReturnTemp"
+          unit="℃"
+          :decimals="1"
+          dot="#f97316"
+        />
+        <KpiCard title="二次侧流量" :value="data.secFlow" unit="m³/h" :decimals="1" dot="#06b6d4" />
+        <KpiCard
+          title="温差 ΔT"
+          :value="data.deltaT"
+          unit="℃"
+          :decimals="1"
+          dot="#eab308"
+          :status="Math.abs(data.deltaT) > 8 ? 'warning' : 'normal'"
+        />
+      </div>
     </div>
 
     <!-- ========== 一次侧 CDU ========== -->
@@ -964,12 +991,71 @@ const liquidAlarms = computed(() => {
   border-color: var(--cyan);
 }
 
+/* KPI 分组标题 */
+.kpi-group {
+  margin-bottom: 14px;
+}
+.kpi-group-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+.kpi-group-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  margin-left: 6px;
+  background: linear-gradient(90deg, var(--line), transparent);
+}
+.kpi-group-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.kpi-group-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--txt2);
+  letter-spacing: 0.6px;
+}
+.kpi-group-meta {
+  font-size: 11px;
+  color: var(--txt3);
+}
+
 /* KPI rows */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 10px;
-  margin-bottom: 10px;
+  gap: 12px;
+}
+.kpi-row > * {
+  min-width: 0;
+}
+/* 卡片：hover 抬升 + 顶部高亮描边（dui 包内组件，需 :deep 穿透） */
+.kpi-row :deep(.dui-kpi-card) {
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.kpi-row :deep(.dui-kpi-card:hover) {
+  transform: translateY(-2px);
+  border-color: rgba(34, 227, 255, 0.4);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+}
+.kpi-row :deep(.dui-kpi-card:hover)::after {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(34, 227, 255, 0.9), transparent);
+}
+.kpi-row :deep(.dui-kpi-cv) {
+  font-size: 26px;
+}
+.kpi-row :deep(.dui-kpi-detail) {
+  margin-top: 8px;
+  line-height: 1.5;
 }
 @media (max-width: 1200px) {
   .kpi-row {

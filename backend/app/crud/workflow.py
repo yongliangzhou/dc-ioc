@@ -83,6 +83,101 @@ def list_items(db: Session, *, wtype: str = "", status: str = "", kw: str = "") 
     return [_to_dict(r) for r in rows]
 
 
+def stats(db: Session) -> dict:
+    """流程统计聚合：KPI + 分布 + 近 12 周趋势。
+
+    口径与前端 WorkflowCenter 保持一致，但判定下推到服务端（UTC），
+    避免前端本地时钟/时区差异导致 SLA 超时率与平均时长统计漂移：
+      - SLA 超时: 未关闭/未驳回 且 (now - created_at) > sla_hours
+      - 平均解决时长: 已关闭流程 (updated_at - created_at) 均值(小时)
+      - 趋势: 近 12 个自然周（周一起算, UTC），统计每周创建数 / 关闭数
+    """
+    rows = db.query(WorkflowItem).all()
+    now = datetime.datetime.now(datetime.timezone.utc)
+    total = len(rows)
+
+    def _parse(val: Optional[str]) -> Optional[datetime.datetime]:
+        if not val:
+            return None
+        try:
+            d = datetime.datetime.strptime(str(val)[:19], "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return None
+        return d.replace(tzinfo=datetime.timezone.utc)
+
+    by_type: dict = {}
+    by_status: dict = {}
+    by_priority: dict = {}
+    open_cnt = 0
+    breached = 0
+    month_created = 0
+    month_closed = 0
+    durations: list = []
+
+    for w in rows:
+        wtype = w.type or "unknown"
+        wstatus = w.status or "unknown"
+        wpri = w.priority or "P3"
+        by_type[wtype] = by_type.get(wtype, 0) + 1
+        by_status[wstatus] = by_status.get(wstatus, 0) + 1
+        by_priority[wpri] = by_priority.get(wpri, 0) + 1
+
+        created = _parse(w.created_at)
+        updated = _parse(w.updated_at)
+        sla = w.sla_hours or 24
+
+        if wstatus not in ("closed", "rejected"):
+            open_cnt += 1
+            if created and (now - created).total_seconds() / 3600.0 > sla:
+                breached += 1
+        if created and created.year == now.year and created.month == now.month:
+            month_created += 1
+        if wstatus == "closed":
+            if updated and updated.year == now.year and updated.month == now.month:
+                month_closed += 1
+            if created and updated:
+                durations.append((updated - created).total_seconds() / 3600.0)
+
+    avg_resolve = round(sum(durations) / len(durations), 1) if durations else 0.0
+    breach_rate = round(breached / total * 100, 1) if total else 0.0
+
+    # ---- 近 12 周趋势 ----
+    weeks = 12
+    this_monday = (now - datetime.timedelta(days=now.weekday())).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    )
+    starts = [this_monday - datetime.timedelta(weeks=weeks - 1 - i) for i in range(weeks)]
+    created_series = [0] * weeks
+    closed_series = [0] * weeks
+    for w in rows:
+        created = _parse(w.created_at)
+        updated = _parse(w.updated_at)
+        for i in range(weeks):
+            lo, hi = starts[i], starts[i] + datetime.timedelta(days=7)
+            if created and lo <= created < hi:
+                created_series[i] += 1
+            if (w.status or "") == "closed" and updated and lo <= updated < hi:
+                closed_series[i] += 1
+
+    trend = [
+        {"week": s.strftime("%m-%d"), "created": created_series[i], "closed": closed_series[i]}
+        for i, s in enumerate(starts)
+    ]
+
+    return {
+        "total": total,
+        "open": open_cnt,
+        "monthCreated": month_created,
+        "monthClosed": month_closed,
+        "avgResolve": avg_resolve,
+        "breachRate": breach_rate,
+        "byType": by_type,
+        "byStatus": by_status,
+        "byPriority": by_priority,
+        "trend": trend,
+    }
+
+
 def get(db: Session, wid: str) -> Optional[WorkflowItem]:
     return db.query(WorkflowItem).filter(WorkflowItem.id == wid).first()
 

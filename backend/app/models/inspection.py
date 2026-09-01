@@ -18,11 +18,13 @@ class InspectionRoute(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     code = Column(String(32), index=True, default="")
+    name = Column(String(128), default="")                      # 路线名称
+    description = Column(Text, default="")                       # 备注/说明
     freq = Column(String(32), default="每日")                   # 频次
     items = Column(Integer, default=0)                          # 检查项数
     last = Column(String(32), default="")                       # 上次巡检
     next = Column(String(32), default="")                       # 下次巡检
-    state = Column(String(32), default="进行中")                # 进行中/已完成
+    state = Column(String(32), default="active")                # active/disabled
     note = Column(Text, default="")
 
 

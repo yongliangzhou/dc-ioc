@@ -36,6 +36,16 @@ export interface ItemView {
   remark: string | null
 }
 
+// 巡检发现 (findings) —— 即页面中的"巡检记录"
+export interface FindingView {
+  id: number
+  route: string
+  item: string
+  ts: string
+  lv: string
+  action: string
+}
+
 export interface InspectionStats {
   totalRoutes: number
   activeRoutes: number
@@ -59,11 +69,10 @@ interface RawItem {
 }
 
 // 后端 GET /api/ops/inspection/findings 返回巡检发现列表 (对应原 records 概念)
-export function getInspectionRecords(routeId?: number): Promise<RecordView[]> {
-  return request.get<unknown, RecordView[]>(
-    '/api/ops/inspection/findings',
-    { params: routeId ? { routeId } : {} },
-  )
+export function getInspectionRecords(routeId?: number): Promise<FindingView[]> {
+  return request.get<unknown, FindingView[]>('/api/ops/inspection/findings', {
+    params: routeId ? { routeId } : {},
+  })
 }
 
 // 后端已补 GET /api/ops/inspection/findings/{fid} 详情端点
@@ -80,6 +89,8 @@ export function getInspectionItems(recordId: number): Promise<ItemView[]> {
 // ---- 路线写操作 ----
 export interface RouteCreatePayload {
   code?: string
+  name?: string
+  description?: string
   freq: string
   items?: number
   last?: string
@@ -90,7 +101,10 @@ export interface RouteCreatePayload {
 export function createInspectionRoute(payload: RouteCreatePayload): Promise<unknown> {
   return request.post('/api/ops/inspection/routes', payload)
 }
-export function updateInspectionRoute(id: number, payload: Partial<RouteCreatePayload>): Promise<unknown> {
+export function updateInspectionRoute(
+  id: number,
+  payload: Partial<RouteCreatePayload>,
+): Promise<unknown> {
   return request.put(`/api/ops/inspection/routes/${id}`, payload)
 }
 export function deleteInspectionRoute(id: number): Promise<unknown> {
@@ -108,7 +122,10 @@ export interface FindingCreatePayload {
 export function createInspectionFinding(payload: FindingCreatePayload): Promise<unknown> {
   return request.post('/api/ops/inspection/findings', payload)
 }
-export function updateInspectionFinding(id: number, payload: Partial<FindingCreatePayload>): Promise<unknown> {
+export function updateInspectionFinding(
+  id: number,
+  payload: Partial<FindingCreatePayload>,
+): Promise<unknown> {
   return request.put(`/api/ops/inspection/findings/${id}`, payload)
 }
 export function deleteInspectionFinding(id: number): Promise<unknown> {
@@ -120,15 +137,15 @@ export function deleteInspectionFinding(id: number): Promise<unknown> {
 export async function getInspectionStats(): Promise<InspectionStats> {
   const resp = await request.get<unknown, RawItem>('/api/ops/inspection')
   const today = (resp.today as RawItem) ?? {}
-  const plan = Number(today.plan) || 0
-  const done = Number(today.done) || 0
+  const active = Number(today.active) || 0
+  const abnormal = Number(today.abnormal) || 0
   const rate = Number(today.rate) || 0
   return {
     totalRoutes: Array.isArray(resp.routes) ? resp.routes.length : 0,
-    activeRoutes: plan,
-    todayRecords: done,
-    completedRecords: done,
-    passRecords: done,
+    activeRoutes: active,
+    todayRecords: abnormal,
+    completedRecords: abnormal,
+    passRecords: abnormal,
     failRecords: 0,
     completionRate: rate,
     passRate: rate,

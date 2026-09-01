@@ -19,7 +19,7 @@ from app.models.idc import IDC  # noqa: F401
 from app.models.knowledge import KnowledgeItem  # noqa: F401
 from app.models.drill import DrillPlan  # noqa: F401
 from app.models.drill_record import DrillRecord  # noqa: F401
-from app.models.maintenance import MaintenanceRecord  # noqa: F401
+from app.models.maintenance import MaintenancePlan, MaintenanceRecord  # noqa: F401
 from app.models.risk import RiskItem  # noqa: F401
 from app.models.workflow import WorkflowItem  # noqa: F401
 from app.models.inspection import InspectionRoute, InspectionFinding, InspectionRobot  # noqa: F401
@@ -52,6 +52,7 @@ __all__ = [
     "KnowledgeItem",
     "DrillPlan",
     "DrillRecord",
+    "MaintenancePlan",
     "MaintenanceRecord",
     "RiskItem",
     "WorkflowItem",

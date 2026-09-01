@@ -38,11 +38,15 @@ def _ensure_missing_columns(db):
 
     # 表名 -> [(列名, 类型SQL, 默认值SQL)]
     specs: dict[str, list[tuple[str, str, str]]] = {
-        "knowledge_items": [
+        "knowledge_item": [
             ("review_status", "VARCHAR(16)", "DEFAULT 'approved'"),
             ("reviewer", "VARCHAR(64)", "DEFAULT ''"),
             ("reviewed_at", "VARCHAR(32)", "DEFAULT ''"),
             ("review_note", "TEXT", "DEFAULT ''"),
+        ],
+        "inspection_route": [
+            ("name", "VARCHAR(128)", "DEFAULT ''"),
+            ("description", "TEXT", "DEFAULT ''"),
         ],
     }
 
@@ -97,6 +101,36 @@ def _ensure_missing_columns(db):
                 if "already exists" in msg or "42701" in msg or "duplicate column" in msg:
                     continue
                 logger.warning("补齐列 %s.%s 失败(可忽略): %s", table, col, e)
+
+
+# ======================================================================
+#  枚举 CHECK 约束自愈 (第八章 8.4) —— 对应 Alembic 0006 (生产库)
+#  开发/测试库依赖此函数在启动期补齐枚举列 CHECK 约束, 防止脏枚举值写入。
+# ======================================================================
+def _ensure_check_constraints(db):
+    """按 enums.CHECK_SPECS 幂等补齐低基数枚举列 CHECK 约束。
+
+    约束值集以 enums.CHECK_SPECS 为单一事实源 (与开发库实际取值对齐, 不破坏历史行)。
+    已存在则跳过; 表/列缺失或现存数据违反约束则警告并跳过, 不阻断启动。
+    """
+    from sqlalchemy import text
+    from app.core.enums import CHECK_SPECS, constraint_name, check_condition
+
+    for table, column, _vals, _is_text in CHECK_SPECS:
+        cname = constraint_name(table, column)
+        cond = check_condition(table, column)
+        try:
+            db.execute(
+                text(f"ALTER TABLE {table} ADD CONSTRAINT {cname} CHECK ({cond})")  # sql-guard-ignore
+            )
+            db.commit()
+            logger.info("补齐 CHECK 约束 %s", cname)
+        except Exception as e:  # noqa: BLE001
+            db.rollback()
+            msg = str(e).lower()
+            if "already exists" in msg or "42710" in msg or "duplicate object" in msg:
+                continue
+            logger.warning("补齐 CHECK 约束 %s 失败(可忽略): %s", cname, e)
 
 
 # ======================================================================
@@ -254,7 +288,7 @@ def _seed_default_users():
     import logging
     logger = logging.getLogger("seed")
     from app.core.security import hash_password
-    from app.db.session import SessionLocal, engine
+    from app.db.session import SessionLocal
     from app.models.user import Role, User
 
     db = None
@@ -269,10 +303,12 @@ def _seed_default_users():
 
     try:
         from app.models import Base  # 触发 metadata 收集
-        Base.metadata.create_all(bind=engine)
+
         logger.info("已确保 ORM 表结构就绪")
         # 兜底: 对已存在但缺列的旧表补齐 (create_all 不改已有表结构)
         _ensure_missing_columns(db)
+        # 兜底: 补齐枚举列 CHECK 约束 (第八章 8.4 自愈)
+        _ensure_check_constraints(db)
 
         default_roles = [
             ("admin", "超级管理员", ["*"]),
@@ -335,7 +371,7 @@ def _seed_knowledge_and_shift():
     logger = logging.getLogger("seed")
     from datetime import datetime, timedelta
 
-    from app.db.session import SessionLocal, engine
+    from app.db.session import SessionLocal
     from app.models import Base
 
     db = None
@@ -349,7 +385,7 @@ def _seed_knowledge_and_shift():
         return
 
     try:
-        Base.metadata.create_all(bind=engine)
+
         from app.crud import knowledge as kb_crud
         from app.crud import shift as shift_crud
 
@@ -572,7 +608,7 @@ def _seed_drill_risk_inspection():
     logger = logging.getLogger("seed")
     from datetime import datetime, timedelta
 
-    from app.db.session import SessionLocal, engine
+    from app.db.session import SessionLocal
     from app.models import Base
 
     db = None
@@ -586,7 +622,7 @@ def _seed_drill_risk_inspection():
         return
 
     try:
-        Base.metadata.create_all(bind=engine)
+
         from app.crud import drill as drill_crud
         from app.crud import risk as risk_crud
         from app.crud import inspection as insp_crud
@@ -634,16 +670,25 @@ def _seed_drill_risk_inspection():
             today = datetime.now()
             y = today.strftime("%Y-%m-%d")
             routes = [
-                {"code": "RT-001", "freq": "每日", "items": 28, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "已完成"},
-                {"code": "RT-002", "freq": "每日", "items": 26, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "已完成"},
-                {"code": "RT-003", "freq": "每周", "items": 12, "last": (today - timedelta(days=3)).strftime("%Y-%m-%d"), "next": (today + timedelta(days=4)).strftime("%Y-%m-%d"), "state": "已完成"},
-                {"code": "RT-004", "freq": "每日", "items": 8, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "已完成"},
-                {"code": "RT-005", "freq": "每周", "items": 10, "last": (today - timedelta(days=5)).strftime("%Y-%m-%d"), "next": (today + timedelta(days=2)).strftime("%Y-%m-%d"), "state": "已完成"},
-                {"code": "RT-006", "freq": "每日", "items": 6, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "已完成"},
+                {"code": "RT-001", "name": "1#机房日巡检", "freq": "每日", "items": 28, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "active"},
+                {"code": "RT-002", "name": "2#机房日巡检", "freq": "每日", "items": 26, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "active"},
+                {"code": "RT-003", "name": "柴发周巡检", "freq": "每周", "items": 12, "last": (today - timedelta(days=3)).strftime("%Y-%m-%d"), "next": (today + timedelta(days=4)).strftime("%Y-%m-%d"), "state": "active"},
+                {"code": "RT-004", "name": "配电日巡检", "freq": "每日", "items": 8, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "active"},
+                {"code": "RT-005", "name": "冷却塔周巡检", "freq": "每周", "items": 10, "last": (today - timedelta(days=5)).strftime("%Y-%m-%d"), "next": (today + timedelta(days=2)).strftime("%Y-%m-%d"), "state": "active"},
+                {"code": "RT-006", "name": "UPS日巡检", "freq": "每日", "items": 6, "last": (today - timedelta(days=1)).strftime("%Y-%m-%d"), "next": y, "state": "active"},
             ]
             for r in routes:
                 insp_crud.create_route(db, data=r)
             logger.info("已种子巡检路线 %d 条", len(routes))
+
+        # 归一化旧版状态词 (进行中/已完成 -> active), 对齐新模型词汇, 使启用率统计正确 (幂等)
+        try:
+            from sqlalchemy import text as _st
+            db.execute(_st("UPDATE inspection_route SET state='active' WHERE state IN ('进行中','已完成')"))
+            db.commit()
+        except Exception as e:  # noqa: BLE001
+            db.rollback()
+            logger.debug("巡检路线状态归一化跳过: %s", e)
 
         if insp_crud.finding_count(db) == 0:
             t = datetime.now()
@@ -668,7 +713,7 @@ def _seed_tenants():
     """首次启动时填充租户演示数据 (幂等)。"""
     import logging
     logger = logging.getLogger("seed")
-    from app.db.session import SessionLocal, engine
+    from app.db.session import SessionLocal
     from app.models import Base
 
     db = None
@@ -682,7 +727,7 @@ def _seed_tenants():
         return
 
     try:
-        Base.metadata.create_all(bind=engine)
+
         from app.crud import tenant as tenant_crud
 
         if tenant_crud.count(db) == 0:
@@ -712,7 +757,7 @@ def _seed_external_devices():
     logger = logging.getLogger("seed")
     from datetime import datetime, timedelta
 
-    from app.db.session import SessionLocal, engine
+    from app.db.session import SessionLocal
     from app.models import Base
 
     db = None
@@ -726,7 +771,7 @@ def _seed_external_devices():
         return
 
     try:
-        Base.metadata.create_all(bind=engine)
+
         from sqlalchemy import select, func
         from app.crud import external as ext_crud
         from app.models.external import ExternalDevice, MetricRaw
@@ -796,7 +841,7 @@ def _seed_idc():
     """首次启动时填充多数据中心演示数据 (幂等)。"""
     import logging
     logger = logging.getLogger("seed")
-    from app.db.session import SessionLocal, engine
+    from app.db.session import SessionLocal
     from app.models import Base
 
     db = None
@@ -810,7 +855,7 @@ def _seed_idc():
         return
 
     try:
-        Base.metadata.create_all(bind=engine)
+
         from sqlalchemy import select, func
         from app.models.idc import IDC
 
@@ -849,7 +894,7 @@ def _seed_alarm_rules():
     """
     import logging
     logger = logging.getLogger("seed")
-    from app.db.session import SessionLocal, engine
+    from app.db.session import SessionLocal
     from app.models import Base
     from app.services import alarm_engine
 
@@ -863,7 +908,7 @@ def _seed_alarm_rules():
             db.close()
         return
     try:
-        Base.metadata.create_all(bind=engine)
+
         alarm_engine.seed_alarm_rules(db)
         logger.info("已种子告警规则 (与 DEFAULT_RULES 同源)")
     except Exception as e:
@@ -875,12 +920,122 @@ def _seed_alarm_rules():
             db.close()
 
 
+def _seed_maintenance():
+    """首次启动时填充维保计划与执行记录演示数据 (幂等)。
+
+    维保日历 (/ops/maintenance-calendar) 依赖 maintenance_plan + maintenance_record,
+    两表均为空时日历将整片空白, 用户感知为"加载失败", 故在此播种演示数据。
+    """
+    import logging
+    logger = logging.getLogger("seed")
+    from datetime import datetime, timedelta
+
+    from app.db.session import SessionLocal
+    from app.models import Base
+
+    db = None
+    try:
+        db = SessionLocal()
+        from sqlalchemy import text
+        db.execute(text("select 1"))
+    except Exception:
+        if db is not None:
+            db.close()
+        return
+
+    try:
+        # 表结构已由 lifespan 启动期统一 create_all 保障, 此处不再重复
+        from app.crud import maintenance as m_crud
+
+        today = datetime.now()
+
+        def day(offset: int) -> str:
+            return (today + timedelta(days=offset)).strftime("%Y-%m-%d")
+
+        if m_crud.count_plans(db) == 0:
+            plans = [
+                {"code": "PM-001", "name": "冷水机组月度保养", "equipmentCode": "CHL-A01",
+                 "description": "清洗冷凝器换热面、校验导叶开度与加载曲线",
+                 "frequency": "monthly", "nextDueDate": day(3), "status": "active", "owner": "暖通班"},
+                {"code": "PM-002", "name": "冷却塔填料清洗", "equipmentCode": "CT-A01",
+                 "description": "清理布水器与填料污堵、检查风机皮带",
+                 "frequency": "quarterly", "nextDueDate": day(7), "status": "active", "owner": "暖通班"},
+                {"code": "PM-003", "name": "精密空调滤网更换", "equipmentCode": "CRAC-A01",
+                 "description": "更换送风滤网、清洗加湿罐并校准温湿度设定",
+                 "frequency": "monthly", "nextDueDate": day(-2), "status": "active", "owner": "暖通班"},
+                {"code": "PM-004", "name": "UPS 蓄电池内阻测试", "equipmentCode": "UPS-A01",
+                 "description": "单体内阻测试、均衡充电、超差单体重换",
+                 "frequency": "quarterly", "nextDueDate": day(5), "status": "active", "owner": "电气班"},
+                {"code": "PM-005", "name": "柴油发电机带载试机", "equipmentCode": "GEN-A01",
+                 "description": "空载启动检查后逐级带载, 记录电压频率与油耗",
+                 "frequency": "monthly", "nextDueDate": day(12), "status": "active", "owner": "电气班"},
+                {"code": "PM-006", "name": "10kV 进线柜停电检修", "equipmentCode": "HV-IN-01",
+                 "description": "工作票验电、挂牌上锁、检修后核相复电",
+                 "frequency": "yearly", "nextDueDate": day(18), "status": "active", "owner": "电气班"},
+                {"code": "PM-007", "name": "摄像头巡检与存储排查", "equipmentCode": "CAM-A01",
+                 "description": "检查在线率与画面质量、核查 NVR 录像完整性",
+                 "frequency": "weekly", "nextDueDate": day(1), "status": "active", "owner": "安防班"},
+                {"code": "PM-008", "name": "冷冻水泵轴承润滑", "equipmentCode": "CHWP-A01",
+                 "description": "补充轴承润滑脂、检查联轴器与机封渗漏",
+                 "frequency": "monthly", "nextDueDate": day(-5), "status": "active", "owner": "暖通班"},
+            ]
+            for p in plans:
+                m_crud.create_plan(db, data=p)
+            logger.info("已种子维保计划 %d 条", len(plans))
+
+        if m_crud.count(db) == 0:
+            records = [
+                {"planCode": "PM-008", "planName": "冷冻水泵轴承润滑", "equipmentCode": "CHWP-A01",
+                 "maintainedBy": "张伟", "startedAt": day(-5) + " 09:00", "completedAt": day(-5) + " 11:30",
+                 "status": "已完成", "result": "正常",
+                 "actionDescription": "补脂并复测振动值 1.8mm/s, 机封无渗漏, 试运行正常。"},
+                {"planCode": "PM-003", "planName": "精密空调滤网更换", "equipmentCode": "CRAC-A01",
+                 "maintainedBy": "李娜", "startedAt": day(-2) + " 14:00", "completedAt": day(-2) + " 15:20",
+                 "status": "已完成", "result": "正常",
+                 "actionDescription": "更换滤网 2 片并清洗加湿罐, 送风温度恢复至 22.5℃。"},
+                {"planCode": "PM-004", "planName": "UPS 蓄电池内阻测试", "equipmentCode": "UPS-A01",
+                 "maintainedBy": "王强", "startedAt": day(-9) + " 10:00", "completedAt": day(-9) + " 12:00",
+                 "status": "已完成", "result": "异常",
+                 "actionDescription": "第 17 节单体内阻 8.4mΩ 超差, 已列入更换计划并加强监测。"},
+                {"planCode": "PM-002", "planName": "冷却塔填料清洗", "equipmentCode": "CT-A01",
+                 "maintainedBy": "张伟", "startedAt": day(-14) + " 08:30", "completedAt": day(-14) + " 16:00",
+                 "status": "已完成", "result": "正常",
+                 "actionDescription": "高压清洗填料并校正布水均匀性, 出水温度下降 1.2℃。"},
+            ]
+            for r in records:
+                m_crud.create(db, data=r)
+            logger.info("已种子维保记录 %d 条", len(records))
+    except Exception as e:
+        if db is not None:
+            db.rollback()
+        logger.warning("维保计划/记录种子跳过: %s", e)
+    finally:
+        if db is not None:
+            db.close()
+
+
 # ======================================================================
 #  生命周期
 # ======================================================================
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ---- 启动 ----
+    # 表结构一次性就绪: 替代各 seed 内重复的 create_all, 加速启动并避免并发索引冲突
+    # 逐表 create_all(checkfirst=True): 容忍已存在表/索引 (Alembic 已建的索引不会触发
+    # DuplicateTable 导致整体中止), 确保 maintenance_plan / external_devices 等新表始终被补建
+    try:
+        from app.models import Base  # 触发 metadata 收集
+        from app.db.session import engine
+        _created = _skipped = 0
+        for _t in Base.metadata.sorted_tables:
+            try:
+                _t.create(bind=engine, checkfirst=True)
+                _created += 1
+            except Exception:  # noqa: BLE001
+                _skipped += 1
+        logger.info("ORM 表结构已确保就绪 (create_all 逐表, 新建=%d 跳过=%d)", _created, _skipped)
+    except Exception as e:  # noqa: BLE001
+        logger.debug("启动期 create_all 跳过 (DB 不可用?): %s", e)
     try:
         _seed_default_users()
     except Exception as e:
@@ -915,6 +1070,11 @@ async def lifespan(app: FastAPI):
         _seed_alarm_rules()
     except Exception as e:
         logger.warning("告警规则种子跳过: %s", e)
+
+    try:
+        _seed_maintenance()
+    except Exception as e:
+        logger.warning("维保计划/记录种子跳过: %s", e)
 
     consumer_task = await maybe_start_consumer()
     mock_task = await maybe_start_mock_collector()

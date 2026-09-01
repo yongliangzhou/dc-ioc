@@ -24,6 +24,7 @@ from app.api.v1.endpoints import (
     ops,
     power,
     risk,
+    row_audit,
     runbooks,
     workflow,
     security,
@@ -68,6 +69,7 @@ api_router.include_router(shift.router, prefix="/ops/shift", tags=["shift"], dep
 api_router.include_router(audit.router, prefix="/audit-logs", tags=["audit"], dependencies=_auth)
 api_router.include_router(drill.router, prefix="/ops/drill", tags=["drill"], dependencies=_auth)
 api_router.include_router(risk.router, prefix="/ops/risk", tags=["risk"], dependencies=_auth)
+api_router.include_router(row_audit.router, prefix="/row-audit", tags=["row-audit"], dependencies=_auth)
 # 运维预案 (runbooks): 告警关联处置预案, 复用知识库 related 逻辑
 api_router.include_router(runbooks.router, tags=["runbooks"], dependencies=_auth)
 api_router.include_router(inspection.router, prefix="/ops/inspection", tags=["inspection"], dependencies=_auth)

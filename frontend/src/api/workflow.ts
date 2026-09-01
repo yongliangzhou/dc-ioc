@@ -38,7 +38,31 @@ export interface WorkflowListResp {
   items: WorkflowItem[]
 }
 
+export interface WorkflowTrendPoint {
+  /** 该周周一, MM-DD */
+  week: string
+  created: number
+  closed: number
+}
+export interface WorkflowStats {
+  total: number
+  open: number
+  monthCreated: number
+  monthClosed: number
+  /** 平均解决时长(小时), 无已关闭流程时为 0 */
+  avgResolve: number
+  /** SLA 超时率百分比 (0-100) */
+  breachRate: number
+  byType: Record<string, number>
+  byStatus: Record<string, number>
+  byPriority: Record<string, number>
+  trend: WorkflowTrendPoint[]
+}
+
 export const getWorkflows = () => request.get<unknown, WorkflowListResp>('/api/ops/workflows')
+/** 服务端聚合统计(KPI + 分布 + 近 12 周趋势), 前端失败时回退本地计算 */
+export const getWorkflowStats = () =>
+  request.get<unknown, WorkflowStats>('/api/ops/workflows/stats')
 export const createWorkflow = (data: Partial<WorkflowItem>) =>
   request.post<unknown, WorkflowItem>('/api/ops/workflows', data)
 export const getWorkflow = (id: string) =>
@@ -53,7 +77,12 @@ export const closeWorkflow = (id: string) =>
   request.post<unknown, WorkflowItem>(`/api/ops/workflows/${id}/close`)
 export const reopenWorkflow = (id: string) =>
   request.post<unknown, WorkflowItem>(`/api/ops/workflows/${id}/reopen`)
-export const approveNode = (id: string, nodeIndex: number, result: 'approved' | 'rejected', comment?: string) =>
+export const approveNode = (
+  id: string,
+  nodeIndex: number,
+  result: 'approved' | 'rejected',
+  comment?: string,
+) =>
   request.post<unknown, WorkflowItem>(`/api/ops/workflows/${id}/approve`, {
     node_index: nodeIndex,
     result,

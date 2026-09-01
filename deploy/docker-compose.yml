@@ -4,16 +4,16 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-dcuser}
+      POSTGRES_USER: dcuser
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dcpass}
-      POSTGRES_DB: ${POSTGRES_DB:-dc_ioc}
+      POSTGRES_DB: dc_ioc   # 唯一创建的数据库
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-dcuser}"]
+      test: ["CMD-SHELL", "pg_isready -U dcuser"]
       interval: 5s
       timeout: 3s
       retries: 10

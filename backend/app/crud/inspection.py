@@ -20,8 +20,9 @@ def _to_snake(d: dict) -> dict:
 # ---------- 路线 ----------
 def _route_dict(r: InspectionRoute) -> dict:
     return {
-        "id": r.id, "code": r.code, "freq": r.freq, "items": r.items,
-        "last": r.last, "next": r.next, "state": r.state,
+        "id": r.id, "code": r.code, "name": r.name or "", "description": r.description or "",
+        "freq": r.freq, "frequency": r.freq, "items": r.items,
+        "last": r.last, "next": r.next, "state": r.state, "status": r.state,
     }
 
 
@@ -148,11 +149,11 @@ def aggregate(db: Session) -> dict:
     routes = list_routes(db)
     findings = list_findings(db)
     plan = len(routes)
-    done = sum(1 for r in routes if r["state"] == "已完成")
+    active = sum(1 for r in routes if r.get("state") == "active")
     abnormal = len(findings)
-    rate = round(done / plan * 100) if plan else 0
+    rate = round(active / plan * 100) if plan else 0
     return {
-        "today": {"plan": plan, "done": done, "abnormal": abnormal, "rate": rate},
+        "today": {"plan": plan, "done": active, "active": active, "abnormal": abnormal, "rate": rate},
         "robot": robot_state(db),
         "routes": routes,
         "findings": findings,

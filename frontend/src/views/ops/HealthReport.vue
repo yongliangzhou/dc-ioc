@@ -55,16 +55,32 @@
           <!-- 八维雷达图 (SVG 自绘, 轴数随域数量动态计算) -->
           <div class="radar-box">
             <div class="radar-title">{{ t.radarTitle }}</div>
-            <svg viewBox="0 0 200 200" class="radar-svg">
+            <svg
+              viewBox="0 0 200 200"
+              class="radar-svg"
+              role="img"
+              :aria-label="`${t.radarTitle} · ${t.radarHint}`"
+            >
               <g transform="translate(100,100)">
                 <polygon
-                  v-for="ring in [0.25, 0.5, 0.75, 1]"
+                  v-for="ring in radarRings"
                   :key="ring"
                   :points="radarPoints(ring)"
                   fill="none"
                   stroke="var(--line)"
                   stroke-width="1"
                 />
+                <!-- 刻度数值：沿正上方轴标出 25/50/75/100，否则同心环无量化含义 -->
+                <text
+                  v-for="ring in radarRings"
+                  :key="'tk' + ring"
+                  x="3"
+                  :y="axisY(0, ring) + 2"
+                  font-size="6"
+                  fill="var(--txt3, #8595ad)"
+                >
+                  {{ ring * 100 }}
+                </text>
                 <line
                   v-for="(d, i) in report.domains"
                   :key="'ax' + i"
@@ -88,7 +104,9 @@
                   :cy="axisY(i, d.score / 100)"
                   r="2.5"
                   fill="var(--blue)"
-                />
+                >
+                  <title>{{ tipText(d) }}</title>
+                </circle>
                 <text
                   v-for="(d, i) in report.domains"
                   :key="'lb' + i"
@@ -103,6 +121,7 @@
                 </text>
               </g>
             </svg>
+            <div class="radar-hint">{{ t.radarHint }}</div>
           </div>
 
           <div class="hr-summary">
@@ -129,17 +148,34 @@
       <!-- 域评分（点击钻取） -->
       <Panel :title="t.domainScores" class="hr-domains-panel">
         <div class="grid cols-auto hr-domains">
-          <div v-for="d in report.domains" :key="d.key" class="domain-card" @click="openDetail(d)">
+          <div
+            v-for="d in report.domains"
+            :key="d.key"
+            class="domain-card"
+            role="button"
+            tabindex="0"
+            :title="t.clickDetail"
+            @click="openDetail(d)"
+            @keydown.enter.prevent="openDetail(d)"
+          >
             <div class="domain-top">
               <span class="domain-name">{{ d.name }}</span>
               <span class="domain-score" :style="{ color: scoreColor(d.score) }">{{
                 d.score
               }}</span>
             </div>
-            <div class="domain-bar">
+            <div
+              class="domain-bar"
+              role="progressbar"
+              :aria-valuenow="d.score"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              :aria-label="d.name"
+            >
               <i :style="{ width: d.score + '%', background: scoreColor(d.score) }"></i>
             </div>
             <p class="domain-note">{{ d.note }}</p>
+            <div class="domain-more">{{ t.clickDetail }} ›</div>
           </div>
         </div>
       </Panel>
@@ -164,7 +200,14 @@
       <div class="modal-box">
         <div class="modal-head">
           <h3>{{ t.detailTitle }} · {{ detail.name }}</h3>
-          <button class="modal-close" @click="detail = null">✕</button>
+          <button
+            class="modal-close"
+            :title="tc('tooltipClose')"
+            :aria-label="tc('tooltipClose')"
+            @click="detail = null"
+          >
+            ✕
+          </button>
         </div>
         <div class="modal-score" :style="{ color: scoreColor(detail.score) }">
           {{ detail.score }}<span class="modal-score-unit">{{ t.score }}</span>
@@ -195,13 +238,15 @@ import { useAsyncPageAll } from '@/composables/useAsyncPage'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import Panel from '@/components/common/Panel.vue'
 
-const { t: raw } = useI18n()
+const { t: raw, tm } = useI18n()
 const t = new Proxy({} as any, {
   get(_t, key) {
-    const ns = (raw('healthReport') || {}) as any
+    const ns = (tm('healthReport') || {}) as any
     return ns && typeof ns === 'object' ? ns[key] : ''
   },
 })
+/** 通用动作文案（common 命名空间），用于图标按钮的 title / aria-label */
+const tc = (k: string) => (raw('common.' + k) as string) || ''
 
 interface Domain {
   key: string
@@ -290,8 +335,16 @@ function scoreColor(v: number) {
 
 // 雷达图坐标 (轴数随域数量动态取, 当前 8 维; 不再写死 7 导致第 8 点与第一点重叠、多边形错位)
 const AXIS_R = 80
+/** 同心环刻度：图形与刻度标签共用同一数组，避免两处写死不一致 */
+const radarRings = [0.25, 0.5, 0.75, 1]
 function axisCount(): number {
   return report.value?.domains.length ?? 7
+}
+/** 雷达图数据点悬停文案：读出域名与具体分数 */
+function tipText(d: Domain) {
+  return String(t.scoreTooltip || '{name}: {score}')
+    .replace('{name}', d.name)
+    .replace('{score}', String(d.score))
 }
 function radarPoint(i: number, r: number) {
   const n = axisCount()
@@ -781,6 +834,15 @@ onMounted(() => {
   color: var(--txt2);
   margin: 8px 0 0;
   line-height: 1.4;
+}
+.domain-more {
+  font-size: 0.66rem;
+  color: var(--txt3, #8595ad);
+  margin-top: 6px;
+}
+.domain-card:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
 }
 
 /* 发现 / 建议列表 */

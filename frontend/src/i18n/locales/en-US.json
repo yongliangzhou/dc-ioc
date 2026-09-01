@@ -24,7 +24,21 @@
     "pointsUnit": "pts",
     "status": "Status",
     "quantity": "Qty",
-    "detail": "Detail"
+    "detail": "Detail",
+    "save": "Save",
+    "delete": "Delete",
+    "close": "Close",
+    "refresh": "Refresh",
+    "remove": "Remove",
+    "unlink": "Unlink",
+    "removeStep": "Delete this step",
+    "rateN": "Rate {n}",
+    "tooltipClose": "Close",
+    "tooltipDelete": "Delete",
+    "tooltipRemove": "Remove",
+    "tooltipRefresh": "Refresh data",
+    "tooltipUnlink": "Unlink",
+    "tooltipSignOut": "Sign out"
   },
   "nav": {
     "overview": "Overview",
@@ -1730,6 +1744,7 @@
     "save": "Save",
     "delete": "Delete",
     "empty": "Select or create a thing model",
+    "listEmpty": "No thing models. Create one from top-right.",
     "saved": "Thing model saved",
     "deleted": "Thing model deleted",
     "confirmDelete": "Delete this thing model?",
@@ -1905,8 +1920,15 @@
     "citeTotal": "Total Citations",
     "topRated": "Top Rated",
     "recentShared": "Recently Shared",
+    "delete": "Delete",
+    "status": "Status",
     "empty": "No knowledge items match",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "ratingLabel": "Rating",
+    "commentLabel": "Comments",
+    "citeLabel": "Citations",
+    "ratingCount": "{n} ratings",
+    "noRating": "No ratings yet"
   },
   "workflow": {
     "title": "ITIL Workflow Center",
@@ -1977,6 +1999,13 @@
     "byType": "By Type",
     "byStatus": "By Status",
     "byPriority": "By Priority",
+    "totalLabel": "Total",
+    "unitTicket": "Unit: ticket",
+    "trendCreated": "Created",
+    "trendClosed": "Closed",
+    "trendSum": "12-week total",
+    "trendEmpty": "No data in last 12 weeks",
+    "clickFilter": "Click to filter",
     "avgResolve": "Avg Resolve (h)",
     "breachRate": "SLA Breach Rate",
     "openCount": "Open",
@@ -1985,7 +2014,9 @@
     "confirmDelete": "Delete this process?",
     "deleted": "Deleted",
     "saved": "Saved",
-    "empty": "No processes"
+    "empty": "No processes",
+    "cancel": "Cancel",
+    "delete": "Delete"
   },
   "mntCalendar": {
     "title": "Maintenance Calendar",
@@ -1993,13 +2024,19 @@
     "month": "Month",
     "week": "Week",
     "today": "Today",
+    "prev": "Prev",
+    "next": "Next",
     "duePlans": "Due Plans",
     "records": "Records",
     "noPlan": "No due plans this month",
     "noRecord": "No records on this day",
     "legendDue": "Plan Due",
     "legendDone": "Executed",
-    "clickNew": "Click a date to add a maintenance record"
+    "clickNew": "Click a date to add a maintenance record",
+    "emptyCalendar": "No plans or records in the current view",
+    "partialFailed": "{name} failed to load, showing the rest",
+    "planCount": "{n} due plans",
+    "recordCount": "{n} execution records"
   },
   "repair": {
     "title": "Repair Work Orders",
@@ -2088,7 +2125,8 @@
     "stillIn": "Inside",
     "cancel": "Cancel",
     "del": "Delete",
-    "confirmDeleteTitle": "Delete Entry"
+    "confirmDeleteTitle": "Delete Entry",
+    "save": "Save"
   },
   "faultImpact": {
     "title": "Fault Impact Analysis",
@@ -2122,6 +2160,11 @@
     "faultNode": "Fault Node",
     "affectedNode": "Affected Node",
     "normalNode": "Normal Node",
+    "edgeItFeed": "IT feed link",
+    "edgeCritical": "Critical path",
+    "edgeNormal": "Normal link",
+    "hopLabel": "Hop {n}",
+    "moreNodes": "{n} more nodes hidden",
     "affectedList": "Affected Assets",
     "bizDomain": "Affected Business Domains",
     "bizSla": "SLA Target",
@@ -2177,7 +2220,8 @@
     "previewTitle": "Drill Preview - Impact",
     "previewClose": "Close",
     "previewFromDrill": "From Drill",
-    "previewRun": "Run Preview Analysis"
+    "previewRun": "Run Preview Analysis",
+    "retry": "Retry"
   },
   "drillPlan": {
     "title": "Emergency Drill",
@@ -2240,7 +2284,15 @@
     "criticalPaths": "Critical paths",
     "affectedBiz": "Affected businesses",
     "suggestActions": "Suggested actions",
-    "offlineMsg": "Backend unreachable, using offline mock data (retry after refresh)."
+    "offlineMsg": "Backend unreachable, using offline mock data (retry after refresh).",
+    "done": "Completed",
+    "next": "Next Drill",
+    "result": "Result",
+    "search": "Search",
+    "sevCritical": "Critical",
+    "sevHigh": "High",
+    "sevMedium": "Medium",
+    "sevLow": "Low"
   },
   "supplier": {
     "title": "Supplier Management",
@@ -2264,6 +2316,11 @@
     "del": "Delete",
     "empty": "No suppliers",
     "rateDims": "Scoring dims (0-100)",
+    "rateTitle": "Rate Supplier",
+    "confirmDelTitle": "Delete Supplier",
+    "confirmDelText": "Delete this supplier? This action cannot be undone.",
+    "confirmDelOk": "Delete",
+    "confirmDel": "Delete this supplier? This action cannot be undone.",
     "name": "Name",
     "namePlaceholder": "Supplier name",
     "categoryPlaceholder": "e.g. Power O&M",
@@ -2274,7 +2331,10 @@
     "dim_sla": "SLA",
     "dim_cooperation": "Coop",
     "cancel": "Cancel",
-    "save": "Save"
+    "save": "Save",
+    "scoreScale": "/100",
+    "excellentHint": "Score ≥ 85",
+    "improveHint": "Score < 70"
   },
   "powerAiHazards": {
     "title": "Power AI Hazard Library",
@@ -2405,7 +2465,11 @@
     "sAlarm": "Dispatch by severity, shorten MTTR.",
     "sCapacity": "Watch high-occupancy DC expansion & balance.",
     "fCapHigh": "DC occupancy over 90%, capacity risk.",
-    "weightHint": "Weights: power/cooling/network 18% each, hazard/drill/supplier/repair 9% each, capacity 10%"
+    "weightHint": "Weights: power/cooling/network 18% each, hazard/drill/supplier/repair 9% each, capacity 10%",
+    "radarHint": "Each domain scores 0-100; further from center is healthier",
+    "radarScale": "Max 100",
+    "clickDetail": "Click a card for score breakdown",
+    "scoreTooltip": "{name}: {score} pts"
   },
   "integrationHub": {
     "title": "Integration Hub",

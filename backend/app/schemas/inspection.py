@@ -8,17 +8,22 @@ from pydantic import BaseModel, ConfigDict
 
 class RouteCreate(BaseModel):
     code: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
     freq: str = "每日"
     items: int = 0
     last: str = ""
     next: str = ""
-    state: str = "进行中"
+    state: str = "active"
     note: str = ""
 
 
 class RouteUpdate(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
+    code: Optional[str] = None
+    name: Optional[str] = None
+    description: Optional[str] = None
     freq: Optional[str] = None
     items: Optional[int] = None
     last: Optional[str] = None

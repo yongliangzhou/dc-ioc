@@ -2323,7 +2323,7 @@ function genServersForCabinet(cabinetId: number, uTotal = 42): ServerItem[] {
       cabinetId,
       assetNo: `AS${String(cabinetId).padStart(3, '0')}-${String(sid).padStart(4, '0')}`,
       hostname: `node-${String(cabinetId).padStart(3, '0')}-${String(i + 1).padStart(2, '0')}`,
-      ip: `10.${(cabinetId / 250) % 250 | 0}.${cabinetId % 250}.${i + 1}`,
+      ip: `10.${((cabinetId / 250) % 250) | 0}.${cabinetId % 250}.${i + 1}`,
       brand: U_BRANDS[Math.floor(rnd(i + 4) * U_BRANDS.length)],
       model: `R${4 + Math.floor(rnd(i + 5) * 6)}40`,
       uStart,
@@ -2523,29 +2523,135 @@ function recognizeUPositionMock(cabinetId: number): RecognizeResp {
 
 // ---- 故障影响分析离线兜底 (复用 DC 供电/制冷节点 + 简化 BFS 传播) ----
 const _FI_CRIT_CATS = new Set([
-  'hv_incomer', 'hv_isolator', 'hv_breaker', 'transformer', 'ups', 'hvdc',
-  'lv_feeder', 'ats', 'bus_tie', 'chiller', 'chw_pump', 'cooling_tower',
-  'hex', 'sec_pump', 'crac',
+  'hv_incomer',
+  'hv_isolator',
+  'hv_breaker',
+  'transformer',
+  'ups',
+  'hvdc',
+  'lv_feeder',
+  'ats',
+  'bus_tie',
+  'chiller',
+  'chw_pump',
+  'cooling_tower',
+  'hex',
+  'sec_pump',
+  'crac',
 ])
 const _FI_BIZ = [
-  { business: '核心交易系统', sla: '99.999%', cats: ['server', 'switch', 'router'], note: '金融核心交易, 双路供电+2N制冷, 中断即资损' },
-  { business: '客户门户/网银', sla: '99.95%', cats: ['server', 'switch'], note: '对外服务, 可用性敏感' },
-  { business: '大数据/AI 平台', sla: '99.9%', cats: ['server', 'gpu'], note: '离线/近线计算, 短时中断可容忍' },
+  {
+    business: '核心交易系统',
+    sla: '99.999%',
+    cats: ['server', 'switch', 'router'],
+    note: '金融核心交易, 双路供电+2N制冷, 中断即资损',
+  },
+  {
+    business: '客户门户/网银',
+    sla: '99.95%',
+    cats: ['server', 'switch'],
+    note: '对外服务, 可用性敏感',
+  },
+  {
+    business: '大数据/AI 平台',
+    sla: '99.9%',
+    cats: ['server', 'gpu'],
+    note: '离线/近线计算, 短时中断可容忍',
+  },
   { business: '办公协同/邮箱', sla: '99.5%', cats: ['server'], note: '内部办公, 低优先级' },
-  { business: '视频监控平台', sla: '99.9%', cats: ['nvr', 'switch'], note: '安防录像, 断链影响合规留存' },
+  {
+    business: '视频监控平台',
+    sla: '99.9%',
+    cats: ['nvr', 'switch'],
+    note: '安防录像, 断链影响合规留存',
+  },
 ]
 
 const _FI_SOURCES: FaultSourceNode[] = [
-  { id: 1, label: '冷水机组 A', kind: '冷水机组', domain: 'hvac_source', category: 'chiller', status: '运行', health: 60, loadPct: 76, redundancy: 'N+1', roomCode: '制冷站', riskHint: '健康分偏低 60' },
-  { id: 2, label: '冷水机组 B', kind: '冷水机组', domain: 'hvac_source', category: 'chiller', status: '运行', health: 60, loadPct: 71, redundancy: 'N+1', roomCode: '制冷站', riskHint: '健康分偏低 60' },
-  { id: 7, label: '变压器 T1', kind: '变压器', domain: 'power_source', category: 'transformer', status: '运行', health: 72, loadPct: 68, redundancy: '2N', roomCode: '配电室', riskHint: '健康分偏低 72' },
-  { id: 9, label: 'UPS 主机', kind: 'UPS', domain: 'power_source', category: 'ups', status: '运行', health: 80, loadPct: 45, redundancy: '2N', roomCode: '配电室', riskHint: null },
-  { id: 11, label: '精密空调 CRAC-01', kind: '精密空调', domain: 'hvac_terminal', category: 'crac', status: '故障', health: 60, loadPct: 0, redundancy: 'N+1', roomCode: 'A01', riskHint: '状态异常:故障' },
-  { id: 12, label: '精密空调 CRAC-02', kind: '精密空调', domain: 'hvac_terminal', category: 'crac', status: '运行', health: 85, loadPct: 52, redundancy: 'N+1', roomCode: 'A01', riskHint: null },
+  {
+    id: 1,
+    label: '冷水机组 A',
+    kind: '冷水机组',
+    domain: 'hvac_source',
+    category: 'chiller',
+    status: '运行',
+    health: 60,
+    loadPct: 76,
+    redundancy: 'N+1',
+    roomCode: '制冷站',
+    riskHint: '健康分偏低 60',
+  },
+  {
+    id: 2,
+    label: '冷水机组 B',
+    kind: '冷水机组',
+    domain: 'hvac_source',
+    category: 'chiller',
+    status: '运行',
+    health: 60,
+    loadPct: 71,
+    redundancy: 'N+1',
+    roomCode: '制冷站',
+    riskHint: '健康分偏低 60',
+  },
+  {
+    id: 7,
+    label: '变压器 T1',
+    kind: '变压器',
+    domain: 'power_source',
+    category: 'transformer',
+    status: '运行',
+    health: 72,
+    loadPct: 68,
+    redundancy: '2N',
+    roomCode: '配电室',
+    riskHint: '健康分偏低 72',
+  },
+  {
+    id: 9,
+    label: 'UPS 主机',
+    kind: 'UPS',
+    domain: 'power_source',
+    category: 'ups',
+    status: '运行',
+    health: 80,
+    loadPct: 45,
+    redundancy: '2N',
+    roomCode: '配电室',
+    riskHint: null,
+  },
+  {
+    id: 11,
+    label: '精密空调 CRAC-01',
+    kind: '精密空调',
+    domain: 'hvac_terminal',
+    category: 'crac',
+    status: '故障',
+    health: 60,
+    loadPct: 0,
+    redundancy: 'N+1',
+    roomCode: 'A01',
+    riskHint: '状态异常:故障',
+  },
+  {
+    id: 12,
+    label: '精密空调 CRAC-02',
+    kind: '精密空调',
+    domain: 'hvac_terminal',
+    category: 'crac',
+    status: '运行',
+    health: 85,
+    loadPct: 52,
+    redundancy: 'N+1',
+    roomCode: 'A01',
+    riskHint: null,
+  },
 ]
 
 function faultImpactSourcesMock(): FaultSourceList {
-  const nodes = _FI_SOURCES.slice().sort((a, b) => (a.riskHint ? 0 : 1) - (b.riskHint ? 0 : 1) || a.health - b.health)
+  const nodes = _FI_SOURCES
+    .slice()
+    .sort((a, b) => (a.riskHint ? 0 : 1) - (b.riskHint ? 0 : 1) || a.health - b.health)
   return { generatedAt: new Date().toISOString(), source: 'mock', nodes, edges: [] }
 }
 
@@ -2569,29 +2675,88 @@ function faultImpactAnalyzeMock(req: FaultImpactReq): FaultImpactResp {
     }
   }
   const nodes: FaultImpactResp['nodes'] = [
-    ...faultNodes.map((n) => ({ id: n.id, label: n.label, kind: n.kind, domain: n.domain, category: n.category, status: n.status, health: n.health, roomCode: n.roomCode, state: 'fault' as const, hop: 0, critical: _FI_CRIT_CATS.has(n.category), business: null, slaRisk: null })),
+    ...faultNodes.map((n) => ({
+      id: n.id,
+      label: n.label,
+      kind: n.kind,
+      domain: n.domain,
+      category: n.category,
+      status: n.status,
+      health: n.health,
+      roomCode: n.roomCode,
+      state: 'fault' as const,
+      hop: 0,
+      critical: _FI_CRIT_CATS.has(n.category),
+      business: null,
+      slaRisk: null,
+    })),
     ...itBiz.map((d, _idx) => {
       const biz = _FI_BIZ.find((b) => b.cats.includes(d.category))
-      return { id: d.id, label: d.label, kind: d.category, domain: 'it', category: d.category, status: '在线', health: d.health, roomCode: 'A01', state: 'affected' as const, hop: 1, critical: false, business: biz?.business ?? null, slaRisk: biz ? 'medium' : null }
+      return {
+        id: d.id,
+        label: d.label,
+        kind: d.category,
+        domain: 'it',
+        category: d.category,
+        status: '在线',
+        health: d.health,
+        roomCode: 'A01',
+        state: 'affected' as const,
+        hop: 1,
+        critical: false,
+        business: biz?.business ?? null,
+        slaRisk: biz ? 'medium' : null,
+      }
     }),
   ]
-  const bizCount = scope.business !== false && linkHit ? _FI_BIZ.filter((b) => b.cats.includes('server')).length : 0
-  const businesses: FaultImpactResp['businesses'] = (scope.business !== false && linkHit)
-    ? _FI_BIZ.map((b) => ({
-        business: b.business, criticalDevices: b.cats.includes('server') ? 1 : 0,
-        affectedDevices: itBiz.filter((d) => b.cats.includes(d.category)).length,
-        severity: b.cats.includes('server') ? 'high' : 'medium', sla: b.sla, note: b.note,
-      })).filter((x) => x.affectedDevices > 0)
-    : []
-  const severity = !failed.size ? 'low' : (linkHit || businesses.length ? (linkHit && businesses.some((b) => b.severity === 'critical') ? 'critical' : 'high') : (affected.size > 0 ? 'medium' : 'low'))
+  const bizCount =
+    scope.business !== false && linkHit
+      ? _FI_BIZ.filter((b) => b.cats.includes('server')).length
+      : 0
+  const businesses: FaultImpactResp['businesses'] =
+    scope.business !== false && linkHit
+      ? _FI_BIZ
+          .map((b) => ({
+            business: b.business,
+            criticalDevices: b.cats.includes('server') ? 1 : 0,
+            affectedDevices: itBiz.filter((d) => b.cats.includes(d.category)).length,
+            severity: b.cats.includes('server') ? 'high' : 'medium',
+            sla: b.sla,
+            note: b.note,
+          }))
+          .filter((x) => x.affectedDevices > 0)
+      : []
+  const severity = !failed.size
+    ? 'low'
+    : linkHit || businesses.length
+      ? linkHit && businesses.some((b) => b.severity === 'critical')
+        ? 'critical'
+        : 'high'
+      : affected.size > 0
+        ? 'medium'
+        : 'low'
   return {
     faultIds: Array.from(failed),
     generatedAt: new Date().toISOString(),
     nodes,
-    edges: nodes.filter((n) => n.state === 'affected').map((n) => ({ source: faultNodes[0]?.id ?? 0, target: n.id, type: 'it_feed', label: '机房级冷量/电力丧失' })),
+    edges: nodes
+      .filter((n) => n.state === 'affected')
+      .map((n) => ({
+        source: faultNodes[0]?.id ?? 0,
+        target: n.id,
+        type: 'it_feed',
+        label: '机房级冷量/电力丧失',
+      })),
     mitigations: [],
     affectedIds: Array.from(affected).filter((x) => !failed.has(x)),
-    summary: { severity, faultCount: failed.size, affectedCount: affected.size - failed.size, criticalPaths: faultNodes.filter((n) => _FI_CRIT_CATS.has(n.category)).length, slaRisk: businesses.length ? 'high' : (linkHit ? 'medium' : 'low'), bizCount },
+    summary: {
+      severity,
+      faultCount: failed.size,
+      affectedCount: affected.size - failed.size,
+      criticalPaths: faultNodes.filter((n) => _FI_CRIT_CATS.has(n.category)).length,
+      slaRisk: businesses.length ? 'high' : linkHit ? 'medium' : 'low',
+      bizCount,
+    },
     businesses,
     suggestion: faultNodes.length
       ? `故障源 ${faultNodes.length} 个: ${faultNodes.map((n) => n.label).join('、')}。${linkHit ? '已冲击关键供电/制冷节点, 优先切换冗余链路。' : ''}${businesses.length ? `业务域「${businesses[0].business}」(SLA ${businesses[0].sla}) 受影响最重, 建议立即启动容灾切换。` : '未直接波及核心业务域, 按常规工单处置。'}`
@@ -2603,9 +2768,42 @@ function faultImpactAnalyzeMock(req: FaultImpactReq): FaultImpactResp {
 let _memDrills: any[] = (DC.drill as any).plans.map((p: any) => ({ ...p }))
 let _memDrillSeq = _memDrills.length + 1
 let _memRecords: any[] = [
-  { id: 1, planId: 2, planName: '冷源系统故障切换演练', date: '2026-06-20', participants: 8, startAt: '09:00', endAt: '10:30', score: 92, result: '通过', note: '切换耗时达标' },
-  { id: 2, planId: 3, planName: '母联备自投切换演练', date: '2026-07-05', participants: 6, startAt: '14:00', endAt: '15:00', score: 88, result: '通过', note: '备自投动作正常' },
-  { id: 3, planId: 1, planName: '市电全停-柴发接管演练', date: '2026-08-05', participants: 12, startAt: '10:00', endAt: '12:00', score: 0, result: '—', note: '待执行' },
+  {
+    id: 1,
+    planId: 2,
+    planName: '冷源系统故障切换演练',
+    date: '2026-06-20',
+    participants: 8,
+    startAt: '09:00',
+    endAt: '10:30',
+    score: 92,
+    result: '通过',
+    note: '切换耗时达标',
+  },
+  {
+    id: 2,
+    planId: 3,
+    planName: '母联备自投切换演练',
+    date: '2026-07-05',
+    participants: 6,
+    startAt: '14:00',
+    endAt: '15:00',
+    score: 88,
+    result: '通过',
+    note: '备自投动作正常',
+  },
+  {
+    id: 3,
+    planId: 1,
+    planName: '市电全停-柴发接管演练',
+    date: '2026-08-05',
+    participants: 12,
+    startAt: '10:00',
+    endAt: '12:00',
+    score: 0,
+    result: '—',
+    note: '待执行',
+  },
 ]
 let _memRecSeq = _memRecords.length + 1
 
@@ -2617,7 +2815,10 @@ function drillListMock(kw = '', type = ''): { stats: any; plans: any[] } {
     year: plans.length,
     done: plans.filter((p) => p.state === '已完成').length,
     pass: plans.filter((p) => p.result === '通过').length,
-    next: (plans.find((p) => p.state !== '已完成')?.date + ' ' + plans.find((p) => p.state !== '已完成')?.name) || '—',
+    next:
+      plans.find((p) => p.state !== '已完成')?.date +
+        ' ' +
+        plans.find((p) => p.state !== '已完成')?.name || '—',
   }
   return { stats, plans }
 }
@@ -2627,7 +2828,20 @@ function drillMutations(method: string, u: string, data: any): any {
   if (method === 'POST' && u === '/api/ops/drill') {
     const id = _memDrillSeq++
     const code = data.code || `DR-${String(id).padStart(3, '0')}`
-    const plan = { id, code, name: data.name || '', type: data.type || '电力', date: data.date || '', state: data.state || '计划中', result: data.result || '—', note: data.note || '', level: data.level || '—', scope: data.scope || '', duration: data.duration || 0, steps: data.steps || [] }
+    const plan = {
+      id,
+      code,
+      name: data.name || '',
+      type: data.type || '电力',
+      date: data.date || '',
+      state: data.state || '计划中',
+      result: data.result || '—',
+      note: data.note || '',
+      level: data.level || '—',
+      scope: data.scope || '',
+      duration: data.duration || 0,
+      steps: data.steps || [],
+    }
     _memDrills.push(plan)
     return plan as any
   }
@@ -2653,7 +2867,18 @@ function drillMutations(method: string, u: string, data: any): any {
   // POST /api/ops/drill/records
   if (method === 'POST' && u === '/api/ops/drill/records') {
     const id = _memRecSeq++
-    const rec = { id, planId: data.planId || 0, planName: data.planName || '', date: data.date || '', participants: data.participants || 0, startAt: data.startAt || '', endAt: data.endAt || '', score: data.score || 0, result: data.result || '—', note: data.note || '' }
+    const rec = {
+      id,
+      planId: data.planId || 0,
+      planName: data.planName || '',
+      date: data.date || '',
+      participants: data.participants || 0,
+      startAt: data.startAt || '',
+      endAt: data.endAt || '',
+      score: data.score || 0,
+      result: data.result || '—',
+      note: data.note || '',
+    }
     _memRecords.push(rec)
     return rec as any
   }
@@ -2675,18 +2900,133 @@ function drillMutations(method: string, u: string, data: any): any {
 
 /* =================== 租户管理 (阶段三 A · 资源运营) 离线兜底 =================== */
 let _memTenants: any[] = [
-  { id: 1, name: '云栖科技', code: 'TH-001', contact: '王经理', phone: '13800000001', industry: '互联网', contractNo: 'HT-2023-001', validFrom: '2023-01-01', validTo: '2026-12-31', status: 'active', rent: 120000, cabinets: 8, quotaCabinets: 10, quotaDevices: 200, quotaPowerKw: 160, quotaBandwidthMbps: 2000, usedDevices: 168, usedPowerKw: 142.6, usedBandwidthMbps: 1680, uOccupied: 264, note: '核心客户' },
-  { id: 2, name: '智算网络', code: 'TH-002', contact: '李总', phone: '13800000002', industry: '人工智能', contractNo: 'HT-2023-002', validFrom: '2023-03-01', validTo: '2025-09-30', status: 'expired', rent: 200000, cabinets: 12, quotaCabinets: 12, quotaDevices: 320, quotaPowerKw: 300, quotaBandwidthMbps: 4000, usedDevices: 305, usedPowerKw: 292.4, usedBandwidthMbps: 3720, uOccupied: 396, note: '合同待续签' },
-  { id: 3, name: '金信金融', code: 'TH-003', contact: '赵主管', phone: '13800000003', industry: '金融', contractNo: 'HT-2023-003', validFrom: '2023-06-01', validTo: '2027-06-30', status: 'active', rent: 150000, cabinets: 6, quotaCabinets: 10, quotaDevices: 150, quotaPowerKw: 120, quotaBandwidthMbps: 1500, usedDevices: 142, usedPowerKw: 119.8, usedBandwidthMbps: 980, uOccupied: 198, note: '等保三级' },
-  { id: 4, name: '联创医疗', code: 'TH-004', contact: '孙主任', phone: '13800000004', industry: '医疗', contractNo: 'HT-2024-001', validFrom: '2024-01-15', validTo: '2026-01-14', status: 'pending', rent: 90000, cabinets: 4, quotaCabinets: 8, quotaDevices: 100, quotaPowerKw: 80, quotaBandwidthMbps: 1000, usedDevices: 61, usedPowerKw: 52.3, usedBandwidthMbps: 410, uOccupied: 132, note: '新签待启用' },
-  { id: 5, name: '远图物流', code: 'TH-005', contact: '周经理', phone: '13800000005', industry: '物流', contractNo: 'HT-2024-002', validFrom: '2024-05-01', validTo: '2026-04-30', status: 'active', rent: 80000, cabinets: 5, quotaCabinets: 6, quotaDevices: 90, quotaPowerKw: 70, quotaBandwidthMbps: 900, usedDevices: 88, usedPowerKw: 68.9, usedBandwidthMbps: 870, uOccupied: 165, note: '机柜接近配额' },
+  {
+    id: 1,
+    name: '云栖科技',
+    code: 'TH-001',
+    contact: '王经理',
+    phone: '13800000001',
+    industry: '互联网',
+    contractNo: 'HT-2023-001',
+    validFrom: '2023-01-01',
+    validTo: '2026-12-31',
+    status: 'active',
+    rent: 120000,
+    cabinets: 8,
+    quotaCabinets: 10,
+    quotaDevices: 200,
+    quotaPowerKw: 160,
+    quotaBandwidthMbps: 2000,
+    usedDevices: 168,
+    usedPowerKw: 142.6,
+    usedBandwidthMbps: 1680,
+    uOccupied: 264,
+    note: '核心客户',
+  },
+  {
+    id: 2,
+    name: '智算网络',
+    code: 'TH-002',
+    contact: '李总',
+    phone: '13800000002',
+    industry: '人工智能',
+    contractNo: 'HT-2023-002',
+    validFrom: '2023-03-01',
+    validTo: '2025-09-30',
+    status: 'expired',
+    rent: 200000,
+    cabinets: 12,
+    quotaCabinets: 12,
+    quotaDevices: 320,
+    quotaPowerKw: 300,
+    quotaBandwidthMbps: 4000,
+    usedDevices: 305,
+    usedPowerKw: 292.4,
+    usedBandwidthMbps: 3720,
+    uOccupied: 396,
+    note: '合同待续签',
+  },
+  {
+    id: 3,
+    name: '金信金融',
+    code: 'TH-003',
+    contact: '赵主管',
+    phone: '13800000003',
+    industry: '金融',
+    contractNo: 'HT-2023-003',
+    validFrom: '2023-06-01',
+    validTo: '2027-06-30',
+    status: 'active',
+    rent: 150000,
+    cabinets: 6,
+    quotaCabinets: 10,
+    quotaDevices: 150,
+    quotaPowerKw: 120,
+    quotaBandwidthMbps: 1500,
+    usedDevices: 142,
+    usedPowerKw: 119.8,
+    usedBandwidthMbps: 980,
+    uOccupied: 198,
+    note: '等保三级',
+  },
+  {
+    id: 4,
+    name: '联创医疗',
+    code: 'TH-004',
+    contact: '孙主任',
+    phone: '13800000004',
+    industry: '医疗',
+    contractNo: 'HT-2024-001',
+    validFrom: '2024-01-15',
+    validTo: '2026-01-14',
+    status: 'pending',
+    rent: 90000,
+    cabinets: 4,
+    quotaCabinets: 8,
+    quotaDevices: 100,
+    quotaPowerKw: 80,
+    quotaBandwidthMbps: 1000,
+    usedDevices: 61,
+    usedPowerKw: 52.3,
+    usedBandwidthMbps: 410,
+    uOccupied: 132,
+    note: '新签待启用',
+  },
+  {
+    id: 5,
+    name: '远图物流',
+    code: 'TH-005',
+    contact: '周经理',
+    phone: '13800000005',
+    industry: '物流',
+    contractNo: 'HT-2024-002',
+    validFrom: '2024-05-01',
+    validTo: '2026-04-30',
+    status: 'active',
+    rent: 80000,
+    cabinets: 5,
+    quotaCabinets: 6,
+    quotaDevices: 90,
+    quotaPowerKw: 70,
+    quotaBandwidthMbps: 900,
+    usedDevices: 88,
+    usedPowerKw: 68.9,
+    usedBandwidthMbps: 870,
+    uOccupied: 165,
+    note: '机柜接近配额',
+  },
 ]
 let _memTenantSeq = 6
 
 function _deriveHealth(t: any): 'normal' | 'warn' | 'over' {
   const WARN = 0.8
   const ratio = (used: number, quota: number) => (quota ? used / quota : 0)
-  const rs = [ratio(t.cabinets || 0, t.quotaCabinets || 0), ratio(t.usedDevices || 0, t.quotaDevices || 0), ratio(t.usedPowerKw || 0, t.quotaPowerKw || 0), ratio(t.usedBandwidthMbps || 0, t.quotaBandwidthMbps || 0)]
+  const rs = [
+    ratio(t.cabinets || 0, t.quotaCabinets || 0),
+    ratio(t.usedDevices || 0, t.quotaDevices || 0),
+    ratio(t.usedPowerKw || 0, t.quotaPowerKw || 0),
+    ratio(t.usedBandwidthMbps || 0, t.quotaBandwidthMbps || 0),
+  ]
   if (rs.some((r) => r >= 1)) return 'over'
   if (rs.some((r) => r >= WARN)) return 'warn'
   return 'normal'
@@ -2698,14 +3038,18 @@ function tenantListMock(params?: MockQuery): { tenants: any[]; total: number } {
   if (kw) list = list.filter((t) => (t.name + t.code + t.contact).toLowerCase().includes(kw))
   const status = String(params?.status ?? '')
   if (status) list = list.filter((t) => t.status === status)
-  return { tenants: list.map((t) => ({ ...t, health: _deriveHealth(t) })), total: list.length } as any
+  return {
+    tenants: list.map((t) => ({ ...t, health: _deriveHealth(t) })),
+    total: list.length,
+  } as any
 }
 
 function tenantStatsMock(): any {
   const total = _memTenants.length
   const active = _memTenants.filter((t) => t.status === 'active').length
   const totalCabinets = _memTenants.reduce((s, t) => s + (t.cabinets || 0), 0)
-  const totalPowerKw = Math.round(_memTenants.reduce((s, t) => s + (t.usedPowerKw || 0), 0) * 10) / 10
+  const totalPowerKw =
+    Math.round(_memTenants.reduce((s, t) => s + (t.usedPowerKw || 0), 0) * 10) / 10
   let warnCount = 0
   let overCount = 0
   _memTenants.forEach((t) => {
@@ -2731,7 +3075,29 @@ function tenantMutations(method: string, u: string, data: any): any {
   if (method === 'POST' && u === '/api/ops/tenants') {
     const id = _memTenantSeq++
     const code = data.code || `TH-${String(id).padStart(3, '0')}`
-    const t = { id, code, name: data.name || '', contact: data.contact || '', phone: data.phone || '', industry: data.industry || '', contractNo: data.contractNo || '', validFrom: data.validFrom || '', validTo: data.validTo || '', status: data.status || 'active', rent: data.rent || 0, cabinets: data.cabinets || 0, quotaCabinets: data.quotaCabinets || 0, quotaDevices: data.quotaDevices || 0, quotaPowerKw: data.quotaPowerKw || 0, quotaBandwidthMbps: data.quotaBandwidthMbps || 0, usedDevices: data.usedDevices || 0, usedPowerKw: data.usedPowerKw || 0, usedBandwidthMbps: data.usedBandwidthMbps || 0, uOccupied: data.uOccupied || 0, note: data.note || '' }
+    const t = {
+      id,
+      code,
+      name: data.name || '',
+      contact: data.contact || '',
+      phone: data.phone || '',
+      industry: data.industry || '',
+      contractNo: data.contractNo || '',
+      validFrom: data.validFrom || '',
+      validTo: data.validTo || '',
+      status: data.status || 'active',
+      rent: data.rent || 0,
+      cabinets: data.cabinets || 0,
+      quotaCabinets: data.quotaCabinets || 0,
+      quotaDevices: data.quotaDevices || 0,
+      quotaPowerKw: data.quotaPowerKw || 0,
+      quotaBandwidthMbps: data.quotaBandwidthMbps || 0,
+      usedDevices: data.usedDevices || 0,
+      usedPowerKw: data.usedPowerKw || 0,
+      usedBandwidthMbps: data.usedBandwidthMbps || 0,
+      uOccupied: data.uOccupied || 0,
+      note: data.note || '',
+    }
     _memTenants.push(t)
     return { ...t, health: _deriveHealth(t) }
   }
@@ -2753,6 +3119,393 @@ function tenantMutations(method: string, u: string, data: any): any {
       _memTenants = _memTenants.filter((x) => x.id !== id)
       return { ok: true }
     }
+  }
+  return null
+}
+
+/* =================== 运维工作流 (D5 后端化) 离线兜底 =================== */
+const _WF_TYPE_PREFIX: Record<string, string> = {
+  incident: 'INC',
+  problem: 'PRB',
+  change: 'CHG',
+  risk: 'RSK',
+}
+const _WF_DEFAULT_APPROVAL: Record<string, { approver: string; status: string }[]> = {
+  incident: [{ approver: '一线主管', status: 'pending' }],
+  problem: [{ approver: '技术专家', status: 'pending' }],
+  change: [
+    { approver: '变更委员会', status: 'pending' },
+    { approver: '运维经理', status: 'pending' },
+  ],
+  risk: [{ approver: '安全负责人', status: 'pending' }],
+}
+const _WF_SLA: Record<string, number> = { P1: 4, P2: 8, P3: 24, P4: 72 }
+
+function _wfDateStr(d: Date): string {
+  return d.toISOString().slice(0, 19).replace('T', ' ')
+}
+function _wfNow(): string {
+  return _wfDateStr(new Date())
+}
+function _wfDaysAgo(n: number): string {
+  return _wfDateStr(new Date(Date.now() - n * 86400000))
+}
+function _wfApprovalFor(t: string) {
+  return (_WF_DEFAULT_APPROVAL[t] || _WF_DEFAULT_APPROVAL.incident).map((n) => ({
+    ...n,
+    at: n.status === 'pending' ? null : _wfNow(),
+  }))
+}
+function _wfGenId(arr: any[], t: string): string {
+  const prefix = _WF_TYPE_PREFIX[t] || 'WF'
+  const cnt = arr.filter((x) => String(x.id).startsWith(prefix + '-')).length + 1
+  return `${prefix}-2026-${String(cnt).padStart(4, '0')}`
+}
+function _wfParse(d: string): number {
+  const ms = new Date(String(d).replace(' ', 'T') + 'Z').getTime()
+  return Number.isNaN(ms) ? 0 : ms
+}
+
+let _memWorkflows: any[] = [
+  {
+    id: 'INC-2026-0001',
+    type: 'incident',
+    title: 'A 区 3 号冷机出水温度偏高告警',
+    description:
+      'BMS 上报 A 区 3 号冷机出水温度持续高于 15℃，已触发阈值告警，需现场排查冷凝器与阀门。',
+    priority: 'P1',
+    status: 'progress',
+    owner: '张伟',
+    applicant: '李娜',
+    createdAt: _wfDaysAgo(2),
+    updatedAt: _wfDaysAgo(1),
+    slaHours: 4,
+    riskLevel: undefined,
+    approval: [
+      { approver: '一线主管', status: 'approved', comment: '已派单现场', at: _wfDaysAgo(2) },
+    ],
+    logs: [
+      { user: '李娜', text: '创建', at: _wfDaysAgo(2) },
+      { user: '张伟', text: '推进至 progress', at: _wfDaysAgo(1) },
+    ],
+    knowledgeLinks: ['KB-0001'],
+  },
+  {
+    id: 'PRB-2026-0001',
+    type: 'problem',
+    title: '核心网络偶发丢包根因分析',
+    description: '近一周核心交换机上联端口出现间歇性丢包，需定位是光模块还是路由策略问题。',
+    priority: 'P2',
+    status: 'approval',
+    owner: '王强',
+    applicant: '王强',
+    createdAt: _wfDaysAgo(1),
+    updatedAt: _wfDaysAgo(1),
+    slaHours: 8,
+    riskLevel: undefined,
+    approval: [{ approver: '技术专家', status: 'pending' }],
+    logs: [{ user: '王强', text: '创建', at: _wfDaysAgo(1) }],
+    knowledgeLinks: [],
+  },
+  {
+    id: 'CHG-2026-0001',
+    type: 'change',
+    title: 'B 区 UPS 蓄电池组更换变更',
+    description: '计划对 B 区 UPS 蓄电池组进行整组更换，需停电解列，影响 3 个机柜。',
+    priority: 'P2',
+    status: 'new',
+    owner: '赵敏',
+    applicant: '赵敏',
+    createdAt: _wfDaysAgo(1),
+    updatedAt: _wfDaysAgo(1),
+    slaHours: 8,
+    riskLevel: undefined,
+    approval: [
+      { approver: '变更委员会', status: 'pending' },
+      { approver: '运维经理', status: 'pending' },
+    ],
+    logs: [{ user: '赵敏', text: '创建', at: _wfDaysAgo(1) }],
+    knowledgeLinks: ['KB-0003'],
+  },
+  {
+    id: 'RSK-2026-0001',
+    type: 'risk',
+    title: '市电双路中断单路运行风险',
+    description: '当前 A 路市电检修，机房处于单路运行，存在单点故障风险，需制定降级预案。',
+    priority: 'P1',
+    status: 'new',
+    owner: '安全负责人',
+    applicant: '孙主任',
+    createdAt: _wfDaysAgo(3),
+    updatedAt: _wfDaysAgo(3),
+    slaHours: 4,
+    riskLevel: 'high',
+    approval: [{ approver: '安全负责人', status: 'pending' }],
+    logs: [{ user: '孙主任', text: '创建', at: _wfDaysAgo(3) }],
+    knowledgeLinks: [],
+  },
+  {
+    id: 'INC-2026-0002',
+    type: 'incident',
+    title: '门禁系统离线告警',
+    description: 'C 区门禁控制器离线，无法远程开门，已临时改为机械钥匙管理。',
+    priority: 'P3',
+    status: 'closed',
+    owner: '周磊',
+    applicant: '周磊',
+    createdAt: _wfDaysAgo(5),
+    updatedAt: _wfDaysAgo(4),
+    slaHours: 24,
+    riskLevel: undefined,
+    approval: [{ approver: '一线主管', status: 'approved', comment: '已恢复', at: _wfDaysAgo(4) }],
+    logs: [
+      { user: '周磊', text: '创建', at: _wfDaysAgo(5) },
+      { user: '一线主管', text: '审批通过', at: _wfDaysAgo(4) },
+      { user: '周磊', text: '关闭', at: _wfDaysAgo(4) },
+    ],
+    knowledgeLinks: [],
+  },
+  {
+    id: 'PRB-2026-0002',
+    type: 'problem',
+    title: '空调加湿系统频繁补水',
+    description: '加湿罐消耗异常，疑似进水阀关不严，需评估是否更换。',
+    priority: 'P3',
+    status: 'rejected',
+    owner: '李娜',
+    applicant: '李娜',
+    createdAt: _wfDaysAgo(6),
+    updatedAt: _wfDaysAgo(5),
+    slaHours: 24,
+    riskLevel: undefined,
+    approval: [
+      {
+        approver: '技术专家',
+        status: 'rejected',
+        comment: '非紧急，纳入月度维护',
+        at: _wfDaysAgo(5),
+      },
+    ],
+    logs: [{ user: '李娜', text: '创建', at: _wfDaysAgo(6) }],
+    knowledgeLinks: [],
+  },
+]
+
+function workflowListMock(params?: MockQuery): { items: any[] } {
+  let list = _memWorkflows.slice()
+  const wtype = String(params?.wtype ?? params?.type ?? '').trim()
+  const status = String(params?.status ?? '').trim()
+  const kw = String(params?.kw ?? '')
+    .trim()
+    .toLowerCase()
+  if (wtype) list = list.filter((w) => w.type === wtype)
+  if (status) list = list.filter((w) => w.status === status)
+  if (kw) list = list.filter((w) => (w.id + w.title + w.owner).toLowerCase().includes(kw))
+  list.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+  return { items: list }
+}
+
+function workflowStatsMock(): any {
+  const arr = _memWorkflows
+  const now = Date.now()
+  const byType: Record<string, number> = {}
+  const byStatus: Record<string, number> = {}
+  const byPriority: Record<string, number> = {}
+  let open = 0
+  let breached = 0
+  let monthCreated = 0
+  let monthClosed = 0
+  const durations: number[] = []
+  const ym = new Date().getFullYear() * 12 + new Date().getMonth()
+  for (const w of arr) {
+    byType[w.type] = (byType[w.type] || 0) + 1
+    byStatus[w.status] = (byStatus[w.status] || 0) + 1
+    byPriority[w.priority] = (byPriority[w.priority] || 0) + 1
+    const created = _wfParse(w.createdAt)
+    const updated = _wfParse(w.updatedAt)
+    const sla = w.slaHours || 24
+    if (!['closed', 'rejected'].includes(w.status)) {
+      open++
+      if (now - created > sla * 3600000) breached++
+    }
+    if (created) {
+      const cy = new Date(created).getFullYear() * 12 + new Date(created).getMonth()
+      if (cy === ym) monthCreated++
+    }
+    if (w.status === 'closed') {
+      if (updated) {
+        const uy = new Date(updated).getFullYear() * 12 + new Date(updated).getMonth()
+        if (uy === ym) monthClosed++
+      }
+      if (created && updated) durations.push((updated - created) / 3600000)
+    }
+  }
+  const avgResolve = durations.length
+    ? Math.round((durations.reduce((s, x) => s + x, 0) / durations.length) * 10) / 10
+    : 0
+  const breachRate = arr.length ? Math.round((breached / arr.length) * 100) : 0
+  // 近 12 周趋势（周一起算）
+  const weeks = 12
+  const monday = new Date()
+  monday.setDate(monday.getDate() - monday.getDay())
+  monday.setHours(0, 0, 0, 0)
+  const starts: number[] = []
+  for (let i = weeks - 1; i >= 0; i--) starts.push(monday.getTime() - i * 7 * 86400000)
+  const createdSeries = new Array(weeks).fill(0)
+  const closedSeries = new Array(weeks).fill(0)
+  for (const w of arr) {
+    const created = _wfParse(w.createdAt)
+    const updated = _wfParse(w.updatedAt)
+    for (let i = 0; i < weeks; i++) {
+      const lo = starts[i]
+      const hi = lo + 7 * 86400000
+      if (created >= lo && created < hi) createdSeries[i]++
+      if (w.status === 'closed' && updated >= lo && updated < hi) closedSeries[i]++
+    }
+  }
+  const trend = starts.map((s, i) => {
+    const d = new Date(s)
+    const week = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return { week, created: createdSeries[i], closed: closedSeries[i] }
+  })
+  return {
+    total: arr.length,
+    open,
+    monthCreated,
+    monthClosed,
+    avgResolve,
+    breachRate,
+    byType,
+    byStatus,
+    byPriority,
+    trend,
+  }
+}
+
+/** 工作流内存 CRUD + 状态流转 (对齐后端 crud/workflow.py 状态机) */
+function workflowMutations(method: string, url: string, data: any): any {
+  const m = url.match(/^\/api\/ops\/workflows\/(.+)$/)
+  if (m) {
+    const now = _wfNow()
+    const rest = m[1]
+    const slash = rest.indexOf('/')
+    const id = decodeURIComponent(slash === -1 ? rest : rest.slice(0, slash))
+    const item = _memWorkflows.find((x) => x.id === id)
+    const me = (data && (data.operator || data.user || data.applicant)) || 'me'
+    if (slash === -1) {
+      // 无子路径: 详情 / 更新 / 删除
+      if (method === 'GET') return item || null
+      if (method === 'PUT') {
+        if (!item) return null
+        const patch: any = { ...data }
+        if (patch.knowledgeLinks) {
+          patch.knowledge_links = patch.knowledgeLinks
+          delete patch.knowledgeLinks
+        }
+        Object.assign(item, patch, { updatedAt: now })
+        return item
+      }
+      if (method === 'DELETE') {
+        _memWorkflows = _memWorkflows.filter((x) => x.id !== id)
+        return { ok: true }
+      }
+      return null
+    }
+    // 有子路径: 动作 (advance/close/reopen/approve/logs/link[/kbId])
+    if (!item) return null
+    const actParts = rest.slice(slash + 1).split('/')
+    const act = actParts[0]
+    if (act === 'advance') {
+      if (item.status === 'new')
+        item.status = item.approval && item.approval.length ? 'approval' : 'progress'
+      else if (item.status === 'progress') item.status = 'closed'
+      item.updatedAt = now
+      item.logs = [...(item.logs || []), { user: me, text: `推进至 ${item.status}`, at: now }]
+      return item
+    }
+    if (act === 'close') {
+      item.status = 'closed'
+      item.updatedAt = now
+      item.logs = [...(item.logs || []), { user: me, text: '关闭', at: now }]
+      return item
+    }
+    if (act === 'reopen') {
+      item.status = 'progress'
+      item.updatedAt = now
+      item.logs = [...(item.logs || []), { user: me, text: '重新打开', at: now }]
+      return item
+    }
+    if (act === 'approve') {
+      const idx = Number(data && data.node_index)
+      const approval = (item.approval || []).slice()
+      if (idx < 0 || idx >= approval.length) return null
+      approval[idx] = {
+        ...approval[idx],
+        status: data.result,
+        comment: data.comment || '',
+        at: now,
+      }
+      item.approval = approval
+      item.updatedAt = now
+      item.logs = [
+        ...(item.logs || []),
+        { user: me, text: `审批节点 ${idx + 1}: ${data.result}`, at: now },
+      ]
+      if (data.result === 'rejected') item.status = 'rejected'
+      else if (approval.every((n: any) => n.status === 'approved')) item.status = 'progress'
+      return item
+    }
+    if (act === 'logs') {
+      item.logs = [...(item.logs || []), { user: me, text: data.text, at: now }]
+      item.updatedAt = now
+      return item
+    }
+    if (act === 'link') {
+      const kb = actParts[1]
+      const links = (item.knowledgeLinks || []).slice()
+      if (kb) {
+        const decoded = decodeURIComponent(kb)
+        if (method === 'DELETE') {
+          const i = links.indexOf(decoded)
+          if (i >= 0) links.splice(i, 1)
+        } else if (!links.includes(decoded)) {
+          links.push(decoded)
+        }
+      }
+      item.knowledgeLinks = links
+      item.updatedAt = now
+      return item
+    }
+    return null
+  }
+  // 列表
+  if (method === 'GET' && url === '/api/ops/workflows') return workflowListMock(data)
+  // 统计
+  if (method === 'GET' && url === '/api/ops/workflows/stats') return workflowStatsMock()
+  // 新建
+  if (method === 'POST' && url === '/api/ops/workflows') {
+    const t = data.type || 'incident'
+    const now = _wfNow()
+    const applicant = data.applicant || 'me'
+    const item: any = {
+      id: _wfGenId(_memWorkflows, t),
+      type: t,
+      title: data.title || '',
+      description: data.description || '',
+      priority: data.priority || 'P3',
+      status: 'new',
+      owner: data.owner || applicant,
+      applicant,
+      createdAt: now,
+      updatedAt: now,
+      slaHours: _WF_SLA[data.priority || 'P3'] || 24,
+      riskLevel: t === 'risk' ? data.riskLevel || 'medium' : undefined,
+      approval: _wfApprovalFor(t),
+      logs: [{ user: applicant, text: '创建', at: now }],
+      knowledgeLinks: [],
+    }
+    _memWorkflows.push(item)
+    return item
   }
   return null
 }
@@ -3310,7 +4063,8 @@ const STORE: MockStore = {
         domain: domains[i % domains.length],
         type: t,
         summary: '这是知识库条目自动生成的摘要，用于演示知识库列表、搜索与审核流程。',
-        content: '详细内容：操作流程、检查要点、处置步骤、注意事项等完整的文档内容。\n\n步骤1：确认环境\n步骤2：执行操作\n步骤3：验证结果',
+        content:
+          '详细内容：操作流程、检查要点、处置步骤、注意事项等完整的文档内容。\n\n步骤1：确认环境\n步骤2：执行操作\n步骤3：验证结果',
         tags: ['演示', domains[i % domains.length]],
         relatedCategories: [cats[i % cats.length]],
         relatedDomains: [domains[i % domains.length]],
@@ -3392,7 +4146,11 @@ function wrAlarmRule(method: string, url: string, data: any, _cfg: any): any {
     const id = Number(decodeURIComponent(idM[1]))
     const idx = STORE.alarmRules.findIndex((r) => Number(r.id) === id)
     if (idx < 0) throw { response: { data: { message: '规则不存在', detail: '规则不存在' } } }
-    STORE.alarmRules[idx] = { ...STORE.alarmRules[idx], ...data, updatedAt: new Date().toISOString() } as any
+    STORE.alarmRules[idx] = {
+      ...STORE.alarmRules[idx],
+      ...data,
+      updatedAt: new Date().toISOString(),
+    } as any
     return { ...STORE.alarmRules[idx] }
   }
   if (method === 'delete' && idM) {
@@ -3435,7 +4193,9 @@ function wrKnowledge(method: string, url: string, data: any, cfg: any): any {
         domain: 'ops',
         type: 'manual',
         summary: `通过文件导入自动创建的知识条目，等待审核入库。(模拟解析第 ${i + 1} 段)`,
-        content: file ? `已从文件 ${file.name} 解析内容 (${file.size} bytes)\n\n请在待审核列表确认后入库。` : '文件内容已解析，待审核。',
+        content: file
+          ? `已从文件 ${file.name} 解析内容 (${file.size} bytes)\n\n请在待审核列表确认后入库。`
+          : '文件内容已解析，待审核。',
         tags: ['导入', '待审核'],
         version: '0.1',
         reviewStatus: 'pending',
@@ -3514,7 +4274,11 @@ function wrShift(method: string, url: string, data: any): any {
     if (method === 'put') {
       const idx = STORE.handovers.findIndex((h) => h.id === id)
       if (idx < 0) throw { response: { data: { detail: '交接记录不存在' } } }
-      STORE.handovers[idx] = { ...STORE.handovers[idx], ...data, updatedAt: new Date().toISOString() }
+      STORE.handovers[idx] = {
+        ...STORE.handovers[idx],
+        ...data,
+        updatedAt: new Date().toISOString(),
+      }
       return { ...STORE.handovers[idx] }
     }
     if (method === 'delete') {
@@ -3618,7 +4382,14 @@ function wrExternal(method: string, url: string, data: any): any {
     }
     if (method === 'post') {
       const id = nextIdFor(list)
-      const newMd = { id, deviceId: did, metricName: data.metricName ?? data.label ?? '', enabled: true, dataType: 'number', ...data }
+      const newMd = {
+        id,
+        deviceId: did,
+        metricName: data.metricName ?? data.label ?? '',
+        enabled: true,
+        dataType: 'number',
+        ...data,
+      }
       list.push(newMd)
       return { ...newMd } as any
     }
@@ -3655,7 +4426,8 @@ export function mockWriteForUrl(
     // 外部设备 + 测点
     if (u.startsWith('/api/external')) return wrExternal(method, u, data)
     // 故障影响分析 (POST 计算, 离线兜底直接返回传播结果)
-    if (u === '/api/ops/fault-impact/analyze') return faultImpactAnalyzeMock(data || { faultIds: [] })
+    if (u === '/api/ops/fault-impact/analyze')
+      return faultImpactAnalyzeMock(data || { faultIds: [] })
     // 应急演练 (内存 CRUD 兜底)
     if (u === '/api/ops/drill' || u.startsWith('/api/ops/drill/')) {
       const r = drillMutations(method, u, data || {})
@@ -3664,6 +4436,11 @@ export function mockWriteForUrl(
     // 租户管理 (内存 CRUD 兜底)
     if (u === '/api/ops/tenants' || u.startsWith('/api/ops/tenants/')) {
       const r = tenantMutations(method, u, data || {})
+      if (r !== null) return r
+    }
+    // 运维工作流 (内存 CRUD + 状态流转兜底)
+    if (u === '/api/ops/workflows' || u.startsWith('/api/ops/workflows/')) {
+      const r = workflowMutations(method, u, data || {})
       if (r !== null) return r
     }
   } catch (e) {
@@ -3697,7 +4474,9 @@ function rdKnowledge(params?: any): any {
     list = list.filter(
       (k) =>
         String(k.title).toLowerCase().includes(q) ||
-        String(k.content || '').toLowerCase().includes(q) ||
+        String(k.content || '')
+          .toLowerCase()
+          .includes(q) ||
         (k.tags || []).some((t: string) => t.toLowerCase().includes(q)),
     )
   }
@@ -3722,7 +4501,10 @@ function rdPendingKnowledge(): { total: number; items: KnowledgeItem[] } {
 }
 function rdMetricDefs(deviceId: string): any[] {
   if (!STORE.metricDefs[deviceId]) {
-    const specs = specsFor(MOCK_REGISTERED.find((d) => d.device_id === deviceId)?.category, deviceId)
+    const specs = specsFor(
+      MOCK_REGISTERED.find((d) => d.device_id === deviceId)?.category,
+      deviceId,
+    )
     STORE.metricDefs[deviceId] = specs.map((s, i) => ({
       id: i + 1,
       deviceId,
@@ -3783,8 +4565,16 @@ export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown |
     '/api/ops/tenants/stats': tenantStatsMock(),
     '/api/ops/risk': DC.risk,
     '/api/ops/fault-impact/sources': faultImpactSourcesMock(),
+    '/api/ops/workflows': workflowListMock(cfg?.params),
+    '/api/ops/workflows/stats': workflowStatsMock(),
   }
   if (u in table) return table[u]
+
+  // ---- 工作流详情 (单条) 离线兜底 ----
+  if (u.startsWith('/api/ops/workflows/')) {
+    const r = workflowMutations('GET', u, cfg?.params)
+    if (r !== null) return r
+  }
 
   // ---- 租户详情 (单条) 离线兜底 ----
   if (u.startsWith('/api/ops/tenants')) {
@@ -3796,7 +4586,9 @@ export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown |
   if (u === '/api/thing-models') {
     const kw = String(cfg?.params?.kw ?? '').toLowerCase()
     const all = thingModelsAdminMock()
-    return kw ? all.filter((m) => (m.name + m.modelKey + m.category).toLowerCase().includes(kw)) : all
+    return kw
+      ? all.filter((m) => (m.name + m.modelKey + m.category).toLowerCase().includes(kw))
+      : all
   }
   const tmOne = u.match(/^\/api\/thing-models\/(\d+)$/)
   if (tmOne) return thingModelAdminOneMock(Number(tmOne[1])) ?? null
@@ -3841,7 +4633,8 @@ export function mockForUrl(url: string, cfg?: { params?: MockQuery }): unknown |
   // ---- 告警规则引擎 / 告警历史 ----
   if (u === '/api/alarm-rules') return alarmRulesMock()
   if (u === '/api/alarm-rules/state') return alarmEngineStateMock()
-  if (u === '/api/alarm-history') return alarmHistoryMock(cfg?.params as AlarmHistoryQuery | undefined)
+  if (u === '/api/alarm-history')
+    return alarmHistoryMock(cfg?.params as AlarmHistoryQuery | undefined)
 
   // ---- 机柜 / 统一设备台账 ----
   if (u === '/api/cabinets') return cabinetsMock(cfg?.params)

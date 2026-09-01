@@ -139,10 +139,14 @@ export const getAssistantModels = () =>
   request.get<unknown, { active: string; models: AssistantModel[] }>('/api/ops/assistant/models')
 /** 切换激活模型（admin/operator） */
 export const selectAssistantModel = (model: string) =>
-  request.post<unknown, { ok: boolean; active: string }>('/api/ops/assistant/models/select', { model })
+  request.post<unknown, { ok: boolean; active: string }>('/api/ops/assistant/models/select', {
+    model,
+  })
 /** 探测指定模型真实推理可用性 */
 export const assistantModelStatus = (model: string) =>
-  request.get<unknown, AssistantStatusResp>('/api/ops/assistant/models/status', { params: { model } })
+  request.get<unknown, AssistantStatusResp>('/api/ops/assistant/models/status', {
+    params: { model },
+  })
 
 /** 提交 AI 回答反馈 (满意度/纠错) */
 export const submitAssistantFeedback = (payload: {
@@ -190,10 +194,14 @@ export const updateAlarmRule = (id: string, data: Partial<AlarmRuleDef>) =>
 export const deleteAlarmRule = (id: string) =>
   request.delete<unknown, void>(`/api/alarm-rules/${encodeURIComponent(id)}`)
 
-export const toggleAlarmRule = (id: string | number, status?: 'enabled' | 'silenced' | 'disabled') => {
-  const url = status && status !== 'disabled'
-    ? `/api/alarm-rules/${encodeURIComponent(id)}/status`
-    : `/api/alarm-rules/${encodeURIComponent(id)}/toggle`
+export const toggleAlarmRule = (
+  id: string | number,
+  status?: 'enabled' | 'silenced' | 'disabled',
+) => {
+  const url =
+    status && status !== 'disabled'
+      ? `/api/alarm-rules/${encodeURIComponent(id)}/status`
+      : `/api/alarm-rules/${encodeURIComponent(id)}/toggle`
   const body = status && status !== 'disabled' ? { status } : undefined
   return request.patch<unknown, AlarmRuleDef>(url, body)
 }
@@ -203,6 +211,44 @@ export const getAuditLogs = (params: AuditLogQuery = {}) =>
     '/api/audit-logs',
     { params },
   )
+
+/* ================= 行级变更审计 API (row_audit 触发器只读查询) ================= */
+
+export interface RowAuditItem {
+  id: number
+  ts: string | null
+  table_name: string
+  row_id: string | null
+  action: string
+  old_val: Record<string, unknown> | null
+  new_val: Record<string, unknown> | null
+  changed_by: string | null
+  app_name: string | null
+}
+
+export interface RowAuditStats {
+  total: number
+  by_table: { table_name: string; count: number }[]
+  by_action: { action: string; count: number }[]
+}
+
+export interface RowAuditQuery {
+  page?: number
+  page_size?: number
+  table_name?: string
+  action?: string
+  changed_by?: string
+  start?: string
+  end?: string
+}
+
+export const getRowAuditLogs = (params: RowAuditQuery = {}) =>
+  request.get<unknown, { items: RowAuditItem[]; total: number; page: number; page_size: number }>(
+    '/api/row-audit',
+    { params },
+  )
+
+export const getRowAuditStats = () => request.get<unknown, RowAuditStats>('/api/row-audit/stats')
 
 /* ================= 告警持久化 API ================= */
 
@@ -456,13 +502,12 @@ export const updateDrill = (id: number, data: Partial<DrillPlan>) =>
   request.put<unknown, DrillPlan>(`/api/ops/drill/${id}`, data)
 
 /** 删除演练计划 */
-export const deleteDrill = (id: number) =>
-  request.delete(`/api/ops/drill/${id}`)
+export const deleteDrill = (id: number) => request.delete(`/api/ops/drill/${id}`)
 
 /** 演练记录列表 (真实数据, 可过滤 planId) */
 export const getDrillRecords = (planId?: number) =>
   request.get<unknown, { records: DrillRecord[]; total: number }>(
-    '/api/ops/drill/records' + (planId != null ? `?planId=${planId}` : '')
+    '/api/ops/drill/records' + (planId != null ? `?planId=${planId}` : ''),
   )
 
 /** 新建演练记录 */
@@ -474,8 +519,7 @@ export const updateDrillRecord = (id: number, data: Partial<DrillRecord>) =>
   request.put<unknown, DrillRecord>(`/api/ops/drill/records/${id}`, data)
 
 /** 删除演练记录 */
-export const deleteDrillRecord = (id: number) =>
-  request.delete(`/api/ops/drill/records/${id}`)
+export const deleteDrillRecord = (id: number) => request.delete(`/api/ops/drill/records/${id}`)
 
 /* ===== 租户管理 (阶段三 A · 资源运营) — 真实数据驱动 ===== */
 /** 租户列表 (真实数据, 支持关键字/状态过滤) */
@@ -484,14 +528,11 @@ export const getTenants = (kw?: string, status?: string) => {
   if (kw) q.push(`kw=${encodeURIComponent(kw)}`)
   if (status) q.push(`status=${encodeURIComponent(status)}`)
   const qs = q.length ? '?' + q.join('&') : ''
-  return request.get<unknown, { tenants: TenantItem[]; total: number }>(
-    `/api/ops/tenants${qs}`
-  )
+  return request.get<unknown, { tenants: TenantItem[]; total: number }>(`/api/ops/tenants${qs}`)
 }
 
 /** 租户级统计汇总 (顶部统计卡真实聚合) */
-export const getTenantStats = () =>
-  request.get<unknown, TenantStats>('/api/ops/tenants/stats')
+export const getTenantStats = () => request.get<unknown, TenantStats>('/api/ops/tenants/stats')
 
 /** 新建租户 */
 export const createTenant = (data: Partial<TenantItem>) =>
@@ -502,5 +543,4 @@ export const updateTenant = (id: number, data: Partial<TenantItem>) =>
   request.put<unknown, TenantItem>(`/api/ops/tenants/${id}`, data)
 
 /** 删除租户 */
-export const deleteTenant = (id: number) =>
-  request.delete(`/api/ops/tenants/${id}`)
+export const deleteTenant = (id: number) => request.delete(`/api/ops/tenants/${id}`)

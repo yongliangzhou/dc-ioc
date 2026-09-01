@@ -1,6 +1,7 @@
 """运维工作流 API (D5 后端化: 流程数据服务端化, 审批权限改为基于角色)。
 
   - getWorkflows       -> GET    /api/ops/workflows
+  - getWorkflowStats   -> GET    /api/ops/workflows/stats
   - createWorkflow     -> POST   /api/ops/workflows
   - getWorkflow        -> GET    /api/ops/workflows/{id}
   - updateWorkflow     -> PUT    /api/ops/workflows/{id}
@@ -53,6 +54,17 @@ def list_workflows(
 ):
     items = crud.list_items(db, wtype=wtype, status=status, kw=kw)
     return {"items": items}
+
+
+# 注意: 必须注册在 /{wid} 之前, 否则会被路径参数吞掉
+@router.get("/stats", response_model=dict)
+def workflow_stats(db: Session = Depends(get_db)):
+    """流程统计聚合: KPI(进行中/本月新建/本月关闭/平均时长/SLA超时率)
+    + 分布(类型/状态/优先级) + 近 12 周创建-关闭趋势。
+
+    统计口径放在服务端(UTC), 前端仅做展示, 避免本地时钟差异导致口径漂移。
+    """
+    return crud.stats(db)
 
 
 @router.post(
