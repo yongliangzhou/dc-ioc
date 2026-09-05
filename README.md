@@ -1,6 +1,6 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.11.0** | 侧边导航按业务域重组为 9 组并支持折叠 · 菜单图标体系补全 · 原生弹窗收敛收口 | 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
+> **v0.12.0** | 统一图形编辑入口（12 个图形页）· 统一告警触达中心 · 告警自动建单 · 上架模拟器 · 全项目体检（41 用例测试基线 / i18n 对齐门禁 / 裸 except 可观测）| 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
 
 ---
 
@@ -52,6 +52,8 @@ dc-ioc-platform/
 │   │   │       ├── runbooks.py        #   运维预案 (告警关联处置预案, /api/runbooks/related)
 │   │   │       ├── audit.py           #   审计日志查询 (/api/audit-logs, 过滤/分页/CSV 导出)
 │   │   │       ├── uploads.py         #   通用文件上传 (/api/uploads/avatar|attachment|batch)
+│   │   │       ├── graphic_editor.py  #   统一图形编辑入口 (场景覆盖层) + 加油记录 CRUD
+│   │   │       ├── notification.py    #   通知中心 (通道 CRUD / 发送记录 / 测试发送)
 │   │   │       ├── network.py         #   网络监控 (交换机/路由/防火墙/无线)
 │   │   │       ├── domain.py          #   域名/路由监控
 │   │   │       ├── demo.py            #   v2 演示/兜底数据
@@ -64,6 +66,9 @@ dc-ioc-platform/
 │   │   │   ├── alarm_engine.py        #   告警引擎 (13类设备阈值+收敛+抑制+通知)
 │   │   │   ├── alarm_notify_webhook.py#   告警 Webhook 通知 (钉钉/邮件/微信)
 │   │   │   ├── ws_broadcaster.py      #   WebSocket 广播管理器
+│   │   │   ├── notification_service.py#   统一告警触达中心 (级别路由/静默/去重/重试/留痕)
+│   │   │   ├── alarm_ticket_bridge.py #   告警→工单自动建单桥 (幂等, 双向联动)
+│   │   │   └── capacity_whatif.py     #   上架模拟器 (容量 What-if 纯函数推演)
 │   │   │   └── dc_ioc_data.py         #   兜底数据生成器 (22 个业务域, 34 个函数)
 │   │   ├── db/session.py              # SQLAlchemy 引擎 (连接池参数配置化) + lifespan 建表
 │   │   ├── collectors/                # 采集层 (MockCollector / Kafka 消费)
@@ -77,6 +82,7 @@ dc-ioc-platform/
 │   │       ├── 012_permission_matrix.md#   权限矩阵
 │   │       ├── 009_index_optimization.sql    # 高频查询索引
 │   │       └── 013_timeseries_optimization.sql # 时序超表/压缩/连续聚合
+│   ├── alembic/                       # Alembic 迁移 (0001~0012: 核心表/审计软删/CHECK/BIGINT/FK/行级审计/超表/图形编辑/通知)
 │   ├── tests/                         # 测试 (Phase 2 核心 / 负载)
 │   ├── requirements.txt               # Python 依赖
 │   ├── Dockerfile
@@ -163,7 +169,9 @@ dc-ioc-platform/
 │   │   │       ├── WorkflowCenter.vue #     ITIL 流程
 │   │   │       ├── IntegrationHub.vue #     集成验证中心
 │   │   │       ├── DataCenterManage.vue #   多数据中心管理 (增改删/启停/设为当前)
-│   │   │       └── DataCenterCompare.vue #  跨中心对比仪表盘 + 统一告警视图
+│   │   │       ├── DataCenterCompare.vue #  跨中心对比仪表盘 + 统一告警视图
+│   │   │       ├── NotificationCenter.vue #  统一告警触达中心 (通道/记录/测试)
+│   │   │       └── CapacityWhatIf.vue #     上架模拟器 (容量 What-if)
 │   │   │   ├── energy/
 │   │   │       └── EnergyDashboard.vue #   电量预测与节能 (含 iCooling 制冷策略优化)
 │   │   │   ├── twin/
@@ -174,6 +182,9 @@ dc-ioc-platform/
 │   │   │   ├── metrics.ts             #   实时指标状态
 │   │   │   ├── tickets.ts             #   工单状态 (持久化)
 │   │   │   └── datacenter.ts          #   当前数据中心 (Pinia: 切换持久化 + 影响拓扑/监控范围)
+│   │   ├── composables/
+│   │   │   ├── useAsyncPage.ts        #   异步页状态机 (useAsyncPage / useAsyncPageAll / toErrorMessage)
+│   │   │   └── useGraphicEditor.ts    #   统一图形编辑状态机 (场景覆盖层: 覆盖/删除/自建)
 │   │   ├── hooks/useWebSocket.ts      #   WebSocket 组合式函数 (自动重连)
 │   │   ├── engine/
 │   │   │   └── realtimeLinkage.ts     #   实时越限联动引擎
@@ -184,9 +195,13 @@ dc-ioc-platform/
 │   │   │   ├── MetricCard.vue         #     指标卡片
 │   │   │   ├── KnowledgePanels.vue    #     知识库面板
 │   │   │   ├── Pagination.vue         #     分页
+│   │   │   ├── common/                #     通用区块 (AsyncSection / ErrorBanner / GraphicEditDrawer 等)
 │   │   │   ├── charts/                #     图表 (BaseChart / TrendChart)
 │   │   │   └── business/              #     业务组件 (DeviceMonitor / TicketFormModal / SlaSummary)
-│   │   └── types/index.ts             #   TS 类型定义
+│   │   ├── types/
+│   │   │   ├── index.ts               #   TS 类型定义
+│   │   │   ├── graphic.ts             #   图形场景覆盖层 + 加油记录契约
+│   │   │   └── capacity.ts            #   上架模拟器契约
 │   ├── package.json
 │   ├── vite.config.ts
 │   └── Dockerfile
@@ -222,9 +237,19 @@ dc-ioc-platform/
 │   ├── cache_strategy.md               #   缓存策略 (推广/失效/预热 + cache_json TTL)
 │   └── thing_models.example.json       #   物模型配置覆盖文件示例
 │
-├── tests/load/
-│   ├── locustfile.py                  # Locust 压测 (只读/写入 9 端点)
-│   └── requirements.txt
+├── tests/                             # ===== pytest 测试基线 (41 用例, SQLite+依赖覆盖) =====
+│   ├── conftest.py                    #   共享设施 (FakeUser / 轻量 FastAPI / SQLite 内存库)
+│   ├── test_graphic_editor.py         #   图形编辑入口 + 加油记录
+│   ├── test_notification_center.py    #   通知中心 (路由/静默/去重/重试/端点)
+│   ├── test_alarm_ticket_bridge.py    #   告警自动建单 (幂等/级别/回写)
+│   ├── test_capacity_whatif.py        #   上架模拟器推演
+│   ├── test_tenants_row_audit.py      #   租户 / 行级审计冒烟
+│   └── load/
+│       ├── locustfile.py              #   Locust 压测 (只读/写入 9 端点)
+│       └── requirements.txt
+│
+├── scripts/
+│   └── check_i18n_keys.py             # i18n zh/en 键对齐审计 (CI 门禁, --json)
 │
 ├── start.bat                          # Windows 一键启动
 ├── docker-compose.yml                 # 根编排 (指向 deploy/ 下配置)
@@ -261,14 +286,14 @@ dc-ioc-platform/
 | 1 | **总览** | IOC 驾驶舱 |
 | 2 | **设施监控** | 暖通空调（冷源/末端/液冷/制冷链路/温度云图）· 电力监控（10KV/0.4KV/配电链路/柴发/燃油/电池）· 物理安防与消防（视频/门禁/入侵/消防）· 网络监控（交换/路由/防火墙/无线）· 设备健康度 · 数字可视（3D/大屏/大屏定制） |
 | 3 | **告警** | 告警中心 · 告警历史 · 告警规则引擎 |
-| 4 | **运维作业** | 巡检（+电子巡检）· 维保（+维保日历）· 值班（+排班日历）· 事件工单中心 · 机房进出登记 · 故障影响分析 · 应急演练 · 风险管理 · 供配电 AI 隐患 · iHealth 报告 · 供应商管理 |
-| 5 | **资产** | 统一设备台账 · U 位识别 · 机柜管理 · 资产生命周期 · 租户管理 |
+| 4 | **运维作业** | 巡检（+电子巡检）· 维保（+维保日历）· 值班（+排班日历）· 事件工单中心 · 机房进出登记 · 故障影响分析 · 应急演练 · 通知中心 · 风险管理 · 供配电 AI 隐患 · iHealth 报告 · 供应商管理 |
+| 5 | **资产** | 统一设备台账 · U 位识别 · 机柜管理 · 上架模拟器 · 资产生命周期 · 租户管理 |
 | 6 | **能效** | 电量预测与节能 |
 | 7 | **知识与 AI** | 知识库 · 知识协作 · AI 运维助手 |
 | 8 | **平台集成** | 物模型 · 采集器接入 · 设备遥测 · ITIL 流程 · 集成验证中心 · 数据中心（管理/对比） |
-| 9 | **系统管理** | 操作审计 |
+| 9 | **系统管理** | 操作审计 · 行级变更审计 |
 
-> 约定：菜单项与路由一一对应（**63 条路由 ↔ 63 个菜单项**）。新增页面需**同时**在 `router/index.ts`
+> 约定：菜单项与路由一一对应（**65 条路由 ↔ 65 个菜单项**，v0.12 新增通知中心/上架模拟器后）。新增页面需**同时**在 `router/index.ts`
 > 注册路由并在 `DefaultLayout.vue` 的 `nav` 中登记入口，否则会成为无入口的孤儿页。
 
 ### 3.1 总览（Overview）
@@ -359,6 +384,7 @@ dc-ioc-platform/
 | 供配电 AI 隐患 | `/ops/power-ai-hazards` | admin/operator | 供配电隐患识别与处置跟踪 |
 | iHealth 健康报告 | `/ops/health-report` | admin/operator | 月度健康报告：7 大域评分 → 总分/等级/环形图 + 关键发现与改进建议 |
 | 供应商管理 | `/ops/supplier` | admin/operator | 供应商档案与多维度评分（滑块录入 + 删除二次确认） |
+| 通知中心 | `/ops/notifications` | admin/operator | 告警触达通道配置（类型/最低级别/静默窗口/启停）+ 发送记录留痕查询 + 连通性测试；后端按级别路由分发（复用告警引擎 notify_handler 机制） |
 
 ### 3.5 资产（Asset）
 
@@ -369,6 +395,7 @@ dc-ioc-platform/
 | 机柜管理 | `/ops/cabinets` | admin/operator | 机柜空间 / 电力 / 制冷容量 |
 | 资产生命周期 | `/ops/asset-lifecycle` | admin/operator | 资产从入库到退役全周期跟踪 |
 | 租户管理 | `/ops/tenant-manage` | admin/operator | 租户档案与配额（机柜/设备/功耗/带宽）+ 实时用量与健康状态 |
+| 上架模拟器 | `/ops/capacity-whatif` | admin/operator | 容量 What-if 推演：给定新增机柜数与单柜功率，推演电力/制冷/空间/U 位四维余量、85%/100% 到达月份与瓶颈排序（区别于 twin 的故障注入 What-if） |
 
 ### 3.6 能效（Energy）
 
@@ -403,6 +430,7 @@ dc-ioc-platform/
 | 页面 | 路由 | 权限 | 功能 |
 |---|---|---|---|
 | 操作审计 | `/admin/audit` | admin/operator | 审计日志查询（过滤/分页/CSV 导出，`/api/audit-logs`） |
+| 行级变更审计 | `/admin/row-audit` | admin/operator | 敏感表（users/roles/tenant）行级 I/U/D 镜像与操作人追溯（DB 触发器落库，`/api/row-audit`） |
 
 > **历史遗留（当前未接入路由）**：数字孪生 `/ops/twin`、链路拓扑 `/ops/topology`、容量管理 `/ops/capacity`、
 > 3D 数字孪生 `/twin/3d` 四条路由均已移除——3D 能力现由 `/monitor/visual/3d` 承载，容量类能力并入
@@ -554,6 +582,19 @@ MockCollector (模拟采集器) 或 真实采集器
 > `docker exec dc-ioc-platform-frontend-1 rm -rf /app/node_modules/.vite` →
 > `docker restart dc-ioc-platform-frontend-1` → 浏览器硬刷新 (Ctrl+Shift+R)。
 
+### v0.12 — 统一图形编辑入口 / 告警触达中心 / 告警自动建单 / 上架模拟器 / 全项目体检 (2026-09)
+
+| 模块 | 文件 | 功能 |
+|------|------|------|
+| **统一图形编辑入口** | `backend/app/models/graphic_config.py` `crud/graphic_editor.py` `schemas/graphic_editor.py` `api/v1/endpoints/graphic_editor.py` `alembic/versions/0011_graphic_editor.py`；`frontend/src/composables/useGraphicEditor.ts` `components/common/GraphicEditDrawer.vue` | 按 kind 存一份 JSON「场景覆盖层」（改名/坐标/参数=覆盖，removed=删除，新 id=自建节点），12 个图形页（冷源工艺/制冷链路/温度云图/10KV/0.4KV/柴发/储油/电池组/配电链路/门禁/周界/消防）通过「编辑」按钮增删改图形内容；未编辑时渲染与原版逐像素一致；后端不可达落 localStorage 并显式标注 |
+| **统一告警触达中心** | `models/notification.py` `crud/notification.py` `schemas/notification.py` `services/notification_service.py` `api/v1/endpoints/notification.py` `alembic/versions/0012_notification.py`；`views/ops/NotificationCenter.vue` | 通道配置落库（dingtalk/email/wechat/sms/custom + 最低级别路由 + 静默窗口 + 启停）；同告警+通道 10 分钟去重；失败退避重试 ≤2；每次触达留痕（sent/failed/muted/dedup）；注册为告警引擎第 4 个 notify_handler（与 WS 广播、env Webhook 并存）；前端 `/ops/notifications` 通道管理 + 发送记录 + 测试发送 |
+| **告警→工单自动化** | `services/alarm_ticket_bridge.py` `crud/ticket.py` `api/v1/endpoints/tickets.py`；`views/ops/Alarms.vue` `views/ops/Tickets.vue` | 级别 ≥ `ALARM_AUTO_TICKET_MIN_LEVEL`（默认 crit）的告警自动建单（`source=auto-alarm`、SLA crit=1h/warn=4h/info=8h、同告警未关单幂等跳过、建单即确认）；工单进入终态自动回写 `resolve_alarm`；`GET /tickets/by-alarm/{id}` 与 source 过滤；前端告警行「已建单 WO-xxx」徽标 + 工单来源标识（告警自动/告警转单/手工） |
+| **上架模拟器** | `services/capacity_whatif.py` `api/v1/endpoints/ops.py`（`POST /capacity/what-if`、`GET /capacity/what-if/baseline`）；`views/ops/CapacityWhatIf.vue` | 给定新增机柜数与单柜功率，推演电力/制冷/空间/U 位四维余量与 85%/100% 到达月份（复用 `capacity_forecast` 年度增长率），输出瓶颈排序与处置建议；滑块 debounce 自动推演 + 双层对比条 + 瓶颈高亮 |
+| **加油记录真实 CRUD** | `models/refuel_record.py` `api/v1/endpoints/graphic_editor.py`（refuel-records 路由）`views/ops/PowerFuel.vue` | `refuel_record` 表 + `/api/ops/refuel-records` CRUD，替换前端 computed 生成的假数据；接口不可用时回退本地示例并显式标注 |
+| **全项目体检** | `scripts/check_i18n_keys.py` `tests/conftest.py` `tests/test_*.py`（6 份）+ 16 个后端文件 + 多个前端页面 | ① i18n 键对齐审计脚本（`--json`/CI 门禁，zh=en=2960 键 0 缺失）；② pytest 基线 41 用例全绿（通知中心/工单桥/What-if/图形编辑/租户与审计，SQLite+依赖覆盖模式）；③ 后端 16 文件裸 `except` 补 logger（单次性 warning / 高频 debug，零控制流变化）；④ 前端空 catch 与 `console.log` 清零；⑤ 多源页统一 `useAsyncPageAll`+`ErrorBanner`、分页筛选复位、写操作 `toErrorMessage` 归一；⑥ **修复 `crud/tenant.py` 真缺陷**：`_to_snake` 盲转导致 camelCase 字段建单 `TypeError`（改为按模型列名映射）；⑦ Alembic 与 lifespan 自愈一致性核对（新增 0011/0012，漂移列补齐） |
+
+> **部署提示**：本次新增 `alembic/versions/0011_graphic_editor.py` 与 `0012_notification.py`（graphic_config / refuel_record / notification_channel / notification_record 四表，均幂等可回滚）。升级存量环境执行 `alembic upgrade head`；全新环境由 lifespan `create_all` 自动建表。其余前后端热重载/清缓存事项同 v0.11 部署提示。
+
 ### API 域汇总（附录）
 
 后端统一挂载于 `/api`，共 28 个业务域 + 认证。主要分组：
@@ -577,6 +618,9 @@ MockCollector (模拟采集器) 或 真实采集器
 | 物模型 `thing-models` (v0.9) | `GET/POST/PUT/DELETE /api/thing-models`（property/service/event 三要素，接管只读出口） |
 | 多数据中心 `idc` (v0.9) | `GET/POST/PUT/DELETE /api/idc`、`GET/PUT /api/idc/current`、`GET /api/idc/compare`、`GET /api/idc/alarms` |
 | AI 助手 `assistant` | 知识库问答 + 多模型端点 `/api/ops/assistant/models*` + NIM 诊断端点 `/api/ops/assistant/status` |
+| 图形编辑/加油记录 `graphic_editor` (v0.12) | `GET/PUT/DELETE /api/ops/graphic-config/{kind}`（场景覆盖层）、`GET/POST/PUT/DELETE /api/ops/refuel-records` |
+| 通知中心 `notifications` (v0.12) | `GET/POST/PUT/DELETE /api/ops/notifications/channels`、`GET /api/ops/notifications/records`、`POST /api/ops/notifications/test` |
+| 上架模拟器 `ops` (v0.12) | `POST /api/ops/capacity/what-if`、`GET /api/ops/capacity/what-if/baseline` |
 
 > 完整端点清单（含方法/路径/鉴权）见 `backend/api_endpoints.md`（由 `gen_api.py` 静态反射生成）。
 
