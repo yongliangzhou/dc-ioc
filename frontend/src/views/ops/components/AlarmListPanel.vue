@@ -108,8 +108,11 @@
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed } from 'vue'
-import type { Alarm } from '@/types'
+import { useRouter } from 'vue-router'
+import type { Alarm, Ticket } from '@/types'
 import { alarmKeyOf } from '@/utils/state'
+
+const router = useRouter()
 
 interface AlarmWithDevice extends Alarm {
   deviceId?: string
@@ -131,8 +134,6 @@ const props = withDefaults(
   }>(),
   { selectable: false, selected: () => [], ticketMap: () => ({}) },
 )
-
-const router = useRouter()
 
 /**
  * 匹配键以 ticket.sourceAlarmId 为准, 与告警行的 id 对齐:

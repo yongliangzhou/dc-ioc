@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <ErrorBanner :count="all.errorCount" :labels="failedLabels" @retry="all.reloadFailed" />
+    <ErrorBanner :count="all.errorCount.value" :labels="failedLabels" @retry="all.reloadFailed" />
 
     <AsyncSection :page="comparePage" @retry="comparePage.reload">
       <!-- 对比选择 -->

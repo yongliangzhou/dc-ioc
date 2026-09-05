@@ -10,8 +10,6 @@
 removed 中的 id = 删除, 覆盖层里新增的 id = 用户自建节点。
 这样既有展示逻辑不需要重写, 又能真正支持"图形内容增删改"。
 """
-from datetime import datetime
-
 from sqlalchemy import Column, DateTime, String, func
 from sqlalchemy.dialects.postgresql import JSONB
 

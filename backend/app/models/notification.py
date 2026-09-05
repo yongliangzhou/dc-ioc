@@ -8,8 +8,6 @@ notification_record —— 每一次实际触达尝试的留痕 (sent/failed/mut
 级别数值 ≥ min_level 才投递。channel_name 在 record 上做快照,
 通道被删除后历史记录仍可读。
 """
-from datetime import datetime
-
 from sqlalchemy import BigInteger, Boolean, Column, DateTime, Index, Integer, String, Text, func
 
 from app.db.session import Base

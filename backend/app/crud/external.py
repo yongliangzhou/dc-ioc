@@ -248,6 +248,8 @@ def bulk_insert_metrics(db: Optional[Session], points: list[MetricPoint]) -> int
                 dialect = bind.dialect.name
         except Exception as e:  # noqa: BLE001
             logger.debug("获取 DB dialect 失败, 按 postgresql 处理: %s", e)
+
+        if dialect == "postgresql":
             stmt = pg_insert(MetricRaw).values(rows)
             stmt = stmt.on_conflict_do_nothing(
                 index_elements=["device_id", "metric_name", "ts"]

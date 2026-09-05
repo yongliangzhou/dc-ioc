@@ -42,9 +42,9 @@
     </div>
 
     <ErrorBanner
-      :count="all.errorCount"
+      :count="all.errorCount.value"
       :labels="failedLabels"
-      :retrying="all.anyLoading"
+      :retrying="all.anyLoading.value"
       @retry="all.reloadFailed"
     />
 

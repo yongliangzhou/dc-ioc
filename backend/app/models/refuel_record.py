@@ -5,8 +5,6 @@
 字段与前端 RefuelRecord 接口保持一致 (no/date/tank/amount/before/after/
 vendor/grade/qc/operator/status), 避免前后端二次映射。
 """
-from datetime import datetime
-
 from sqlalchemy import BigInteger, Column, DateTime, Float, String, Text, func
 
 from app.db.session import Base

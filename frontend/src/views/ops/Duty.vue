@@ -4,7 +4,7 @@
       <h1>{{ tl('nav.duty') }}</h1>
       <span class="sub">{{ tl('人员值班与交接班管理') }}</span>
     </div>
-    <ErrorBanner :count="all.errorCount" :labels="failedLabels" @retry="all.reloadFailed" />
+    <ErrorBanner :count="all.errorCount.value" :labels="failedLabels" @retry="all.reloadFailed" />
 
     <AsyncSection :page="statsPage" @retry="statsPage.reload" :min-height="'110px'">
       <div class="grid cols-3" v-if="stats">
