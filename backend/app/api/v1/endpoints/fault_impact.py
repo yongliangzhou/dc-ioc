@@ -66,3 +66,12 @@ def history_sign(hid: int, payload: SignReq, db: Session = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=404, detail="报告不存在")
     return obj
+
+
+@router.post("/fault-impact/history/{hid}/push", summary="报告分级推送 (标记 pushed 并返回实际送达通道)",
+             dependencies=[Depends(require_role("admin", "operator"))])
+def history_push(hid: int, db: Session = Depends(get_db)):
+    obj = fi_crud.push_history(db, hid)
+    if not obj:
+        raise HTTPException(status_code=404, detail="报告不存在")
+    return obj

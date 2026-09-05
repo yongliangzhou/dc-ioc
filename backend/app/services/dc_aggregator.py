@@ -59,8 +59,8 @@ def _latest_metric_for_device(device_id: str, metric_name: str, db=None, fallbac
         for r in rows:
             if r.metric_name == metric_name:
                 return r.value
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("测点 %s 实时值读取失败, 回退 metric_raws: %s", metric_name, e)
     # 兜底：从 metric_raws 批量取最近数据
     if db is not None:
         try:
@@ -72,8 +72,8 @@ def _latest_metric_for_device(device_id: str, metric_name: str, db=None, fallbac
             ).order_by(desc(MetricRaw.received_at)).limit(1).first()
             if row:
                 return row.value
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("测点 %s metric_raws 兜底查询失败, 返回默认值: %s", metric_name, e)
     return fallback_val
 
 # ======================================================================
@@ -233,7 +233,8 @@ def _devices_in_domain(db, domain: str) -> list[dict]:
     try:
         items, _, _, _ = ext_crud.list_devices(db, domain=domain, skip=0, limit=10000, with_metric_count=False)
         return [i.model_dump() for i in items]
-    except Exception:
+    except Exception as e:
+        logger.warning("业务域 %s 设备列表查询失败, 返回空列表: %s", domain, e)
         return []
 
 # ---- 暖通 ----
@@ -405,7 +406,8 @@ def _ext_device_to_equipment(dev: ExternalDevice) -> dict:
         try:
             delta = (datetime.now(timezone.utc) - dev.last_seen).total_seconds()
             online = delta <= ext_crud.ONLINE_THRESHOLD_SEC
-        except Exception:  # noqa: BLE001
+        except Exception as e:  # noqa: BLE001
+            logger.debug("设备 %s last_seen 解析失败, 视为离线: %s", dev.device_id, e)
             online = False
     return {
         "id": dev.id,
@@ -588,7 +590,8 @@ def _inject_metric_values(data: dict, category: str, devices_all: list) -> None:
             continue
         try:
             latest = ext_crud.latest_metrics(did) or {}
-        except Exception:
+        except Exception as e:
+            logger.debug("设备 %s 最新测点缓存读取失败: %s", did, e)
             latest = {}
         points = []
         for mn, mv in latest.items():
@@ -1027,7 +1030,8 @@ def _alarm_device_ids(db) -> set:
         from app.services import alarm_engine
 
         return {a.get("device_id") for a in alarm_engine.get_active_alarms() if a.get("device_id")}
-    except Exception:
+    except Exception as e:
+        logger.warning("活跃告警设备集合读取失败, 返回空集合: %s", e)
         return set()
 
 
@@ -1048,7 +1052,8 @@ def inspection_plan(db):
             from app.crud import inspection as ins_crud
 
             base = ins_crud.aggregate(db)
-        except Exception:
+        except Exception as e:
+            logger.warning("巡检计划聚合查询失败, 回退空基线: %s", e)
             base = {}
     routes = list(base.get("routes", []))
     findings = list(base.get("findings", []))
@@ -1159,7 +1164,8 @@ def drill_plan(db):
 
         rows = drill_crud.list_plans(db)
         db_plans = [drill_crud._to_dict(o) for o in rows] if hasattr(drill_crud, "_to_dict") else rows
-    except Exception:
+    except Exception as e:
+        logger.warning("演练计划查询失败, 回退生成数据: %s", e)
         db_plans = generated.drill()["plans"]
 
     plans = suggestions + list(db_plans)
@@ -1167,8 +1173,8 @@ def drill_plan(db):
     try:
         from app.crud import drill as drill_crud
         stats = drill_crud.stats(db)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("演练统计查询失败, 保留默认统计: %s", e)
     return {"stats": stats, "plans": plans}
 
 

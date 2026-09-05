@@ -78,9 +78,11 @@
           >
             <td class="mono">{{ fmtDateTime(e.triggeredAt) }}</td>
             <td>
-              <span class="tag" :class="e.level === 'crit' ? 'r' : e.level === 'warn' ? 'a' : 'g'">{{
-                e.level
-              }}</span>
+              <span
+                class="tag"
+                :class="e.level === 'crit' ? 'r' : e.level === 'warn' ? 'a' : 'g'"
+                >{{ e.level }}</span
+              >
             </td>
             <td>{{ e.system }}</td>
             <td>
@@ -136,14 +138,15 @@
         <h2>{{ tl('告警触达通道') }}</h2>
         <span class="sub">{{ tl('统一管理多通道触达策略与发送记录') }}</span>
       </div>
+      <div class="muted" style="font-size: 11px; margin-bottom: 10px">
+        ⓘ
+        {{
+          tl('以下为演示数据 · 真实通道配置与发送记录请前往「通知中心」(/ops/notifications) 管理')
+        }}
+      </div>
 
       <div class="ch-grid">
-        <div
-          v-for="c in channels"
-          :key="c.id"
-          class="ch-card"
-          :class="{ disabled: !c.enabled }"
-        >
+        <div v-for="c in channels" :key="c.id" class="ch-card" :class="{ disabled: !c.enabled }">
           <div class="ch-top">
             <span class="ch-icon">{{ c.icon }}</span>
             <span class="ch-name">{{ c.name }}</span>
@@ -152,8 +155,12 @@
             }}</span>
           </div>
           <div class="ch-meta">
-            <div><span class="muted">{{ tl('触发级别') }}</span> {{ c.levels.join(' / ') }}</div>
-            <div><span class="muted">{{ tl('触达对象') }}</span> {{ c.target }}</div>
+            <div>
+              <span class="muted">{{ tl('触发级别') }}</span> {{ c.levels.join(' / ') }}
+            </div>
+            <div>
+              <span class="muted">{{ tl('触达对象') }}</span> {{ c.target }}
+            </div>
           </div>
           <div class="ch-bar">
             <span class="muted sm">{{ tl('近 24h 触达') }}</span>
@@ -207,11 +214,19 @@
             <tr v-for="l in channelLogs" :key="l.id">
               <td class="mono">{{ fmtDateTime(l.at) }}</td>
               <td>{{ l.channel }}</td>
-              <td><span class="tag" :class="l.level === 'crit' ? 'r' : l.level === 'warn' ? 'a' : 'g'">{{ l.level }}</span></td>
+              <td>
+                <span
+                  class="tag"
+                  :class="l.level === 'crit' ? 'r' : l.level === 'warn' ? 'a' : 'g'"
+                  >{{ l.level }}</span
+                >
+              </td>
               <td>{{ l.receiver }}</td>
               <td class="muted">{{ l.summary }}</td>
               <td>
-                <span class="tag" :class="l.ok ? 'g' : 'r'">{{ l.ok ? tl('成功') : tl('失败') }}</span>
+                <span class="tag" :class="l.ok ? 'g' : 'r'">{{
+                  l.ok ? tl('成功') : tl('失败')
+                }}</span>
               </td>
             </tr>
           </tbody>
@@ -253,21 +268,106 @@ const operator = '值班员'
 
 /* 触达通道数据 (由多通道告警模块整合) */
 const channels = [
-  { id: 'ch1', icon: '📟', name: tl('短信 SMS'), enabled: true, levels: ['crit', 'warn'], target: tl('运维值班组'), sent: 184 },
-  { id: 'ch2', icon: '💬', name: tl('企业微信'), enabled: true, levels: ['crit', 'warn', 'info'], target: tl('数据中心运维群'), sent: 326 },
-  { id: 'ch3', icon: '🔔', name: tl('钉钉'), enabled: true, levels: ['crit'], target: tl('应急管理群'), sent: 47 },
-  { id: 'ch4', icon: '📧', name: tl('邮件'), enabled: true, levels: ['crit', 'warn'], target: tl('设施经理'), sent: 92 },
-  { id: 'ch5', icon: '📞', name: tl('语音外呼'), enabled: false, levels: ['crit'], target: tl('7×24 值守'), sent: 0 },
+  {
+    id: 'ch1',
+    icon: '📟',
+    name: tl('短信 SMS'),
+    enabled: true,
+    levels: ['crit', 'warn'],
+    target: tl('运维值班组'),
+    sent: 184,
+  },
+  {
+    id: 'ch2',
+    icon: '💬',
+    name: tl('企业微信'),
+    enabled: true,
+    levels: ['crit', 'warn', 'info'],
+    target: tl('数据中心运维群'),
+    sent: 326,
+  },
+  {
+    id: 'ch3',
+    icon: '🔔',
+    name: tl('钉钉'),
+    enabled: true,
+    levels: ['crit'],
+    target: tl('应急管理群'),
+    sent: 47,
+  },
+  {
+    id: 'ch4',
+    icon: '📧',
+    name: tl('邮件'),
+    enabled: true,
+    levels: ['crit', 'warn'],
+    target: tl('设施经理'),
+    sent: 92,
+  },
+  {
+    id: 'ch5',
+    icon: '📞',
+    name: tl('语音外呼'),
+    enabled: false,
+    levels: ['crit'],
+    target: tl('7×24 值守'),
+    sent: 0,
+  },
 ]
 const channelRules = [
-  { id: 'r1', name: tl('一级事件电话升级'), channels: [tl('语音外呼'), tl('短信 SMS')], levels: ['crit'], silence: tl('22:00–07:00 免打扰'), enabled: true },
-  { id: 'r2', name: tl('二级事件群通知'), channels: [tl('企业微信'), tl('钉钉')], levels: ['warn'], silence: tl('无'), enabled: true },
-  { id: 'r3', name: tl('三级事件邮件'), channels: [tl('邮件')], levels: ['info'], silence: tl('工作日 09:00–18:00'), enabled: false },
+  {
+    id: 'r1',
+    name: tl('一级事件电话升级'),
+    channels: [tl('语音外呼'), tl('短信 SMS')],
+    levels: ['crit'],
+    silence: tl('22:00–07:00 免打扰'),
+    enabled: true,
+  },
+  {
+    id: 'r2',
+    name: tl('二级事件群通知'),
+    channels: [tl('企业微信'), tl('钉钉')],
+    levels: ['warn'],
+    silence: tl('无'),
+    enabled: true,
+  },
+  {
+    id: 'r3',
+    name: tl('三级事件邮件'),
+    channels: [tl('邮件')],
+    levels: ['info'],
+    silence: tl('工作日 09:00–18:00'),
+    enabled: false,
+  },
 ]
 const channelLogs = [
-  { id: 'l1', at: new Date(Date.now() - 3600e3).toISOString(), channel: tl('企业微信'), level: 'crit', receiver: tl('数据中心运维群'), summary: tl('A 区冷机 2 回风温度越限'), ok: true },
-  { id: 'l2', at: new Date(Date.now() - 7200e3).toISOString(), channel: tl('短信 SMS'), level: 'warn', receiver: tl('运维值班组'), summary: tl('B 区 UPS 负载率 86%'), ok: true },
-  { id: 'l3', at: new Date(Date.now() - 10800e3).toISOString(), channel: tl('钉钉'), level: 'crit', receiver: tl('应急管理群'), summary: tl('市电中断演练触发'), ok: false },
+  {
+    id: 'l1',
+    at: new Date(Date.now() - 3600e3).toISOString(),
+    channel: tl('企业微信'),
+    level: 'crit',
+    receiver: tl('数据中心运维群'),
+    summary: tl('A 区冷机 2 回风温度越限'),
+    ok: true,
+  },
+  {
+    id: 'l2',
+    at: new Date(Date.now() - 7200e3).toISOString(),
+    channel: tl('短信 SMS'),
+    level: 'warn',
+    receiver: tl('运维值班组'),
+    summary: tl('B 区 UPS 负载率 86%'),
+    ok: true,
+  },
+  {
+    id: 'l3',
+    at: new Date(Date.now() - 10800e3).toISOString(),
+    channel: tl('钉钉'),
+    level: 'crit',
+    receiver: tl('应急管理群'),
+    summary: tl('市电中断演练触发'),
+    ok: false,
+  },
 ]
 
 const systemOptions = computed(() =>

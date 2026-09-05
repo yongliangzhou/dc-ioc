@@ -14,6 +14,8 @@
       </div>
     </div>
 
+    <MockDataBanner :level="mockLevel" :reason="mockReason" />
+
     <!-- 总览 KPI -->
     <div class="kpi-row">
       <KpiCard
@@ -53,6 +55,9 @@
             <span class="lg"><i class="lg-dot g"></i>布防</span>
             <span class="lg"><i class="lg-dot r"></i>报警</span>
             <span class="lg"><i class="lg-dot y"></i>撤防</span>
+            <button class="plan-edit" @click="editOpen = true">
+              编辑{{ hasGraphicEdits ? ' ●' : '' }}
+            </button>
           </div>
         </div>
         <div class="plan-wrap">
@@ -63,7 +68,7 @@
             <text x="240" y="140" class="b-label">数据中心楼</text>
             <text x="34" y="42" class="s-label">园区周界 · 防区布防</text>
             <!-- 周界防区点位（沿外框分布） -->
-            <g v-for="z in zones" :key="z.id" @click.stop="selectZone(z)">
+            <g v-for="z in zonesView" :key="z.id" @click.stop="selectZone(z)">
               <line
                 v-if="
                   z.side === 'top' || z.side === 'bottom' || z.side === 'left' || z.side === 'right'
@@ -88,7 +93,8 @@
           </svg>
           <div v-if="selectedZone" class="z-info">
             <div class="z-info-h">
-              <span class="z-dot" :class="selectedZone.state"></span>{{ selectedZone.id }}
+              <span class="z-dot" :class="selectedZone.state"></span
+              >{{ selectedZone.label || selectedZone.id }}
             </div>
             <div class="z-info-b">
               <span>状态：{{ stateText(selectedZone.state) }}</span>
@@ -98,6 +104,14 @@
           </div>
         </div>
       </Panel>
+
+      <!-- 统一图形编辑入口: 对周界防区做增删改 (覆盖层, 不影响接口数据) -->
+      <GraphicEditDrawer
+        v-model="editOpen"
+        :editor="graphicEditor"
+        title="周界示意图"
+        :defaults="graphicDefaults"
+      />
 
       <!-- 右：探测器状态面板 -->
       <Panel class="det-card">
@@ -221,9 +235,15 @@ import { AlarmBadge } from '@dc-ioc/ui'
 import EmptyState from '@/components/monitor/EmptyState.vue'
 import { getSecurityIdsDetailed } from '@/api/security'
 import type { IdsSummary, IdsEventView } from '@/api/security'
+import { useMockFlag } from '@/composables/useAsyncPage'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
+import { useGraphicEditor, type NodeAdapter } from '@/composables/useGraphicEditor'
+import type { GraphicNode } from '@/types/graphic'
 
 interface Zone {
   id: string
+  label?: string
   short: string
   side: string
   state: 'armed' | 'alarm' | 'disarm'
@@ -252,6 +272,7 @@ const s = ref<IdsSummary>({
   knowledge: { thresholds: [] },
 })
 const usingMock = ref(false)
+const { level: mockLevel, reason: mockReason, markPartial, markFull } = useMockFlag()
 
 const armRate = computed(() =>
   s.value.perimeter.zones
@@ -310,6 +331,62 @@ function buildZones(perimeter: IdsSummary['perimeter'], events: IdsEventView[]):
 function selectZone(z: Zone) {
   selectedZone.value = z
 }
+
+/* ───────── 统一图形编辑入口 (周界示意图) ─────────
+ * 场景覆盖层: 改名/改状态/改坐标/改参数 = 覆盖; 删除 = removed; 新增 = 自建防区。
+ * 接口派生防区仍是默认值并持续刷新, 编辑只在其上叠加, 不污染数据源。 */
+const graphicEditor = useGraphicEditor('security-perimeter-plan', { title: '周界示意图' })
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => graphicEditor.hasOverrides.value)
+
+/** Zone ↔ GraphicNode 双向映射 (short/side 走 params; x1..y2 与 cx/cy 重合, 由坐标统一派生) */
+const zoneAdapter: NodeAdapter<Zone> = {
+  toNode: (z) => ({
+    id: z.id,
+    label: z.label || z.id,
+    type: z.tech,
+    x: z.cx,
+    y: z.cy,
+    status: z.state,
+    params: { short: z.short, side: z.side },
+  }),
+  fromNode: (g, base) => {
+    const src: Zone = base ?? {
+      id: g.id,
+      label: g.label || g.id,
+      short: g.params?.short || g.id,
+      side: g.params?.side || 'top',
+      state: (g.status as Zone['state']) || 'armed',
+      tech: g.type || '电子围栏',
+      cx: g.x ?? 0,
+      cy: g.y ?? 0,
+      x1: g.x ?? 0,
+      y1: g.y ?? 0,
+      x2: g.x ?? 0,
+      y2: g.y ?? 0,
+    }
+    const x = g.x ?? src.cx
+    const y = g.y ?? src.cy
+    return {
+      ...src,
+      id: g.id,
+      label: g.label || src.label || src.id,
+      short: g.params?.short || src.short,
+      side: g.params?.side || src.side,
+      state: (g.status || src.state) as Zone['state'],
+      tech: g.type || src.tech,
+      cx: x,
+      cy: y,
+      x1: x,
+      y1: y,
+      x2: x,
+      y2: y,
+    }
+  },
+}
+
+const zonesView = computed(() => graphicEditor.apply(zones.value, zoneAdapter))
+const graphicDefaults = (): GraphicNode[] => zones.value.map(zoneAdapter.toNode)
 
 // 探测器（派生）
 const detectors = ref<Det[]>([])
@@ -384,10 +461,12 @@ async function load() {
     if (data && data.perimeter && data.perimeter.zones) {
       s.value = data
       usingMock.value = false
+      markPartial('平面图点位/布防时间线由前端基于实时事件派生，非后端实测明细')
     } else throw new Error('empty')
   } catch {
     s.value = mockSummary()
     usingMock.value = true
+    markFull()
   } finally {
     zones.value = buildZones(s.value.perimeter, s.value.events)
     detectors.value = buildDetectors(s.value.indoor, s.value.events)
@@ -705,6 +784,19 @@ void AlertTriangle
   border-radius: 8px;
   padding: 8px 10px;
   background: var(--bg-2);
+}
+/* 统一图形编辑入口按钮 */
+.plan-edit {
+  background: var(--bg-1);
+  border: 1px solid var(--brand);
+  color: var(--brand);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.plan-edit:hover {
+  background: rgba(63, 159, 191, 0.14);
 }
 .z-info-h {
   display: flex;

@@ -1,9 +1,11 @@
 <template>
   <div class="net-sw">
     <div class="view-head">
-      <h1>{{ tl('设施监控') }} {{ tl('·') }} {{ tl('网络监控') }} {{ tl('·') }} {{ tl('核心交换机') }}</h1>
+      <h1>
+        {{ tl('设施监控') }} {{ tl('·') }} {{ tl('网络监控') }} {{ tl('·') }} {{ tl('核心交换机') }}
+      </h1>
       <span class="sub">{{ tl('Spine-Leaf 拓扑 / 端口面板 / 链路聚合 / 流量监控') }}</span>
-      <MockDataBanner :level="mockLevel" />
+      <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
     <!-- 2.1.5 系统资源仪表区 KpiCard × 4 -->
@@ -49,55 +51,124 @@
     <Panel v-if="s && s.switches.length" title="Spine-Leaf 网络拓扑">
       <template #extra>
         <div class="topo-legend">
-          <span><i class="tl-dot" style="background:#22c55e"></i> {{ tl('正常') }}</span>
-          <span><i class="tl-dot" style="background:#f59e0b"></i> {{ tl('高负载') }}</span>
-          <span><i class="tl-dot" style="background:#ef4444"></i> {{ tl('拥塞/告警') }}</span>
+          <span><i class="tl-dot" style="background: #22c55e"></i> {{ tl('正常') }}</span>
+          <span><i class="tl-dot" style="background: #f59e0b"></i> {{ tl('高负载') }}</span>
+          <span><i class="tl-dot" style="background: #ef4444"></i> {{ tl('拥塞/告警') }}</span>
         </div>
       </template>
       <svg class="topo-svg" :viewBox="`0 0 ${svgW} ${svgH}`">
         <!-- spine switches -->
         <g v-for="sp in spineSwitches" :key="sp.id">
-          <rect :x="sp.x" :y="sp.y" :width="sp.w" :height="sp.h" rx="6"
+          <rect
+            :x="sp.x"
+            :y="sp.y"
+            :width="sp.w"
+            :height="sp.h"
+            rx="6"
             :fill="sp.status === 'online' ? 'rgba(34,227,255,0.10)' : 'rgba(107,114,128,0.08)'"
             :stroke="sp.status === 'online' ? 'rgba(34,227,255,0.5)' : 'rgba(107,114,128,0.3)'"
-            stroke-width="1.5" />
-          <text :x="sp.x + sp.w/2" :y="sp.y + 22" text-anchor="middle"
-            fill="var(--txt)" font-size="11" font-weight="600">{{ sp.name }}</text>
-          <text :x="sp.x + sp.w/2" :y="sp.y + 40" text-anchor="middle"
-            fill="var(--txt3)" font-size="10">{{ sp.role }}</text>
-          <text :x="sp.x + sp.w/2" :y="sp.y + 54" text-anchor="middle"
+            stroke-width="1.5"
+          />
+          <text
+            :x="sp.x + sp.w / 2"
+            :y="sp.y + 22"
+            text-anchor="middle"
+            fill="var(--txt)"
+            font-size="11"
+            font-weight="600"
+          >
+            {{ sp.name }}
+          </text>
+          <text
+            :x="sp.x + sp.w / 2"
+            :y="sp.y + 40"
+            text-anchor="middle"
+            fill="var(--txt3)"
+            font-size="10"
+          >
+            {{ sp.role }}
+          </text>
+          <text
+            :x="sp.x + sp.w / 2"
+            :y="sp.y + 54"
+            text-anchor="middle"
             :fill="sp.cpu_pct > 80 ? '#ef4444' : sp.cpu_pct > 60 ? '#f59e0b' : '#22c55e'"
-            font-size="10" font-weight="600">CPU {{ sp.cpu_pct }}%</text>
+            font-size="10"
+            font-weight="600"
+          >
+            CPU {{ sp.cpu_pct }}%
+          </text>
         </g>
 
         <!-- leaf switches -->
         <g v-for="lf in leafSwitches" :key="lf.id">
-          <rect :x="lf.x" :y="lf.y" :width="lf.w" :height="lf.h" rx="6"
+          <rect
+            :x="lf.x"
+            :y="lf.y"
+            :width="lf.w"
+            :height="lf.h"
+            rx="6"
             :fill="lf.status === 'online' ? 'rgba(168,85,247,0.08)' : 'rgba(107,114,128,0.06)'"
             :stroke="lf.status === 'online' ? 'rgba(168,85,247,0.4)' : 'rgba(107,114,128,0.25)'"
-            stroke-width="1.5" />
-          <text :x="lf.x + lf.w/2" :y="lf.y + 20" text-anchor="middle"
-            fill="var(--txt)" font-size="10" font-weight="600">{{ lf.name }}</text>
-          <text :x="lf.x + lf.w/2" :y="lf.y + 36" text-anchor="middle"
-            fill="var(--txt3)" font-size="9">{{ lf.role }}</text>
-          <text :x="lf.x + lf.w/2" :y="lf.y + 52" text-anchor="middle"
-            font-size="9" font-weight="600" :fill="lf.status === 'online' ? '#22c55e' : '#6b7280'">
+            stroke-width="1.5"
+          />
+          <text
+            :x="lf.x + lf.w / 2"
+            :y="lf.y + 20"
+            text-anchor="middle"
+            fill="var(--txt)"
+            font-size="10"
+            font-weight="600"
+          >
+            {{ lf.name }}
+          </text>
+          <text
+            :x="lf.x + lf.w / 2"
+            :y="lf.y + 36"
+            text-anchor="middle"
+            fill="var(--txt3)"
+            font-size="9"
+          >
+            {{ lf.role }}
+          </text>
+          <text
+            :x="lf.x + lf.w / 2"
+            :y="lf.y + 52"
+            text-anchor="middle"
+            font-size="9"
+            font-weight="600"
+            :fill="lf.status === 'online' ? '#22c55e' : '#6b7280'"
+          >
             {{ lf.up_ports }}/{{ lf.total_ports }} UP
           </text>
         </g>
 
         <!-- links: each leaf connects to each spine -->
-        <line v-for="(lnk, li) in topoLinks" :key="'l'+li"
-          :x1="lnk.x1" :y1="lnk.y1" :x2="lnk.x2" :y2="lnk.y2"
-          :stroke="lnk.color" :stroke-width="lnk.sw" :opacity="lnk.op" />
+        <line
+          v-for="(lnk, li) in topoLinks"
+          :key="'l' + li"
+          :x1="lnk.x1"
+          :y1="lnk.y1"
+          :x2="lnk.x2"
+          :y2="lnk.y2"
+          :stroke="lnk.color"
+          :stroke-width="lnk.sw"
+          :opacity="lnk.op"
+        />
       </svg>
     </Panel>
 
     <!-- 2.1.6 链路健康面板 -->
     <Panel v-if="s && s.switches.length" title="链路聚合与冗余状态">
       <template #extra>
-        <span class="pill g" v-if="healthyTrunks.length === allTrunks.length">{{ tl('全部链路正常') }}</span>
-        <span class="pill a" v-else>{{ tl('异常') }}: {{ allTrunks.length - healthyTrunks.length }}/{{ allTrunks.length }}</span>
+        <span class="pill g" v-if="healthyTrunks.length === allTrunks.length">{{
+          tl('全部链路正常')
+        }}</span>
+        <span class="pill a" v-else
+          >{{ tl('异常') }}: {{ allTrunks.length - healthyTrunks.length }}/{{
+            allTrunks.length
+          }}</span
+        >
       </template>
       <div class="trunk-grid" v-if="allTrunks.length">
         <div
@@ -108,22 +179,33 @@
         >
           <div class="trunk-bar-head">
             <span class="mono fw6">{{ t.id }}</span>
-            <span class="pill" :class="t.isHealthy ? 'g' : 'a'">{{ t.isHealthy ? tl('正常') : tl('降级') }}</span>
+            <span class="pill" :class="t.isHealthy ? 'g' : 'a'">{{
+              t.isHealthy ? tl('正常') : tl('降级')
+            }}</span>
           </div>
           <div class="trunk-meta">
             <span>{{ t.mode }} · {{ t.members.length }} {{ tl('成员') }}</span>
             <span class="trunk-members">{{ t.members.join(' / ') }}</span>
           </div>
           <div class="trunk-util-bar">
-            <div class="bar-label" style="font-size:10px;color:var(--txt2)">{{ tl('链路利用率') }} {{ t.util_pct ?? 0 }}%</div>
+            <div class="bar-label" style="font-size: 10px; color: var(--txt2)">
+              {{ tl('链路利用率') }} {{ t.util_pct ?? 0 }}%
+            </div>
             <div class="bar-track">
-              <div class="bar-fill" :class="(t.util_pct ?? 0) > 85 ? 'bar-r' : (t.util_pct ?? 0) > 60 ? 'bar-a' : 'bar-g'"
-                :style="{ width: Math.min(100, t.util_pct ?? 0) + '%' }"></div>
+              <div
+                class="bar-fill"
+                :class="
+                  (t.util_pct ?? 0) > 85 ? 'bar-r' : (t.util_pct ?? 0) > 60 ? 'bar-a' : 'bar-g'
+                "
+                :style="{ width: Math.min(100, t.util_pct ?? 0) + '%' }"
+              ></div>
             </div>
           </div>
         </div>
       </div>
-      <div class="muted" v-else style="padding:20px 0;text-align:center">{{ tl('无链路聚合配置') }}</div>
+      <div class="muted" v-else style="padding: 20px 0; text-align: center">
+        {{ tl('无链路聚合配置') }}
+      </div>
     </Panel>
 
     <!-- 设备逐台 (PortPanel + 端口流量表) -->
@@ -137,18 +219,42 @@
         </template>
 
         <div class="sw-meta-grid">
-          <div class="sw-kv"><span class="sw-k">{{ tl('管理IP') }}</span><span class="sw-v mono">{{ sw.ip }}</span></div>
-          <div class="sw-kv"><span class="sw-k">{{ tl('角色') }}</span><span class="sw-v">{{ sw.role }}</span></div>
-          <div class="sw-kv"><span class="sw-k">{{ tl('位置') }}</span><span class="sw-v">{{ sw.location }}</span></div>
-          <div class="sw-kv"><span class="sw-k">{{ tl('CPU') }}</span>
-            <span class="sw-v" :class="sw.cpu_pct > 80 ? 'a-text' : 'g-text'">{{ sw.cpu_pct }}%</span>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('管理IP') }}</span
+            ><span class="sw-v mono">{{ sw.ip }}</span>
           </div>
-          <div class="sw-kv"><span class="sw-k">{{ tl('内存') }}</span>
-            <span class="sw-v" :class="sw.mem_pct > 80 ? 'a-text' : 'g-text'">{{ sw.mem_pct }}%</span>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('角色') }}</span
+            ><span class="sw-v">{{ sw.role }}</span>
           </div>
-          <div class="sw-kv"><span class="sw-k">{{ tl('温度') }}</span><span class="sw-v">{{ sw.temp_c }}°C</span></div>
-          <div class="sw-kv"><span class="sw-k">{{ tl('运行时长') }}</span><span class="sw-v">{{ sw.uptime_days }} {{ tl('天') }}</span></div>
-          <div class="sw-kv"><span class="sw-k">{{ tl('端口') }}</span><span class="sw-v">{{ sw.up_ports }}/{{ sw.total_ports }}</span></div>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('位置') }}</span
+            ><span class="sw-v">{{ sw.location }}</span>
+          </div>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('CPU') }}</span>
+            <span class="sw-v" :class="sw.cpu_pct > 80 ? 'a-text' : 'g-text'"
+              >{{ sw.cpu_pct }}%</span
+            >
+          </div>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('内存') }}</span>
+            <span class="sw-v" :class="sw.mem_pct > 80 ? 'a-text' : 'g-text'"
+              >{{ sw.mem_pct }}%</span
+            >
+          </div>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('温度') }}</span
+            ><span class="sw-v">{{ sw.temp_c }}°C</span>
+          </div>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('运行时长') }}</span
+            ><span class="sw-v">{{ sw.uptime_days }} {{ tl('天') }}</span>
+          </div>
+          <div class="sw-kv">
+            <span class="sw-k">{{ tl('端口') }}</span
+            ><span class="sw-v">{{ sw.up_ports }}/{{ sw.total_ports }}</span>
+          </div>
           <div class="sw-kv" v-if="sw.stack">
             <span class="sw-k">{{ tl('堆叠') }}</span>
             <span class="sw-v">{{ sw.stack.topo }} · {{ sw.stack.members }} {{ tl('成员') }}</span>
@@ -165,32 +271,33 @@
           <div class="sub-title">{{ tl('端口流量详情') }}</div>
           <div class="port-table scroll-x">
             <table>
-              <thead><tr>
-                <th>{{ tl('端口') }}</th>
-                <th>{{ tl('状态') }}</th>
-                <th>{{ tl('速率') }}</th>
-                <th>{{ tl('入利用率') }}</th>
-                <th>{{ tl('出利用率') }}</th>
-                <th>{{ tl('实时流量') }}</th>
-                <th>{{ tl('错包率') }}</th>
-                <th>{{ tl('丢包率') }}</th>
-                <th>{{ tl('收光') }}</th>
-                <th>{{ tl('发光') }}</th>
-              </tr></thead>
+              <thead>
+                <tr>
+                  <th>{{ tl('端口') }}</th>
+                  <th>{{ tl('状态') }}</th>
+                  <th>{{ tl('速率') }}</th>
+                  <th>{{ tl('入利用率') }}</th>
+                  <th>{{ tl('出利用率') }}</th>
+                  <th>{{ tl('实时流量') }}</th>
+                  <th>{{ tl('错包率') }}</th>
+                  <th>{{ tl('丢包率') }}</th>
+                  <th>{{ tl('收光') }}</th>
+                  <th>{{ tl('发光') }}</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr
-                  v-for="p in sw.ports.slice(0, 24)"
-                  :key="p.name"
-                  :class="portRowCls(p)"
-                >
+                <tr v-for="p in sw.ports.slice(0, 24)" :key="p.name" :class="portRowCls(p)">
                   <td class="mono">{{ p.name }}</td>
                   <td>
-                    <StatusBadge
-                      :status="p.status === 'up' ? 'online' : 'offline'"
-                      size="sm"
-                    />
+                    <StatusBadge :status="p.status === 'up' ? 'online' : 'offline'" size="sm" />
                   </td>
-                  <td class="mono">{{ p.speed_mbps >= 1000 ? (p.speed_mbps/1000).toFixed(0)+'G' : p.speed_mbps+'M' }}</td>
+                  <td class="mono">
+                    {{
+                      p.speed_mbps >= 1000
+                        ? (p.speed_mbps / 1000).toFixed(0) + 'G'
+                        : p.speed_mbps + 'M'
+                    }}
+                  </td>
                   <td class="mono">
                     <span :class="utilCls(p.in_util_pct)">{{ p.in_util_pct }}%</span>
                   </td>
@@ -198,10 +305,10 @@
                     <span :class="utilCls(p.out_util_pct)">{{ p.out_util_pct }}%</span>
                   </td>
                   <td class="mono">{{ fmtBps(p.in_bps + p.out_bps) }}</td>
-                  <td class="mono" :class="(p.in_errors + p.out_errors) ? 'a-text' : ''">
+                  <td class="mono" :class="p.in_errors + p.out_errors ? 'a-text' : ''">
                     {{ p.in_errors + p.out_errors }}
                   </td>
-                  <td class="mono" :class="(p.in_discards || 0) ? 'a-text' : ''">
+                  <td class="mono" :class="p.in_discards || 0 ? 'a-text' : ''">
                     {{ p.in_discards || 0 }}
                   </td>
                   <td class="mono" :class="opticalPowerCls(p.rx_power_dbm)">
@@ -226,7 +333,7 @@
         </span>
       </template>
       <div class="ping-grid">
-        <div class="ping-block" v-for="p in (s.pingTargets ?? [])" :key="p.target">
+        <div class="ping-block" v-for="p in s.pingTargets ?? []" :key="p.target">
           <div class="ping-head">
             <span class="d-name">{{ p.name }}</span>
             <StatusBadge
@@ -235,19 +342,24 @@
             />
           </div>
           <div class="ping-meta">
-            <span class="muted">{{ tl('RTT') }}</span><span class="mono">{{ p.rtt_avg_ms }}ms ({{ p.rtt_min_ms }}~{{ p.rtt_max_ms }})</span>
-            <span class="muted">{{ tl('抖动') }}</span><span class="mono">{{ p.jitter_ms }}ms</span>
-            <span class="muted">{{ tl('丢包') }}</span><span class="mono" :class="p.loss_pct > 1 ? 'a-text' : 'g-text'">{{ p.loss_pct }}%</span>
+            <span class="muted">{{ tl('RTT') }}</span
+            ><span class="mono">{{ p.rtt_avg_ms }}ms ({{ p.rtt_min_ms }}~{{ p.rtt_max_ms }})</span>
+            <span class="muted">{{ tl('抖动') }}</span
+            ><span class="mono">{{ p.jitter_ms }}ms</span>
+            <span class="muted">{{ tl('丢包') }}</span
+            ><span class="mono" :class="p.loss_pct > 1 ? 'a-text' : 'g-text'"
+              >{{ p.loss_pct }}%</span
+            >
           </div>
         </div>
       </div>
-      </Panel>
+    </Panel>
 
     <!-- 负载状态 -->
-    <div class="flex center" style="padding:40px" v-if="!s && !error">
+    <div class="flex center" style="padding: 40px" v-if="!s && !error">
       <span class="muted">{{ tl('加载中...') }}</span>
     </div>
-    <div class="flex center" style="padding:40px" v-if="error">
+    <div class="flex center" style="padding: 40px" v-if="error">
       <span class="muted a-text">{{ tl('加载失败') }}: {{ error }}</span>
     </div>
   </div>
@@ -260,14 +372,19 @@ import { fmtBps, utilCls } from '@/utils/format'
 import { KpiCard } from '@dc-ioc/ui'
 import { StatusBadge } from '@dc-ioc/ui'
 import PortPanel from '@/components/monitor/PortPanel.vue'
-import { getNetworkSwitchesDetailed, type NetworkSwitchSummary, type SwitchView, type SwitchPortView } from '@/api/monitor'
+import {
+  getNetworkSwitchesDetailed,
+  type NetworkSwitchSummary,
+  type SwitchView,
+  type SwitchPortView,
+} from '@/api/monitor'
 import Panel from '@/components/common/Panel.vue'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 const { t: tl } = useI18n()
 
 /** 后端无有效返回时页面会回退到本地 mockData()，必须让用户看见这是假的 */
-const { level: mockLevel, markReal, markFull } = useMockFlag()
+const { level: mockLevel, reason: mockReason, markFull, markPartial } = useMockFlag()
 
 const s = ref<NetworkSwitchSummary | null>(null)
 const error = ref('')
@@ -281,18 +398,28 @@ interface TopoNode {
   cpu_pct: number
   total_ports: number
   up_ports: number
-  x: number; y: number; w: number; h: number
+  x: number
+  y: number
+  w: number
+  h: number
 }
 
 interface TopoLink {
-  x1: number; y1: number; x2: number; y2: number
-  sw: number; color: string; op: number
+  x1: number
+  y1: number
+  x2: number
+  y2: number
+  sw: number
+  color: string
+  op: number
 }
 
 const svgW = 900
 const svgH = 380
-const nodeW = 130; const nodeH = 62
-const spineY = 50; const leafY = 240
+const nodeW = 130
+const nodeH = 62
+const spineY = 50
+const leafY = 240
 
 const spineSwitches = computed<TopoNode[]>(() => {
   if (!s.value) return []
@@ -309,8 +436,21 @@ const leafSwitches = computed<TopoNode[]>(() => {
   const nonCore = s.value.switches.filter((sw) => sw.role !== 'core').slice(0, 6)
   if (!nonCore.length) return []
   return nonCore.map((sw, i) => {
-    const total = nonCore.length; const spacing = svgW / (total + 1)
-    return { id: sw.id, name: sw.name, role: sw.role, status: sw.status, cpu_pct: sw.cpu_pct, total_ports: sw.total_ports, up_ports: sw.up_ports, x: spacing * (i + 1) - nodeW / 2, y: leafY, w: nodeW, h: nodeH }
+    const total = nonCore.length
+    const spacing = svgW / (total + 1)
+    return {
+      id: sw.id,
+      name: sw.name,
+      role: sw.role,
+      status: sw.status,
+      cpu_pct: sw.cpu_pct,
+      total_ports: sw.total_ports,
+      up_ports: sw.up_ports,
+      x: spacing * (i + 1) - nodeW / 2,
+      y: leafY,
+      w: nodeW,
+      h: nodeH,
+    }
   })
 })
 
@@ -318,10 +458,15 @@ const topoLinks = computed<TopoLink[]>(() => {
   const links: TopoLink[] = []
   for (const sp of spineSwitches.value) {
     for (const lf of leafSwitches.value) {
-      const sx = sp.x + sp.w / 2; const sy = sp.y + sp.h
-      const ex = lf.x + lf.w / 2; const ey = lf.y
+      const sx = sp.x + sp.w / 2
+      const sy = sp.y + sp.h
+      const ex = lf.x + lf.w / 2
+      const ey = lf.y
       // simulate link utilization based on port data
-      const util = 30 + Math.abs(sp.name.charCodeAt(sp.name.length-1) * lf.name.charCodeAt(lf.name.length-1)) % 60
+      const util =
+        30 +
+        (Math.abs(sp.name.charCodeAt(sp.name.length - 1) * lf.name.charCodeAt(lf.name.length - 1)) %
+          60)
       const sw = 1 + (util / 100) * 4
       const color = util > 85 ? '#ef4444' : util > 55 ? '#f59e0b' : '#22c55e'
       const op = sp.status === 'online' && lf.status === 'online' ? 0.7 : 0.2
@@ -334,9 +479,17 @@ const topoLinks = computed<TopoLink[]>(() => {
 function nodeDef(sw: SwitchView, i: number, total: number): TopoNode {
   const spacing = svgW / (total + 1)
   return {
-    id: sw.id, name: sw.name, role: sw.role, status: sw.status,
-    cpu_pct: sw.cpu_pct, total_ports: sw.total_ports, up_ports: sw.up_ports,
-    x: spacing * (i + 1) - nodeW / 2, y: spineY, w: nodeW, h: nodeH,
+    id: sw.id,
+    name: sw.name,
+    role: sw.role,
+    status: sw.status,
+    cpu_pct: sw.cpu_pct,
+    total_ports: sw.total_ports,
+    up_ports: sw.up_ports,
+    x: spacing * (i + 1) - nodeW / 2,
+    y: spineY,
+    w: nodeW,
+    h: nodeH,
   }
 }
 
@@ -422,20 +575,140 @@ function makeStack(topo: string, members: number) {
 
 function mockData(): NetworkSwitchSummary {
   const sws: SwitchView[] = [
-    { id: 'sp-01', name: 'Spine-01', role: 'core', status: 'online', ip: '10.1.1.1', location: '机房A顶列', model: 'CE12800E', cpu_pct: 42, mem_pct: 55, temp_c: 38, uptime_days: 365, total_ports: 48, up_ports: 48, down_ports: 0, ports: mockPorts(48), trunks: [makeTrunk('Eth-Trunk10', ['Eth1/1', 'Eth1/2'], 35)], stack: makeStack('Ring', 2) },
-    { id: 'sp-02', name: 'Spine-02', role: 'core', status: 'online', ip: '10.1.1.2', location: '机房A顶列', model: 'CE12800E', cpu_pct: 38, mem_pct: 52, temp_c: 37, uptime_days: 365, total_ports: 48, up_ports: 48, down_ports: 0, ports: mockPorts(48, 49), trunks: [makeTrunk('Eth-Trunk20', ['Eth1/1', 'Eth1/2'], 28)], stack: makeStack('Ring', 2) },
-    { id: 'lf-01', name: 'Leaf-01', role: 'aggregation', status: 'online', ip: '10.1.2.1', location: '机房A列头', model: 'CE6881-48S6CQ', cpu_pct: 31, mem_pct: 45, temp_c: 35, uptime_days: 320, total_ports: 48, up_ports: 42, down_ports: 6, ports: mockPorts(48, 97), trunks: [makeTrunk('Eth-Trunk1', ['Eth1/47', 'Eth1/48'], 55)], stack: null },
-    { id: 'lf-02', name: 'Leaf-02', role: 'aggregation', status: 'online', ip: '10.1.2.2', location: '机房A列头', model: 'CE6881-48S6CQ', cpu_pct: 29, mem_pct: 48, temp_c: 34, uptime_days: 320, total_ports: 48, up_ports: 43, down_ports: 5, ports: mockPorts(48, 145), trunks: [makeTrunk('Eth-Trunk2', ['Eth1/47', 'Eth1/48'], 48)], stack: null },
-    { id: 'ac-01', name: 'Access-01', role: 'access', status: 'online', ip: '10.1.3.1', location: 'A01列', model: 'S6735-S', cpu_pct: 18, mem_pct: 30, temp_c: 32, uptime_days: 290, total_ports: 24, up_ports: 22, down_ports: 2, ports: mockPorts(24, 193), trunks: [makeTrunk('Eth-Trunk100', ['Eth1/23', 'Eth1/24'], 22)], stack: null },
+    {
+      id: 'sp-01',
+      name: 'Spine-01',
+      role: 'core',
+      status: 'online',
+      ip: '10.1.1.1',
+      location: '机房A顶列',
+      model: 'CE12800E',
+      cpu_pct: 42,
+      mem_pct: 55,
+      temp_c: 38,
+      uptime_days: 365,
+      total_ports: 48,
+      up_ports: 48,
+      down_ports: 0,
+      ports: mockPorts(48),
+      trunks: [makeTrunk('Eth-Trunk10', ['Eth1/1', 'Eth1/2'], 35)],
+      stack: makeStack('Ring', 2),
+    },
+    {
+      id: 'sp-02',
+      name: 'Spine-02',
+      role: 'core',
+      status: 'online',
+      ip: '10.1.1.2',
+      location: '机房A顶列',
+      model: 'CE12800E',
+      cpu_pct: 38,
+      mem_pct: 52,
+      temp_c: 37,
+      uptime_days: 365,
+      total_ports: 48,
+      up_ports: 48,
+      down_ports: 0,
+      ports: mockPorts(48, 49),
+      trunks: [makeTrunk('Eth-Trunk20', ['Eth1/1', 'Eth1/2'], 28)],
+      stack: makeStack('Ring', 2),
+    },
+    {
+      id: 'lf-01',
+      name: 'Leaf-01',
+      role: 'aggregation',
+      status: 'online',
+      ip: '10.1.2.1',
+      location: '机房A列头',
+      model: 'CE6881-48S6CQ',
+      cpu_pct: 31,
+      mem_pct: 45,
+      temp_c: 35,
+      uptime_days: 320,
+      total_ports: 48,
+      up_ports: 42,
+      down_ports: 6,
+      ports: mockPorts(48, 97),
+      trunks: [makeTrunk('Eth-Trunk1', ['Eth1/47', 'Eth1/48'], 55)],
+      stack: null,
+    },
+    {
+      id: 'lf-02',
+      name: 'Leaf-02',
+      role: 'aggregation',
+      status: 'online',
+      ip: '10.1.2.2',
+      location: '机房A列头',
+      model: 'CE6881-48S6CQ',
+      cpu_pct: 29,
+      mem_pct: 48,
+      temp_c: 34,
+      uptime_days: 320,
+      total_ports: 48,
+      up_ports: 43,
+      down_ports: 5,
+      ports: mockPorts(48, 145),
+      trunks: [makeTrunk('Eth-Trunk2', ['Eth1/47', 'Eth1/48'], 48)],
+      stack: null,
+    },
+    {
+      id: 'ac-01',
+      name: 'Access-01',
+      role: 'access',
+      status: 'online',
+      ip: '10.1.3.1',
+      location: 'A01列',
+      model: 'S6735-S',
+      cpu_pct: 18,
+      mem_pct: 30,
+      temp_c: 32,
+      uptime_days: 290,
+      total_ports: 24,
+      up_ports: 22,
+      down_ports: 2,
+      ports: mockPorts(24, 193),
+      trunks: [makeTrunk('Eth-Trunk100', ['Eth1/23', 'Eth1/24'], 22)],
+      stack: null,
+    },
   ]
   const avgCpu = Math.round(sws.reduce((a, b) => a + (b.cpu_pct ?? 0), 0) / sws.length)
   const avgMem = Math.round(sws.reduce((a, b) => a + (b.mem_pct ?? 0), 0) / sws.length)
   const totalP = sws.reduce((a, b) => a + (b.total_ports ?? 0), 0)
   const upP = sws.reduce((a, b) => a + (b.up_ports ?? 0), 0)
   const pingTargets = [
-    { target: '10.1.2.1', name: 'Leaf-01 Spine侧', category: 'leaf', status: 'ok', rtt_avg_ms: 1.2, rtt_min_ms: 0.8, rtt_max_ms: 2.1, jitter_ms: 0.3, loss_pct: 0 },
-    { target: '10.1.2.2', name: 'Leaf-02 Spine侧', category: 'leaf', status: 'ok', rtt_avg_ms: 1.3, rtt_min_ms: 0.9, rtt_max_ms: 2.4, jitter_ms: 0.4, loss_pct: 0 },
-    { target: '10.1.3.1', name: 'Access-01 Leaf侧', category: 'access', status: 'lossy', rtt_avg_ms: 3.5, rtt_min_ms: 1.0, rtt_max_ms: 12.0, jitter_ms: 2.1, loss_pct: 1.2 },
+    {
+      target: '10.1.2.1',
+      name: 'Leaf-01 Spine侧',
+      category: 'leaf',
+      status: 'ok',
+      rtt_avg_ms: 1.2,
+      rtt_min_ms: 0.8,
+      rtt_max_ms: 2.1,
+      jitter_ms: 0.3,
+      loss_pct: 0,
+    },
+    {
+      target: '10.1.2.2',
+      name: 'Leaf-02 Spine侧',
+      category: 'leaf',
+      status: 'ok',
+      rtt_avg_ms: 1.3,
+      rtt_min_ms: 0.9,
+      rtt_max_ms: 2.4,
+      jitter_ms: 0.4,
+      loss_pct: 0,
+    },
+    {
+      target: '10.1.3.1',
+      name: 'Access-01 Leaf侧',
+      category: 'access',
+      status: 'lossy',
+      rtt_avg_ms: 3.5,
+      rtt_min_ms: 1.0,
+      rtt_max_ms: 12.0,
+      jitter_ms: 2.1,
+      loss_pct: 1.2,
+    },
   ]
   return {
     total: sws.length,
@@ -446,7 +719,8 @@ function mockData(): NetworkSwitchSummary {
     downPorts: totalP - upP,
     overallPortRate: totalP ? Math.round((upP / totalP) * 1000) / 10 : 0,
     totalTrafficBps: 1234567890,
-    avgCpu, avgMem,
+    avgCpu,
+    avgMem,
     switches: sws,
     pingTargets,
     avgPingRttMs: 1.2,
@@ -465,7 +739,7 @@ async function load() {
       markFull()
     } else {
       s.value = data
-      markReal()
+      markPartial(tl('链路利用率/健康色由设备名派生，后端未提供真实链路指标'))
     }
   } catch (e: unknown) {
     error.value = toErrorMessage(e)
@@ -476,74 +750,257 @@ onMounted(load)
 
 <style scoped>
 /* layout */
-.view-head { margin-bottom: 16px; }
-.view-head h1 { font-size: 20px; font-weight: 700; color: var(--txt); margin: 0 0 4px; }
-.view-head .sub { font-size: 12px; color: var(--txt2); }
-.card { background: var(--bg1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+.view-head {
+  margin-bottom: 16px;
+}
+.view-head h1 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--txt);
+  margin: 0 0 4px;
+}
+.view-head .sub {
+  font-size: 12px;
+  color: var(--txt2);
+}
+.card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
 
-.mono { font-variant-numeric: tabular-nums; font-family: "SF Mono", Consolas, monospace; }
-.g-text { color: var(--green); }
-.a-text { color: var(--amber); }
-.fw6 { font-weight: 600; }
+.mono {
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', Consolas, monospace;
+}
+.g-text {
+  color: var(--green);
+}
+.a-text {
+  color: var(--amber);
+}
+.fw6 {
+  font-weight: 600;
+}
 
 /* grid */
-.grid { display: grid; gap: 12px; }
-.cols-4 { grid-template-columns: repeat(4, 1fr); }
-.flex { display: flex; } .center { align-items: center; } .scroll-x { overflow-x: auto; }
+.grid {
+  display: grid;
+  gap: 12px;
+}
+.cols-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+.flex {
+  display: flex;
+}
+.center {
+  align-items: center;
+}
+.scroll-x {
+  overflow-x: auto;
+}
 
 /* pills & badges */
 
 /* Spine-Leaf topology */
-.topo-legend { display: flex; gap: 16px; font-size: 10px; color: var(--txt3); }
-.topo-legend span { display: flex; align-items: center; gap: 4px; }
-.tl-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
-.topo-svg { width: 100%; height: auto; max-height: 400px; }
+.topo-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 10px;
+  color: var(--txt3);
+}
+.topo-legend span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.tl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.topo-svg {
+  width: 100%;
+  height: auto;
+  max-height: 400px;
+}
 
 /* switch meta grid */
-.sw-meta-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 16px; margin-bottom: 12px; }
-.sw-kv { display: flex; flex-direction: column; gap: 2px; padding: 5px 0; border-bottom: 1px dashed var(--td-line); }
-.sw-k { font-size: 11px; color: var(--txt3); }
-.sw-v { font-size: 13px; color: var(--txt); font-weight: 600; }
+.sw-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2px 16px;
+  margin-bottom: 12px;
+}
+.sw-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--td-line);
+}
+.sw-k {
+  font-size: 11px;
+  color: var(--txt3);
+}
+.sw-v {
+  font-size: 13px;
+  color: var(--txt);
+  font-weight: 600;
+}
 
 /* PortPanel wrapper */
-.sw-panels { margin-bottom: 14px; }
+.sw-panels {
+  margin-bottom: 14px;
+}
 
 /* port table */
-.sub-title { font-size: 11px; color: var(--cyan); font-weight: 600; margin-bottom: 8px; }
-.port-table-wrap { margin-top: 10px; }
-.port-table { max-height: 320px; overflow-y: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
-th { text-align: left; color: var(--txt3); font-weight: 600; font-size: 10px; padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
-td { padding: 5px 8px; border-bottom: 1px solid var(--td-line); white-space: nowrap; }
-tbody tr:hover { background: var(--row-hover); }
-.row-offline { color: var(--txt3); opacity: 0.7; }
-.row-alarm { background: rgba(245,158,11,0.04); }
+.sub-title {
+  font-size: 11px;
+  color: var(--cyan);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.port-table-wrap {
+  margin-top: 10px;
+}
+.port-table {
+  max-height: 320px;
+  overflow-y: auto;
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+th {
+  text-align: left;
+  color: var(--txt3);
+  font-weight: 600;
+  font-size: 10px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--td-line);
+  white-space: nowrap;
+}
+tbody tr:hover {
+  background: var(--row-hover);
+}
+.row-offline {
+  color: var(--txt3);
+  opacity: 0.7;
+}
+.row-alarm {
+  background: rgba(245, 158, 11, 0.04);
+}
 
 /* trunk grid */
-.trunk-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.trunk-card { border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
-.trunk-card.trunk-ok { border-color: rgba(34,197,94,0.2); background: rgba(34,197,94,0.03); }
-.trunk-card.trunk-warn { border-color: rgba(245,158,11,0.25); background: rgba(245,158,11,0.03); }
-.trunk-bar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.trunk-meta { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--txt2); margin-bottom: 8px; }
-.trunk-members { font-size: 10px; color: var(--txt3); font-family: "SF Mono", Consolas, monospace; }
-.trunk-util-bar { margin-top: 4px; }
-.bar-label { margin-bottom: 3px; }
-.bar-track { height: 6px; background: var(--track); border-radius: 3px; overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 3px; }
-.bar-g { background: linear-gradient(90deg, rgba(34,197,94,.5), rgba(34,197,94,.85)); }
-.bar-a { background: linear-gradient(90deg, rgba(245,158,11,.5), rgba(245,158,11,.85)); }
-.bar-r { background: linear-gradient(90deg, rgba(239,68,68,.5), rgba(239,68,68,.85)); }
+.trunk-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.trunk-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.trunk-card.trunk-ok {
+  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(34, 197, 94, 0.03);
+}
+.trunk-card.trunk-warn {
+  border-color: rgba(245, 158, 11, 0.25);
+  background: rgba(245, 158, 11, 0.03);
+}
+.trunk-bar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.trunk-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  color: var(--txt2);
+  margin-bottom: 8px;
+}
+.trunk-members {
+  font-size: 10px;
+  color: var(--txt3);
+  font-family: 'SF Mono', Consolas, monospace;
+}
+.trunk-util-bar {
+  margin-top: 4px;
+}
+.bar-label {
+  margin-bottom: 3px;
+}
+.bar-track {
+  height: 6px;
+  background: var(--track);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
+.bar-g {
+  background: linear-gradient(90deg, rgba(34, 197, 94, 0.5), rgba(34, 197, 94, 0.85));
+}
+.bar-a {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.85));
+}
+.bar-r {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.5), rgba(239, 68, 68, 0.85));
+}
 
 /* ping grid */
-.ping-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-.ping-block { border: 1px solid var(--td-line); border-radius: 8px; padding: 10px 12px; background: var(--bg2); }
-.ping-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.ping-meta { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; font-size: 11px; }
+.ping-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+.ping-block {
+  border: 1px solid var(--td-line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: var(--bg2);
+}
+.ping-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.ping-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 3px 8px;
+  font-size: 11px;
+}
 
 @media (max-width: 1180px) {
-  .cols-4 { grid-template-columns: repeat(2, 1fr); }
-  .trunk-grid, .ping-grid { grid-template-columns: 1fr 1fr; }
-  .sw-meta-grid { grid-template-columns: 1fr 1fr; }
+  .cols-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .trunk-grid,
+  .ping-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .sw-meta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

@@ -6,6 +6,7 @@
 """
 from __future__ import annotations
 
+import logging
 from typing import Optional
 
 from sqlalchemy import select
@@ -15,12 +16,15 @@ from app.models.server import Server
 from app.schemas.server import RecognizeResp, UCell, UConflict, UPositionView
 from app.services import mock_data
 
+logger = logging.getLogger(__name__)
+
 
 def _db_servers(db: Session, cabinet_id: int) -> Optional[list[dict]]:
     """优先读真实 server 表; 不可用时返回 None (调用方降级到 mock)。"""
     try:
         rows = db.execute(select(Server).where(Server.cabinet_id == cabinet_id)).scalars().all()
-    except Exception:
+    except Exception as e:
+        logger.warning("server 表查询失败, 回退 mock 数据: %s", e)
         return None
     if not rows:
         return None

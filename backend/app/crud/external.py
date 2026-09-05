@@ -246,10 +246,8 @@ def bulk_insert_metrics(db: Optional[Session], points: list[MetricPoint]) -> int
             bind = db.get_bind()
             if bind is not None:
                 dialect = bind.dialect.name
-        except Exception:  # noqa: BLE001
-            pass
-
-        if dialect == "postgresql":
+        except Exception as e:  # noqa: BLE001
+            logger.debug("获取 DB dialect 失败, 按 postgresql 处理: %s", e)
             stmt = pg_insert(MetricRaw).values(rows)
             stmt = stmt.on_conflict_do_nothing(
                 index_elements=["device_id", "metric_name", "ts"]
@@ -508,7 +506,8 @@ def delete_old_metrics(db: Session, older_than: datetime, batch_size: int = 5000
     try:
         from app.services import metric_agg
         mode = metric_agg._detect(db).get("mode")
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        logger.warning("metric_agg 存储模式探测失败, 回退 plain 模式: %s", e)
         mode = "plain"
 
     # [P2-8] 保留清理单次调用耗时分布
@@ -554,8 +553,8 @@ def _delete_old_metrics_timescale(db: Session, older_than: datetime) -> int:
         logger.warning("[metric_retention] drop_chunks 失败, 回退分批 DELETE: %s", e)
         try:
             db.rollback()
-        except Exception:  # noqa: BLE001
-            pass
+        except Exception as e:  # noqa: BLE001
+            logger.warning("metric_retention 异常后回滚失败: %s", e)
         return _delete_old_metrics_plain(db, older_than, 50000)
 
 
@@ -623,7 +622,8 @@ def is_online(device_id: str, threshold_sec: int = ONLINE_THRESHOLD_SEC) -> bool
         return False
     try:
         last = max(_to_dt(v["ts"]) for v in latest.values() if v.get("ts"))
-    except Exception:
+    except Exception as e:
+        logger.debug("设备 %s 在线判定时间戳解析失败: %s", device_id, e)
         return False
     return (datetime.now(timezone.utc) - last).total_seconds() <= threshold_sec
 
@@ -669,8 +669,8 @@ def query_history(
         agg_result = metric_agg.query_history_agg(db, device_id, metrics, start_dt, end_dt, limit)
         if agg_result is not None and agg_result[0]:
             return agg_result
-    except Exception:  # noqa: BLE001
-        pass  # 聚合路径异常不影响原始表兜底
+    except Exception as e:  # noqa: BLE001
+        logger.warning("预聚合历史查询失败, 回退原始表查询: %s", e)  # 聚合路径异常不影响原始表兜底
 
     q = db.query(MetricRaw).filter(MetricRaw.device_id == device_id)
     if metrics:

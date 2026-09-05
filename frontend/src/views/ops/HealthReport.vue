@@ -16,6 +16,8 @@
       </div>
     </div>
 
+    <MockDataBanner :level="mockLevel" :reason="mockReason" />
+
     <!-- 部分数据源失败显式露出 (不再静默吞掉), 可一键重试失败项 -->
     <ErrorBanner
       v-if="anyHealthError"
@@ -234,9 +236,11 @@ import {
   listEquipment,
   getTenantStats,
 } from '@/api'
-import { useAsyncPageAll } from '@/composables/useAsyncPage'
+import { useAsyncPageAll, useMockFlag } from '@/composables/useAsyncPage'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import Panel from '@/components/common/Panel.vue'
+const { level: mockLevel, reason: mockReason, markPartial, markFull } = useMockFlag()
 
 const { t: raw, tm } = useI18n()
 const t = new Proxy({} as any, {
@@ -595,6 +599,12 @@ async function generate() {
       findings,
       suggestions,
       sources: Array.from(sources),
+    }
+
+    if (sources.has('realtime')) {
+      markPartial('后端缺失指标用本地回退系数估算评分，其余来自实时接口')
+    } else {
+      markFull()
     }
   } finally {
     loading.value = false

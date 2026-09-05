@@ -39,7 +39,8 @@ def register(client: WebSocket) -> str:
     _connections[cid] = client
     try:
         _loop = asyncio.get_event_loop()
-    except Exception:
+    except Exception as e:
+        logger.warning("WS register 获取事件循环失败, 广播暂不可用: %s", e)
         _loop = None
     logger.info("WS 客户端连接: %s (当前 %d 个连接)", cid, len(_connections))
     return cid
@@ -87,7 +88,8 @@ def publish_device_metrics(device_id: str, message: dict):
         fut = asyncio.run_coroutine_threadsafe(_send_raw(ws, data), _loop)
         try:
             fut.result(timeout=2)
-        except Exception:
+        except Exception as e:
+            logger.debug("WS 设备测点推送失败, 移除连接 %s: %s", cid, e)
             subs.discard(cid)
 
 
@@ -100,7 +102,8 @@ async def broadcast(message: dict):
     for cid, ws in list(_connections.items()):
         try:
             tasks.append(ws.send_text(data))
-        except Exception:
+        except Exception as e:
+            logger.debug("WS 广播连接 %s 同步发送失败, 移除连接: %s", cid, e)
             _connections.pop(cid, None)
     if tasks:
         results = await asyncio.gather(*tasks, return_exceptions=True)

@@ -37,16 +37,16 @@
           class="ipt"
           :placeholder="tl('操作人')"
           style="width: 140px"
-          @keyup.enter="reload"
+          @keyup.enter="applyFilters"
         />
         <input
           v-model.trim="filters.keyword"
           class="ipt"
           placeholder="关键字 (路径/详情)"
           style="width: 200px"
-          @keyup.enter="reload"
+          @keyup.enter="applyFilters"
         />
-        <button class="btn-sm primary" @click="reload">{{ tl('查询') }}</button>
+        <button class="btn-sm primary" @click="applyFilters">{{ tl('查询') }}</button>
         <button class="btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
         <span class="muted" style="margin-left: auto; font-size: 11px"
           >{{ tl('共') }} {{ total }} {{ tl('条') }}</span
@@ -55,93 +55,93 @@
     </Panel>
 
     <!-- 审计日志表格 (Presentational) -->
-    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="reload" :min-height="'320px'">
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="false"
+      @retry="reload"
+      :min-height="'320px'"
+    >
       <Panel class="scroll-x">
-      <table>
-        <thead>
-          <tr>
-            <th style="width: 150px">{{ tl('时间') }}</th>
-            <th style="width: 80px">{{ tl('方法') }}</th>
-            <th style="width: 80px">{{ tl('动作') }}</th>
-            <th style="width: 120px">{{ tl('资源') }}</th>
-            <th>{{ tl('路径') }}</th>
-            <th style="width: 120px">{{ tl('操作人') }}</th>
-            <th style="width: 110px">{{ tl('客户端') }} IP</th>
-            <th style="width: 70px">{{ tl('状态码') }}</th>
-            <th>{{ tl('请求详情') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in rows" :key="row.id">
-            <td class="mono" style="font-size: 11px">{{ fmtTime(row.ts) }}</td>
-            <td>
-              <span class="tag b">{{ row.method }}</span>
-            </td>
-            <td>
-              <span class="tag" :class="actionTag(row.action ?? '')">{{ row.action }}</span>
-            </td>
-            <td>{{ row.resource }}</td>
-            <td
-              class="mono"
-              style="font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis"
-              :title="row.path"
-            >
-              {{ row.path }}
-            </td>
-            <td>{{ row.username || '匿名' }}</td>
-            <td class="mono" style="font-size: 11px">{{ row.ip }}</td>
-            <td>
-              <span class="tag" :class="statusTag(row.status_code ?? 0)">{{ row.status_code }}</span>
-            </td>
-            <td
-              class="mono"
-              style="
-                font-size: 10.5px;
-                max-width: 320px;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-              "
-              :title="row.detail"
-            >
-              {{ row.detail }}
-            </td>
-          </tr>
-          <tr v-if="!rows.length">
-            <td colspan="9" class="muted" style="text-align: center; padding: 20px">
-              {{ loading ? '加载中…' : '暂无审计记录' }}
-            </td>
-          </tr>
-        </tbody>
-      </table>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 150px">{{ tl('时间') }}</th>
+              <th style="width: 80px">{{ tl('方法') }}</th>
+              <th style="width: 80px">{{ tl('动作') }}</th>
+              <th style="width: 120px">{{ tl('资源') }}</th>
+              <th>{{ tl('路径') }}</th>
+              <th style="width: 120px">{{ tl('操作人') }}</th>
+              <th style="width: 110px">{{ tl('客户端') }} IP</th>
+              <th style="width: 70px">{{ tl('状态码') }}</th>
+              <th>{{ tl('请求详情') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in rows" :key="row.id">
+              <td class="mono" style="font-size: 11px">{{ fmtTime(row.ts) }}</td>
+              <td>
+                <span class="tag b">{{ row.method }}</span>
+              </td>
+              <td>
+                <span class="tag" :class="actionTag(row.action ?? '')">{{ row.action }}</span>
+              </td>
+              <td>{{ row.resource }}</td>
+              <td
+                class="mono"
+                style="font-size: 11px; max-width: 260px; overflow: hidden; text-overflow: ellipsis"
+                :title="row.path"
+              >
+                {{ row.path }}
+              </td>
+              <td>{{ row.username || '匿名' }}</td>
+              <td class="mono" style="font-size: 11px">{{ row.ip }}</td>
+              <td>
+                <span class="tag" :class="statusTag(row.status_code ?? 0)">{{
+                  row.status_code
+                }}</span>
+              </td>
+              <td
+                class="mono"
+                style="
+                  font-size: 10.5px;
+                  max-width: 320px;
+                  overflow: hidden;
+                  text-overflow: ellipsis;
+                  white-space: nowrap;
+                "
+                :title="row.detail"
+              >
+                {{ row.detail }}
+              </td>
+            </tr>
+            <tr v-if="!rows.length">
+              <td colspan="9" class="muted" style="text-align: center; padding: 20px">
+                {{ loading ? '加载中…' : '暂无审计记录' }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </Panel>
     </AsyncSection>
 
     <!-- 分页 -->
     <div class="flex gap8" style="align-items: center; margin-top: 12px">
-      <button
-        class="btn-sm"
-        :disabled="page <= 1"
-        @click="page--; reload()"
-      >
+      <button class="btn-sm" :disabled="page <= 1" @click="goPrev">
         {{ tl('上一页') }}
       </button>
       <span class="muted" style="font-size: 12px"
         >{{ tl('第') }} {{ page }} {{ tl('页') }} / {{ tl('共') }} {{ totalPages }}
         {{ tl('页') }}</span
       >
-      <button
-        class="btn-sm"
-        :disabled="page >= totalPages"
-        @click="page++; reload()"
-      >
+      <button class="btn-sm" :disabled="page >= totalPages" @click="goNext">
         {{ tl('下一页') }}
       </button>
       <select
         v-model="pageSize"
         class="ipt"
         style="width: 120px; margin-left: auto"
-        @change="page = 1; reload()"
+        @change="onPageSizeChange"
       >
         <option :value="20">20 {{ tl('条') }}/{{ tl('页') }}</option>
         <option :value="50">50 {{ tl('条') }}/{{ tl('页') }}</option>
@@ -204,6 +204,31 @@ function resetFilters() {
   filters.action = ''
   filters.username = ''
   filters.keyword = ''
+  page.value = 1
+  reload()
+}
+
+/** 筛选/查询: 变更过滤条件后回到第 1 页再查询 */
+function applyFilters() {
+  page.value = 1
+  reload()
+}
+
+function goPrev() {
+  if (page.value > 1) {
+    page.value--
+    reload()
+  }
+}
+
+function goNext() {
+  if (page.value < totalPages.value) {
+    page.value++
+    reload()
+  }
+}
+
+function onPageSizeChange() {
   page.value = 1
   reload()
 }

@@ -26,6 +26,13 @@
           @blur="loginValidate('password', form)"
         />
         <FieldError :message="loginTouched.password ? loginErrors.password : ''" />
+        <div class="remember-row">
+          <label class="remember-label">
+            <input v-model="remember" type="checkbox" class="remember-cb" />
+            <span>记住我</span>
+          </label>
+          <span class="remember-tip">不勾选：关闭/刷新页面后需重新登录</span>
+        </div>
         <p v-if="error" class="err">{{ error }}</p>
         <button type="submit" :disabled="loading || !loginValid">
           {{ loading ? '登录中...' : '登 录' }}
@@ -83,6 +90,7 @@ const authStore = useAuthStore()
 const form = reactive({ username: 'admin', password: 'admin123' })
 const loading = ref(false)
 const error = ref('')
+const remember = ref(localStorage.getItem('dc_ioc_remember') !== '0')
 
 const loginFV = useFormValidation({
   rules: {
@@ -116,7 +124,7 @@ async function handleLogin() {
   loading.value = true
   error.value = ''
   try {
-    await authStore.login(form.username, form.password)
+    await authStore.login(form.username, form.password, remember.value)
     router.replace('/overview')
   } catch (e: unknown) {
     error.value = toErrorMessage(e) || '登录失败'
@@ -208,6 +216,30 @@ input.invalid {
   color: #ff6b6b;
   font-size: 12px;
   margin: 10px 0 0;
+}
+.remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+.remember-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #ccd6f6;
+  font-size: 13px;
+  cursor: pointer;
+}
+.remember-cb {
+  width: auto;
+  margin: 0;
+  accent-color: #22e3ff;
+}
+.remember-tip {
+  color: #5a6380;
+  font-size: 11px;
 }
 button {
   width: 100%;

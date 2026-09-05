@@ -55,13 +55,13 @@ def _ensure_missing_columns(db):
     try:
         from app.models.idc import IDC
         auto_tables["idc"] = IDC
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        logger.debug("可选模型导入失败, 跳过: %s", e)
     try:
         from app.models.external import ExternalDevice
         auto_tables["external_devices"] = ExternalDevice
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        logger.debug("可选模型导入失败, 跳过: %s", e)
 
     for table_name, model in auto_tables.items():
         cols: list[tuple[str, str, str]] = []
@@ -149,8 +149,8 @@ async def kpi_broadcast_loop():
         from app.services import kpi_history as _kh
 
         _kh.seed_kpi_history(hours=48)
-    except Exception:  # noqa: BLE001
-        pass
+    except Exception as e:  # noqa: BLE001
+        logger.debug("KPI 历史回填失败, 本次启动跳过: %s", e)
 
     while True:
         try:
@@ -183,8 +183,8 @@ async def kpi_broadcast_loop():
                 from app.services import kpi_history as _kh
 
                 await asyncio.to_thread(_kh.record_kpi_snapshot, overview)
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.debug("KPI 快照写入失败, 本轮跳过: %s", e)
 
             # [P2-8] 活跃告警数 (按 severity 分维度) 同步到 Prometheus Gauge
             try:
@@ -196,11 +196,11 @@ async def kpi_broadcast_loop():
                     sev_counts[lv] = sev_counts.get(lv, 0) + 1
                 for lv in ("crit", "warn", "info"):
                     alarms_active.labels(severity=lv).set(sev_counts.get(lv, 0))
-            except Exception:  # noqa: BLE001
-                pass
+            except Exception as e:  # noqa: BLE001
+                logger.debug("活跃告警 Prometheus Gauge 同步失败, 本轮跳过: %s", e)
 
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("KPI 广播轮次失败, 5s 后重试: %s", e)
         await asyncio.sleep(5)
 
 
@@ -296,7 +296,8 @@ def _seed_default_users():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("默认角色/管理员种子(_seed_default_users)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return  # 数据库不可用，静默跳过
@@ -376,7 +377,8 @@ def _seed_knowledge_and_shift():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("知识库/排班种子(_seed_knowledge_and_shift)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return
@@ -612,7 +614,8 @@ def _seed_drill_risk_inspection():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("演练/风险/巡检种子(_seed_drill_risk_inspection)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return
@@ -716,7 +719,8 @@ def _seed_tenants():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("租户种子(_seed_tenants)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return
@@ -759,7 +763,8 @@ def _seed_external_devices():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("外部设备/测点种子(_seed_external_devices)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return
@@ -842,7 +847,8 @@ def _seed_idc():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("数据中心种子(_seed_idc)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return
@@ -895,7 +901,8 @@ def _seed_alarm_rules():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("告警规则种子(_seed_alarm_rules)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return
@@ -929,7 +936,8 @@ def _seed_maintenance():
         db = SessionLocal()
         from sqlalchemy import text
         db.execute(text("select 1"))
-    except Exception:
+    except Exception as e:
+        logger.warning("维保计划/记录种子(_seed_maintenance)跳过, 数据库不可用: %s", e)
         if db is not None:
             db.close()
         return
@@ -1022,7 +1030,8 @@ async def lifespan(app: FastAPI):
             try:
                 _t.create(bind=engine, checkfirst=True)
                 _created += 1
-            except Exception:  # noqa: BLE001
+            except Exception as e:  # noqa: BLE001
+                logger.debug("表 %s 创建跳过: %s", getattr(_t, "__tablename__", "?"), e)
                 _skipped += 1
         logger.info("ORM 表结构已确保就绪 (create_all 逐表, 新建=%d 跳过=%d)", _created, _skipped)
     except Exception as e:  # noqa: BLE001
@@ -1078,8 +1087,14 @@ async def lifespan(app: FastAPI):
     # 不再依赖 KPI 广播循环启动后才注册。告警面板经 WS 实时刷新, Webhook 默认关闭。
     from app.services import ws_broadcaster
     from app.services.alarm_notify_webhook import register_webhook_notifier
+    from app.services.notification_service import register_notification_center
     ws_broadcaster.setup_alarm_notify()
     register_webhook_notifier()
+    # 统一告警触达中心: 通道配置/静默/去重/重试/发送留痕 (notification_channel 表)
+    register_notification_center()
+    # 告警自动建单桥: crit 级告警自动创建工单 (幂等, 工单终态回写 resolve_alarm)
+    from app.services.alarm_ticket_bridge import register_alarm_ticket_bridge
+    register_alarm_ticket_bridge()
 
     try:
         alarm_engine.hydrate_alarm_engine()

@@ -16,11 +16,13 @@ from app.api.v1.endpoints import (
     equipment,
     external,
     fault_impact,
+    graphic_editor,
     hvac,
     inspection,
     knowledge,
     metrics,
     network,
+    notification,
     ops,
     power,
     risk,
@@ -96,6 +98,15 @@ api_router.include_router(server.router, prefix="/servers", tags=["servers"], de
 api_router.include_router(server.cabinet_router, prefix="/cabinets", tags=["u-position"], dependencies=_auth)
 # 租户管理 (资源运营: 配额/用量明细 + 超阈值预警, 真实数据 CRUD)
 api_router.include_router(tenant.router, prefix="/ops/tenants", tags=["tenants"], dependencies=_auth)
+api_router.include_router(
+    graphic_editor.router, prefix="/ops", tags=["graphic-config"], dependencies=_auth
+)
+api_router.include_router(
+    graphic_editor.refuel_router, prefix="/ops", tags=["refuel-records"], dependencies=_auth
+)
+api_router.include_router(
+    notification.router, prefix="/ops", tags=["notifications"], dependencies=_auth
+)
 # 通用文件上传 (头像/附件/批量)
 api_router.include_router(uploads.router, tags=["uploads"], dependencies=_auth)
 # WebSocket 遥测在 main 中单独挂载于 /ws

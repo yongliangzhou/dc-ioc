@@ -14,13 +14,18 @@
             @click="toggle(g.id)"
           >
             <span class="gtitle-text">{{ g.title }}</span>
-            <NavIcon class="gtitle-arrow" :name="collapsed[g.id] ? 'ChevronRight' : 'ChevronDown'" />
+            <NavIcon
+              class="gtitle-arrow"
+              :name="collapsed[g.id] ? 'ChevronRight' : 'ChevronDown'"
+            />
           </button>
           <div class="nav-items" v-show="!collapsed[g.id]">
             <template v-for="it in g.items" :key="it.path">
               <router-link :to="it.path" class="nav-item" :class="{ active: isActive(it.path) }">
                 <NavIcon :name="it.ico" />{{ it.title }}
-                <span v-if="it.badge" class="badge" :class="{ alert: it.alert }">{{ it.badge }}</span>
+                <span v-if="it.badge" class="badge" :class="{ alert: it.alert }">{{
+                  it.badge
+                }}</span>
               </router-link>
               <router-link
                 v-for="c in it.children ?? []"
@@ -167,7 +172,11 @@ const nav = computed<NavGroup[]>(() => [
         ico: 'Search',
         children: [
           { path: '/ops/inspection', title: t('nav.inspect'), ico: 'Search' },
-          { path: '/ops/inspection-template', title: t('nav.electronicInspection'), ico: 'Smartphone' },
+          {
+            path: '/ops/inspection-template',
+            title: t('nav.electronicInspection'),
+            ico: 'Smartphone',
+          },
         ],
       },
       {
@@ -188,10 +197,17 @@ const nav = computed<NavGroup[]>(() => [
           { path: '/ops/duty-calendar', title: t('nav.dutyCalendar'), ico: 'CalendarDays' },
         ],
       },
-      { path: '/ops/tickets', title: t('nav.tickets'), ico: 'ClipboardList', badge: '6', alert: true },
+      {
+        path: '/ops/tickets',
+        title: t('nav.tickets'),
+        ico: 'ClipboardList',
+        badge: '6',
+        alert: true,
+      },
       { path: '/ops/room-access', title: t('nav.roomAccess'), ico: 'LogIn' },
       { path: '/ops/fault-impact', title: t('nav.faultImpact'), ico: 'GitBranch' },
       { path: '/ops/drill-plan', title: t('nav.drillPlan'), ico: 'ClipboardCheck' },
+      { path: '/ops/notifications', title: t('nav.notifications'), ico: 'BellRing' },
       { path: '/ops/risk', title: t('nav.risk'), ico: 'AlertTriangle' },
       { path: '/ops/power-ai-hazards', title: t('nav.powerAi'), ico: 'Zap' },
       { path: '/ops/health-report', title: t('nav.healthReport'), ico: 'HeartPulse' },
@@ -205,6 +221,7 @@ const nav = computed<NavGroup[]>(() => [
     items: [
       { path: '/ops/equipment', title: t('nav.equipment'), ico: 'FileText' },
       { path: '/ops/u-position', title: t('nav.uPosition'), ico: 'LayoutGrid' },
+      { path: '/ops/capacity-whatif', title: t('nav.whatIf'), ico: 'Gauge' },
       { path: '/ops/cabinets', title: t('nav.cabinets'), ico: 'ServerCog' },
       { path: '/ops/asset-lifecycle', title: t('nav.assetLifecycle'), ico: 'GitBranch' },
       { path: '/ops/tenant-manage', title: t('nav.tenantManage'), ico: 'Building2' },
@@ -251,7 +268,10 @@ const nav = computed<NavGroup[]>(() => [
   {
     id: 'system',
     title: t('admin.title'),
-    items: [{ path: '/admin/audit', title: t('admin.audit'), ico: 'ScrollText' }],
+    items: [
+      { path: '/admin/audit', title: t('admin.audit'), ico: 'ScrollText' },
+      { path: '/admin/row-audit', title: t('admin.rowAudit'), ico: 'History' },
+    ],
   },
 ])
 
@@ -304,7 +324,9 @@ onBeforeUnmount(() => {
   text-align: left;
   cursor: pointer;
   border-radius: 6px;
-  transition: background 0.18s ease, color 0.18s ease;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
 }
 .nav-group > .gtitle:hover {
   background: var(--panel);

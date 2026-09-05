@@ -61,13 +61,22 @@ export function toErrorMessage(e: unknown, fallback = '加载失败'): string {
 
   const err = e as {
     response?: { status?: number; data?: unknown }
+    status?: number
     code?: string
-    message?: string
+    name?: string
+    message?: unknown
+    detail?: unknown
+    msg?: unknown
   }
-  const status = err.response?.status
-  const data = err.response?.data as
-    | { detail?: unknown; message?: unknown; msg?: unknown }
-    | undefined
+  // request.ts 对 HTTP 错误 reject 的是 err.response.data（FastAPI 直出 {detail/message/msg}），
+  // axios 错误才是 { response: { data, status } } 形态，mock 兜底抛的也带 response.data。
+  // 统一解析两种形态，避免把后端明确返回的文案误判成「网络异常或服务未启动」。
+  const hasPayloadField =
+    typeof err.detail !== 'undefined' ||
+    typeof err.msg !== 'undefined' ||
+    typeof err.message !== 'undefined'
+  const data = (err.response?.data ?? (hasPayloadField ? err : undefined)) as
+    { detail?: unknown; message?: unknown; msg?: unknown } | undefined
 
   // FastAPI 422: detail 为 [{loc:[...], msg}] 数组
   const detail = data?.detail
@@ -85,12 +94,25 @@ export function toErrorMessage(e: unknown, fallback = '加载失败'): string {
   if (typeof data?.message === 'string' && data.message) return data.message
   if (typeof data?.msg === 'string' && data.msg) return data.msg
 
+  const status = err.response?.status ?? err.status
   if (status && HTTP_MSG[status]) {
     return status >= 500 ? `${HTTP_MSG[status]}（${status}）` : HTTP_MSG[status]
   }
-  // 无 response 说明连不上服务 (后端未启动 / 断网)
-  if (!err.response) return '网络异常或服务未启动'
-  return err.message || fallback
+
+  // 无 response：可能是请求根本没发出去（断网 / 后端未启动），
+  // 也可能是业务代码直接 throw new Error('文案') —— 后者优先展示原文。
+  if (!err.response) {
+    const m = err.message == null ? '' : String(err.message)
+    const isNetworkLike =
+      err.name === 'AxiosError' ||
+      err.name === 'TypeError' ||
+      err.name === 'TimeoutError' ||
+      /network|timeout|timed out|fetch/i.test(m)
+    if (m && !isNetworkLike) return m
+    return '网络异常或服务未启动'
+  }
+  const m = err.message == null ? '' : String(err.message)
+  return m || fallback
 }
 
 /**
@@ -368,5 +390,14 @@ export function useAsyncPageAll<T extends FetcherMap>(
     )
   }
 
-  return { pages, anyError, errorCount, failedKeys, anyLoading, allLoading, reloadAll, reloadFailed }
+  return {
+    pages,
+    anyError,
+    errorCount,
+    failedKeys,
+    anyLoading,
+    allLoading,
+    reloadAll,
+    reloadFailed,
+  }
 }

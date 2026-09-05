@@ -146,9 +146,11 @@ class AuditMiddleware(BaseHTTPMiddleware):
                 if body:
                     try:
                         detail = body.decode("utf-8", "ignore")
-                    except Exception:
+                    except Exception as e:
+                        logger.debug("请求体 UTF-8 解码失败, 审计明细记为 <binary>: %s", e)
                         detail = "<binary>"
-            except Exception:
+            except Exception as e:
+                logger.debug("读取请求体失败, 审计明细置空: %s", e)
                 detail = None
 
         username = _principal(request)
@@ -181,7 +183,8 @@ class AuditMiddleware(BaseHTTPMiddleware):
                         action=action, resource=resource,
                         detail=detail, username=username, ip=ip,
                     )
-            except Exception:  # noqa: BLE001
-                pass  # 告警失败不影响主流程
+            except Exception as e:  # noqa: BLE001
+                # 告警失败不影响主流程
+                logger.debug("安全告警发送失败: %s", e)
 
         return response

@@ -8,8 +8,8 @@ export interface WsMessage {
     | 'connected'
     | 'device_metrics'
     | 'subscribed'
-  | 'auth_ok'
-  | 'auth_error'
+    | 'auth_ok'
+    | 'auth_error'
   data?: unknown
   ts?: string
   client_id?: string
@@ -46,12 +46,15 @@ export function useWebSocket(onMessage?: (msg: WsMessage) => void) {
         const msg: WsMessage = JSON.parse(event.data)
         if (msg.type === 'auth_ok') {
           connected.value = true
-          console.log('[WS] 认证通过, 已连接')
+          console.debug('[WS] 认证通过, 已连接')
         } else if (msg.type === 'auth_error') {
           console.warn('[WS] 认证失败, 连接将被关闭')
         }
         onMessage?.(msg)
-      } catch {}
+      } catch {
+        // 非 JSON 帧 (心跳/探测) 属预期, debug 级避免噪音; 不静默到无迹可查
+        console.debug('[WS] 收到非 JSON 消息帧, 已忽略')
+      }
     }
 
     socket.onclose = () => {

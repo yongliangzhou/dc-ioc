@@ -432,8 +432,19 @@ function verifyLabel(id: string) {
 }
 
 function loadCfg() {
-  cfg.value = JSON.parse(localStorage.getItem(KEY_CFG) || 'null') || cfg.value
-  syncLogs.value = JSON.parse(localStorage.getItem(KEY_LOG) || '[]')
+  // 本地 JSON 可能因版本变更/手改损坏: 逐项容错, 损坏时保留默认配置, 避免页面初始化抛错
+  try {
+    const c = JSON.parse(localStorage.getItem(KEY_CFG) || 'null')
+    if (c && typeof c === 'object') cfg.value = { ...cfg.value, ...c }
+  } catch {
+    /* 忽略损坏配置, 使用默认值 */
+  }
+  try {
+    const logs = JSON.parse(localStorage.getItem(KEY_LOG) || '[]')
+    if (Array.isArray(logs)) syncLogs.value = logs
+  } catch {
+    syncLogs.value = []
+  }
 }
 function saveCfg() {
   localStorage.setItem(KEY_CFG, JSON.stringify(cfg.value))

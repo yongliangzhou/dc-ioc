@@ -1,5 +1,9 @@
 <template>
   <div class="page-wrap">
+    <MockDataBanner
+      level="full"
+      note="当前页面为本地演示数据：供应商台账存于浏览器 localStorage（内置种子数据），非后端数据。"
+    />
     <div class="view-head">
       <div class="vh-icon">
         <svg
@@ -248,6 +252,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { useFormValidation, required } from '@/composables/useFormValidation'
 
 const { tm } = useI18n()

@@ -9,15 +9,12 @@
       </div>
     </header>
 
+    <MockDataBanner :level="mockLevel" :reason="mockReason" />
+
     <ErrorBanner v-if="error" :count="1" :labels="['实时数据']" @retry="refresh" />
 
     <div class="bs-grid" :style="gridStyle">
-      <div
-        v-for="w in widgets"
-        :key="w.id"
-        class="bs-card"
-        :class="'type-' + w.type"
-      >
+      <div v-for="w in widgets" :key="w.id" class="bs-card" :class="'type-' + w.type">
         <div class="bs-card-label">{{ w.label }}</div>
         <!-- KPI -->
         <div v-if="w.type === 'kpi'" class="bs-kpi">
@@ -27,7 +24,13 @@
         <!-- Gauge -->
         <div v-else-if="w.type === 'gauge'" class="bs-gauge">
           <svg viewBox="0 0 120 70">
-            <path d="M10 65 A50 50 0 0 1 110 65" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10" stroke-linecap="round" />
+            <path
+              d="M10 65 A50 50 0 0 1 110 65"
+              fill="none"
+              stroke="rgba(255,255,255,.08)"
+              stroke-width="10"
+              stroke-linecap="round"
+            />
             <path
               d="M10 65 A50 50 0 0 1 110 65"
               fill="none"
@@ -37,7 +40,9 @@
               :stroke-dasharray="gaugeDash(w.value, w.max)"
             />
           </svg>
-          <div class="bs-gauge-val">{{ fmt(w.value) }}<small>{{ w.unit }}</small></div>
+          <div class="bs-gauge-val">
+            {{ fmt(w.value) }}<small>{{ w.unit }}</small>
+          </div>
         </div>
         <!-- Line / Bar 趋势 -->
         <div v-else class="bs-chart">
@@ -67,10 +72,12 @@ import {
   type DataSourceTemplate,
 } from '@/bigscreen/sources'
 import { themeMode, applyTheme } from '@/theme'
-import { toErrorMessage } from '@/composables/useAsyncPage'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 
 const { t: tl } = useI18n()
+const { level: mockLevel, reason: mockReason, markPartial } = useMockFlag()
 const cfg = ref<BigScreenConfig>(loadConfig())
 const refreshTime = ref('--:--:--')
 const values = ref<Record<string, number>>({})
@@ -102,7 +109,10 @@ const widgets = computed<Widget[]>(() => {
     const base = s.type === 'gauge' ? v : Math.max(v, 1)
     const seriesData =
       s.type === 'line' || s.type === 'bar'
-        ? Array.from({ length: 16 }, (_, i) => +(base * (0.85 + 0.3 * Math.sin(i / 2) + (i % 3) * 0.05)).toFixed(2))
+        ? Array.from(
+            { length: 16 },
+            (_, i) => +(base * (0.85 + 0.3 * Math.sin(i / 2) + (i % 3) * 0.05)).toFixed(2),
+          )
         : []
     return { ...s, value: v, seriesData, max: s.max }
   })
@@ -141,6 +151,7 @@ async function refresh() {
     values.value = next
     refreshTime.value = new Date().toLocaleTimeString('zh-CN', { hour12: false })
     error.value = ''
+    markPartial('折线/柱状历史波形为演示曲线，当前数值来自实时接口')
   } catch (e) {
     error.value = toErrorMessage(e) || '实时数据刷新失败'
   }
@@ -160,26 +171,137 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.bigscreen { min-height: 100vh; background: #060b16; color: #e2e8f0; padding: 18px 22px; }
-.bigscreen.light { background: #eef2f7; color: #0f172a; }
-.bs-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-.bs-title { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: var(--cyan, #22e3ff); text-shadow: 0 0 12px rgba(34,227,255,.4); }
-.bs-meta { display: flex; align-items: center; gap: 14px; font-size: 13px; color: #94a3b8; }
-.live { display: inline-flex; align-items: center; gap: 5px; color: #2bd47a; }
-.live i { width: 8px; height: 8px; border-radius: 50%; background: #2bd47a; box-shadow: 0 0 8px #2bd47a; animation: blink 1.4s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-.edit { color: var(--cyan, #22e3ff); border: 1px solid rgba(34,227,255,.4); border-radius: 8px; padding: 4px 12px; text-decoration: none; font-size: 12px; }
-.bs-grid { display: grid; gap: 16px; }
-.bs-card { background: linear-gradient(160deg, rgba(15,30,50,.9), rgba(10,18,32,.9)); border: 1px solid rgba(34,227,255,.18); border-radius: 14px; padding: 18px; min-height: 150px; display: flex; flex-direction: column; }
-.bigscreen.light .bs-card { background: #fff; border-color: rgba(8,145,178,.2); }
-.bs-card-label { font-size: 13px; color: #94a3b8; margin-bottom: 10px; }
-.bs-kpi { display: flex; align-items: baseline; gap: 6px; margin-top: auto; }
-.bs-kpi .val { font-size: 38px; font-weight: 800; color: #e2e8f0; }
-.bs-kpi .unit { font-size: 14px; color: #64748b; }
-.bs-gauge { position: relative; flex: 1; display: flex; align-items: center; justify-content: center; }
-.bs-gauge svg { width: 100%; max-width: 180px; }
-.bs-gauge-val { position: absolute; bottom: 4px; font-size: 22px; font-weight: 700; color: #e2e8f0; }
-.bs-gauge-val small { font-size: 12px; color: #64748b; margin-left: 2px; }
-.bs-chart .bars { display: flex; align-items: flex-end; gap: 4px; height: 90px; }
-.bs-chart .bar { flex: 1; border-radius: 3px 3px 0 0; opacity: .85; min-height: 4px; }
+.bigscreen {
+  min-height: 100vh;
+  background: #060b16;
+  color: #e2e8f0;
+  padding: 18px 22px;
+}
+.bigscreen.light {
+  background: #eef2f7;
+  color: #0f172a;
+}
+.bs-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.bs-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  color: var(--cyan, #22e3ff);
+  text-shadow: 0 0 12px rgba(34, 227, 255, 0.4);
+}
+.bs-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #2bd47a;
+}
+.live i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2bd47a;
+  box-shadow: 0 0 8px #2bd47a;
+  animation: blink 1.4s infinite;
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+.edit {
+  color: var(--cyan, #22e3ff);
+  border: 1px solid rgba(34, 227, 255, 0.4);
+  border-radius: 8px;
+  padding: 4px 12px;
+  text-decoration: none;
+  font-size: 12px;
+}
+.bs-grid {
+  display: grid;
+  gap: 16px;
+}
+.bs-card {
+  background: linear-gradient(160deg, rgba(15, 30, 50, 0.9), rgba(10, 18, 32, 0.9));
+  border: 1px solid rgba(34, 227, 255, 0.18);
+  border-radius: 14px;
+  padding: 18px;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+}
+.bigscreen.light .bs-card {
+  background: #fff;
+  border-color: rgba(8, 145, 178, 0.2);
+}
+.bs-card-label {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-bottom: 10px;
+}
+.bs-kpi {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-top: auto;
+}
+.bs-kpi .val {
+  font-size: 38px;
+  font-weight: 800;
+  color: #e2e8f0;
+}
+.bs-kpi .unit {
+  font-size: 14px;
+  color: #64748b;
+}
+.bs-gauge {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bs-gauge svg {
+  width: 100%;
+  max-width: 180px;
+}
+.bs-gauge-val {
+  position: absolute;
+  bottom: 4px;
+  font-size: 22px;
+  font-weight: 700;
+  color: #e2e8f0;
+}
+.bs-gauge-val small {
+  font-size: 12px;
+  color: #64748b;
+  margin-left: 2px;
+}
+.bs-chart .bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 90px;
+}
+.bs-chart .bar {
+  flex: 1;
+  border-radius: 3px 3px 0 0;
+  opacity: 0.85;
+  min-height: 4px;
+}
 </style>

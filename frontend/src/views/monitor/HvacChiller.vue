@@ -110,284 +110,313 @@
 
     <!-- ========== 系统工艺流程图 (SVG 组态) ========== -->
     <div class="section">
-      <h3 class="section-title"><span class="dot c0"></span> 系统工艺流程</h3>
+      <h3 class="section-title">
+        <span class="dot c0"></span> 系统工艺流程
+        <button class="flow-edit-btn" @click="editOpen = true">
+          编辑{{ hasGraphicEdits ? ' ●' : '' }}
+        </button>
+      </h3>
       <div class="flow-svg-wrap">
         <svg viewBox="0 0 1000 340" class="flow-svg" @click="onFlowClick">
-          <!-- 冷冻回水总管 -->
-          <rect
-            x="20"
-            y="130"
-            width="60"
-            height="100"
-            rx="4"
-            fill="rgba(6,182,212,0.08)"
-            stroke="var(--cyan)"
-            stroke-width="1"
-          />
-          <text x="50" y="175" text-anchor="middle" fill="var(--cyan)" font-size="11">
-            冷冻回水
-          </text>
-          <text x="50" y="192" text-anchor="middle" fill="var(--txt3)" font-size="9">总管</text>
-          <text
-            x="50"
-            y="218"
-            text-anchor="middle"
-            fill="var(--txt)"
-            font-size="11"
-            font-weight="700"
-          >
-            {{ chiller?.returnTemp ?? '-' }}℃
-          </text>
+          <!-- 冷冻回水总管 (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('chw-return')">
+            <rect
+              x="20"
+              y="130"
+              width="60"
+              height="100"
+              rx="4"
+              fill="rgba(6,182,212,0.08)"
+              stroke="var(--cyan)"
+              stroke-width="1"
+            />
+            <text x="50" y="175" text-anchor="middle" fill="var(--cyan)" font-size="11">
+              {{ geLabel('chw-return', '冷冻回水') }}
+            </text>
+            <text x="50" y="192" text-anchor="middle" fill="var(--txt3)" font-size="9">总管</text>
+            <text
+              x="50"
+              y="218"
+              text-anchor="middle"
+              fill="var(--txt)"
+              font-size="11"
+              font-weight="700"
+            >
+              {{ chiller?.returnTemp ?? '-' }}℃
+            </text>
+          </g>
 
-          <!-- 冷水机组 1 -->
-          <rect
-            x="120"
-            y="80"
-            width="120"
-            height="200"
-            rx="8"
-            class="flow-chiller"
-            :class="chillerState(0)"
-            data-idx="0"
-          />
-          <text
-            x="180"
-            y="140"
-            text-anchor="middle"
-            fill="var(--txt)"
-            font-size="13"
-            font-weight="700"
-          >
-            {{ groupName(0) }}
-          </text>
-          <StatusBadge :status="groupStatus(0)" size="tiny" class="flow-badge" />
-          <text
-            x="180"
-            y="200"
-            text-anchor="middle"
-            :fill="groupStatus(0) === 'online' ? '#22c55e' : 'var(--txt3)'"
-            font-size="18"
-            font-weight="800"
-          >
-            {{ groupLoad(0) }}%
-          </text>
-          <text x="180" y="218" text-anchor="middle" fill="var(--cyan)" font-size="10">
-            COP {{ groupCop(0) }}
-          </text>
-          <text x="180" y="235" text-anchor="middle" fill="var(--txt)" font-size="10">
-            {{ groupEvapT(0) }} / {{ groupCondT(0) }}℃
-          </text>
-          <text
-            x="180"
-            y="260"
-            text-anchor="middle"
-            fill="var(--txt3)"
-            font-size="9"
-            class="click-hint"
-          >
-            点击查看详情
-          </text>
+          <!-- 冷水机组 1 (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('chiller-1')">
+            <rect
+              x="120"
+              y="80"
+              width="120"
+              height="200"
+              rx="8"
+              class="flow-chiller"
+              :class="chillerState(0)"
+              data-idx="0"
+            />
+            <text
+              x="180"
+              y="140"
+              text-anchor="middle"
+              fill="var(--txt)"
+              font-size="13"
+              font-weight="700"
+            >
+              {{ geLabel('chiller-1', groupName(0)) }}
+            </text>
+            <StatusBadge :status="groupStatus(0)" size="tiny" class="flow-badge" />
+            <text
+              x="180"
+              y="200"
+              text-anchor="middle"
+              :fill="groupStatus(0) === 'online' ? '#22c55e' : 'var(--txt3)'"
+              font-size="18"
+              font-weight="800"
+            >
+              {{ groupLoad(0) }}%
+            </text>
+            <text x="180" y="218" text-anchor="middle" fill="var(--cyan)" font-size="10">
+              COP {{ groupCop(0) }}
+            </text>
+            <text x="180" y="235" text-anchor="middle" fill="var(--txt)" font-size="10">
+              {{ groupEvapT(0) }} / {{ groupCondT(0) }}℃
+            </text>
+            <text
+              x="180"
+              y="260"
+              text-anchor="middle"
+              fill="var(--txt3)"
+              font-size="9"
+              class="click-hint"
+            >
+              点击查看详情
+            </text>
+          </g>
 
-          <!-- 冷水机组 2 -->
-          <rect
-            x="280"
-            y="80"
-            width="120"
-            height="200"
-            rx="8"
-            class="flow-chiller"
-            :class="chillerState(1)"
-            data-idx="1"
-          />
-          <text
-            x="340"
-            y="140"
-            text-anchor="middle"
-            fill="var(--txt)"
-            font-size="13"
-            font-weight="700"
-          >
-            {{ groupName(1) }}
-          </text>
-          <StatusBadge :status="groupStatus(1)" size="tiny" class="flow-badge" />
-          <text
-            x="340"
-            y="200"
-            text-anchor="middle"
-            :fill="groupStatus(1) === 'online' ? '#22c55e' : 'var(--txt3)'"
-            font-size="18"
-            font-weight="800"
-          >
-            {{ groupLoad(1) }}%
-          </text>
-          <text x="340" y="218" text-anchor="middle" fill="var(--cyan)" font-size="10">
-            COP {{ groupCop(1) }}
-          </text>
-          <text x="340" y="235" text-anchor="middle" fill="var(--txt)" font-size="10">
-            {{ groupEvapT(1) }} / {{ groupCondT(1) }}℃
-          </text>
-          <text
-            x="340"
-            y="260"
-            text-anchor="middle"
-            fill="var(--txt3)"
-            font-size="9"
-            class="click-hint"
-          >
-            点击查看详情
-          </text>
+          <!-- 冷水机组 2 (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('chiller-2')">
+            <rect
+              x="280"
+              y="80"
+              width="120"
+              height="200"
+              rx="8"
+              class="flow-chiller"
+              :class="chillerState(1)"
+              data-idx="1"
+            />
+            <text
+              x="340"
+              y="140"
+              text-anchor="middle"
+              fill="var(--txt)"
+              font-size="13"
+              font-weight="700"
+            >
+              {{ geLabel('chiller-2', groupName(1)) }}
+            </text>
+            <StatusBadge :status="groupStatus(1)" size="tiny" class="flow-badge" />
+            <text
+              x="340"
+              y="200"
+              text-anchor="middle"
+              :fill="groupStatus(1) === 'online' ? '#22c55e' : 'var(--txt3)'"
+              font-size="18"
+              font-weight="800"
+            >
+              {{ groupLoad(1) }}%
+            </text>
+            <text x="340" y="218" text-anchor="middle" fill="var(--cyan)" font-size="10">
+              COP {{ groupCop(1) }}
+            </text>
+            <text x="340" y="235" text-anchor="middle" fill="var(--txt)" font-size="10">
+              {{ groupEvapT(1) }} / {{ groupCondT(1) }}℃
+            </text>
+            <text
+              x="340"
+              y="260"
+              text-anchor="middle"
+              fill="var(--txt3)"
+              font-size="9"
+              class="click-hint"
+            >
+              点击查看详情
+            </text>
+          </g>
 
-          <!-- 冷水机组 3 -->
-          <rect
-            x="440"
-            y="80"
-            width="120"
-            height="200"
-            rx="8"
-            class="flow-chiller"
-            :class="chillerState(2)"
-            data-idx="2"
-          />
-          <text
-            x="500"
-            y="140"
-            text-anchor="middle"
-            fill="var(--txt)"
-            font-size="13"
-            font-weight="700"
-          >
-            {{ groupName(2) }}
-          </text>
-          <StatusBadge :status="groupStatus(2)" size="tiny" class="flow-badge" />
-          <text
-            x="500"
-            y="200"
-            text-anchor="middle"
-            :fill="groupStatus(2) === 'online' ? '#22c55e' : 'var(--txt3)'"
-            font-size="18"
-            font-weight="800"
-          >
-            {{ groupLoad(2) }}%
-          </text>
-          <text x="500" y="218" text-anchor="middle" fill="var(--cyan)" font-size="10">
-            COP {{ groupCop(2) }}
-          </text>
-          <text x="500" y="235" text-anchor="middle" fill="var(--txt)" font-size="10">
-            {{ groupEvapT(2) }} / {{ groupCondT(2) }}℃
-          </text>
-          <text
-            x="500"
-            y="260"
-            text-anchor="middle"
-            fill="var(--txt3)"
-            font-size="9"
-            class="click-hint"
-          >
-            点击查看详情
-          </text>
+          <!-- 冷水机组 3 (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('chiller-3')">
+            <rect
+              x="440"
+              y="80"
+              width="120"
+              height="200"
+              rx="8"
+              class="flow-chiller"
+              :class="chillerState(2)"
+              data-idx="2"
+            />
+            <text
+              x="500"
+              y="140"
+              text-anchor="middle"
+              fill="var(--txt)"
+              font-size="13"
+              font-weight="700"
+            >
+              {{ geLabel('chiller-3', groupName(2)) }}
+            </text>
+            <StatusBadge :status="groupStatus(2)" size="tiny" class="flow-badge" />
+            <text
+              x="500"
+              y="200"
+              text-anchor="middle"
+              :fill="groupStatus(2) === 'online' ? '#22c55e' : 'var(--txt3)'"
+              font-size="18"
+              font-weight="800"
+            >
+              {{ groupLoad(2) }}%
+            </text>
+            <text x="500" y="218" text-anchor="middle" fill="var(--cyan)" font-size="10">
+              COP {{ groupCop(2) }}
+            </text>
+            <text x="500" y="235" text-anchor="middle" fill="var(--txt)" font-size="10">
+              {{ groupEvapT(2) }} / {{ groupCondT(2) }}℃
+            </text>
+            <text
+              x="500"
+              y="260"
+              text-anchor="middle"
+              fill="var(--txt3)"
+              font-size="9"
+              class="click-hint"
+            >
+              点击查看详情
+            </text>
+          </g>
 
-          <!-- 冷冻供水总管 -->
-          <rect
-            x="600"
-            y="130"
-            width="60"
-            height="100"
-            rx="4"
-            fill="rgba(34,197,94,0.08)"
-            stroke="var(--green)"
-            stroke-width="1"
-          />
-          <text x="630" y="175" text-anchor="middle" fill="var(--green)" font-size="11">
-            冷冻供水
-          </text>
-          <text x="630" y="192" text-anchor="middle" fill="var(--txt3)" font-size="9">总管</text>
-          <text
-            x="630"
-            y="218"
-            text-anchor="middle"
-            fill="var(--txt)"
-            font-size="11"
-            font-weight="700"
-          >
-            {{ chiller?.supplyTemp ?? '-' }}℃
-          </text>
+          <!-- 冷冻供水总管 (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('chw-supply')">
+            <rect
+              x="600"
+              y="130"
+              width="60"
+              height="100"
+              rx="4"
+              fill="rgba(34,197,94,0.08)"
+              stroke="var(--green)"
+              stroke-width="1"
+            />
+            <text x="630" y="175" text-anchor="middle" fill="var(--green)" font-size="11">
+              {{ geLabel('chw-supply', '冷冻供水') }}
+            </text>
+            <text x="630" y="192" text-anchor="middle" fill="var(--txt3)" font-size="9">总管</text>
+            <text
+              x="630"
+              y="218"
+              text-anchor="middle"
+              fill="var(--txt)"
+              font-size="11"
+              font-weight="700"
+            >
+              {{ chiller?.supplyTemp ?? '-' }}℃
+            </text>
+          </g>
 
-          <!-- 冷却塔 -->
-          <rect
-            x="700"
-            y="60"
-            width="90"
-            height="100"
-            rx="6"
-            fill="rgba(249,115,22,0.06)"
-            stroke="var(--amber)"
-            stroke-width="1"
-            stroke-dasharray="4"
-          />
-          <text x="745" y="100" text-anchor="middle" fill="var(--amber)" font-size="11">
-            冷却塔
-          </text>
-          <text x="745" y="118" text-anchor="middle" fill="var(--txt3)" font-size="9">
-            ×{{ chiller?.towers?.length || 0 }}台
-          </text>
-          <text x="745" y="140" text-anchor="middle" fill="var(--txt)" font-size="10">
-            {{ towerSummary }}
-          </text>
-          <text
-            x="745"
-            y="158"
-            text-anchor="middle"
-            fill="var(--txt3)"
-            font-size="9"
-            class="click-hint"
-          >
-            点击展开
-          </text>
+          <!-- 冷却塔 (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('tower')">
+            <rect
+              x="700"
+              y="60"
+              width="90"
+              height="100"
+              rx="6"
+              fill="rgba(249,115,22,0.06)"
+              stroke="var(--amber)"
+              stroke-width="1"
+              stroke-dasharray="4"
+            />
+            <text x="745" y="100" text-anchor="middle" fill="var(--amber)" font-size="11">
+              {{ geLabel('tower', '冷却塔') }}
+            </text>
+            <text x="745" y="118" text-anchor="middle" fill="var(--txt3)" font-size="9">
+              ×{{ chiller?.towers?.length || 0 }}台
+            </text>
+            <text x="745" y="140" text-anchor="middle" fill="var(--txt)" font-size="10">
+              {{ towerSummary }}
+            </text>
+            <text
+              x="745"
+              y="158"
+              text-anchor="middle"
+              fill="var(--txt3)"
+              font-size="9"
+              class="click-hint"
+            >
+              点击展开
+            </text>
+          </g>
 
-          <!-- 冷冻泵 CHWP -->
-          <rect
-            x="120"
-            y="295"
-            width="120"
-            height="40"
-            rx="4"
-            fill="rgba(6,182,212,0.06)"
-            stroke="var(--line)"
-            stroke-width="1"
-          />
-          <text x="180" y="318" text-anchor="middle" fill="var(--cyan)" font-size="11">
-            ❰ 冷冻一次泵 CHWP
-          </text>
+          <!-- 冷冻泵 CHWP (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('chwp')">
+            <rect
+              x="120"
+              y="295"
+              width="120"
+              height="40"
+              rx="4"
+              fill="rgba(6,182,212,0.06)"
+              stroke="var(--line)"
+              stroke-width="1"
+            />
+            <text x="180" y="318" text-anchor="middle" fill="var(--cyan)" font-size="11">
+              ❰ {{ geLabel('chwp', '冷冻一次泵 CHWP') }}
+            </text>
+          </g>
 
-          <!-- 冷却泵 CWP -->
-          <rect
-            x="280"
-            y="295"
-            width="120"
-            height="40"
-            rx="4"
-            fill="rgba(249,115,22,0.06)"
-            stroke="var(--line)"
-            stroke-width="1"
-          />
-          <text x="340" y="318" text-anchor="middle" fill="var(--amber)" font-size="11">
-            ❰ 冷却水泵 CWP
-          </text>
+          <!-- 冷却泵 CWP (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('cwp')">
+            <rect
+              x="280"
+              y="295"
+              width="120"
+              height="40"
+              rx="4"
+              fill="rgba(249,115,22,0.06)"
+              stroke="var(--line)"
+              stroke-width="1"
+            />
+            <text x="340" y="318" text-anchor="middle" fill="var(--amber)" font-size="11">
+              ❰ {{ geLabel('cwp', '冷却水泵 CWP') }}
+            </text>
+          </g>
 
-          <!-- 板换 -->
-          <rect
-            x="440"
-            y="295"
-            width="120"
-            height="40"
-            rx="4"
-            fill="rgba(139,92,246,0.06)"
-            stroke="var(--line)"
-            stroke-width="1"
-          />
-          <text x="500" y="318" text-anchor="middle" fill="var(--purple2, #8b5cf6)" font-size="11">
-            ❰ 板式换热器
-          </text>
+          <!-- 板换 (统一图形编辑: 可隐藏/改名) -->
+          <g v-if="!geHidden('hex')">
+            <rect
+              x="440"
+              y="295"
+              width="120"
+              height="40"
+              rx="4"
+              fill="rgba(139,92,246,0.06)"
+              stroke="var(--line)"
+              stroke-width="1"
+            />
+            <text
+              x="500"
+              y="318"
+              text-anchor="middle"
+              fill="var(--purple2, #8b5cf6)"
+              font-size="11"
+            >
+              ❰ {{ geLabel('hex', '板式换热器') }}
+            </text>
+          </g>
 
           <!-- 连接线（简化：水平线 + 箭头） -->
           <line
@@ -466,8 +495,49 @@
               <path d="M0,0 L10,0 L5,10 z" fill="var(--amber)" />
             </marker>
           </defs>
+
+          <!-- 用户新增节点 (统一图形编辑: 覆盖层自建条目按 x/y 叠加渲染) -->
+          <g v-for="n in flowCustomNodes" :key="n.id">
+            <rect
+              :x="n.x ?? 0"
+              :y="n.y ?? 0"
+              width="120"
+              height="52"
+              rx="6"
+              fill="rgba(34,211,238,0.06)"
+              stroke="var(--cyan)"
+              stroke-width="1"
+              stroke-dasharray="4"
+            />
+            <text
+              :x="(n.x ?? 0) + 60"
+              :y="(n.y ?? 0) + 23"
+              text-anchor="middle"
+              fill="var(--cyan)"
+              font-size="11"
+            >
+              {{ n.label || n.id }}
+            </text>
+            <text
+              :x="(n.x ?? 0) + 60"
+              :y="(n.y ?? 0) + 40"
+              text-anchor="middle"
+              fill="var(--txt3)"
+              font-size="9"
+            >
+              {{ n.type || '自定义节点' }}
+            </text>
+          </g>
         </svg>
       </div>
+
+      <!-- 统一图形编辑入口: 工艺流程节点可隐藏/改名/新增 (覆盖层) -->
+      <GraphicEditDrawer
+        v-model="editOpen"
+        :editor="graphicEditor"
+        title="冷源系统工艺流程"
+        :defaults="processDefaults"
+      />
     </div>
 
     <!-- ========== 制冷机组分组详情 ========== -->
@@ -893,12 +963,24 @@ interface PumpRow extends PumpView {
   outP: number
 }
 import { getActiveAlarms } from '@/api/index'
-import { GroupCard, TrendChart, DeviceTable, HeatmapView, TimeRangePicker, QuickControl, EmptyState, SkeletonCard,  } from '@/components/monitor'
+import {
+  GroupCard,
+  TrendChart,
+  DeviceTable,
+  HeatmapView,
+  TimeRangePicker,
+  QuickControl,
+  EmptyState,
+  SkeletonCard,
+} from '@/components/monitor'
 import { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 import { CHART_COLORS } from '@/assets/echarts-theme'
 import { useToast } from '@/hooks/useToast'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
 import { useAsyncPageAll } from '@/composables/useAsyncPage'
+import { useGraphicEditor } from '@/composables/useGraphicEditor'
+import type { GraphicNode } from '@/types/graphic'
 
 // ---- State (多源并发: 单源失败不阻塞其它源, 由 ErrorBanner 显式露出) ----
 const all = useAsyncPageAll(
@@ -918,7 +1000,31 @@ const activeRange = ref('24h')
 const loading = computed(() => all.allLoading.value)
 const trendsLoading = computed(() => all.pages.trends.loading.value)
 
-function mapActiveAlarms(res: unknown): { level: string; ts: string; msg: string; status: string }[] {
+/* ───────── 统一图形编辑入口 (冷源系统工艺流程) ─────────
+ * 工艺流程图是硬编码 SVG: 通过场景覆盖层支持 隐藏(isHidden)/改名(labelOf)/
+ * 新增节点(customNodes 按 x/y 叠加渲染)。接口遥测数据不受影响。 */
+const graphicEditor = useGraphicEditor('hvac-chiller-process', { title: '冷源系统工艺流程' })
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => graphicEditor.hasOverrides.value)
+const geHidden = (id: string) => graphicEditor.isHidden(id)
+const geLabel = (id: string, fallback: string) => graphicEditor.labelOf(id, fallback)
+/** 工艺流程默认节点清单 (与硬编码 SVG 一一对应, 供编辑抽屉列出可编辑项) */
+const processDefaults = (): GraphicNode[] => [
+  { id: 'chw-return', label: '冷冻回水', type: '总管', x: 20, y: 130 },
+  { id: 'chiller-1', label: String(groupName(0)), type: '冷水机组', x: 120, y: 80 },
+  { id: 'chiller-2', label: String(groupName(1)), type: '冷水机组', x: 280, y: 80 },
+  { id: 'chiller-3', label: String(groupName(2)), type: '冷水机组', x: 440, y: 80 },
+  { id: 'chw-supply', label: '冷冻供水', type: '总管', x: 600, y: 130 },
+  { id: 'tower', label: '冷却塔', type: '冷却塔', x: 700, y: 60 },
+  { id: 'chwp', label: '冷冻一次泵 CHWP', type: '水泵', x: 120, y: 295 },
+  { id: 'cwp', label: '冷却水泵 CWP', type: '水泵', x: 280, y: 295 },
+  { id: 'hex', label: '板式换热器', type: '板换', x: 440, y: 295 },
+]
+const flowCustomNodes = computed(() => graphicEditor.customNodes(processDefaults()))
+
+function mapActiveAlarms(
+  res: unknown,
+): { level: string; ts: string; msg: string; status: string }[] {
   const items = (res as { items?: AlarmLite[] } | undefined)?.items ?? []
   return items
     .filter(
@@ -1480,6 +1586,21 @@ onUnmounted(() => clearInterval(refreshTimer))
 </script>
 
 <style scoped>
+/* 统一图形编辑入口按钮 */
+.flow-edit-btn {
+  margin-left: 10px;
+  background: var(--bg2, #0f172a);
+  border: 1px solid var(--cyan, #22d3ee);
+  color: var(--cyan, #22d3ee);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  vertical-align: middle;
+}
+.flow-edit-btn:hover {
+  background: rgba(34, 211, 238, 0.14);
+}
 .chiller-page {
   display: flex;
   flex-direction: column;

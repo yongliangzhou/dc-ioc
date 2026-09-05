@@ -8,28 +8,28 @@ import request from './request'
 // battery(): { groups:[{id,type,soc,u,i,state,maxT,...}], ... }
 
 export interface PowerDeviceView {
-    /** 设备唯一标识，使用后端返回的 device_id 或自定义 code */
-    id: string
-    /** 兼容旧字段，保留 code 与 id 相同 */
-    code: string
-    name: string
-    /** 机房/区域名称 */
-    roomName: string
-    /** 新增字段：机房/区域 */
-    room: string
-    /** 设备编号（在同一机房内的顺序） */
-    no: number
-    status: string
-    voltage: number | null
-    current: number | null
-    powerKw: number | null
-    loadPercent: number | null
-    powerFactor: number | null
-    fuelLevel: number | null
-    fuelConsumption: number | null
-    commissionedOn: string | null
-    healthScore: number | null
-  }
+  /** 设备唯一标识，使用后端返回的 device_id 或自定义 code */
+  id: string
+  /** 兼容旧字段，保留 code 与 id 相同 */
+  code: string
+  name: string
+  /** 机房/区域名称 */
+  roomName: string
+  /** 新增字段：机房/区域 */
+  room: string
+  /** 设备编号（在同一机房内的顺序） */
+  no: number
+  status: string
+  voltage: number | null
+  current: number | null
+  powerKw: number | null
+  loadPercent: number | null
+  powerFactor: number | null
+  fuelLevel: number | null
+  fuelConsumption: number | null
+  commissionedOn: string | null
+  healthScore: number | null
+}
 
 export interface PowerSystemSummary {
   total: number
@@ -1084,35 +1084,21 @@ function mapBatteryDetailed(raw: RawItem): BatterySummary {
 
 // ---- API 调用 ----
 
-function emptySummary(): PowerSystemSummary {
-  return {
-    total: 0,
-    online: 0,
-    avgLoadPercent: null,
-    avgVoltage: null,
-    avgCurrent: null,
-    devices: [],
-  }
-}
-
+/**
+ * 映射式拉取子系统摘要。
+ * 注意：不在此处吞咽异常——请求失败（后端宕机 / 5xx / 超时）必须上抛，
+ * 交由调用方的 useAsyncPage / AsyncSection 进入可视错误态并可重试，
+ * 否则后端不可用时页面会静默显示"全 0 设备"，掩盖真实故障。
+ */
 function fetchMapped(
   url: string,
   mapper: (raw: RawItem) => PowerSystemSummary,
 ): Promise<PowerSystemSummary> {
-  return request
-    .get<unknown, RawItem>(url)
-    .then((raw) => mapper(raw ?? {}))
-    .catch(() => emptySummary())
+  return request.get<unknown, RawItem>(url).then((raw) => mapper(raw ?? {}))
 }
 
 function fetchHvDetailed(): Promise<HvSummary> {
-  return request
-    .get<unknown, RawItem>('/api/power/hv')
-    .then((raw) => mapHvDetailed(raw ?? {}))
-    .catch(() => {
-      console.error('Failed to load HV detailed data')
-      return mapHvDetailed({})
-    })
+  return request.get<unknown, RawItem>('/api/power/hv').then((raw) => mapHvDetailed(raw ?? {}))
 }
 
 export function getPowerHv(): Promise<PowerSystemSummary> {
@@ -1128,13 +1114,7 @@ export function getPowerLv(): Promise<PowerSystemSummary> {
 }
 
 export function getPowerLvDetailed(): Promise<LvSummary> {
-  return request
-    .get<unknown, RawItem>('/api/power/lv')
-    .then((raw) => mapLvDetailed(raw ?? {}))
-    .catch(() => {
-      console.error('Failed to load LV detailed data')
-      return mapLvDetailed({})
-    })
+  return request.get<unknown, RawItem>('/api/power/lv').then((raw) => mapLvDetailed(raw ?? {}))
 }
 
 export function getPowerGenset(): Promise<PowerSystemSummary> {
@@ -1145,10 +1125,6 @@ export function getPowerGensetDetailed(): Promise<GensetSummary> {
   return request
     .get<unknown, RawItem>('/api/power/genset')
     .then((raw) => mapGensetDetailed(raw ?? {}))
-    .catch(() => {
-      console.error('Failed to load Genset detailed data')
-      return mapGensetDetailed({})
-    })
 }
 
 export function getPowerFuel(): Promise<PowerSystemSummary> {
@@ -1156,13 +1132,7 @@ export function getPowerFuel(): Promise<PowerSystemSummary> {
 }
 
 export function getPowerFuelDetailed(): Promise<FuelSummary> {
-  return request
-    .get<unknown, RawItem>('/api/power/fuel')
-    .then((raw) => mapFuelDetailed(raw ?? {}))
-    .catch(() => {
-      console.error('Failed to load Fuel detailed data')
-      return mapFuelDetailed({})
-    })
+  return request.get<unknown, RawItem>('/api/power/fuel').then((raw) => mapFuelDetailed(raw ?? {}))
 }
 
 export function getPowerBattery(): Promise<PowerSystemSummary> {
@@ -1173,10 +1143,6 @@ export function getPowerBatteryDetailed(): Promise<BatterySummary> {
   return request
     .get<unknown, RawItem>('/api/power/battery')
     .then((raw) => mapBatteryDetailed(raw ?? {}))
-    .catch(() => {
-      console.error('Failed to load Battery detailed data')
-      return mapBatteryDetailed({})
-    })
 }
 
 export function getPowerOverview(): Promise<PowerOverview> {

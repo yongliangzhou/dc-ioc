@@ -6,7 +6,7 @@
       <span class="sub">{{
         tl('两路市电进线 · 母线 · 馈线回路 · 开关状态 · 电能质量 · 保护事件')
       }}</span>
-      <MockDataBanner :level="mockLevel" />
+      <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
     <!-- Loading -->
@@ -30,6 +30,9 @@
             <span class="lg"><i class="dot r"></i>{{ tl('分闸') }}</span>
             <span class="lg"><i class="dot b"></i>{{ tl('检修/备用') }}</span>
             <span class="lg muted">{{ tl('点击断路器查看详情') }}</span>
+            <button class="hv-edit" @click="editOpen = true">
+              {{ tl('编辑') }}{{ hasGraphicEdits ? ' ●' : '' }}
+            </button>
           </div>
         </template>
         <div class="schematic-wrap">
@@ -77,7 +80,7 @@
 
             <!-- 进线断路器 Q1 / Q2 -->
             <g
-              v-for="(q, qi) in incomerBreakers"
+              v-for="(q, qi) in incomerBreakersView"
               :key="'q' + qi"
               class="breaker-node"
               @click="selectNode(q)"
@@ -93,27 +96,35 @@
               <text :x="q.x" :y="q.y + 4" class="breaker-text">{{ q.code }}</text>
             </g>
 
-            <!-- 母联 QB -->
-            <g class="breaker-node" @click="selectNode(busTieNode)">
+            <!-- 母联 QB (用户删除时隐藏) -->
+            <g
+              v-if="!busTieNodeView.hidden"
+              class="breaker-node"
+              @click="selectNode(busTieNodeView)"
+            >
               <rect
-                :x="busTieNode.x - BR_W / 2"
-                :y="busTieNode.y - BR_H / 2"
+                :x="busTieNodeView.x - BR_W / 2"
+                :y="busTieNodeView.y - BR_H / 2"
                 :width="BR_W"
                 :height="BR_H"
                 rx="5"
-                :class="['breaker-rect', breakerCls(busTieNode.breaker)]"
+                :class="['breaker-rect', breakerCls(busTieNodeView.breaker)]"
               />
-              <text :x="busTieNode.x" :y="busTieNode.y + 4" class="breaker-text">
-                {{ busTieNode.code }}
+              <text :x="busTieNodeView.x" :y="busTieNodeView.y + 4" class="breaker-text">
+                {{ busTieNodeView.code }}
               </text>
-              <text :x="busTieNode.x" :y="busTieNode.y - BR_H / 2 - 6" class="bus-tie-label">
+              <text
+                :x="busTieNodeView.x"
+                :y="busTieNodeView.y - BR_H / 2 - 6"
+                class="bus-tie-label"
+              >
                 {{ s.busTie?.autoSwitch }}
               </text>
             </g>
 
             <!-- 馈线断路器 + 标签 -->
             <g
-              v-for="(f, fi) in feederNodes"
+              v-for="(f, fi) in feederNodesView"
               :key="'f' + fi"
               class="breaker-node"
               @click="selectNode(f)"
@@ -155,6 +166,14 @@
           </div>
         </transition>
       </Panel>
+
+      <!-- 统一图形编辑入口: 对一次系统图的节点/参数做增删改 (覆盖层, 不影响接口数据) -->
+      <GraphicEditDrawer
+        v-model="editOpen"
+        :editor="graphicEditor"
+        :title="tl('10KV 中压一次系统图')"
+        :defaults="graphicDefaults"
+      />
 
       <!-- ======== 3.1.3 进线监测 KPI (KpiCard × 6) ======== -->
       <div class="grid cols-6" v-if="primaryIncomer">
@@ -563,16 +582,18 @@ import {
   type HvFeederView,
 } from '@/api/power'
 import Panel from '@/components/common/Panel.vue'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
+import { useGraphicEditor, type NodeAdapter } from '@/composables/useGraphicEditor'
+import type { GraphicNode } from '@/types/graphic'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 const { t: tl } = useI18n()
 
 /** 后端无有效返回时页面会回退到本地 mockSummary()，必须让用户看见这是假的 */
-const { level: mockLevel, markMock, markReal } = useMockFlag()
+const { level: mockLevel, reason: mockReason, markMock, markPartial } = useMockFlag()
 
 /** 电量格式化：原始值以 Wh 计，折算为 kWh 并以千分位整数展示 */
-const fmtEnergy = (v: number | null | undefined): string =>
-  fmtInt(v == null ? null : v / 1000)
+const fmtEnergy = (v: number | null | undefined): string => fmtInt(v == null ? null : v / 1000)
 
 // ──────────────────────────────────────────
 // SVG 一次图几何
@@ -683,6 +704,69 @@ const feederNodes = computed<BreakerNode[]>(() => {
     }
   })
 })
+
+/* ───────── 统一图形编辑入口 (10KV 中压一次系统图) ─────────
+ * 场景覆盖层: 改名/改状态/改坐标/改参数 = 覆盖; 删除 = removed; 新增 = 自建节点。
+ * 接口数据仍是默认值并持续刷新, 编辑只在其上叠加, 不污染数据源。 */
+const graphicEditor = useGraphicEditor('power-hv-schematic', {
+  title: '10KV 中压一次系统图',
+})
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => graphicEditor.hasOverrides.value)
+
+/** BreakerNode ↔ GraphicNode 双向映射 (页面节点 → 可编辑项 / 编辑结果 → 页面节点) */
+const breakerAdapter: NodeAdapter<BreakerNode> = {
+  toNode: (n) => ({
+    id: n.id,
+    label: n.label,
+    type: n.code,
+    x: n.x,
+    y: n.y,
+    status: n.breaker,
+    params: Object.fromEntries((n.kvs ?? []).map((kv) => [kv.k, String(kv.v)])),
+  }),
+  fromNode: (g, base) => {
+    const src: BreakerNode = base ?? {
+      id: g.id,
+      code: g.type || g.id,
+      label: g.label || g.id,
+      breaker: g.status || tl('分闸'),
+      x: g.x ?? 0,
+      y: g.y ?? 0,
+      kvs: [],
+    }
+    // 未改参数时保留接口实时 kvs; 改过则用编辑值
+    const params = g.params ?? {}
+    const kvs = Object.keys(params).length
+      ? Object.entries(params).map(([k, v]) => ({ k, v }))
+      : src.kvs
+    return {
+      ...src,
+      id: g.id,
+      label: g.label || src.label,
+      code: g.type || src.code,
+      x: g.x ?? src.x,
+      y: g.y ?? src.y,
+      breaker: g.status || src.breaker,
+      kvs,
+    }
+  },
+}
+
+const incomerBreakersView = computed(() =>
+  graphicEditor.apply(incomerBreakers.value, breakerAdapter),
+)
+const feederNodesView = computed(() => graphicEditor.apply(feederNodes.value, breakerAdapter))
+/** 单节点: 被用户删除时带 hidden 标记, 模板据此隐藏 (母联结构件不能真的消失) */
+const busTieNodeView = computed(() => {
+  const arr = graphicEditor.apply([busTieNode.value], breakerAdapter)
+  return { ...(arr[0] ?? busTieNode.value), hidden: arr.length === 0 }
+})
+const graphicDefaults = (): GraphicNode[] => [
+  ...incomerBreakers.value.map(breakerAdapter.toNode),
+  ...feederNodes.value.map(breakerAdapter.toNode),
+  breakerAdapter.toNode(busTieNode.value),
+]
 
 function selectNode(n: BreakerNode) {
   selectedNode.value = n
@@ -1267,7 +1351,7 @@ async function loadData() {
     const data = await getPowerHvDetailed()
     if (data && (data.incomers?.length || data.feeders?.length)) {
       s.value = data
-      markReal()
+      markPartial('历史事件与保护动作记录为本地演示数据，其余读数来自实时接口')
     } else {
       s.value = mockSummary()
       markMock()
@@ -1425,6 +1509,20 @@ onMounted(loadData)
 }
 .dot.b {
   background: #3b82f6;
+}
+
+/* 统一图形编辑入口按钮 */
+.hv-edit {
+  background: var(--bg2, #0f172a);
+  border: 1px solid var(--cyan, #22d3ee);
+  color: var(--cyan, #22d3ee);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.hv-edit:hover {
+  background: rgba(34, 211, 238, 0.14);
 }
 
 /* 节点详情 */

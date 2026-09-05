@@ -3,10 +3,14 @@
 用于防御 /api/auth/login 的暴力破解: 每个客户端 IP 在 60s 窗口内最多
 RATE_LIMIT_PER_MINUTE 次登录尝试。Redis 不可用时自动降级为放行, 不阻断登录主流程。
 """
+import logging
+
 from fastapi import HTTPException, Request, status
 
 from app.cache.redis_client import rds
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 def _client_key(request: Request) -> str:
@@ -34,6 +38,6 @@ def login_rate_limit(request: Request) -> None:
             )
     except HTTPException:
         raise
-    except Exception:
+    except Exception as e:
         # Redis 不可用 -> 降级放行 (基础防护失效, 但登录不阻断)
-        pass
+        logger.debug("登录限流 Redis 不可用, 降级放行: %s", e)

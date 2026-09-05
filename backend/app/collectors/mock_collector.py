@@ -526,8 +526,8 @@ async def _run() -> None:
         try:
             sys.stdout.buffer.write((banner + "\n").encode("utf-8"))
             sys.stdout.buffer.flush()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("stdout 横幅写入失败 (已忽略, 走 logger 输出): %s", e)
         logger.info(banner)
 
         # ---- 3) 每 5 秒批量上报 ----

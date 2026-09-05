@@ -131,12 +131,26 @@ def create_ticket(
     return t
 
 
+def find_open_by_alarm(db: Session, alarm_id: str) -> Optional[Ticket]:
+    """按 source_alarm_id 查未关单工单 (告警自动建单的幂等判定)。"""
+    return (
+        db.query(Ticket)
+        .filter(
+            Ticket.source_alarm_id == alarm_id,
+            Ticket.state.notin_(("done", "resolved", "closed")),
+        )
+        .order_by(Ticket.created.desc())
+        .first()
+    )
+
+
 def list_tickets(
     db: Session,
     *,
     state: Optional[str] = None,
     sys: Optional[str] = None,
     lv: Optional[str] = None,
+    source_alarm_id: Optional[str] = None,
     page: int = 1,
     limit: int = 200,
 ):
@@ -147,6 +161,8 @@ def list_tickets(
         q = q.filter(Ticket.sys == sys)
     if lv:
         q = q.filter(Ticket.lv == lv)
+    if source_alarm_id:
+        q = q.filter(Ticket.source_alarm_id == source_alarm_id)
     total = q.count()
     items = (
         q.order_by(Ticket.created.desc())

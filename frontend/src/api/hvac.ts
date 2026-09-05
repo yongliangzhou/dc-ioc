@@ -618,9 +618,7 @@ function mapChiller(raw: RawItem): ChillerSummary {
     : 0
 
   // 系统 COP: 只统计"运行中"的机组, 待机/检修机的 cop=0 会把它拉成假的低值
-  const systemCop = meanOf(
-    list.filter((d) => d.state === '运行').map((d) => Number(d.cop) || 0),
-  )
+  const systemCop = meanOf(list.filter((d) => d.state === '运行').map((d) => Number(d.cop) || 0))
 
   // 泵组映射
   const mapPump = (p: RawItem): PumpView => ({
@@ -869,7 +867,12 @@ function mapCrac(raw: RawItem): CracSummary {
     cracRun: Number(r.cracRun) || 0,
     cracN: Number(r.cracN) || 0,
     state: String(r.state ?? '正常'),
-    leak: (r.leak as RoomView['leak']) ?? { status: '正常', level: '正常', position: null, zone: 0 },
+    leak: (r.leak as RoomView['leak']) ?? {
+      status: '正常',
+      level: '正常',
+      position: null,
+      zone: 0,
+    },
   }))
 
   // ---- 定位式漏水检测 ----
@@ -1373,7 +1376,9 @@ export interface ChillerTrends {
 }
 
 export function getChillerTrends(): Promise<ChillerTrends> {
-  return request.get<unknown, RawItem>('/api/hvac/chiller-trends').then((r) => r as unknown as ChillerTrends).catch(() => ({} as ChillerTrends))
+  return request
+    .get<unknown, RawItem>('/api/hvac/chiller-trends')
+    .then((r) => r as unknown as ChillerTrends)
 }
 
 // ============================================================
@@ -1439,45 +1444,6 @@ export function mapCracRoomGroups(summary: CracSummary): CracRoomGroupView[] {
     humidifier: globalHum,
     leak: room.leak,
   }))
-}
-
-function mapCracView(d: RawItem): CracView {
-  const control = (d.control as RawItem) ?? {}
-  const setpoints = (d.setpoints as RawItem) ?? {}
-  return {
-    id: d.id ? parseInt(String(d.id).replace(/\D/g, '')) || 1 : 1,
-    code: String(d.id ?? ''),
-    name: String(d.id ?? ''),
-    roomName: String(d.room ?? ''),
-    type: String(d.type ?? '精密空调'),
-    status: d.state === '运行' ? 'online' : d.state === '故障' ? 'fault' : 'standby',
-    supplyT: d.supplyT === '-' ? '-' : Number(d.supplyT) || 0,
-    returnT: d.returnT === '-' ? '-' : Number(d.returnT) || 0,
-    supplyRh: d.supplyRh === '-' ? '-' : Number(d.supplyRh) || 0,
-    returnRh: d.returnRh === '-' ? '-' : Number(d.returnRh) || 0,
-    chilledWaterT: d.chilledWaterT === '-' ? '-' : Number(d.chilledWaterT) || 0,
-    returnWaterT: d.returnWaterT === '-' ? '-' : Number(d.returnWaterT) || 0,
-    fanSpeed: Number(d.fan) || 0,
-    valve: Number(d.valve) || 0,
-    waterValve: Number(d.waterValve) || 0,
-    power: Number(d.power) || 0,
-    dp: d.dp === '-' ? '-' : Number(d.dp) || 0,
-    shr: d.shr === '-' || d.shr == null ? null : Number(d.shr) || null,
-    filter: String(d.filter ?? '正常'),
-    fanEnable: Boolean(control.fanEnable ?? true),
-    fanSpeedSet: Number(control.fanSpeedSet) || 0,
-    waterValveSet: Number(control.waterValveSet) || 0,
-    coolingMode: String(control.coolingMode ?? '制冷'),
-    humidOn: Boolean(control.humidOn ?? false),
-    supplyTSet: Number(setpoints.supplyTSet) || 0,
-    rhSet: Number(setpoints.rhSet) || 0,
-    roomTSet: Number(setpoints.roomTSet) || 0,
-    highTempAlarm: Number(setpoints.highTempAlarm) || 0,
-    lowTempAlarm: Number(setpoints.lowTempAlarm) || 0,
-    highRhAlarm: Number(setpoints.highRhAlarm) || 0,
-    commissionedOn: null,
-    healthScore: null,
-  }
 }
 
 // ============================================================
@@ -1580,5 +1546,7 @@ export interface CracTrends {
 }
 
 export function getCracTrends(): Promise<CracTrends> {
-  return request.get<unknown, RawItem>('/api/hvac/crac-trends').then((r) => r as unknown as CracTrends).catch(() => ({} as CracTrends))
+  return request
+    .get<unknown, RawItem>('/api/hvac/crac-trends')
+    .then((r) => r as unknown as CracTrends)
 }

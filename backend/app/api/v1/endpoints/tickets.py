@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_db, require_role
 from app.crud import alarm as alarm_crud
 from app.models.user import User
+from app.models.ticket import Ticket
 from app.crud import ticket as ticket_crud
 from app.services import alarm_engine
 from app.schemas.ticket import (
@@ -36,13 +37,25 @@ def list_tickets(
     state: str | None = None,
     sys: str | None = None,
     lv: str | None = None,
+    source_alarm_id: str | None = None,
     page: int = 1,
     limit: int = 200,
     db: Session = Depends(get_db),
 ):
-    items, _ = ticket_crud.list_tickets(db, state=state, sys=sys, lv=lv, page=page, limit=limit)
+    items, _ = ticket_crud.list_tickets(
+        db, state=state, sys=sys, lv=lv, source_alarm_id=source_alarm_id, page=page, limit=limit
+    )
     stats = ticket_crud.ticket_stats(db)
     return TicketCenterOut(stats=stats, list=[TicketOut.model_validate(t) for t in items])
+
+
+@router.get("/by-alarm/{alarm_id}", response_model=list[TicketOut])
+def tickets_by_alarm(alarm_id: str, db: Session = Depends(get_db)):
+    """按告警 ID 查关联工单 (前端告警行「已建单」徽标数据源)。"""
+    q = db.query(Ticket).filter(Ticket.source_alarm_id == alarm_id)
+    q = q.filter(Ticket.state.notin_(("done", "resolved", "closed")))
+    items = q.order_by(Ticket.created.desc()).all()
+    return [TicketOut.model_validate(t) for t in items]
 
 
 @router.post("", response_model=TicketOut, status_code=201)

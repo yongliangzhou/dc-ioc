@@ -1,5 +1,9 @@
 <template>
   <div class="page-wrap">
+    <MockDataBanner
+      level="full"
+      note="当前页面为本地演示数据：内置 22 条供配电隐患规则（含 AI 研判），状态存于浏览器 localStorage，非后端实时数据。"
+    />
     <div class="view-head">
       <div class="vh-icon">
         <svg
@@ -170,6 +174,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { askAssistant } from '@/api'
 
 const { tm } = useI18n()
@@ -219,7 +224,17 @@ function blank(): Hazard {
 }
 
 function load() {
-  rules.value = JSON.parse(localStorage.getItem(KEY) || 'null') || seed()
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || 'null')
+    // 仅接受数组; 损坏/缺失一律回退种子数据并自愈重写, 避免白屏
+    if (Array.isArray(raw)) {
+      rules.value = raw
+      return
+    }
+  } catch {
+    /* 本地缓存损坏 → 回退种子数据 */
+  }
+  rules.value = seed()
   localStorage.setItem(KEY, JSON.stringify(rules.value))
 }
 function seed(): Hazard[] {

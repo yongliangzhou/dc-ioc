@@ -1,5 +1,9 @@
 <template>
   <div class="page">
+    <MockDataBanner
+      level="full"
+      note="当前页面为本地演示数据：门禁/访客进出记录保存在浏览器 localStorage，非后端真实门禁系统。"
+    />
     <header class="page-head">
       <div>
         <h1 class="page-title">{{ t.title }}</h1>
@@ -166,6 +170,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { useAuthStore } from '@/stores/modules/auth'
 import { useFormValidation, required } from '@/composables/useFormValidation'
 
@@ -202,7 +207,10 @@ function load(): AccessRecord[] {
   try {
     const s = JSON.parse(localStorage.getItem(LS) || 'null')
     if (s && Array.isArray(s) && s.length) return s
-  } catch {}
+  } catch {
+    // 本地缓存损坏: 自愈为种子数据 (可恢复, 无需打断用户), debug 留痕
+    console.debug('[RoomAccess] localStorage 数据损坏, 已重置为种子数据')
+  }
   localStorage.setItem(LS, JSON.stringify(seed))
   return seed
 }

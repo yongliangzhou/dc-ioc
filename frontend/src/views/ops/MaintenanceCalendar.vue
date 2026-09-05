@@ -41,9 +41,19 @@
       <span class="lg-tip">{{ t.clickNew }}</span>
     </div>
 
-    <div v-if="warn" class="warn-bar">{{ warn }}</div>
+    <ErrorBanner
+      :count="all.errorCount"
+      :labels="failedLabels"
+      :retrying="all.anyLoading"
+      @retry="all.reloadFailed"
+    />
 
-    <AsyncSection :loading="loading" :error="error" @retry="load">
+    <AsyncSection
+      :loading="sectionLoading"
+      :error="sectionError"
+      :retrying="sectionRetrying"
+      @retry="all.reloadAll"
+    >
       <div class="cal">
         <div v-if="!events.length" class="cal-empty">{{ t.emptyCalendar }}</div>
         <div class="cal-grid" :class="{ week: view === 'week' }">
@@ -146,7 +156,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/modules/auth'
 import AsyncSection from '@/components/common/AsyncSection.vue'
-import { toErrorMessage } from '@/composables/useAsyncPage'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { useAsyncPageAll } from '@/composables/useAsyncPage'
 import {
   getMaintenancePlanList,
   getMaintenanceRecords,
@@ -170,10 +181,32 @@ const auth = useAuthStore()
 const me = computed(() => auth.user?.username || 'me')
 
 const view = ref<'month' | 'week'>('month')
-const loading = ref(false)
-const error = ref('')
-/** 部分数据源失败提示（全部失败时才置 error） */
-const warn = ref('')
+
+/* 计划/记录两路独立加载: 任一路失败只提示并允许单路重试, 不再整页判失败 */
+const all = useAsyncPageAll(
+  { plans: getMaintenancePlanList, records: getMaintenanceRecords },
+  { autoLoad: false },
+)
+const plansPage = all.pages.plans
+const recordsPage = all.pages.records
+const SRC_LABELS: Record<string, string> = {
+  plans: String(t.duePlans),
+  records: String(t.records),
+}
+const failedLabels = computed(() => all.failedKeys.value.map((k) => SRC_LABELS[k] ?? k))
+/** 仅当两路都失败时整个日历区块才进入错误态; 单路失败由顶部 ErrorBanner 汇总并可单路重试 */
+const sectionError = computed(() => {
+  const errs: string[] = []
+  if (plansPage.error.value) errs.push(plansPage.error.value)
+  if (recordsPage.error.value) errs.push(recordsPage.error.value)
+  return errs.length === 2 ? errs.join('；') : ''
+})
+const sectionLoading = computed(() => {
+  // 已有任一成功数据后不再整屏骨架, 保留另一半可交互 (失败项在横幅上可重试)
+  if (plansPage.loaded.value || recordsPage.loaded.value) return false
+  return all.anyLoading.value
+})
+const sectionRetrying = computed(() => plansPage.retrying.value || recordsPage.retrying.value)
 const today = new Date()
 const cursor = ref(new Date(today.getFullYear(), today.getMonth(), today.getDate()))
 
@@ -184,7 +217,33 @@ interface CalEvent {
   date: string
   meta?: any
 }
-const events = ref<CalEvent[]>([])
+/** 日历事件由两路数据源派生: 任何一路成功即可先渲染, 失败路不影响另一路 */
+const events = computed<CalEvent[]>(() => {
+  const evs: CalEvent[] = []
+  for (const p of plansPage.data.value ?? []) {
+    if (p.nextDueDate) {
+      evs.push({
+        id: 'plan-' + p.id,
+        kind: 'due',
+        title: p.name,
+        date: (p.nextDueDate as string).slice(0, 10),
+        meta: p,
+      })
+    }
+  }
+  for (const r of recordsPage.data.value ?? []) {
+    const d = (r.startedAt || '').slice(0, 10)
+    if (d)
+      evs.push({
+        id: 'rec-' + r.id,
+        kind: 'done',
+        title: r.planName || r.actionDescription || '维保记录',
+        date: d,
+        meta: r,
+      })
+  }
+  return evs
+})
 
 const weekHeads = ['一', '二', '三', '四', '五', '六', '日']
 
@@ -257,58 +316,6 @@ const cells = computed(() => {
   return arr
 })
 
-async function load() {
-  loading.value = true
-  error.value = ''
-  warn.value = ''
-  try {
-    // 计划与记录各自容错: 单一数据源失败仍展示另一半, 避免整页被判为"加载失败"
-    const [planRes, recRes] = await Promise.allSettled([
-      getMaintenancePlanList(),
-      getMaintenanceRecords(),
-    ])
-    const plans = planRes.status === 'fulfilled' ? planRes.value : []
-    const recs = recRes.status === 'fulfilled' ? recRes.value : []
-    const evs: CalEvent[] = []
-    for (const p of plans) {
-      if (p.nextDueDate) {
-        evs.push({
-          id: 'plan-' + p.id,
-          kind: 'due',
-          title: p.name,
-          date: (p.nextDueDate as string).slice(0, 10),
-          meta: p,
-        })
-      }
-    }
-    for (const r of recs) {
-      const d = (r.startedAt || '').slice(0, 10)
-      if (d)
-        evs.push({
-          id: 'rec-' + r.id,
-          kind: 'done',
-          title: r.planName || r.actionDescription || '维保记录',
-          date: d,
-          meta: r,
-        })
-    }
-    events.value = evs
-
-    const failed: string[] = []
-    if (planRes.status === 'rejected') failed.push(String(t.duePlans))
-    if (recRes.status === 'rejected') failed.push(String(t.records))
-    if (failed.length === 2) {
-      error.value = toErrorMessage((planRes as PromiseRejectedResult).reason) || '加载维保日历失败'
-    } else if (failed.length === 1) {
-      warn.value = String(t.partialFailed || '{name} 加载失败').replace('{name}', failed[0])
-    }
-  } catch (e: unknown) {
-    error.value = toErrorMessage(e) || '加载维保日历失败'
-  } finally {
-    loading.value = false
-  }
-}
-
 const drawer = ref<(CalEvent & { date: string }) | null>(null)
 const drawerMode = ref<'new' | 'view'>('view')
 const saving = ref(false)
@@ -340,12 +347,14 @@ async function saveRec() {
       actionDescription: recForm.value.actionDescription,
     })
     drawer.value = null
-    await load()
+    await all.reloadAll()
   } finally {
     saving.value = false
   }
 }
-onMounted(load)
+onMounted(() => {
+  void all.reloadAll()
+})
 </script>
 
 <style scoped>
@@ -434,15 +443,6 @@ onMounted(load)
   margin-left: auto;
   color: var(--txt3, #8595ad);
   font-size: 11px;
-}
-.warn-bar {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fbbf24;
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 12px;
-  margin-bottom: 12px;
 }
 .cal-empty {
   text-align: center;

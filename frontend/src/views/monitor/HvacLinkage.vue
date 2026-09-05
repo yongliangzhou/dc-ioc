@@ -4,12 +4,33 @@
       <h1>{{ tl('制冷链路可视化') }}</h1>
       <span class="sub">{{ tl('制冷一次系统 · 冷却水/冷冻水双循环') }}</span>
       <button class="refresh" @click="() => load()" :disabled="loading">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        <svg
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M23 4v6h-6M1 20v-6h6" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
         {{ tl('刷新') }}
+      </button>
+      <button class="ge-edit" @click="editOpen = true">
+        {{ tl('编辑') }}{{ hasGraphicEdits ? ' ●' : '' }}
       </button>
     </div>
 
-    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="() => load()" :min-height="'320px'">
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="false"
+      @retry="() => load()"
+      :min-height="'320px'"
+    >
       <div class="legend">
         <span><i class="dot normal" /> {{ tl('正常') }}</span>
         <span><i class="dot warning" /> {{ tl('预警') }}</span>
@@ -20,8 +41,16 @@
         <span class="muted">{{ tl('点击设备查看状态 · 跳转对应监控页') }}</span>
       </div>
 
-      <CoolingLinkageDiagram :nodes="nodes" :pipes="pipes" @device-click="onDeviceClick" />
+      <CoolingLinkageDiagram :nodes="nodesView" :pipes="pipes" @device-click="onDeviceClick" />
     </AsyncSection>
+
+    <!-- 统一图形编辑入口: 链路节点可改名/改坐标/改状态, 可删除与新增 (覆盖层) -->
+    <GraphicEditDrawer
+      v-model="editOpen"
+      :editor="graphicEditor"
+      :title="tl('制冷链路可视化')"
+      :defaults="graphicDefaults"
+    />
 
     <transition name="slide">
       <div v-if="selected" class="drawer" @click.self="selected = null">
@@ -50,11 +79,17 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import CoolingLinkageDiagram, { CoolingDevice, CoolingPipe } from '@/components/hvac/CoolingLinkageDiagram.vue'
+import CoolingLinkageDiagram, {
+  CoolingDevice,
+  CoolingPipe,
+} from '@/components/hvac/CoolingLinkageDiagram.vue'
 import { getChillerPlant } from '@/api/hvac'
 import type { ChillerSummary } from '@/api/hvac'
 import { toErrorMessage } from '@/composables/useAsyncPage'
+import { useGraphicEditor, type NodeAdapter } from '@/composables/useGraphicEditor'
+import type { GraphicNode } from '@/types/graphic'
 import AsyncSection from '@/components/common/AsyncSection.vue'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
 
 const { t: tl } = useI18n()
 const router = useRouter()
@@ -79,7 +114,8 @@ function statusOf(state: string): CoolingDevice['status'] {
   if (!state) return 'off'
   const s = String(state).toLowerCase()
   if (s.includes('fault') || s.includes('故障')) return 'fault'
-  if (s.includes('warn') || s.includes('预警') || s === 'alarm' || s === 'maintenance') return 'warning'
+  if (s.includes('warn') || s.includes('预警') || s === 'alarm' || s === 'maintenance')
+    return 'warning'
   if (s === 'off' || s === 'offline' || s === 'stop' || s === '停机' || s === '0') return 'off'
   return 'normal'
 }
@@ -92,8 +128,8 @@ function place(list: Array<Record<string, any>>, col: string, top: boolean) {
     const gap = Math.min(80, 200 / n)
     const y = (top ? rowYTop : rowYBot) + (i - (n - 1) / 2) * gap
     out.push({
-      id: (col + (it.code ?? i)),
-      title: it.name || it.code || (col + (i + 1)),
+      id: col + (it.code ?? i),
+      title: it.name || it.code || col + (i + 1),
       sub: it.state,
       status: statusOf(it.state ?? it.status),
       x: colX[col],
@@ -132,7 +168,13 @@ const nodes = computed<CoolingDevice[]>(() => {
 })
 
 // 管道：按列中心连线，代表该段水管走向
-function pipeBetween(fromCol: string, toCol: string, kind: CoolingPipe['kind'], yFrom?: number, yTo?: number): CoolingPipe {
+function pipeBetween(
+  fromCol: string,
+  toCol: string,
+  kind: CoolingPipe['kind'],
+  yFrom?: number,
+  yTo?: number,
+): CoolingPipe {
   const x1 = colX[fromCol]
   const x2 = colX[toCol]
   const y1 = yFrom ?? (fromCol === 'tower' || fromCol === 'cwpump' ? rowYTop : rowYBot)
@@ -158,14 +200,66 @@ const pipes = computed<CoolingPipe[]>(() => {
   return ps
 })
 
+/* ───────── 统一图形编辑入口 (制冷链路可视化) ─────────
+ * 场景覆盖层: 改名/改坐标/改状态 = 覆盖; 删除 = removed; 新增 = 自建节点。
+ * 接口数据仍是默认值并持续刷新, 编辑只在其上叠加。 */
+const graphicEditor = useGraphicEditor('hvac-cooling-linkage', { title: '制冷链路可视化' })
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => graphicEditor.hasOverrides.value)
+
+/** CoolingDevice ↔ GraphicNode 双向映射 */
+const deviceAdapter: NodeAdapter<CoolingDevice> = {
+  toNode: (n) => ({
+    id: n.id,
+    label: n.title,
+    type: n.kind,
+    x: n.x,
+    y: n.y,
+    status: n.sub ?? '',
+  }),
+  fromNode: (g, base) => {
+    const src: CoolingDevice = base ?? {
+      id: g.id,
+      title: g.label || g.id,
+      sub: g.status || '',
+      status: 'normal',
+      x: g.x ?? 0,
+      y: g.y ?? 0,
+      kind: g.type || 'chiller',
+      meta: { col: g.type ?? 'chiller' },
+    }
+    return {
+      ...src,
+      id: g.id,
+      title: g.label || src.title,
+      x: g.x ?? src.x,
+      y: g.y ?? src.y,
+      sub: g.status || src.sub,
+    }
+  },
+}
+const nodesView = computed(() => graphicEditor.apply(nodes.value, deviceAdapter))
+const graphicDefaults = (): GraphicNode[] => nodes.value.map(deviceAdapter.toNode)
+
 const selectedMetrics = computed(() => {
   const raw = selected.value?.meta?.raw as Record<string, any>
   if (!raw) return []
   const map: Record<string, string> = {
-    state: '状态', code: '编码', name: '名称', hz: '频率', kw: '功率',
-    flow: '流量', fanHz: '风机频率', outTemp: '出水温', level: '液位',
-    eff: '效率', loadPercent: '负载', cop: 'COP', temperatureIn: '进水温',
-    temperatureOut: '出水温', coolingCapacity: '冷量',
+    state: '状态',
+    code: '编码',
+    name: '名称',
+    hz: '频率',
+    kw: '功率',
+    flow: '流量',
+    fanHz: '风机频率',
+    outTemp: '出水温',
+    level: '液位',
+    eff: '效率',
+    loadPercent: '负载',
+    cop: 'COP',
+    temperatureIn: '进水温',
+    temperatureOut: '出水温',
+    coolingCapacity: '冷量',
   }
   return Object.keys(map)
     .filter((k) => raw[k] !== undefined && raw[k] !== null)
@@ -207,31 +301,161 @@ onMounted(load)
 </script>
 
 <style scoped>
-.linkage-view { padding: 16px 20px 32px; }
-.view-head { display: flex; align-items: center; gap: 14px; }
-.view-head h1 { font-size: 20px; margin: 0; color: #e2e8f0; }
-.sub { color: #64748b; font-size: 13px; }
-.refresh {
-  background: #1e293b; color: #cbd5e1; border: 1px solid #334155;
-  border-radius: 8px; padding: 6px 12px; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 6px; margin-left: auto;
+.linkage-view {
+  padding: 16px 20px 32px;
 }
-.legend { display: flex; gap: 14px; align-items: center; margin: 14px 0; font-size: 12px; color: #94a3b8; flex-wrap: wrap; }
-.legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-.dot.normal { background: #22c55e; } .dot.warning { background: #f59e0b; } .dot.fault { background: #ef4444; } .dot.off { background: #64748b; }
-.pipe-key .line { display: inline-block; width: 18px; height: 4px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
-.line.cw { background: #38bdf8; } .line.chw { background: #2dd4bf; }
-.muted { color: #64748b; }
-.drawer { position: fixed; inset: 0; background: rgba(2,6,23,0.6); display: flex; justify-content: flex-end; z-index: 50; }
-.drawer-card { width: 380px; max-width: 90vw; height: 100%; background: #0f172a; border-left: 1px solid #1e293b; padding: 22px; overflow-y: auto; }
-.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; }
-.drawer-head h3 { margin: 0 0 4px; color: #e2e8f0; }
-.drawer-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 18px 0; }
-.metric { background: #1e293b; border-radius: 8px; padding: 10px 12px; }
-.mk { display: block; color: #64748b; font-size: 12px; }
-.mv { display: block; color: #e2e8f0; font-size: 16px; font-weight: 600; }
-.goto { width: 100%; background: #0ea5e9; color: #fff; border: none; border-radius: 8px; padding: 10px; cursor: pointer; font-size: 14px; }
-.goto:hover { background: #0284c7; }
-.slide-enter-active, .slide-leave-active { transition: opacity 0.2s; }
-.slide-enter-from, .slide-leave-to { opacity: 0; }
+.view-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.view-head h1 {
+  font-size: 20px;
+  margin: 0;
+  color: #e2e8f0;
+}
+.sub {
+  color: #64748b;
+  font-size: 13px;
+}
+.refresh {
+  background: #1e293b;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+/* 统一图形编辑入口按钮 */
+.ge-edit {
+  background: #1e293b;
+  color: #22d3ee;
+  border: 1px solid #22d3ee;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.ge-edit:hover {
+  background: rgba(34, 211, 238, 0.14);
+}
+.legend {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin: 14px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  flex-wrap: wrap;
+}
+.legend .dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.dot.normal {
+  background: #22c55e;
+}
+.dot.warning {
+  background: #f59e0b;
+}
+.dot.fault {
+  background: #ef4444;
+}
+.dot.off {
+  background: #64748b;
+}
+.pipe-key .line {
+  display: inline-block;
+  width: 18px;
+  height: 4px;
+  border-radius: 2px;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+.line.cw {
+  background: #38bdf8;
+}
+.line.chw {
+  background: #2dd4bf;
+}
+.muted {
+  color: #64748b;
+}
+.drawer {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.6);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+}
+.drawer-card {
+  width: 380px;
+  max-width: 90vw;
+  height: 100%;
+  background: #0f172a;
+  border-left: 1px solid #1e293b;
+  padding: 22px;
+  overflow-y: auto;
+}
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.drawer-head h3 {
+  margin: 0 0 4px;
+  color: #e2e8f0;
+}
+.drawer-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 18px 0;
+}
+.metric {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.mk {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+}
+.mv {
+  display: block;
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.goto {
+  width: 100%;
+  background: #0ea5e9;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.goto:hover {
+  background: #0284c7;
+}
+.slide-enter-active,
+.slide-leave-active {
+  transition: opacity 0.2s;
+}
+.slide-enter-from,
+.slide-leave-to {
+  opacity: 0;
+}
 </style>

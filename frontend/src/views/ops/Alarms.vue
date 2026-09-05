@@ -25,7 +25,9 @@
             stroke-linecap="round"
             stroke-linejoin="round"
           >
-            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            <path
+              d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"
+            />
           </svg>
           {{ tl('进入规则引擎') }}
         </button>
@@ -33,7 +35,12 @@
     </div>
 
     <!-- 部分失败汇总: 绝不允许静默降级 -->
-    <ErrorBanner :count="failures.length" :labels="failureLabels" :retrying="refreshing" @retry="retryAllFailures" />
+    <ErrorBanner
+      :count="failures.length"
+      :labels="failureLabels"
+      :retrying="refreshing"
+      @retry="retryAllFailures"
+    />
 
     <!-- ===== KPI: 1 主（活动告警）+ 次（收敛/SLA）+ 引擎 ===== -->
     <div class="kpi-band">
@@ -210,18 +217,20 @@
               {{ tl('条') }})</template
             >
             <div class="flex gap8 wrap" style="margin: 8px 0 12px">
-              <span v-for="r in center?.rules ?? []" :key="r" class="tag p" style="padding: 6px 12px">{{
-                r
-              }}</span>
+              <span
+                v-for="r in center?.rules ?? []"
+                :key="r"
+                class="tag p"
+                style="padding: 6px 12px"
+                >{{ r }}</span
+              >
             </div>
             <div class="kvs">
               <span class="k">{{ tl('自动闭环率') }}</span
               ><span class="v" style="color: var(--green)">{{ center?.sla.autoCloseRate }}%</span>
               <span class="k">{{ tl('误报抑制') }}</span
               ><span class="v" style="font-size: 11.5px"
-                >AI {{ tl('过滤小动物') }}/{{ tl('扬尘等') }} 38 {{ tl('条') }}/{{
-                  tl('日')
-                }}</span
+                >AI {{ tl('过滤小动物') }}/{{ tl('扬尘等') }} 38 {{ tl('条') }}/{{ tl('日') }}</span
               >
             </div>
           </Panel>
@@ -263,8 +272,7 @@
               {{ tl('启用') }}</span
             >
             <span class="muted" style="font-size: 11px"
-              >{{ tl('遥测测点越限') }} → {{ tl('自动生成告警') }} →
-              {{ tl('一键转工单') }}</span
+              >{{ tl('遥测测点越限') }} → {{ tl('自动生成告警') }} → {{ tl('一键转工单') }}</span
             >
           </div>
           <div class="grid cols-2">
@@ -361,6 +369,7 @@
         <AlarmListPanel
           :alarms="sortedActive"
           selectable
+          :ticket-map="alarmTicketMap"
           :selected="selectedKeys"
           @update:selected="selectedKeys = $event"
           @ack="handleAck"
@@ -390,9 +399,7 @@
             tone="sample"
             tip="趋势曲线由前端基于当前告警量合成示例数据（后端暂无告警时序接口），仅用于观察量级与形态，不可作为统计口径"
           />
-          <button class="tb-btn" style="margin-left: auto" @click="exportHistory">
-            导出 CSV
-          </button>
+          <button class="tb-btn" style="margin-left: auto" @click="exportHistory">导出 CSV</button>
         </div>
         <TrendChart
           :metrics="historyTrendMetrics"
@@ -470,8 +477,8 @@
     <KnowledgePanels :knowledge="center?.knowledge" />
 
     <div class="footer-note">
-      智能运营·告警中心 — 规则引擎 {{ engineState.enabledCount }}/{{ engineState.totalRules }}
-      启用 · 活动告警 {{ realtimeLinkage.active.length }} 条 · 数据每 {{ refreshSec }}s 刷新
+      智能运营·告警中心 — 规则引擎 {{ engineState.enabledCount }}/{{ engineState.totalRules }} 启用
+      · 活动告警 {{ realtimeLinkage.active.length }} 条 · 数据每 {{ refreshSec }}s 刷新
     </div>
 
     <transition name="fade">
@@ -610,6 +617,7 @@ import {
   resolveAlarm,
   getRelatedRunbooks,
   submitAlarmFeedback,
+  getTickets,
 } from '@/api'
 import MetricCard from '@/components/common/MetricCard.vue'
 import TrendChart from '@/components/charts/TrendChart.vue'
@@ -638,6 +646,7 @@ import type {
   AlarmRuleDef,
   AlarmEngineState,
   AlarmHistoryResponse,
+  Ticket,
   TicketCreateRequest,
   KnowledgeItem,
 } from '@/types'
@@ -657,6 +666,26 @@ function ruleBandLabel(r: AlarmRuleDef): string {
 
 const router = useRouter()
 const ticketsStore = useTicketsStore()
+
+/* ---- 告警 -> 工单 关联映射 (「已建单」徽标数据源) ----
+ * 一次拉取最近 200 张工单, 以 ticket.sourceAlarmId 建 alarmId -> Ticket 映射。
+ * 说明: 这是辅助性增强信息, 拉取失败选择静默降级 (不显示徽标 + console.debug),
+ * 而非像主数据那样走 ErrorBanner —— 主告警列表的可用性不依赖工单关联, 但失败
+ * 原因仍保留在 console 供排查, 不属于"完全吞错"。 */
+const alarmTicketMap = ref<Record<string, Ticket>>({})
+async function loadTicketMap() {
+  try {
+    const res = await getTickets({ limit: 200 })
+    const map: Record<string, Ticket> = {}
+    for (const t of res.list ?? []) {
+      const aid = t.sourceAlarmId
+      if (aid && !map[aid]) map[aid] = t
+    }
+    alarmTicketMap.value = map
+  } catch (e) {
+    console.debug('[Alarms] 已建单徽标映射加载失败(降级为不显示):', e)
+  }
+}
 
 function goRuleEngine() {
   router.push('/ops/alarm-rules')
@@ -696,6 +725,7 @@ async function onTicketSubmit(data: TicketCreateRequest) {
   ticketModalOpen.value = false
   currentAlarm.value = null
   showToast(`已生成工单 ${t.id} 并关联告警`)
+  void loadTicketMap() // 新建关联工单后刷新「已建单」徽标映射
 }
 
 /* ---- 关联处置预案 (告警 -> 知识库) ---- */
@@ -920,9 +950,7 @@ const activePage = computed(() => {
     retrying: false,
   }
 })
-const activeStale = computed(
-  () => !!realtimeLinkage.lastError && realtimeLinkage.active.length > 0,
-)
+const activeStale = computed(() => !!realtimeLinkage.lastError && realtimeLinkage.active.length > 0)
 
 /* ================================================================== */
 /* 失败汇总                                                            */
@@ -1189,7 +1217,11 @@ function onRangeChange(_range: string) {
 /* ================================================================== */
 let timer = 0
 onMounted(() => {
-  timer = window.setInterval(() => void centerPage.reload(), Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000))
+  timer = window.setInterval(
+    () => void centerPage.reload(),
+    Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000),
+  )
+  void loadTicketMap()
 })
 onBeforeUnmount(() => clearInterval(timer))
 </script>

@@ -143,6 +143,12 @@ class Settings(BaseSettings):
     ALARM_WEBHOOK_EMAIL_URL: str = ""
     ALARM_WEBHOOK_WECHAT_URL: str = ""
 
+    # 告警自动建单 (services/alarm_ticket_bridge.py):
+    # 级别 >= MIN_LEVEL 的告警自动创建工单 (source=auto-alarm, 幂等:
+    # 同一告警存在未关单时跳过)。工单进入终态时自动回写 resolve_alarm。
+    ALARM_AUTO_TICKET_ENABLED: bool = True
+    ALARM_AUTO_TICKET_MIN_LEVEL: str = "crit"
+
     # 物模型配置覆盖文件 (JSON): 用于在不改代码的情况下扩展 / 覆盖设备类别与测点说明
     # 格式见 deploy/thing_models.example.json; 留空则仅使用内置默认映射。
     THING_MODELS_FILE: str | None = None

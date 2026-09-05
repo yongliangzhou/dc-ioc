@@ -17,11 +17,30 @@ from app.models.tenant import Tenant
 WARN_RATIO = 0.8
 
 
+def _snake_key(k: str) -> str:
+    return "".join("_" + c.lower() if c.isupper() else c for c in k)
+
+
 def _to_snake(d: dict) -> dict:
+    return {_snake_key(k): v for k, v in d.items()}
+
+
+# Tenant 模型列名本身是 camelCase (contractNo/quotaCabinets/validFrom...),
+# 盲目转 snake_case 会产生不存在的属性 (Tenant(**{...}) 直接 TypeError)。
+# 这里以模型真实列名为准: 原名命中优先, 否则回退 snake_case 形态。
+_MODEL_COLS = {c.name for c in Tenant.__table__.columns}
+
+
+def _to_model_fields(d: dict) -> dict:
+    """前端 camelCase payload → Tenant 模型列名。"""
     out: dict = {}
     for k, v in d.items():
-        s = "".join("_" + c.lower() if c.isupper() else c for c in k)
-        out[s] = v
+        if k in _MODEL_COLS:
+            out[k] = v
+        else:
+            s = _snake_key(k)
+            if s in _MODEL_COLS:
+                out[s] = v
     return out
 
 
@@ -108,7 +127,7 @@ def get(db: Session, tid: int) -> Optional[Tenant]:
 
 
 def create(db: Session, data: dict) -> dict:
-    data = {k: v for k, v in _to_snake(data).items() if v is not None}
+    data = {k: v for k, v in _to_model_fields(data).items() if v is not None}
     cnt = db.query(func.count(Tenant.id)).scalar() or 0
     if not data.get("code"):
         data["code"] = f"TH-{cnt + 1:03d}"
@@ -123,7 +142,7 @@ def update(db: Session, tid: int, data: dict) -> Optional[dict]:
     obj = get(db, tid)
     if not obj:
         return None
-    data = {k: v for k, v in _to_snake(data).items() if v is not None}
+    data = {k: v for k, v in _to_model_fields(data).items() if v is not None}
     for k, v in data.items():
         if hasattr(obj, k):
             setattr(obj, k, v)

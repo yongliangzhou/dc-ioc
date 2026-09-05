@@ -5,18 +5,28 @@
       <span class="sub">{{ tl('datacenter.cmpSub') }}</span>
       <div class="head-actions">
         <button class="btn-sm" @click="exportCsv">{{ tl('datacenter.cmpExport') }}</button>
-        <router-link class="btn-sm" :to="{ path: '/ops/datacenter' }">{{ tl('datacenter.title') }}</router-link>
+        <router-link class="btn-sm" :to="{ path: '/ops/datacenter' }">{{
+          tl('datacenter.title')
+        }}</router-link>
       </div>
     </div>
 
-    <AsyncSection :page="page" @retry="page.reload">
+    <ErrorBanner :count="all.errorCount" :labels="failedLabels" @retry="all.reloadFailed" />
+
+    <AsyncSection :page="comparePage" @retry="comparePage.reload">
       <!-- 对比选择 -->
       <Panel class="pick">
-        <div class="list-head">{{ tl('datacenter.cmpPick') }}
+        <div class="list-head">
+          {{ tl('datacenter.cmpPick') }}
           <span class="sub2">{{ tl('datacenter.cmpSelectHint') }}</span>
         </div>
         <div class="chips">
-          <label v-for="c in cmp.centers" :key="c.id" class="chip" :class="{ on: picked.includes(c.id), cur: c.id === cmp.currentIdcId }">
+          <label
+            v-for="c in cmp.centers"
+            :key="c.id"
+            class="chip"
+            :class="{ on: picked.includes(c.id), cur: c.id === cmp.currentIdcId }"
+          >
             <input type="checkbox" :checked="picked.includes(c.id)" @change="togglePick(c.id)" />
             <span>{{ c.name }}</span>
             <em v-if="c.id === cmp.currentIdcId" class="cur-tag">{{ tl('datacenter.current') }}</em>
@@ -39,10 +49,14 @@
           </div>
           <div class="opt">
             <label>{{ tl('datacenter.cmpSortDir') }}</label>
-            <button class="btn-xs" @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">{{ sortDir === 'asc' ? tl('datacenter.asc') : tl('datacenter.desc') }}</button>
+            <button class="btn-xs" @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'">
+              {{ sortDir === 'asc' ? tl('datacenter.asc') : tl('datacenter.desc') }}
+            </button>
           </div>
           <div class="opt">
-            <button class="btn-xs" @click="showCols = !showCols">{{ tl('datacenter.cmpColumns') }}</button>
+            <button class="btn-xs" @click="showCols = !showCols">
+              {{ tl('datacenter.cmpColumns') }}
+            </button>
           </div>
         </div>
 
@@ -50,8 +64,15 @@
         <div v-if="showCols" class="cols">
           <div class="cols-head">{{ tl('datacenter.cmpDragHint') }}</div>
           <ul class="col-list">
-            <li v-for="(m, idx) in metricDefs" :key="m.key" class="col-item" draggable="true"
-                @dragstart="dragIdx = idx" @dragover.prevent @drop="dropCol(idx)">
+            <li
+              v-for="(m, idx) in metricDefs"
+              :key="m.key"
+              class="col-item"
+              draggable="true"
+              @dragstart="dragIdx = idx"
+              @dragover.prevent
+              @drop="dropCol(idx)"
+            >
               <span class="grip">⠿</span>
               <label class="chk"><input type="checkbox" v-model="m.on" /> {{ m.label }}</label>
               <span class="order">{{ idx + 1 }}</span>
@@ -69,7 +90,11 @@
             <thead>
               <tr>
                 <th class="metric-col">{{ tl('datacenter.cmpMetricLabel') }}</th>
-                <th v-for="c in sortedPicked" :key="c.id" :class="{ cur: c.id === cmp.currentIdcId }">
+                <th
+                  v-for="c in sortedPicked"
+                  :key="c.id"
+                  :class="{ cur: c.id === cmp.currentIdcId }"
+                >
                   {{ c.name }} <em class="mono">{{ c.code }}</em>
                 </th>
               </tr>
@@ -77,7 +102,9 @@
             <tbody>
               <tr v-for="m in visibleMetrics" :key="m.key">
                 <th>{{ m.label }}</th>
-                <td v-for="c in sortedPicked" :key="c.id" :class="cellCls(c, m)">{{ fmt(c, m) }}</td>
+                <td v-for="c in sortedPicked" :key="c.id" :class="cellCls(c, m)">
+                  {{ fmt(c, m) }}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -91,7 +118,8 @@
 
         <!-- 统一告警 -->
         <Panel class="alarms">
-          <div class="list-head">{{ tl('datacenter.unifiedAlarms') }}
+          <div class="list-head">
+            {{ tl('datacenter.unifiedAlarms') }}
             <span class="sub2">{{ tl('datacenter.unifiedAlarmsSub') }}</span>
           </div>
           <div class="a-row ah">
@@ -101,14 +129,29 @@
             <span>{{ tl('datacenter.alarmLevel') }}</span>
             <span>{{ tl('common.status') }}</span>
           </div>
-          <div v-for="(a, i) in pickedAlarms" :key="i" class="a-row">
-            <span>{{ a.idcName }} <em class="mono">{{ a.idcCode }}</em></span>
-            <span class="mono">{{ a.deviceId }}</span>
-            <span>{{ a.metricName }}</span>
-            <span><span class="tag" :class="a.level === 'critical' ? 'r' : a.level === 'warn' ? 'a' : 'b'">{{ a.level }}</span></span>
-            <span>{{ a.state }}</span>
-          </div>
-          <div v-if="!pickedAlarms.length" class="empty">{{ tl('datacenter.noAlarm') }}</div>
+          <AsyncSection
+            :page="alarmsPage"
+            @retry="alarmsPage.reload"
+            :min-height="'150px'"
+            :skeleton-rows="3"
+          >
+            <div v-for="(a, i) in pickedAlarms" :key="i" class="a-row">
+              <span
+                >{{ a.idcName }} <em class="mono">{{ a.idcCode }}</em></span
+              >
+              <span class="mono">{{ a.deviceId }}</span>
+              <span>{{ a.metricName }}</span>
+              <span
+                ><span
+                  class="tag"
+                  :class="a.level === 'critical' ? 'r' : a.level === 'warn' ? 'a' : 'b'"
+                  >{{ a.level }}</span
+                ></span
+              >
+              <span>{{ a.state }}</span>
+            </div>
+            <div v-if="!pickedAlarms.length" class="empty">{{ tl('datacenter.noAlarm') }}</div>
+          </AsyncSection>
         </Panel>
       </template>
     </AsyncSection>
@@ -116,13 +159,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
 import BaseChart from '@/components/charts/BaseChart.vue'
 import AsyncSection from '@/components/common/AsyncSection.vue'
-import { useAsyncPage } from '@/composables/useAsyncPage'
-import { compareIdcs, unifiedAlarms, type IdcCompare, type IdcAlarmResp, type IdcCompareItem } from '@/api/idc'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import { useAsyncPageAll } from '@/composables/useAsyncPage'
+import {
+  compareIdcs,
+  unifiedAlarms,
+  type IdcCompare,
+  type IdcAlarmResp,
+  type IdcCompareItem,
+} from '@/api/idc'
 import { downloadCsv, stampedName } from '@/utils/export'
 
 const { t: tl } = useI18n()
@@ -136,17 +186,68 @@ const sortDir = ref<'asc' | 'desc'>('desc')
 const showCols = ref(false)
 const dragIdx = ref<number>(-1)
 
-interface MetricDef { key: string; label: string; on: boolean; max?: (c: IdcCompareItem) => number; fmt?: (c: IdcCompareItem) => string; better?: 'low' | 'high' }
+interface MetricDef {
+  key: string
+  label: string
+  on: boolean
+  max?: (c: IdcCompareItem) => number
+  fmt?: (c: IdcCompareItem) => string
+  better?: 'low' | 'high'
+}
 const metricDefs = ref<MetricDef[]>([
-  { key: 'powerCapacityMw', label: tl('datacenter.cmpPower'), on: true, fmt: (c) => c.powerCapacityMw.toFixed(1) },
-  { key: 'coolingCapacityMw', label: tl('datacenter.cmpCooling'), on: true, fmt: (c) => c.coolingCapacityMw.toFixed(1) },
-  { key: 'rackUsed', label: tl('datacenter.cmpRack'), on: true, max: (c) => c.rackCapacity, fmt: (c) => `${c.rackUsed}/${c.rackCapacity}` },
-  { key: 'deviceCount', label: tl('datacenter.kpiDevice'), on: true, fmt: (c) => String(c.deviceCount) },
-  { key: 'onlineCount', label: tl('datacenter.kpiOnline'), on: true, fmt: (c) => String(c.onlineCount) },
-  { key: 'onlineRate', label: tl('datacenter.cmpOnlineRate'), on: true, max: () => 100, fmt: (c) => (c.deviceCount ? Math.round((c.onlineCount / c.deviceCount) * 100) : 0) + '%' },
-  { key: 'resourceUse', label: tl('datacenter.cmpResourceUse'), on: true, max: () => 100, fmt: (c) => (c.rackCapacity ? Math.round((c.rackUsed / c.rackCapacity) * 100) : 0) + '%' },
+  {
+    key: 'powerCapacityMw',
+    label: tl('datacenter.cmpPower'),
+    on: true,
+    fmt: (c) => c.powerCapacityMw.toFixed(1),
+  },
+  {
+    key: 'coolingCapacityMw',
+    label: tl('datacenter.cmpCooling'),
+    on: true,
+    fmt: (c) => c.coolingCapacityMw.toFixed(1),
+  },
+  {
+    key: 'rackUsed',
+    label: tl('datacenter.cmpRack'),
+    on: true,
+    max: (c) => c.rackCapacity,
+    fmt: (c) => `${c.rackUsed}/${c.rackCapacity}`,
+  },
+  {
+    key: 'deviceCount',
+    label: tl('datacenter.kpiDevice'),
+    on: true,
+    fmt: (c) => String(c.deviceCount),
+  },
+  {
+    key: 'onlineCount',
+    label: tl('datacenter.kpiOnline'),
+    on: true,
+    fmt: (c) => String(c.onlineCount),
+  },
+  {
+    key: 'onlineRate',
+    label: tl('datacenter.cmpOnlineRate'),
+    on: true,
+    max: () => 100,
+    fmt: (c) => (c.deviceCount ? Math.round((c.onlineCount / c.deviceCount) * 100) : 0) + '%',
+  },
+  {
+    key: 'resourceUse',
+    label: tl('datacenter.cmpResourceUse'),
+    on: true,
+    max: () => 100,
+    fmt: (c) => (c.rackCapacity ? Math.round((c.rackUsed / c.rackCapacity) * 100) : 0) + '%',
+  },
   // 原 netDelay / storage 由前端用 `20+(id%5)*6` 与 `rackCapacity*2` 虚构，后端 IdcCompareItem 无真实字段，属伪指标，已从对比中移除；待后端提供真实遥测再补回。
-  { key: 'activeAlarmCount', label: tl('datacenter.cmpAlarm'), on: true, better: 'low', fmt: (c) => String(c.activeAlarmCount) },
+  {
+    key: 'activeAlarmCount',
+    label: tl('datacenter.cmpAlarm'),
+    on: true,
+    better: 'low',
+    fmt: (c) => String(c.activeAlarmCount),
+  },
 ])
 
 const visibleMetrics = computed(() => metricDefs.value.filter((m) => m.on))
@@ -183,7 +284,9 @@ function cellCls(c: IdcCompareItem, m: MetricDef) {
   return ''
 }
 
-const pickedAlarms = computed(() => alarms.value.items.filter((a) => picked.value.includes(a.idcId)))
+const pickedAlarms = computed(() =>
+  alarms.value.items.filter((a) => picked.value.includes(a.idcId)),
+)
 
 function togglePick(id: number) {
   const i = picked.value.indexOf(id)
@@ -201,9 +304,27 @@ function resetCols() {
   metricDefs.value.forEach((m) => (m.on = true))
   metricDefs.value.sort((a, b) => metricOrder.indexOf(a.key) - metricOrder.indexOf(b.key))
 }
-const metricOrder = ['powerCapacityMw', 'coolingCapacityMw', 'rackUsed', 'deviceCount', 'onlineCount', 'onlineRate', 'resourceUse', 'activeAlarmCount']
+const metricOrder = [
+  'powerCapacityMw',
+  'coolingCapacityMw',
+  'rackUsed',
+  'deviceCount',
+  'onlineCount',
+  'onlineRate',
+  'resourceUse',
+  'activeAlarmCount',
+]
 
-const palette = ['#22d3ee', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#ec4899', '#14b8a6']
+const palette = [
+  '#22d3ee',
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#a855f7',
+  '#ec4899',
+  '#14b8a6',
+]
 function colorOf(id: number) {
   const i = cmp.value.centers.findIndex((c) => c.id === id)
   return palette[i % palette.length]
@@ -216,10 +337,15 @@ const barOption = computed(() => {
     tooltip: { trigger: 'axis' },
     legend: { data: centers.map((c) => c.name), textStyle: { color: '#9fb3c8' } },
     grid: { left: 80, right: 24, bottom: 40, top: 40 },
-    xAxis: { type: 'category', data: cats.map((m) => m.label), axisLabel: { color: '#9fb3c8', interval: 0, rotate: 20 } },
+    xAxis: {
+      type: 'category',
+      data: cats.map((m) => m.label),
+      axisLabel: { color: '#9fb3c8', interval: 0, rotate: 20 },
+    },
     yAxis: { type: 'value', axisLabel: { color: '#9fb3c8' } },
     series: centers.map((c) => ({
-      name: c.name, type: 'bar',
+      name: c.name,
+      type: 'bar',
       data: cats.map((m) => (m.fmt ? metricVal(c, m) : (c as any)[m.key])),
       itemStyle: { color: colorOf(c.id) },
     })),
@@ -237,93 +363,328 @@ const radarOption = computed(() => {
     tooltip: {},
     legend: { data: centers.map((c) => c.name), textStyle: { color: '#9fb3c8' }, top: 0 },
     radar: { indicator: indicators, axisName: { color: '#9fb3c8' }, radius: '65%' },
-    series: [{
-      type: 'radar',
-      data: centers.map((c) => ({
-        name: c.name,
-        value: cats.map((m) => (m.fmt ? metricVal(c, m) : (c as any)[m.key])),
-        lineStyle: { color: colorOf(c.id) },
-        itemStyle: { color: colorOf(c.id) },
-        areaStyle: { opacity: 0.08 },
-      })),
-    }],
+    series: [
+      {
+        type: 'radar',
+        data: centers.map((c) => ({
+          name: c.name,
+          value: cats.map((m) => (m.fmt ? metricVal(c, m) : (c as any)[m.key])),
+          lineStyle: { color: colorOf(c.id) },
+          itemStyle: { color: colorOf(c.id) },
+          areaStyle: { opacity: 0.08 },
+        })),
+      },
+    ],
   }
 })
 
 function exportCsv() {
   const headers = ['name', ...visibleMetrics.value.map((m) => m.label)]
-  const rows = sortedPicked.value.map((c) => [c.name, ...visibleMetrics.value.map((m) => fmt(c, m))])
+  const rows = sortedPicked.value.map((c) => [
+    c.name,
+    ...visibleMetrics.value.map((m) => fmt(c, m)),
+  ])
   downloadCsv(stampedName('机房对比'), headers, rows)
 }
 
-/** 双源并行拉取：原来 Promise.all 无 .catch，失败时 loading 卡死且报错被吞。
- *  现统一由 useAsyncPage 管理加载/错误/空态，失败可见且可重试。 */
-const page = useAsyncPage<IdcCompare>(
-  async () => {
-    const [c, a] = await Promise.all([compareIdcs(), unifiedAlarms()])
-    cmp.value = c
-    alarms.value = a
-    picked.value = c.centers.map((x) => x.id).slice(0, 4)
-    return c
+/** 双源并行拉取：对比数据 / 统一告警相互独立。
+ *  原先 Promise.all 一处失败整页报错；现拆成 useAsyncPageAll，
+ *  各区块由自身 AsyncSection + 顶部 ErrorBanner 呈现错误并可独立重试。 */
+const all = useAsyncPageAll(
+  {
+    compare: compareIdcs,
+    alarms: unifiedAlarms,
   },
-  { isEmpty: (d) => !d || d.centers.length === 0 },
+  { autoLoad: false },
+)
+const comparePage = all.pages.compare
+const alarmsPage = all.pages.alarms
+const SRC_LABELS: Record<string, string> = {
+  compare: tl('datacenter.cmpTitle'),
+  alarms: tl('datacenter.unifiedAlarms'),
+}
+const failedLabels = computed(() => all.failedKeys.value.map((k) => SRC_LABELS[k] ?? k))
+
+watch(
+  () => comparePage.data.value,
+  (d) => {
+    if (!d) return
+    cmp.value = d
+    picked.value = d.centers.map((x) => x.id).slice(0, 4)
+  },
+)
+watch(
+  () => alarmsPage.data.value,
+  (d) => {
+    if (d) alarms.value = d
+  },
 )
 
-onMounted(() => page.reload())
+onMounted(() => {
+  void all.reloadAll()
+})
 </script>
 
 <style scoped>
-.dc-cmp { display: flex; flex-direction: column; gap: 14px; }
-.view-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.view-head h1 { font-size: 18px; margin: 0; }
-.view-head .sub { color: var(--muted); font-size: 12px; }
-.head-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
-.btn-sm { color: var(--txt2); border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 5px 10px; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block; }
-.btn-sm:hover { color: var(--cyan); border-color: var(--cyan); }
-.btn-xs { color: var(--txt2); border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 3px 8px; font-size: 11px; cursor: pointer; }
-.ipt.sm { background: var(--track); border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; color: var(--txt-strong); font-size: 12px; }
-.list-head { font-size: 14px; font-weight: 700; color: var(--txt-strong); margin-bottom: 10px; }
-.sub2 { font-size: 11px; color: var(--muted); font-weight: 400; margin-left: 8px; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--txt2); cursor: pointer; }
-.chip.on { border-color: var(--cyan); color: var(--cyan); }
-.chip.cur { box-shadow: 0 0 0 1px var(--cyan) inset; }
-.chip input { display: none; }
-.cur-tag { font-size: 10px; color: var(--cyan); font-style: normal; }
-.opts { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; align-items: flex-end; }
-.opt { display: flex; flex-direction: column; gap: 4px; }
-.opt label { font-size: 11px; color: var(--muted); }
-.cols { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
-.cols-head { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
-.col-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
-.col-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--track); border-radius: 8px; cursor: grab; }
-.grip { color: var(--muted); }
-.chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--txt2); margin-right: auto; }
-.order { font-size: 11px; color: var(--muted); }
-.table { overflow: auto; }
-.cmp-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.cmp-table th, .cmp-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: center; color: var(--txt2); }
-.cmp-table thead th { color: var(--txt-strong); font-weight: 700; }
-.cmp-table thead th.cur, .cmp-table td.cur { color: var(--cyan); }
-.metric-col { text-align: left !important; color: var(--muted) !important; }
-.cmp-table td.crit { color: var(--red); font-weight: 700; }
-.cmp-table td.warn { color: var(--amber); }
-.cmp-table td.ok { color: var(--green); }
-.mono { font-family: monospace; font-size: 11px; font-style: normal; }
-.charts { display: block; }
-.a-row { display: grid; grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr 1fr; gap: 8px; padding: 8px; border-top: 1px solid var(--line); font-size: 12px; color: var(--txt2); }
-.a-row.ah { color: var(--muted); font-weight: 600; border-top: none; }
-.tag { font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--txt2); }
-.tag.b { color: #38bdf8; border-color: rgba(56,189,248,.4); }
-.tag.a { color: var(--amber); border-color: rgba(245,158,11,.4); }
-.tag.r { color: var(--red); border-color: rgba(255,77,94,.4); }
-.empty { text-align: center; color: var(--muted); padding: 24px; font-size: 13px; }
-.empty.warn { color: var(--amber); }
+.dc-cmp {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.view-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.view-head h1 {
+  font-size: 18px;
+  margin: 0;
+}
+.view-head .sub {
+  color: var(--muted);
+  font-size: 12px;
+}
+.head-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.btn-sm {
+  color: var(--txt2);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-sm:hover {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+.btn-xs {
+  color: var(--txt2);
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.ipt.sm {
+  background: var(--track);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 8px;
+  color: var(--txt-strong);
+  font-size: 12px;
+}
+.list-head {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--txt-strong);
+  margin-bottom: 10px;
+}
+.sub2 {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 8px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--txt2);
+  cursor: pointer;
+}
+.chip.on {
+  border-color: var(--cyan);
+  color: var(--cyan);
+}
+.chip.cur {
+  box-shadow: 0 0 0 1px var(--cyan) inset;
+}
+.chip input {
+  display: none;
+}
+.cur-tag {
+  font-size: 10px;
+  color: var(--cyan);
+  font-style: normal;
+}
+.opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  align-items: flex-end;
+}
+.opt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.opt label {
+  font-size: 11px;
+  color: var(--muted);
+}
+.cols {
+  margin-top: 12px;
+  border-top: 1px dashed var(--line);
+  padding-top: 10px;
+}
+.cols-head {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.col-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.col-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--track);
+  border-radius: 8px;
+  cursor: grab;
+}
+.grip {
+  color: var(--muted);
+}
+.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--txt2);
+  margin-right: auto;
+}
+.order {
+  font-size: 11px;
+  color: var(--muted);
+}
+.table {
+  overflow: auto;
+}
+.cmp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.cmp-table th,
+.cmp-table td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: center;
+  color: var(--txt2);
+}
+.cmp-table thead th {
+  color: var(--txt-strong);
+  font-weight: 700;
+}
+.cmp-table thead th.cur,
+.cmp-table td.cur {
+  color: var(--cyan);
+}
+.metric-col {
+  text-align: left !important;
+  color: var(--muted) !important;
+}
+.cmp-table td.crit {
+  color: var(--red);
+  font-weight: 700;
+}
+.cmp-table td.warn {
+  color: var(--amber);
+}
+.cmp-table td.ok {
+  color: var(--green);
+}
+.mono {
+  font-family: monospace;
+  font-size: 11px;
+  font-style: normal;
+}
+.charts {
+  display: block;
+}
+.a-row {
+  display: grid;
+  grid-template-columns: 1.4fr 1.2fr 1fr 0.8fr 1fr;
+  gap: 8px;
+  padding: 8px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--txt2);
+}
+.a-row.ah {
+  color: var(--muted);
+  font-weight: 600;
+  border-top: none;
+}
+.tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--txt2);
+}
+.tag.b {
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.4);
+}
+.tag.a {
+  color: var(--amber);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+.tag.r {
+  color: var(--red);
+  border-color: rgba(255, 77, 94, 0.4);
+}
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 24px;
+  font-size: 13px;
+}
+.empty.warn {
+  color: var(--amber);
+}
 
 @media (max-width: 720px) {
-  .head-actions { margin-left: 0; width: 100%; }
-  .opts { gap: 10px; }
-  .a-row { grid-template-columns: 1fr 1fr; }
-  .a-row.ah { display: none; }
+  .head-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .opts {
+    gap: 10px;
+  }
+  .a-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .a-row.ah {
+    display: none;
+  }
 }
 </style>

@@ -6,6 +6,11 @@ import type { UserInfo, TokenResponse } from '@/types'
 const TOKEN_KEY = 'dc_ioc_token'
 const REFRESH_KEY = 'dc_ioc_refresh'
 const USER_KEY = 'dc_ioc_user'
+export const REMEMBER_KEY = 'dc_ioc_remember'
+/** “记住我”：登录框取消勾选时，本次会话在每次整页加载后都要求重新登录 */
+export function isRemembered(): boolean {
+  return localStorage.getItem(REMEMBER_KEY) !== '0'
+}
 
 const MOCK_AUTH = import.meta.env.VITE_MOCK_AUTH === 'true'
 const MOCK_TOKEN = 'mock-ioc-token-demo-frontend-only'
@@ -49,7 +54,8 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.setItem(USER_KEY, JSON.stringify(u))
   }
 
-  async function login(username: string, password: string) {
+  async function login(username: string, password: string, remember = true) {
+    localStorage.setItem(REMEMBER_KEY, remember ? '1' : '0')
     // Mock 认证模式: 跳过真实后端，直接注入虚拟 token
     if (MOCK_AUTH) {
       console.warn('[mock-auth] 已启用 Mock 认证模式，登录绕过后端 API')

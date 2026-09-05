@@ -4,8 +4,9 @@
       <div class="vh-left">
         <h1>{{ tl('工单中心') }}</h1>
         <span class="sub"
-          >{{ tl('维修工单') }} {{ tl('与') }} {{ tl('事件工单') }} {{ tl('统一创建') }} · {{ tl('派发') }} · {{ tl('跟踪') }} {{ tl('·') }}
-          {{ tl('告警自动转单') }} {{ tl('·') }} {{ tl('状态流转') }} {{ tl('·') }} SLA {{ tl('跟踪') }} {{ tl('·') }}
+          >{{ tl('维修工单') }} {{ tl('与') }} {{ tl('事件工单') }} {{ tl('统一创建') }} ·
+          {{ tl('派发') }} · {{ tl('跟踪') }} {{ tl('·') }} {{ tl('告警自动转单') }} {{ tl('·') }}
+          {{ tl('状态流转') }} {{ tl('·') }} SLA {{ tl('跟踪') }} {{ tl('·') }}
           {{ tl('按看板分组') }}</span
         >
       </div>
@@ -67,192 +68,209 @@
 
       <!-- 工具条 -->
       <Panel class="toolbar">
-      <input
-        v-model.trim="kw"
-        class="ipt"
-        :placeholder="tl('搜索工单号 / 标题 / 责任')"
-        style="width: 220px"
-      />
-      <select v-model="fStatus" class="ipt" style="width: 120px">
-        <option value="">{{ tl('全部状态') }}</option>
-        <option v-for="s in STATUS_ORDER" :key="s" :value="s">{{ statusLabel(s) }}</option>
-      </select>
-      <select v-model="fLv" class="ipt" style="width: 110px">
-        <option value="">{{ tl('全部级别') }}</option>
-        <option value="crit">{{ tl('紧急') }}</option>
-        <option value="warn">{{ tl('重要') }}</option>
-        <option value="info">{{ tl('提示') }}</option>
-      </select>
-      <div class="flex1"></div>
-      <button class="tb-btn" :disabled="!tickets.length" @click="exportAll">
-        导出全部 CSV
-      </button>
-      <div class="seg">
-        <button :class="{ on: view === 'kanban' }" @click="view = 'kanban'">
-          {{ tl('看板') }}
-        </button>
-        <button :class="{ on: view === 'table' }" @click="view = 'table'">{{ tl('列表') }}</button>
-      </div>
-    </Panel>
-
-    <!-- 看板视图 -->
-    <template v-if="view === 'kanban'">
-      <div class="kanban">
-        <div class="kcol" v-for="col in STATUS_ORDER" :key="col">
-          <div class="kh">
-            <span :style="{ color: colColor(col) }">{{ statusLabel(col) }}</span>
-            <span class="muted">{{ filtered.filter((x) => x.state === col).length }}</span>
-          </div>
-          <div
-            class="kcard-i"
-            v-for="x in filtered.filter((y) => y.state === col)"
-            :key="x.id"
-            :class="{ 'is-sel': selectedIds.includes(x.id) }"
-            @click="openDetail(x)"
-          >
-            <div class="flex between">
-              <label class="ck-wrap" @click.stop>
-                <input
-                  type="checkbox"
-                  class="ck"
-                  :checked="selectedIds.includes(x.id)"
-                  @change="toggleRow(x.id)"
-                />
-              </label>
-              <b class="kcard-title">{{ x.title }}</b>
-              <span class="tag" :class="lvClass(x.lv)">{{ lvText(x.lv) }}</span>
-            </div>
-            <div class="km">{{ x.id }} {{ tl('·') }} {{ x.sys }} {{ tl('·') }} {{ x.owner }}</div>
-            <div class="km">{{ tl('创建') }} {{ x.created }} {{ tl('·') }} SLA {{ x.sla }}</div>
-            <div class="progress kbar" style="height: 5px">
-              <i :style="{ width: x.progress + '%', background: colColor(col) }"></i>
-            </div>
-            <div class="kacts" @click.stop>
-              <button
-                class="kbtn"
-                v-if="col !== 'done'"
-                v-bind="authState('write')"
-                @click="advance(x)"
-                :title="tl('推进到下一状态')"
-              >
-                {{ tl('推进') }} ▸
-              </button>
-              <button
-                class="kbtn ghost"
-                v-bind="authState('write')"
-                @click="openEdit(x)"
-                :title="tl('编辑')"
-              >
-                ✎
-              </button>
-              <button
-                class="kbtn ghost danger"
-                v-bind="authState('write')"
-                @click="askDelete(x)"
-                :title="tl('删除')"
-              >
-                🗑
-              </button>
-            </div>
-          </div>
-          <div class="kempty muted" v-if="!filtered.filter((y) => y.state === col).length">
-            {{ tl('无工单') }}
-          </div>
-        </div>
-      </div>
-    </template>
-
-    <!-- 列表视图 -->
-    <template v-else>
-      <Panel class="scroll-x">
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 36px">
-                <input
-                  type="checkbox"
-                  class="ck"
-                  :checked="allSelected"
-                  :indeterminate.prop="someSelected && !allSelected"
-                  :disabled="!filtered.length"
-                  @change="toggleAll"
-                  title="全选 / 取消全选"
-                />
-              </th>
-              <th scope="col">工单号</th>
-              <th scope="col">标题</th>
-              <th scope="col">系统</th>
-              <th scope="col">级别</th>
-              <th scope="col">状态</th>
-              <th scope="col">责任</th>
-              <th scope="col">创建时间</th>
-              <th scope="col">SLA</th>
-              <th scope="col">进度</th>
-              <th style="width: 140px">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="x in filtered"
-              :key="x.id"
-              @click="openDetail(x)"
-              style="cursor: pointer"
-              :class="{ 'row-sel': selectedIds.includes(x.id) }"
-            >
-              <td @click.stop>
-                <input
-                  type="checkbox"
-                  class="ck"
-                  :checked="selectedIds.includes(x.id)"
-                  @change="toggleRow(x.id)"
-                />
-              </td>
-              <td class="mono">{{ x.id }}</td>
-              <td>{{ x.title }}</td>
-              <td>{{ x.sys }}</td>
-              <td>
-                <span class="tag" :class="lvClass(x.lv)">{{ lvText(x.lv) }}</span>
-              </td>
-              <td>
-                <span class="tag" :class="tagClass(x.state)">{{ statusLabel(x.state) }}</span>
-              </td>
-              <td>{{ x.owner }}</td>
-              <td class="mono">{{ x.created }}</td>
-              <td>{{ x.sla }}</td>
-              <td>
-                <div class="progress" style="width: 80px">
-                  <i
-                    :style="{ width: x.progress + '%', background: pctColor(x.progress, 50, 80) }"
-                  ></i>
-                </div>
-              </td>
-              <td>
-                <div class="flex gap4" @click.stop>
-                  <button
-                    class="act-btn"
-                    v-if="x.state !== 'done'"
-                    v-bind="authState('write')"
-                    @click="advance(x)"
-                  >
-                    推进
-                  </button>
-                  <button class="act-btn ghost" v-bind="authState('write')" @click="openEdit(x)">
-                    编辑
-                  </button>
-                  <button class="act-btn danger" v-bind="authState('write')" @click="askDelete(x)">
-                    删
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div class="tbl-empty" v-if="!filtered.length">
-          <span class="muted">当前筛选条件下无匹配工单</span>
-          <button class="link-btn" @click="resetFilter">清空筛选条件</button>
+        <input
+          v-model.trim="kw"
+          class="ipt"
+          :placeholder="tl('搜索工单号 / 标题 / 责任')"
+          style="width: 220px"
+        />
+        <select v-model="fStatus" class="ipt" style="width: 120px">
+          <option value="">{{ tl('全部状态') }}</option>
+          <option v-for="s in STATUS_ORDER" :key="s" :value="s">{{ statusLabel(s) }}</option>
+        </select>
+        <select v-model="fLv" class="ipt" style="width: 110px">
+          <option value="">{{ tl('全部级别') }}</option>
+          <option value="crit">{{ tl('紧急') }}</option>
+          <option value="warn">{{ tl('重要') }}</option>
+          <option value="info">{{ tl('提示') }}</option>
+        </select>
+        <div class="flex1"></div>
+        <button class="tb-btn" :disabled="!tickets.length" @click="exportAll">导出全部 CSV</button>
+        <div class="seg">
+          <button :class="{ on: view === 'kanban' }" @click="view = 'kanban'">
+            {{ tl('看板') }}
+          </button>
+          <button :class="{ on: view === 'table' }" @click="view = 'table'">
+            {{ tl('列表') }}
+          </button>
         </div>
       </Panel>
-    </template>
+
+      <!-- 看板视图 -->
+      <template v-if="view === 'kanban'">
+        <div class="kanban">
+          <div class="kcol" v-for="col in STATUS_ORDER" :key="col">
+            <div class="kh">
+              <span :style="{ color: colColor(col) }">{{ statusLabel(col) }}</span>
+              <span class="muted">{{ filtered.filter((x) => x.state === col).length }}</span>
+            </div>
+            <div
+              class="kcard-i"
+              v-for="x in filtered.filter((y) => y.state === col)"
+              :key="x.id"
+              :class="{ 'is-sel': selectedIds.includes(x.id) }"
+              @click="openDetail(x)"
+            >
+              <div class="flex between">
+                <label class="ck-wrap" @click.stop>
+                  <input
+                    type="checkbox"
+                    class="ck"
+                    :checked="selectedIds.includes(x.id)"
+                    @change="toggleRow(x.id)"
+                  />
+                </label>
+                <b class="kcard-title">{{ x.title }}</b>
+                <span class="tag" :class="lvClass(x.lv)">{{ lvText(x.lv) }}</span>
+              </div>
+              <div v-if="x.source !== 'manual'" class="km">
+                <span class="tag tiny" :class="sourceTagCls(x.source)">{{
+                  sourceText(x.source)
+                }}</span>
+              </div>
+              <div class="km">{{ x.id }} {{ tl('·') }} {{ x.sys }} {{ tl('·') }} {{ x.owner }}</div>
+              <div class="km">{{ tl('创建') }} {{ x.created }} {{ tl('·') }} SLA {{ x.sla }}</div>
+              <div class="progress kbar" style="height: 5px">
+                <i :style="{ width: x.progress + '%', background: colColor(col) }"></i>
+              </div>
+              <div class="kacts" @click.stop>
+                <button
+                  class="kbtn"
+                  v-if="col !== 'done'"
+                  v-bind="authState('write')"
+                  @click="advance(x)"
+                  :title="tl('推进到下一状态')"
+                >
+                  {{ tl('推进') }} ▸
+                </button>
+                <button
+                  class="kbtn ghost"
+                  v-bind="authState('write')"
+                  @click="openEdit(x)"
+                  :title="tl('编辑')"
+                >
+                  ✎
+                </button>
+                <button
+                  class="kbtn ghost danger"
+                  v-bind="authState('write')"
+                  @click="askDelete(x)"
+                  :title="tl('删除')"
+                >
+                  🗑
+                </button>
+              </div>
+            </div>
+            <div class="kempty muted" v-if="!filtered.filter((y) => y.state === col).length">
+              {{ tl('无工单') }}
+            </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 列表视图 -->
+      <template v-else>
+        <Panel class="scroll-x">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 36px">
+                  <input
+                    type="checkbox"
+                    class="ck"
+                    :checked="allSelected"
+                    :indeterminate.prop="someSelected && !allSelected"
+                    :disabled="!filtered.length"
+                    @change="toggleAll"
+                    title="全选 / 取消全选"
+                  />
+                </th>
+                <th scope="col">工单号</th>
+                <th scope="col">标题</th>
+                <th scope="col">系统</th>
+                <th scope="col">级别</th>
+                <th scope="col">状态</th>
+                <th scope="col">责任</th>
+                <th scope="col">创建时间</th>
+                <th scope="col">SLA</th>
+                <th scope="col">进度</th>
+                <th style="width: 140px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="x in filtered"
+                :key="x.id"
+                @click="openDetail(x)"
+                style="cursor: pointer"
+                :class="{ 'row-sel': selectedIds.includes(x.id) }"
+              >
+                <td @click.stop>
+                  <input
+                    type="checkbox"
+                    class="ck"
+                    :checked="selectedIds.includes(x.id)"
+                    @change="toggleRow(x.id)"
+                  />
+                </td>
+                <td class="mono">{{ x.id }}</td>
+                <td>
+                  {{ x.title }}
+                  <span
+                    v-if="x.source !== 'manual'"
+                    class="tag tiny"
+                    :class="sourceTagCls(x.source)"
+                    >{{ sourceText(x.source) }}</span
+                  >
+                </td>
+                <td>{{ x.sys }}</td>
+                <td>
+                  <span class="tag" :class="lvClass(x.lv)">{{ lvText(x.lv) }}</span>
+                </td>
+                <td>
+                  <span class="tag" :class="tagClass(x.state)">{{ statusLabel(x.state) }}</span>
+                </td>
+                <td>{{ x.owner }}</td>
+                <td class="mono">{{ x.created }}</td>
+                <td>{{ x.sla }}</td>
+                <td>
+                  <div class="progress" style="width: 80px">
+                    <i
+                      :style="{ width: x.progress + '%', background: pctColor(x.progress, 50, 80) }"
+                    ></i>
+                  </div>
+                </td>
+                <td>
+                  <div class="flex gap4" @click.stop>
+                    <button
+                      class="act-btn"
+                      v-if="x.state !== 'done'"
+                      v-bind="authState('write')"
+                      @click="advance(x)"
+                    >
+                      推进
+                    </button>
+                    <button class="act-btn ghost" v-bind="authState('write')" @click="openEdit(x)">
+                      编辑
+                    </button>
+                    <button
+                      class="act-btn danger"
+                      v-bind="authState('write')"
+                      @click="askDelete(x)"
+                    >
+                      删
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="tbl-empty" v-if="!filtered.length">
+            <span class="muted">当前筛选条件下无匹配工单</span>
+            <button class="link-btn" @click="resetFilter">清空筛选条件</button>
+          </div>
+        </Panel>
+      </template>
     </AsyncSection>
 
     <!-- 新建 / 编辑弹窗 -->
@@ -292,10 +310,10 @@
               ><span class="dv-v">{{ detail.owner }} · {{ detail.sla }}</span>
             </div>
             <div class="dv-row">
-              <span class="dv-k">来源</span
-              ><span class="dv-v">
-                <span class="tag" :class="detail.source === 'alarm' ? 'r' : 'b'">{{
-                  detail.source === 'alarm' ? '告警转单' : '手动创建'
+              <span class="dv-k">来源</span>
+              <span class="dv-v">
+                <span class="tag" :class="sourceTagCls(detail.source)">{{
+                  sourceText(detail.source)
                 }}</span>
                 <span v-if="detail.sourceAlarmId" class="mono muted">
                   ({{ detail.sourceAlarmId }})</span
@@ -352,11 +370,7 @@
           </div>
           <div class="tf-foot">
             <button class="tf-btn ghost" @click="detail = null">关闭</button>
-            <button
-              class="tf-btn primary"
-              v-if="detail.state !== 'done'"
-              @click="advance(detail)"
-            >
+            <button class="tf-btn primary" v-if="detail.state !== 'done'" @click="advance(detail)">
               推进状态
             </button>
           </div>
@@ -400,8 +414,8 @@
     <KnowledgePanels :knowledge="ticketKb" />
 
     <div class="footer-note">
-      运维作业·事件工单中心 — 全生命周期 CRUD · {{ tickets.length }} 张工单 ·
-      数据实时读写后端 /api/ops/tickets（离线时无法加载与提交）
+      运维作业·事件工单中心 — 全生命周期 CRUD · {{ tickets.length }} 张工单 · 数据实时读写后端
+      /api/ops/tickets（离线时无法加载与提交）
     </div>
   </div>
 </template>
@@ -485,6 +499,20 @@ const ticketKb: PowerKnowledge = {
 
 const STATUS_ORDER = TICKET_STATUS_ORDER
 const statusLabel = (s: TicketStatus) => TICKET_STATUS_LABEL[s]
+
+/** 工单来源文案: manual(手工)/alarm(告警转单)/auto-alarm(告警自动)/其余原样 */
+function sourceText(s?: string): string {
+  if (s === 'auto-alarm') return tl('告警自动')
+  if (s === 'alarm') return tl('告警转单')
+  if (s === 'manual') return tl('手工')
+  return s || tl('手工')
+}
+/** 来源 tag 色系: 告警自动=红(最高优先级) / 告警转单=橙 / 其余=蓝 */
+function sourceTagCls(s?: string): string {
+  if (s === 'auto-alarm') return 'r'
+  if (s === 'alarm') return 'a'
+  return 'b'
+}
 const colColor = (s: TicketStatus) =>
   s === 'open'
     ? 'var(--amber)'
@@ -521,7 +549,9 @@ const selectedIds = ref<string[]>([])
 const batching = ref(false)
 const deleting = ref(false)
 
-const selectedTickets = computed(() => tickets.value.filter((t) => selectedIds.value.includes(t.id)))
+const selectedTickets = computed(() =>
+  tickets.value.filter((t) => selectedIds.value.includes(t.id)),
+)
 /** 可推进 = 未处于终态 done */
 const advanceableSelected = computed(() => selectedTickets.value.filter((t) => t.state !== 'done'))
 
@@ -585,7 +615,7 @@ function toExportRows(list: Ticket[]) {
     t.created,
     t.sla,
     t.progress,
-    t.source === 'alarm' ? '告警转单' : '手动创建',
+    sourceText(t.source),
     t.description ?? '',
   ])
 }
@@ -857,6 +887,13 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   cursor: pointer;
   background: rgba(34, 227, 255, 0.1);
   color: var(--cyan);
+}
+
+/* 来源小号徽标 (沿全局 .tag 色系: r=告警自动 / a=告警转单 / b=手工) */
+.tag.tiny {
+  font-size: 9px;
+  padding: 1px 5px;
+  vertical-align: middle;
 }
 .act-btn.ghost {
   background: var(--bg2);

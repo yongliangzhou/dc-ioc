@@ -45,6 +45,15 @@ import type {
   TicketTransitionRequest,
   TicketUpdateRequest,
 } from '@/types'
+import type { GraphicConfigPayload, GraphicScene, RefuelRecordItem } from '@/types/graphic'
+import type {
+  NotificationChannel,
+  NotificationChannelPayload,
+  NotificationRecordsQuery,
+  NotificationRecordsResp,
+  NotificationTestResp,
+} from '@/types'
+import type { WhatIfBaseline, WhatIfRequest, WhatIfResult } from '@/types/capacity'
 
 export interface CabinetQuery {
   page?: number
@@ -468,6 +477,16 @@ export const getUPosition = (cabinetId: number) =>
 export const recognizeUPosition = (cabinetId: number) =>
   request.post<unknown, RecognizeResp>(`/api/cabinets/${cabinetId}/u-position/recognize`)
 
+// ---- 上架模拟器 (容量 What-if, 新增 IT 负载四维推演) ----
+
+/** 容量基线: 机柜空间/电力/制冷/承重/网络端口 五维当前用量 */
+export const getCapacityWhatIfBaseline = () =>
+  request.get<unknown, WhatIfBaseline>('/api/ops/capacity/what-if/baseline')
+
+/** 推演: 新增 N 柜 x kW 负载后各维度占用与到达阈值时间 */
+export const postCapacityWhatIf = (body: WhatIfRequest) =>
+  request.post<unknown, WhatIfResult>('/api/ops/capacity/what-if', body)
+
 // ---- 故障影响分析 (复用 twin_graph 真实拓扑做链路 BFS 传播) ----
 /** 候选故障源: 真实拓扑节点 + 易故障提示 (低健康/已告警/高负载) */
 export const getFaultSources = () =>
@@ -488,6 +507,13 @@ export const saveFaultImpactHistory = (data: Partial<AnalysisHistory>) =>
 /** 报告会签 (追加会签人) */
 export const signFaultImpactHistory = (id: number, signer: string) =>
   request.post<unknown, AnalysisHistory>(`/api/ops/fault-impact/history/${id}/sign`, { signer })
+
+/** 报告分级推送 (后端标记 pushed 并返回实际送达通道, 非前端假成功) */
+export const pushFaultImpactHistory = (id: number) =>
+  request.post<unknown, AnalysisHistory & { pushedChannels?: string[]; pushedAt?: string }>(
+    `/api/ops/fault-impact/history/${id}/push`,
+    {},
+  )
 
 // ---- 应急演练 (全栈打通真实数据, 持久化到 DB) ----
 /** 演练总览: 真实专业域类别建议演练 + DB 计划 (含 steps/level/scope/duration) */
@@ -544,3 +570,62 @@ export const updateTenant = (id: number, data: Partial<TenantItem>) =>
 
 /** 删除租户 */
 export const deleteTenant = (id: number) => request.delete(`/api/ops/tenants/${id}`)
+
+/* ===== 统一图形编辑入口 (图形场景配置 + 加油记录) ===== */
+/** 读取某图形的场景配置 (未配置时后端返回空场景, 页面回退默认渲染) */
+export const getGraphicConfig = (kind: string) =>
+  request.get<unknown, GraphicConfigPayload>(`/api/ops/graphic-config/${encodeURIComponent(kind)}`)
+
+/** 保存某图形的场景配置 (节点 / 连线 / 页面参数) */
+export const saveGraphicConfig = (kind: string, title: string, payload: GraphicScene) =>
+  request.put<unknown, GraphicConfigPayload>(
+    `/api/ops/graphic-config/${encodeURIComponent(kind)}`,
+    { title, payload },
+  )
+
+/** 删除某图形的场景配置 (回到默认渲染) */
+export const deleteGraphicConfig = (kind: string) =>
+  request.delete(`/api/ops/graphic-config/${encodeURIComponent(kind)}`)
+
+/** 加油记录列表 (储油系统 · 真实数据) */
+export const getRefuelRecords = (limit = 200) =>
+  request.get<unknown, { items: RefuelRecordItem[] }>(`/api/ops/refuel-records?limit=${limit}`)
+
+/** 新增加油记录 */
+export const createRefuelRecord = (data: Partial<RefuelRecordItem>) =>
+  request.post<unknown, RefuelRecordItem>('/api/ops/refuel-records', data)
+
+/** 修改加油记录 */
+export const updateRefuelRecord = (id: number, data: Partial<RefuelRecordItem>) =>
+  request.put<unknown, RefuelRecordItem>(`/api/ops/refuel-records/${id}`, data)
+
+/** 删除加油记录 */
+export const deleteRefuelRecord = (id: number) => request.delete(`/api/ops/refuel-records/${id}`)
+
+/* ===== 统一告警触达中心 (通知中心) ===== */
+/** 触达通道列表 */
+export const getNotificationChannels = () =>
+  request.get<unknown, NotificationChannel[]>('/api/ops/notifications/channels')
+
+/** 新建触达通道 */
+export const createNotificationChannel = (data: NotificationChannelPayload) =>
+  request.post<unknown, NotificationChannel>('/api/ops/notifications/channels', data)
+
+/** 更新触达通道 (字段可选, 支持部分更新) */
+export const updateNotificationChannel = (id: number, data: NotificationChannelPayload) =>
+  request.put<unknown, NotificationChannel>(`/api/ops/notifications/channels/${id}`, data)
+
+/** 删除触达通道 */
+export const deleteNotificationChannel = (id: number) =>
+  request.delete<unknown, { deleted: boolean }>(`/api/ops/notifications/channels/${id}`)
+
+/** 发送记录 (分页 + 级别/通道/状态过滤) */
+export const getNotificationRecords = (params: NotificationRecordsQuery = {}) =>
+  request.get<unknown, NotificationRecordsResp>('/api/ops/notifications/records', { params })
+
+/** 通道测试发送 */
+export const testNotificationChannel = (data: {
+  channelId: number
+  title: string
+  message: string
+}) => request.post<unknown, NotificationTestResp>('/api/ops/notifications/test', data)

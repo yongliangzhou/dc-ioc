@@ -28,7 +28,11 @@
         <tr
           v-for="x in alarms"
           :key="alarmKeyOf(x)"
-          :class="{ 'row-crit': x.level === 'crit', 'row-warn': x.level === 'warn', 'row-sel': isSelected(x) }"
+          :class="{
+            'row-crit': x.level === 'crit',
+            'row-warn': x.level === 'warn',
+            'row-sel': isSelected(x),
+          }"
         >
           <td v-if="selectable">
             <input
@@ -47,7 +51,16 @@
               {{ sourceLabel(x.system) }}
             </span>
           </td>
-          <td class="desc-cell">{{ x.message }}</td>
+          <td class="desc-cell">
+            {{ x.message }}
+            <span
+              v-if="ticketOf(x)"
+              class="tag b tk-badge"
+              :title="`${ticketOf(x)!.title} · 点击进入工单中心`"
+              @click.stop="goTicket"
+              >{{ tl('已建单') }} {{ ticketOf(x)!.id }}</span
+            >
+          </td>
           <td class="mono" style="font-size: 11px">{{ x.time }}</td>
           <td>
             <StatusBadge :status="mapStateStatus(x.status)" :label="x.status" />
@@ -113,9 +126,26 @@ const props = withDefaults(
     selectable?: boolean
     /** 已选中的行标识（alarmKeyOf 的结果） */
     selected?: string[]
+    /** alarmId -> 关联工单 映射（父组件加载, 加载失败时为空, 行内不显示徽标） */
+    ticketMap?: Record<string, Ticket>
   }>(),
-  { selectable: false, selected: () => [] },
+  { selectable: false, selected: () => [], ticketMap: () => ({}) },
 )
+
+const router = useRouter()
+
+/**
+ * 匹配键以 ticket.sourceAlarmId 为准, 与告警行的 id 对齐:
+ * - 实时联动告警 (RtAlarm) 的 id 即后端 alarm_id 字符串
+ * - 兼容未来 alarm.alarmId 字段 (两套 id 体系兜底)
+ */
+function ticketOf(x: Alarm): Ticket | undefined {
+  const aid = (x as { id?: string; alarmId?: string }).id ?? (x as { alarmId?: string }).alarmId
+  return aid ? props.ticketMap?.[aid] : undefined
+}
+function goTicket() {
+  void router.push('/ops/tickets')
+}
 
 const emit = defineEmits<{
   (e: 'update:selected', keys: string[]): void
@@ -412,6 +442,21 @@ function goDevice(alarm: Alarm) {
 }
 .desc-cell {
   max-width: 260px;
+}
+
+/* 「已建单」小号徽标: 沿用全局 .tag 色系 (b=蓝), 不打断行布局 */
+.tk-badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  margin-left: 4px;
+  vertical-align: middle;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tk-badge:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 
 /* 复选框 */

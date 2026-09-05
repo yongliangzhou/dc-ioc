@@ -491,6 +491,7 @@ import {
   getFaultImpactHistory,
   saveFaultImpactHistory,
   signFaultImpactHistory,
+  pushFaultImpactHistory,
   getDeviceRealtime,
 } from '@/api'
 import type { FaultImpactResp, FaultSourceNode, AnalysisHistory } from '@/types'
@@ -596,8 +597,8 @@ async function saveReport() {
     })
     await loadHistory()
     toast.success(t.saveSuccess)
-  } catch {
-    toast.error('save failed')
+  } catch (e) {
+    toast.error(toErrorMessage(e) || '报告保存失败')
   } finally {
     savingHistory.value = false
   }
@@ -609,14 +610,29 @@ async function signReport(id: number) {
     await signFaultImpactHistory(id, signerName.value.trim())
     await loadHistory()
     toast.success(t.signSuccess)
-  } catch {
-    toast.error('sign failed')
+  } catch (e) {
+    toast.error(toErrorMessage(e) || '会签失败')
   }
 }
 
+/** 推送通道展示名 (后端按 severity 返回通道编码, 此处仅做展示映射) */
+const PUSH_CHANNEL_NAMES: Record<string, string> = {
+  wecom: '企业微信',
+  sms: '短信',
+  email: '邮件',
+}
+
 async function pushReport(h: AnalysisHistory) {
-  // 分级推送占位: 按 severity 选择通道 (真实环境对接邮件/告警网关)
-  toast.success(`${t.pushSuccess} [${h.severity}]`)
+  try {
+    // 真实推送: 后端持久化 pushed 标记并按 severity 返回实际送达通道, 不做假成功
+    const r = await pushFaultImpactHistory(h.id)
+    const hh = historyList.value.find((x) => x.id === h.id)
+    if (hh && r) hh.pushed = true
+    const channels = (r?.pushedChannels || []).map((c) => PUSH_CHANNEL_NAMES[c] || c)
+    toast.success(channels.length ? `${t.pushSuccess}（${channels.join(' / ')}）` : t.pushSuccess)
+  } catch (e) {
+    toast.error(toErrorMessage(e) || '分级推送失败')
+  }
 }
 
 async function loadSources() {

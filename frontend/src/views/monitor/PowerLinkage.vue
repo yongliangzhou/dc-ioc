@@ -3,152 +3,224 @@
     <div class="view-head">
       <div>
         <h1>{{ tl('配电链路可视化') }}</h1>
-        <span class="sub">{{ tl('端到端') }} · {{ tl('市电进线 → 中压 → 变压器 → 低压 → UPS → 机柜负载') }}</span>
+        <span class="sub"
+          >{{ tl('端到端') }} · {{ tl('市电进线 → 中压 → 变压器 → 低压 → UPS → 机柜负载') }}</span
+        >
+        <MockDataBanner :level="mockLevel" :reason="mockReason" />
       </div>
       <div class="head-actions">
         <span class="live" :class="{ on: liveOn }">
           <i class="live-dot" /> {{ liveOn ? tl('实时刷新中') : tl('已暂停') }}
         </span>
-        <button class="refresh" @click="toggleLive">{{ liveOn ? tl('暂停') : tl('开启实时') }}</button>
+        <button class="refresh" @click="toggleLive">
+          {{ liveOn ? tl('暂停') : tl('开启实时') }}
+        </button>
         <button class="refresh" @click="() => load()" :disabled="loading">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M23 4v6h-6M1 20v-6h6" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
           {{ tl('刷新') }}
         </button>
       </div>
     </div>
 
-    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="() => load()" :min-height="'360px'">
-    <!-- 概览 KPI -->
-    <div class="kpi-row">
-      <div class="kpi"><span class="k-label">{{ tl('链路节点') }}</span><span class="k-val">{{ nodes.length }}</span></div>
-      <div class="kpi"><span class="k-label">{{ tl('告警节点') }}</span><span class="k-val warn">{{ alarmNodeCount }}</span></div>
-      <div class="kpi"><span class="k-label">{{ tl('总负载') }}</span><span class="k-val">{{ totalLoad }}%</span></div>
-      <div class="kpi"><span class="k-label">{{ tl('平均电压') }}</span><span class="k-val">{{ avgVoltage }}kV</span></div>
-      <div class="kpi"><span class="k-label">{{ tl('平均电流') }}</span><span class="k-val">{{ avgCurrent }}A</span></div>
-      <div class="kpi"><span class="k-label">{{ tl('活动告警') }}</span><span class="k-val" :class="activeAlarms.length ? 'warn' : ''">{{ activeAlarms.length }}</span></div>
-    </div>
-
-    <!-- 主体分屏 -->
-    <div class="main-grid">
-      <!-- 拓扑图 -->
-      <Panel class="topo-panel" :title="tl('配电链路拓扑')">
-        <template #extra>
-          <div class="legend">
-            <span><i class="dot normal" /> {{ tl('正常') }}</span>
-            <span><i class="dot warning" /> {{ tl('预警') }}</span>
-            <span><i class="dot fault" /> {{ tl('故障') }}</span>
-            <span><i class="dot off" /> {{ tl('失电/离线') }}</span>
-          </div>
-        </template>
-        <div class="topo-wrap">
-          <PowerLinkageDiagram
-            ref="diagramRef"
-            :nodes="nodes"
-            :links="links"
-            :groups="groups"
-            :selected-id="selected?.id"
-            @node-click="onNodeClick"
-          />
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="false"
+      @retry="() => load()"
+      :min-height="'360px'"
+    >
+      <!-- 概览 KPI -->
+      <div class="kpi-row">
+        <div class="kpi">
+          <span class="k-label">{{ tl('链路节点') }}</span
+          ><span class="k-val">{{ nodes.length }}</span>
         </div>
-      </Panel>
+        <div class="kpi">
+          <span class="k-label">{{ tl('告警节点') }}</span
+          ><span class="k-val warn">{{ alarmNodeCount }}</span>
+        </div>
+        <div class="kpi">
+          <span class="k-label">{{ tl('总负载') }}</span
+          ><span class="k-val">{{ totalLoad }}%</span>
+        </div>
+        <div class="kpi">
+          <span class="k-label">{{ tl('平均电压') }}</span
+          ><span class="k-val">{{ avgVoltage }}kV</span>
+        </div>
+        <div class="kpi">
+          <span class="k-label">{{ tl('平均电流') }}</span
+          ><span class="k-val">{{ avgCurrent }}A</span>
+        </div>
+        <div class="kpi">
+          <span class="k-label">{{ tl('活动告警') }}</span
+          ><span class="k-val" :class="activeAlarms.length ? 'warn' : ''">{{
+            activeAlarms.length
+          }}</span>
+        </div>
+      </div>
 
-      <!-- 详情 / 趋势 -->
-      <div class="side-col">
-        <!-- 节点详情 -->
-        <Panel class="detail-panel" :title="selected ? selected.title : tl('节点详情')">
-          <div v-if="selected" class="detail-body">
-            <div class="detail-sub muted">{{ selected.sub }}</div>
-            <div class="metrics-grid">
-              <div v-for="m in selectedMetrics" :key="m.k" class="metric" :class="{ hot: m.hot }">
-                <span class="mk">{{ m.k }}</span>
-                <span class="mv">{{ m.v }}<small v-if="m.unit"> {{ m.unit }}</small></span>
-              </div>
-            </div>
-            <div class="alarm-list" v-if="nodeAlarms.length">
-              <div class="alarm-list-head">{{ tl('关联告警') }} ({{ nodeAlarms.length }})</div>
-              <div
-                v-for="(a, i) in nodeAlarms"
-                :key="i"
-                class="alarm-item"
-                :class="'lv-' + a.level"
-                @click="locateAlarm(a)"
-              >
-                <span class="lv">{{ levelText(a.level) }}</span>
-                <span class="msg">{{ a.message }}</span>
-                <span class="time">{{ a.time }}</span>
-              </div>
-            </div>
-            <div v-else class="no-alarm">{{ tl('该节点当前无活动告警') }}</div>
-          </div>
-          <div v-else class="detail-empty muted">{{ tl('点击拓扑节点查看电压、电流、功率等关键参数') }}</div>
-        </Panel>
-
-        <!-- 历史趋势 -->
-        <Panel class="trend-panel" :title="tl('历史数据与趋势分析')">
+      <!-- 主体分屏 -->
+      <div class="main-grid">
+        <!-- 拓扑图 -->
+        <Panel class="topo-panel" :title="tl('配电链路拓扑')">
           <template #extra>
-            <div class="range-tabs">
-              <button
-                v-for="r in ranges"
-                :key="r.val"
-                :class="{ active: range === r.val }"
-                @click="range = r.val; buildTrend()"
-              >{{ r.label }}</button>
+            <div class="legend">
+              <span><i class="dot normal" /> {{ tl('正常') }}</span>
+              <span><i class="dot warning" /> {{ tl('预警') }}</span>
+              <span><i class="dot fault" /> {{ tl('故障') }}</span>
+              <span><i class="dot off" /> {{ tl('失电/离线') }}</span>
+              <!-- 统一图形编辑入口: 对链路节点/连线做增删改 (覆盖层, 不影响接口数据) -->
+              <button class="refresh" @click="editOpen = true">
+                {{ tl('编辑') }}{{ hasGraphicEdits ? ' ●' : '' }}
+              </button>
             </div>
           </template>
-          <div class="trend-body">
-            <div class="trend-metrics">
-              <button
-                v-for="tm in trendMetrics"
-                :key="tm.key"
-                :class="{ active: trendKey === tm.key }"
-                @click="trendKey = tm.key"
-              >{{ tm.label }}</button>
-            </div>
-            <div class="chart-wrap">
-              <svg :viewBox="`0 0 520 200`" class="trend-svg" preserveAspectRatio="none">
-                <g class="grid">
-                  <line v-for="g in 4" :key="g" :x1="40" :x2="510" :y1="20 + g * 40" :y2="20 + g * 40" />
-                </g>
-                <polyline
-                  :points="trendPoints"
-                  :class="['trend-line', trendColor]"
-                  fill="none"
-                />
-                <polyline
-                  v-if="trendArea"
-                  :points="trendArea"
-                  :class="['trend-area', trendColor]"
-                />
-                <text :x="6" :y="24" class="axis-label">{{ yMax }}</text>
-                <text :x="6" :y="188" class="axis-label">{{ yMin }}</text>
-                <text :x="470" :y="196" class="axis-label end">{{ rangeLabel }}</text>
-              </svg>
-              <div class="trend-legend">
-                <span>{{ trendMetricLabel }}</span>
-                <span class="now">{{ trendNow }}{{ trendUnit }}</span>
-                <span class="delta" :class="trendDelta >= 0 ? 'up' : 'down'">
-                  {{ trendDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(trendDelta).toFixed(1) }}{{ trendUnit }}
-                </span>
-              </div>
-            </div>
+          <div class="topo-wrap">
+            <PowerLinkageDiagram
+              ref="diagramRef"
+              :key="nodesKey"
+              :nodes="nodesView"
+              :links="linksView"
+              :groups="groups"
+              :selected-id="selected?.id"
+              @node-click="onNodeClick"
+            />
           </div>
         </Panel>
-      </div>
-    </div>
 
-    <!-- 告警提示条 -->
-    <transition name="slide-up">
-      <div v-if="activeAlarms.length" class="alarm-bar" :class="'lv-' + topAlarmLevel">
-        <span class="ab-icon">⚠</span>
-        <span class="ab-text">
-          {{ tl('配电链路异常') }} · {{ activeAlarms.length }} {{ tl('条活动告警') }}
-          <template v-if="topAlarm">（{{ topAlarm.system }}：{{ topAlarm.message }}）</template>
-          <span v-if="linkageError" style="color: var(--amber); margin-left: 6px;">· {{ tl('实时链路异常，数据可能过期') }}</span>
-        </span>
-        <button class="ab-btn" @click="goAlarms">{{ tl('前往处理') }} ›</button>
+        <!-- 详情 / 趋势 -->
+        <div class="side-col">
+          <!-- 节点详情 -->
+          <Panel class="detail-panel" :title="selected ? selected.title : tl('节点详情')">
+            <div v-if="selected" class="detail-body">
+              <div class="detail-sub muted">{{ selected.sub }}</div>
+              <div class="metrics-grid">
+                <div v-for="m in selectedMetrics" :key="m.k" class="metric" :class="{ hot: m.hot }">
+                  <span class="mk">{{ m.k }}</span>
+                  <span class="mv"
+                    >{{ m.v }}<small v-if="m.unit"> {{ m.unit }}</small></span
+                  >
+                </div>
+              </div>
+              <div class="alarm-list" v-if="nodeAlarms.length">
+                <div class="alarm-list-head">{{ tl('关联告警') }} ({{ nodeAlarms.length }})</div>
+                <div
+                  v-for="(a, i) in nodeAlarms"
+                  :key="i"
+                  class="alarm-item"
+                  :class="'lv-' + a.level"
+                  @click="locateAlarm(a)"
+                >
+                  <span class="lv">{{ levelText(a.level) }}</span>
+                  <span class="msg">{{ a.message }}</span>
+                  <span class="time">{{ a.time }}</span>
+                </div>
+              </div>
+              <div v-else class="no-alarm">{{ tl('该节点当前无活动告警') }}</div>
+            </div>
+            <div v-else class="detail-empty muted">
+              {{ tl('点击拓扑节点查看电压、电流、功率等关键参数') }}
+            </div>
+          </Panel>
+
+          <!-- 历史趋势 -->
+          <Panel class="trend-panel" :title="tl('历史数据与趋势分析')">
+            <template #extra>
+              <div class="range-tabs">
+                <button
+                  v-for="r in ranges"
+                  :key="r.val"
+                  :class="{ active: range === r.val }"
+                  @click="setRange(r.val)"
+                >
+                  {{ r.label }}
+                </button>
+              </div>
+            </template>
+            <div class="trend-body">
+              <div class="trend-metrics">
+                <button
+                  v-for="tm in trendMetrics"
+                  :key="tm.key"
+                  :class="{ active: trendKey === tm.key }"
+                  @click="trendKey = tm.key"
+                >
+                  {{ tm.label }}
+                </button>
+              </div>
+              <div class="chart-wrap">
+                <svg :viewBox="`0 0 520 200`" class="trend-svg" preserveAspectRatio="none">
+                  <g class="grid">
+                    <line
+                      v-for="g in 4"
+                      :key="g"
+                      :x1="40"
+                      :x2="510"
+                      :y1="20 + g * 40"
+                      :y2="20 + g * 40"
+                    />
+                  </g>
+                  <polyline :points="trendPoints" :class="['trend-line', trendColor]" fill="none" />
+                  <polyline
+                    v-if="trendArea"
+                    :points="trendArea"
+                    :class="['trend-area', trendColor]"
+                  />
+                  <text :x="6" :y="24" class="axis-label">{{ yMax }}</text>
+                  <text :x="6" :y="188" class="axis-label">{{ yMin }}</text>
+                  <text :x="470" :y="196" class="axis-label end">{{ rangeLabel }}</text>
+                </svg>
+                <div class="trend-legend">
+                  <span>{{ trendMetricLabel }}</span>
+                  <span class="now">{{ trendNow }}{{ trendUnit }}</span>
+                  <span class="delta" :class="trendDelta >= 0 ? 'up' : 'down'">
+                    {{ trendDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(trendDelta).toFixed(1)
+                    }}{{ trendUnit }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </Panel>
+        </div>
       </div>
-    </transition>
+
+      <!-- 告警提示条 -->
+      <transition name="slide-up">
+        <div v-if="activeAlarms.length" class="alarm-bar" :class="'lv-' + topAlarmLevel">
+          <span class="ab-icon">⚠</span>
+          <span class="ab-text">
+            {{ tl('配电链路异常') }} · {{ activeAlarms.length }} {{ tl('条活动告警') }}
+            <template v-if="topAlarm">（{{ topAlarm.system }}：{{ topAlarm.message }}）</template>
+            <span v-if="linkageError" style="color: var(--amber); margin-left: 6px"
+              >· {{ tl('实时链路异常，数据可能过期') }}</span
+            >
+          </span>
+          <button class="ab-btn" @click="goAlarms">{{ tl('前往处理') }} ›</button>
+        </div>
+      </transition>
     </AsyncSection>
+
+    <!-- 统一图形编辑入口: 配电链路拓扑节点/连线增删改 (覆盖层, 不影响接口数据) -->
+    <GraphicEditDrawer
+      v-model="editOpen"
+      :editor="graphicEditor"
+      :title="tl('配电链路拓扑')"
+      :defaults="graphicDefaults"
+      :edge-defaults="graphicEdgeDefaults"
+      :param-defaults="graphicParamDefaults"
+    />
   </div>
 </template>
 
@@ -156,7 +228,11 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
-import PowerLinkageDiagram, { LinkNode, LinkEdge, LinkGroup } from '@/components/power/PowerLinkageDiagram.vue'
+import PowerLinkageDiagram, {
+  LinkNode,
+  LinkEdge,
+  LinkGroup,
+} from '@/components/power/PowerLinkageDiagram.vue'
 import Panel from '@/components/common/Panel.vue'
 import {
   getPowerHvDetailed,
@@ -167,11 +243,16 @@ import {
 import { getCabinets, getActiveAlarms } from '@/api'
 import { realtimeLinkage } from '@/engine/realtimeLinkage'
 import type { Alarm } from '@/types'
-import { toErrorMessage } from '@/composables/useAsyncPage'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import AsyncSection from '@/components/common/AsyncSection.vue'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
+import { useGraphicEditor, type NodeAdapter } from '@/composables/useGraphicEditor'
+import type { GraphicEdge, GraphicNode } from '@/types/graphic'
 
 const { t: tl } = useI18n()
 const router = useRouter()
+const { level: mockLevel, reason: mockReason, markPartial } = useMockFlag()
 
 const loading = ref(false)
 const error = ref('')
@@ -196,10 +277,24 @@ const SYS_CAB = '机柜'
 type Kind = 'gens' | 'mains' | 'hvbus' | 'tx' | 'lvbus' | 'ups' | 'battery' | 'cab'
 type Layer = 'top' | 'mid' | 'low' | 'bottom'
 const ICON: Record<Kind, string> = {
-  gens: '🛢', mains: '⚡', hvbus: '🔌', tx: '🔻', lvbus: '🗲', ups: '🔋', battery: '🪫', cab: '🖥',
+  gens: '🛢',
+  mains: '⚡',
+  hvbus: '🔌',
+  tx: '🔻',
+  lvbus: '🗲',
+  ups: '🔋',
+  battery: '🪫',
+  cab: '🖥',
 }
 const KIND_GROUP: Record<Kind, string> = {
-  gens: 'g-gens', mains: 'g-mains', hvbus: 'g-hv', tx: 'g-tx', lvbus: 'g-lv', ups: 'g-ups', battery: 'g-battery', cab: 'g-cab',
+  gens: 'g-gens',
+  mains: 'g-mains',
+  hvbus: 'g-hv',
+  tx: 'g-tx',
+  lvbus: 'g-lv',
+  ups: 'g-ups',
+  battery: 'g-battery',
+  cab: 'g-cab',
 }
 
 function statusOf(state: string): LinkNode['status'] {
@@ -245,31 +340,54 @@ const rawNodes = computed(() => {
   const gens = gensetData.value?.units ?? []
   gens.forEach((g: any, i: number) => {
     push({
-      id: 'gens' + i, kind: 'gens' as Kind, icon: ICON.gens, group: KIND_GROUP.gens,
-      title: tl('柴油机组') + (i + 1), sub: String(g.state || '待机'),
+      id: 'gens' + i,
+      kind: 'gens' as Kind,
+      icon: ICON.gens,
+      group: KIND_GROUP.gens,
+      title: tl('柴油机组') + (i + 1),
+      sub: String(g.state || '待机'),
       kpi: `U ${fmtNum(Number(g.u ?? 0))}kV · ${fmtNum(g.rpm ?? 0, 0)}rpm`,
-      status: statusOf(g.state), alarmCount: alarmBySystem(SYS_GENS).length,
-      x: 0, y: 0,
-      meta: { kind: 'gens', raw: g, system: SYS_GENS, metrics: [
-        { k: '电压', v: fmtNum(Number(g.u ?? 0)), unit: 'kV' },
-        { k: '电流', v: fmtNum(g.i ?? 0, 0), unit: 'A' },
-        { k: '功率', v: fmtNum(g.p ?? 0), unit: 'kW' },
-        { k: '转速', v: fmtNum(g.rpm ?? 0, 0), unit: 'rpm' },
-        { k: '水温', v: fmtNum(g.waterT ?? 0), unit: '℃', hot: Number(g.waterT ?? 0) > 95 },
-        { k: '油压', v: fmtNum(g.oilP ?? 0, 1), unit: 'bar' },
-      ] },
+      status: statusOf(g.state),
+      alarmCount: alarmBySystem(SYS_GENS).length,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'gens',
+        raw: g,
+        system: SYS_GENS,
+        metrics: [
+          { k: '电压', v: fmtNum(Number(g.u ?? 0)), unit: 'kV' },
+          { k: '电流', v: fmtNum(g.i ?? 0, 0), unit: 'A' },
+          { k: '功率', v: fmtNum(g.p ?? 0), unit: 'kW' },
+          { k: '转速', v: fmtNum(g.rpm ?? 0, 0), unit: 'rpm' },
+          { k: '水温', v: fmtNum(g.waterT ?? 0), unit: '℃', hot: Number(g.waterT ?? 0) > 95 },
+          { k: '油压', v: fmtNum(g.oilP ?? 0, 1), unit: 'bar' },
+        ],
+      },
     })
   })
   if (!gens.length) {
     push({
-      id: 'gens0', kind: 'gens' as Kind, icon: ICON.gens, group: KIND_GROUP.gens,
-      title: tl('柴油机组'), sub: tl('应急备用'),
+      id: 'gens0',
+      kind: 'gens' as Kind,
+      icon: ICON.gens,
+      group: KIND_GROUP.gens,
+      title: tl('柴油机组'),
+      sub: tl('应急备用'),
       kpi: tl('待机'),
-      status: 'normal', alarmCount: 0, x: 0, y: 0,
-      meta: { kind: 'gens', raw: {}, system: SYS_GENS, metrics: [
-        { k: '状态', v: tl('待机'), unit: '' },
-        { k: '并机母线', v: gensetData.value?.busState || '—', unit: '' },
-      ] },
+      status: 'normal',
+      alarmCount: 0,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'gens',
+        raw: {},
+        system: SYS_GENS,
+        metrics: [
+          { k: '状态', v: tl('待机'), unit: '' },
+          { k: '并机母线', v: gensetData.value?.busState || '—', unit: '' },
+        ],
+      },
     })
   }
 
@@ -278,19 +396,30 @@ const rawNodes = computed(() => {
   incomers.forEach((ic: any, i: number) => {
     const u = ((ic.ua ?? 0) + (ic.ub ?? 0) + (ic.uc ?? 0)) / 3
     push({
-      id: 'mains' + i, kind: 'mains' as Kind, icon: ICON.mains, group: KIND_GROUP.mains,
-      title: tl('市电进线') + (i + 1), sub: ic.src || '10kV',
+      id: 'mains' + i,
+      kind: 'mains' as Kind,
+      icon: ICON.mains,
+      group: KIND_GROUP.mains,
+      title: tl('市电进线') + (i + 1),
+      sub: ic.src || '10kV',
       kpi: `U ${fmtNum(u)}kV · I ${fmtNum(ic.i ?? 0, 0)}A`,
-      status: statusOf(ic.state), alarmCount: alarmBySystem(SYS_HV).length,
-      x: 0, y: 0,
-      meta: { kind: 'mains', raw: ic, system: SYS_HV, metrics: [
-        { k: '电压', v: fmtNum(u), unit: 'kV' },
-        { k: '电流', v: fmtNum(ic.i ?? 0, 0), unit: 'A' },
-        { k: '功率', v: fmtNum((ic.p ?? 0)), unit: 'MW' },
-        { k: '负载率', v: fmtNum(ic.load ?? 0), unit: '%' },
-        { k: '频率', v: fmtNum(ic.f ?? 50), unit: 'Hz' },
-        { k: '电源', v: String(ic.src ?? '—'), unit: '' },
-      ] },
+      status: statusOf(ic.state),
+      alarmCount: alarmBySystem(SYS_HV).length,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'mains',
+        raw: ic,
+        system: SYS_HV,
+        metrics: [
+          { k: '电压', v: fmtNum(u), unit: 'kV' },
+          { k: '电流', v: fmtNum(ic.i ?? 0, 0), unit: 'A' },
+          { k: '功率', v: fmtNum(ic.p ?? 0), unit: 'MW' },
+          { k: '负载率', v: fmtNum(ic.load ?? 0), unit: '%' },
+          { k: '频率', v: fmtNum(ic.f ?? 50), unit: 'Hz' },
+          { k: '电源', v: String(ic.src ?? '—'), unit: '' },
+        ],
+      },
     })
   })
 
@@ -298,16 +427,27 @@ const rawNodes = computed(() => {
   const bus = hvData.value?.busSections ?? hvData.value?.bus ?? []
   bus.forEach((b: any, i: number) => {
     push({
-      id: 'hvbus' + i, kind: 'hvbus' as Kind, icon: ICON.hvbus, group: KIND_GROUP.hvbus,
-      title: tl('中压母线') + (i + 1), sub: (b.u ? fmtNum(Number(b.u)) : '10') + 'kV',
+      id: 'hvbus' + i,
+      kind: 'hvbus' as Kind,
+      icon: ICON.hvbus,
+      group: KIND_GROUP.hvbus,
+      title: tl('中压母线') + (i + 1),
+      sub: (b.u ? fmtNum(Number(b.u)) : '10') + 'kV',
       kpi: `U ${fmtNum(Number(b.u ?? 0))}kV`,
-      status: statusOf(b.state), alarmCount: alarmBySystem(SYS_HV).length,
-      x: 0, y: 0,
-      meta: { kind: 'hvbus', raw: b, system: SYS_HV, metrics: [
-        { k: '电压', v: fmtNum(Number(b.u ?? 0)), unit: 'kV' },
-        { k: '频率', v: fmtNum(b.f ?? 50), unit: 'Hz' },
-        { k: '母线状态', v: String(b.state ?? '—'), unit: '' },
-      ] },
+      status: statusOf(b.state),
+      alarmCount: alarmBySystem(SYS_HV).length,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'hvbus',
+        raw: b,
+        system: SYS_HV,
+        metrics: [
+          { k: '电压', v: fmtNum(Number(b.u ?? 0)), unit: 'kV' },
+          { k: '频率', v: fmtNum(b.f ?? 50), unit: 'Hz' },
+          { k: '母线状态', v: String(b.state ?? '—'), unit: '' },
+        ],
+      },
     })
   })
 
@@ -315,19 +455,35 @@ const rawNodes = computed(() => {
   const tx = hvData.value?.transformers ?? []
   tx.forEach((t: any, i: number) => {
     push({
-      id: 'tx' + i, kind: 'tx' as Kind, icon: ICON.tx, group: KIND_GROUP.tx,
-      title: tl('变压器') + (i + 1), sub: '负载 ' + (t.load ?? '-') + '%',
-      kpi: `负载 ${fmtNum(t.load ?? 0)}% · ${(t.windingT ?? '-')}℃`,
-      status: statusOf(t.state), alarmCount: alarmBySystem(SYS_HV).length,
-      x: 0, y: 0,
-      meta: { kind: 'tx', raw: t, system: SYS_HV, metrics: [
-        { k: '电压(高压)', v: fmtNum(Number(t.uHigh ?? 0)), unit: 'kV' },
-        { k: '电压(低压)', v: fmtNum(Number(t.uLow ?? 0), 3), unit: 'kV' },
-        { k: '电流(高压)', v: fmtNum(t.iHigh ?? 0, 0), unit: 'A' },
-        { k: '功率', v: fmtNum(t.p ?? 0), unit: 'MW' },
-        { k: '负载率', v: fmtNum(t.load ?? 0), unit: '%', hot: Number(t.load ?? 0) > 85 },
-        { k: '绕组温度', v: fmtNum(t.windingT ?? 0), unit: '℃', hot: Number(t.windingT ?? 0) > 95 },
-      ] },
+      id: 'tx' + i,
+      kind: 'tx' as Kind,
+      icon: ICON.tx,
+      group: KIND_GROUP.tx,
+      title: tl('变压器') + (i + 1),
+      sub: '负载 ' + (t.load ?? '-') + '%',
+      kpi: `负载 ${fmtNum(t.load ?? 0)}% · ${t.windingT ?? '-'}℃`,
+      status: statusOf(t.state),
+      alarmCount: alarmBySystem(SYS_HV).length,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'tx',
+        raw: t,
+        system: SYS_HV,
+        metrics: [
+          { k: '电压(高压)', v: fmtNum(Number(t.uHigh ?? 0)), unit: 'kV' },
+          { k: '电压(低压)', v: fmtNum(Number(t.uLow ?? 0), 3), unit: 'kV' },
+          { k: '电流(高压)', v: fmtNum(t.iHigh ?? 0, 0), unit: 'A' },
+          { k: '功率', v: fmtNum(t.p ?? 0), unit: 'MW' },
+          { k: '负载率', v: fmtNum(t.load ?? 0), unit: '%', hot: Number(t.load ?? 0) > 85 },
+          {
+            k: '绕组温度',
+            v: fmtNum(t.windingT ?? 0),
+            unit: '℃',
+            hot: Number(t.windingT ?? 0) > 95,
+          },
+        ],
+      },
     })
   })
 
@@ -335,16 +491,27 @@ const rawNodes = computed(() => {
   const ltx = lvData.value?.transformers ?? []
   ltx.forEach((t: any, i: number) => {
     push({
-      id: 'lvbus' + i, kind: 'lvbus' as Kind, icon: ICON.lvbus, group: KIND_GROUP.lvbus,
-      title: tl('低压母线') + (i + 1), sub: (t.u ? fmtNum(Number(t.u), 3) : '0.4') + 'kV',
+      id: 'lvbus' + i,
+      kind: 'lvbus' as Kind,
+      icon: ICON.lvbus,
+      group: KIND_GROUP.lvbus,
+      title: tl('低压母线') + (i + 1),
+      sub: (t.u ? fmtNum(Number(t.u), 3) : '0.4') + 'kV',
       kpi: `U ${fmtNum(Number(t.u ?? 0), 3)}kV`,
-      status: statusOf(t.state), alarmCount: alarmBySystem(SYS_LV).length,
-      x: 0, y: 0,
-      meta: { kind: 'lvbus', raw: t, system: SYS_LV, metrics: [
-        { k: '电压', v: fmtNum(Number(t.u ?? 0), 3), unit: 'kV' },
-        { k: '频率', v: fmtNum(t.f ?? 50), unit: 'Hz' },
-        { k: '功率因数', v: fmtNum(t.pf ?? 0, 2), unit: '' },
-      ] },
+      status: statusOf(t.state),
+      alarmCount: alarmBySystem(SYS_LV).length,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'lvbus',
+        raw: t,
+        system: SYS_LV,
+        metrics: [
+          { k: '电压', v: fmtNum(Number(t.u ?? 0), 3), unit: 'kV' },
+          { k: '频率', v: fmtNum(t.f ?? 50), unit: 'Hz' },
+          { k: '功率因数', v: fmtNum(t.pf ?? 0, 2), unit: '' },
+        ],
+      },
     })
   })
 
@@ -352,20 +519,31 @@ const rawNodes = computed(() => {
   const ups = lvData.value?.upsGroups ?? []
   ups.forEach((u: any, i: number) => {
     push({
-      id: 'ups' + i, kind: 'ups' as Kind, icon: ICON.ups, group: KIND_GROUP.ups,
-      title: tl('UPS') + (i + 1), sub: (u.mode || u.state || '—'),
+      id: 'ups' + i,
+      kind: 'ups' as Kind,
+      icon: ICON.ups,
+      group: KIND_GROUP.ups,
+      title: tl('UPS') + (i + 1),
+      sub: u.mode || u.state || '—',
       kpi: `Uout ${fmtNum(Number(u.uOut ?? 0), 0)}V · 负载 ${fmtNum(u.load ?? 0)}%`,
-      status: statusOf(u.state), alarmCount: alarmBySystem(SYS_UPS).length,
-      x: 0, y: 0,
-      meta: { kind: 'ups', raw: u, system: SYS_UPS, metrics: [
-        { k: '输入电压', v: fmtNum(Number(u.uIn ?? 0), 0), unit: 'V' },
-        { k: '输出电压', v: fmtNum(Number(u.uOut ?? 0), 0), unit: 'V' },
-        { k: '输出电流', v: fmtNum(u.iOut ?? 0, 0), unit: 'A' },
-        { k: '功率', v: fmtNum(u.p ?? 0), unit: 'kW' },
-        { k: '负载率', v: fmtNum(u.load ?? 0), unit: '%', hot: Number(u.load ?? 0) > 90 },
-        { k: '功率因数', v: fmtNum(u.pf ?? 0, 2), unit: '' },
-        { k: '运行模式', v: String(u.mode ?? '—'), unit: '' },
-      ] },
+      status: statusOf(u.state),
+      alarmCount: alarmBySystem(SYS_UPS).length,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'ups',
+        raw: u,
+        system: SYS_UPS,
+        metrics: [
+          { k: '输入电压', v: fmtNum(Number(u.uIn ?? 0), 0), unit: 'V' },
+          { k: '输出电压', v: fmtNum(Number(u.uOut ?? 0), 0), unit: 'V' },
+          { k: '输出电流', v: fmtNum(u.iOut ?? 0, 0), unit: 'A' },
+          { k: '功率', v: fmtNum(u.p ?? 0), unit: 'kW' },
+          { k: '负载率', v: fmtNum(u.load ?? 0), unit: '%', hot: Number(u.load ?? 0) > 90 },
+          { k: '功率因数', v: fmtNum(u.pf ?? 0, 2), unit: '' },
+          { k: '运行模式', v: String(u.mode ?? '—'), unit: '' },
+        ],
+      },
     })
   })
 
@@ -374,18 +552,30 @@ const rawNodes = computed(() => {
   if (batGroups.length) {
     batGroups.forEach((g: any, i: number) => {
       push({
-        id: 'battery' + i, kind: 'battery' as Kind, icon: ICON.battery, group: KIND_GROUP.battery,
-        title: String(g.id ?? tl('电池组') + (i + 1)), sub: String(g.type ?? '铅酸'),
+        id: 'battery' + i,
+        kind: 'battery' as Kind,
+        icon: ICON.battery,
+        group: KIND_GROUP.battery,
+        title: String(g.id ?? tl('电池组') + (i + 1)),
+        sub: String(g.type ?? '铅酸'),
         kpi: `SOC ${fmtNum(g.soc ?? 0)}% · ${fmtNum(g.u ?? 0, 0)}V`,
-        status: statusOf(g.state), alarmCount: alarmBySystem(SYS_BATTERY).length,
-        isBattery: true, x: 0, y: 0,
-        meta: { kind: 'battery', raw: g, system: SYS_BATTERY, metrics: [
-          { k: '荷电状态', v: fmtNum(g.soc ?? 0), unit: '%', hot: Number(g.soc ?? 0) < 20 },
-          { k: '组端电压', v: fmtNum(g.u ?? 0, 0), unit: 'V' },
-          { k: '电流', v: fmtNum(g.i ?? 0, 0), unit: 'A' },
-          { k: '最高温度', v: fmtNum(g.maxT ?? 0), unit: '℃', hot: Number(g.maxT ?? 0) > 45 },
-          { k: '续航', v: fmtNum(batteryData.value?.backupMin ?? 15), unit: 'min' },
-        ] },
+        status: statusOf(g.state),
+        alarmCount: alarmBySystem(SYS_BATTERY).length,
+        isBattery: true,
+        x: 0,
+        y: 0,
+        meta: {
+          kind: 'battery',
+          raw: g,
+          system: SYS_BATTERY,
+          metrics: [
+            { k: '荷电状态', v: fmtNum(g.soc ?? 0), unit: '%', hot: Number(g.soc ?? 0) < 20 },
+            { k: '组端电压', v: fmtNum(g.u ?? 0, 0), unit: 'V' },
+            { k: '电流', v: fmtNum(g.i ?? 0, 0), unit: 'A' },
+            { k: '最高温度', v: fmtNum(g.maxT ?? 0), unit: '℃', hot: Number(g.maxT ?? 0) > 45 },
+            { k: '续航', v: fmtNum(batteryData.value?.backupMin ?? 15), unit: 'min' },
+          ],
+        },
       })
     })
   } else {
@@ -394,16 +584,28 @@ const rawNodes = computed(() => {
       const soc = u.batterySoc ?? u.soc ?? 96
       const vBat = u.batteryV ?? 540
       push({
-        id: 'battery' + i, kind: 'battery' as Kind, icon: ICON.battery, group: KIND_GROUP.battery,
-        title: tl('电池组') + (i + 1), sub: tl('备用电源'),
+        id: 'battery' + i,
+        kind: 'battery' as Kind,
+        icon: ICON.battery,
+        group: KIND_GROUP.battery,
+        title: tl('电池组') + (i + 1),
+        sub: tl('备用电源'),
         kpi: `SOC ${fmtNum(soc)}% · ${fmtNum(vBat, 0)}V`,
-        status: statusOf(u.state), alarmCount: alarmBySystem(SYS_UPS).length,
-        isBattery: true, x: 0, y: 0,
-        meta: { kind: 'battery', raw: u, system: SYS_UPS, metrics: [
-          { k: '荷电状态', v: fmtNum(soc), unit: '%', hot: Number(soc) < 20 },
-          { k: '组端电压', v: fmtNum(vBat, 0), unit: 'V' },
-          { k: '续航', v: fmtNum(u.backupMin ?? 15), unit: 'min' },
-        ] },
+        status: statusOf(u.state),
+        alarmCount: alarmBySystem(SYS_UPS).length,
+        isBattery: true,
+        x: 0,
+        y: 0,
+        meta: {
+          kind: 'battery',
+          raw: u,
+          system: SYS_UPS,
+          metrics: [
+            { k: '荷电状态', v: fmtNum(soc), unit: '%', hot: Number(soc) < 20 },
+            { k: '组端电压', v: fmtNum(vBat, 0), unit: 'V' },
+            { k: '续航', v: fmtNum(u.backupMin ?? 15), unit: 'min' },
+          ],
+        },
       })
     })
   }
@@ -413,15 +615,26 @@ const rawNodes = computed(() => {
   if (cabCount) {
     const fault = cabinets.value.filter((c) => statusOf(c.status) === 'fault').length
     push({
-      id: 'cab', kind: 'cab' as Kind, icon: ICON.cab, group: KIND_GROUP.cab,
-      title: tl('机柜负载'), sub: cabCount + tl('台') + ' · ' + tl('故障') + fault,
+      id: 'cab',
+      kind: 'cab' as Kind,
+      icon: ICON.cab,
+      group: KIND_GROUP.cab,
+      title: tl('机柜负载'),
+      sub: cabCount + tl('台') + ' · ' + tl('故障') + fault,
       kpi: `机柜 ${cabCount} · 故障 ${fault}`,
-      status: fault ? 'fault' : 'normal', alarmCount: alarmBySystem(SYS_CAB).length,
-      x: 0, y: 0,
-      meta: { kind: 'cab', raw: { count: cabCount, fault }, system: SYS_CAB, metrics: [
-        { k: '机柜总数', v: String(cabCount), unit: '台' },
-        { k: '故障机柜', v: String(fault), unit: '台', hot: fault > 0 },
-      ] },
+      status: fault ? 'fault' : 'normal',
+      alarmCount: alarmBySystem(SYS_CAB).length,
+      x: 0,
+      y: 0,
+      meta: {
+        kind: 'cab',
+        raw: { count: cabCount, fault },
+        system: SYS_CAB,
+        metrics: [
+          { k: '机柜总数', v: String(cabCount), unit: '台' },
+          { k: '故障机柜', v: String(fault), unit: '台', hot: fault > 0 },
+        ],
+      },
     })
   }
   return list
@@ -445,6 +658,89 @@ const nodes = computed<LinkNode[]>(() => {
   return list
 })
 
+/* ───────── 统一图形编辑入口 (配电链路拓扑) ─────────
+ * 场景覆盖层: 改名/改状态/改参数 = 覆盖; 删除 = removed; 新增 = 自建节点。
+ * 节点由本页面计算后传给共享组件 PowerLinkageDiagram (groups+nodes 兼容模式),
+ * 因此在页面侧 apply 包裹后传入, 改名/删除/新增/连线增删均真实生效。
+ * 注意: ① 共享组件只在挂载时执行一次布局, 故用 :key="nodesKey" 在节点集合变化时
+ * 重挂载, 让新增/删除节点落位正确; 组件内拖拽节点仅为临时视图态, 不持久化。
+ * ② 页面传入的节点 x/y 在该模式下由组件按分组自动排版, 编辑坐标作为新增节点兜底。 */
+const graphicEditor = useGraphicEditor('power-linkage-topology', { title: '配电链路拓扑' })
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => graphicEditor.hasOverrides.value)
+
+/** LinkNode ↔ GraphicNode 双向映射 (页面节点 → 可编辑项 / 编辑结果 → 页面节点) */
+const linkageAdapter: NodeAdapter<LinkNode> = {
+  toNode: (n) => ({
+    id: n.id,
+    label: n.title,
+    type: n.kind || '',
+    x: n.x ?? 0,
+    y: n.y ?? 0,
+    status: n.status,
+    params: Object.fromEntries(
+      ((n.meta?.metrics as Array<{ k: string; v: unknown }> | undefined) ?? []).map((m) => [
+        m.k,
+        String(m.v),
+      ]),
+    ),
+  }),
+  fromNode: (g, base) => {
+    if (!base) return customLinkNode(g)
+    // 页面自带节点: 只应用用户改过的字段 (与实时值比较判断), 其余跟随接口实时刷新
+    const live: Record<string, string> = {}
+    for (const m of (base.meta?.metrics as Array<{ k: string; v: unknown }> | undefined) ?? []) {
+      live[m.k] = String(m.v)
+    }
+    const p = g.params ?? {}
+    const metrics = ((base.meta?.metrics as any[] | undefined) ?? []).map((m) => {
+      const v = p[m.k]
+      return v != null && v !== '' && String(v) !== live[m.k] ? { ...m, v: String(v) } : m
+    })
+    return {
+      ...base,
+      id: g.id,
+      title: g.label || base.title,
+      x: g.x ?? base.x,
+      y: g.y ?? base.y,
+      status: g.status && g.status !== base.status ? statusOf(g.status) : base.status,
+      meta: { ...(base.meta ?? {}), metrics },
+    }
+  },
+}
+
+/** 用户自建节点 → 可渲染 LinkNode (type 填 kind 键名如 gens/ups 可归入对应分组, 其余归入市电组) */
+function customLinkNode(g: GraphicNode): LinkNode {
+  const kind = (g.type && g.type in KIND_GROUP ? g.type : 'mains') as Kind
+  return {
+    id: g.id,
+    title: g.label || g.id,
+    sub: tl('自定义节点'),
+    kpi: '',
+    status: g.status ? statusOf(g.status) : 'normal',
+    alarmCount: 0,
+    icon: ICON[kind],
+    group: KIND_GROUP[kind],
+    kind,
+    x: g.x ?? 130,
+    y: g.y ?? 230,
+    meta: {
+      kind,
+      raw: {},
+      system: tl('自定义'),
+      metrics: Object.entries(g.params ?? {}).map(([k, v]) => ({ k, v, unit: '' })),
+    },
+  }
+}
+
+/** 拓扑渲染清单 = 接口链路节点 + 覆盖层 (改名/改状态/改参数/删除/自建) */
+const nodesView = computed<LinkNode[]>(() => graphicEditor.apply(nodes.value, linkageAdapter))
+/** 节点集合 (id) 变化时重挂载共享组件, 触发其一次性布局让新增/删除节点落位正确 */
+const nodesKey = computed(() => nodesView.value.map((n) => n.id).join('|'))
+
+/** 抽屉默认节点快照: 当前实时链路节点 */
+const graphicDefaults = (): GraphicNode[] => nodes.value.map(linkageAdapter.toNode)
+
 const groups = computed<LinkGroup[]>(() => {
   const defs: Array<{ key: string; title: string; kind: Kind; color: string }> = [
     { key: 'g-gens', title: tl('柴发并机系统'), kind: 'gens', color: '#f97316' },
@@ -465,7 +761,16 @@ const groups = computed<LinkGroup[]>(() => {
     const maxX = Math.max(...xs) + 82
     const minY = Math.min(...ys) - 56
     const maxY = Math.max(...ys) + 56
-    return { key: d.key, title: d.title, color: d.color, x: minX, y: minY, w: maxX - minX, h: maxY - minY, nodeIds: arr.map((n) => n.id) }
+    return {
+      key: d.key,
+      title: d.title,
+      color: d.color,
+      x: minX,
+      y: minY,
+      w: maxX - minX,
+      h: maxY - minY,
+      nodeIds: arr.map((n) => n.id),
+    }
   })
 })
 function byKindHas(k: Kind) {
@@ -507,31 +812,59 @@ const links = computed<LinkEdge[]>(() => {
   return l
 })
 
+/** 连线视图 = 原有链路(剔除端点已被删除的) + 覆盖层新增连线 (抽屉"新增连线"真实生效) */
+const linksView = computed<LinkEdge[]>(() => {
+  const ids = new Set(nodesView.value.map((n) => n.id))
+  const base = links.value.filter((l) => ids.has(l.from) && ids.has(l.to))
+  const seen = new Set(base.map((l) => l.from + '->' + l.to))
+  const extra = graphicEditor.scene.value.edges
+    .filter((e) => e.source && e.target && ids.has(e.source) && ids.has(e.target))
+    .filter((e) => !seen.has(e.source + '->' + e.target))
+    .map((e) => ({ from: e.source, to: e.target }))
+  return [...base, ...extra]
+})
+
+/** 抽屉连线默认快照: 当前实时链路 */
+const graphicEdgeDefaults = (): GraphicEdge[] =>
+  links.value.map((l) => ({
+    id: l.from + '->' + l.to,
+    source: l.from,
+    target: l.to,
+    label: l.backup ? tl('备用链路') : l.alarm ? tl('告警链路') : '',
+  }))
+
+/** 页面级参数配置: 默认为空表, 供运维在抽屉内添加场景标注 (随覆盖层持久化) */
+const graphicParamDefaults = (): Record<string, string> => ({})
+
 const alarmNodeCount = computed(() => nodes.value.filter((n) => (n.alarmCount ?? 0) > 0).length)
 
 const totalLoad = computed(() => {
   const tx = nodes.value.filter((n) => n.meta?.kind === 'tx' || n.meta?.kind === 'ups')
   if (!tx.length) return '—'
-  const avg = tx.reduce((s, n) => s + Number((n.meta?.raw?.load ?? 0)), 0) / tx.length
+  const avg = tx.reduce((s, n) => s + Number(n.meta?.raw?.load ?? 0), 0) / tx.length
   return fmtNum(avg)
 })
 
 const avgVoltage = computed(() => {
-  const vs = nodes.value.flatMap((n) => {
-    const m = (n.meta?.metrics as any[]) ?? []
-    const v = m.find((x) => x.k.includes('电压'))
-    return v ? [Number(v.v)] : []
-  }).filter((v) => Number.isFinite(v) && v > 0)
+  const vs = nodes.value
+    .flatMap((n) => {
+      const m = (n.meta?.metrics as any[]) ?? []
+      const v = m.find((x) => x.k.includes('电压'))
+      return v ? [Number(v.v)] : []
+    })
+    .filter((v) => Number.isFinite(v) && v > 0)
   if (!vs.length) return '—'
   return fmtNum(vs.reduce((s, v) => s + v, 0) / vs.length, 2)
 })
 
 const avgCurrent = computed(() => {
-  const cs = nodes.value.flatMap((n) => {
-    const m = (n.meta?.metrics as any[]) ?? []
-    const c = m.find((x) => x.k === '电流')
-    return c ? [Number(c.v)] : []
-  }).filter((v) => Number.isFinite(v) && v > 0)
+  const cs = nodes.value
+    .flatMap((n) => {
+      const m = (n.meta?.metrics as any[]) ?? []
+      const c = m.find((x) => x.k === '电流')
+      return c ? [Number(c.v)] : []
+    })
+    .filter((v) => Number.isFinite(v) && v > 0)
   if (!cs.length) return '—'
   return fmtNum(cs.reduce((s, v) => s + v, 0) / cs.length, 0)
 })
@@ -539,7 +872,7 @@ const avgCurrent = computed(() => {
 // ===== 实时告警联动 =====
 const activeAlarms = computed<Alarm[]>(() => {
   // 优先使用实时引擎的活动告警（含链路定位），回退到接口拉取的活动告警
-  const rt = (realtimeLinkage.active as unknown as Alarm[])
+  const rt = realtimeLinkage.active as unknown as Alarm[]
   const fromApi = alarms.value.filter((a) => a.status === 'active' || a.status === '待确认')
   const merged = [...rt, ...fromApi]
   const powerOnly = merged.filter((a) =>
@@ -557,7 +890,11 @@ const activeAlarms = computed<Alarm[]>(() => {
 const topAlarm = computed(() => activeAlarms.value[0] ?? null)
 const topAlarmLevel = computed(() => {
   if (!topAlarm.value) return 'info'
-  return topAlarm.value.level === 'crit' ? 'fault' : topAlarm.value.level === 'warn' ? 'warning' : 'info'
+  return topAlarm.value.level === 'crit'
+    ? 'fault'
+    : topAlarm.value.level === 'warn'
+      ? 'warning'
+      : 'info'
 })
 
 // 实时联动引擎链路态（loading/lastError/rulesError）：告警列表基于 realtimeLinkage.active，
@@ -596,6 +933,10 @@ const ranges = [
   { val: '7d', label: '7d', points: 28, step: 360 },
 ]
 const range = ref('24h')
+function setRange(val: string) {
+  range.value = val
+  buildTrend()
+}
 const rangeLabel = computed(() => ranges.find((r) => r.val === range.value)?.label ?? '24h')
 const trendMetrics = [
   { key: 'load', label: tl('负载率'), unit: '%', base: 62, amp: 14, hi: 90 },
@@ -606,7 +947,9 @@ const trendMetrics = [
 const trendKey = ref('load')
 const trendSeries = ref<number[]>([])
 
-const trendMetricLabel = computed(() => trendMetrics.find((m) => m.key === trendKey.value)?.label ?? '')
+const trendMetricLabel = computed(
+  () => trendMetrics.find((m) => m.key === trendKey.value)?.label ?? '',
+)
 const trendUnit = computed(() => trendMetrics.find((m) => m.key === trendKey.value)?.unit ?? '')
 const trendColor = computed(() => {
   const m = trendMetrics.find((x) => x.key === trendKey.value)
@@ -667,10 +1010,14 @@ function buildTrend() {
     out.push(Math.max(0, Number(v.toFixed(2))))
   }
   // 末尾贴近当前实时聚合值
-  const live = trendKey.value === 'load' ? Number(totalLoad.value) || cfg!.base
-    : trendKey.value === 'u' ? Number(avgVoltage.value) || cfg!.base
-    : trendKey.value === 'i' ? Number(avgCurrent.value) || cfg!.base
-    : (cfg!.base + cfg!.amp * 0.4)
+  const live =
+    trendKey.value === 'load'
+      ? Number(totalLoad.value) || cfg!.base
+      : trendKey.value === 'u'
+        ? Number(avgVoltage.value) || cfg!.base
+        : trendKey.value === 'i'
+          ? Number(avgCurrent.value) || cfg!.base
+          : cfg!.base + cfg!.amp * 0.4
   out[out.length - 1] = Number(live.toFixed(2))
   trendSeries.value = out
 }
@@ -713,6 +1060,7 @@ async function load(showSpinner = true) {
     batteryData.value = b
     cabinets.value = (c as any)?.items ?? (c as any)?.data ?? []
     alarms.value = a?.items ?? []
+    markPartial('历史数据与趋势曲线为本地演示波形，拓扑节点与实时参数来自实时接口')
     // 保持选中节点刷新
     if (selected.value) {
       const fresh = nodes.value.find((n) => n.id === selected.value!.id)
@@ -766,9 +1114,13 @@ onBeforeUnmount(stopTimer)
   font-size: 12px;
   color: #64748b;
 }
-.live.on { color: #22c55e; }
+.live.on {
+  color: #22c55e;
+}
 .live-dot {
-  width: 8px; height: 8px; border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: currentColor;
   animation: pulse 1.4s infinite;
 }
@@ -783,8 +1135,13 @@ onBeforeUnmount(stopTimer)
   align-items: center;
   gap: 6px;
 }
-.refresh:hover { background: #273449; }
-.refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+.refresh:hover {
+  background: #273449;
+}
+.refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
 
 .kpi-row {
   display: grid;
@@ -801,9 +1158,18 @@ onBeforeUnmount(stopTimer)
   flex-direction: column;
   gap: 4px;
 }
-.k-label { color: #64748b; font-size: 12px; }
-.k-val { color: #e2e8f0; font-size: 22px; font-weight: 700; }
-.k-val.warn { color: #f59e0b; }
+.k-label {
+  color: #64748b;
+  font-size: 12px;
+}
+.k-val {
+  color: #e2e8f0;
+  font-size: 22px;
+  font-weight: 700;
+}
+.k-val.warn {
+  color: #f59e0b;
+}
 
 .main-grid {
   display: grid;
@@ -811,8 +1177,12 @@ onBeforeUnmount(stopTimer)
   gap: 14px;
   align-items: start;
 }
-.topo-panel { min-height: 360px; }
-.topo-wrap { height: 360px; }
+.topo-panel {
+  min-height: 360px;
+}
+.topo-wrap {
+  height: 360px;
+}
 .legend {
   display: flex;
   gap: 14px;
@@ -822,22 +1192,42 @@ onBeforeUnmount(stopTimer)
 }
 .legend .dot {
   display: inline-block;
-  width: 9px; height: 9px; border-radius: 50%;
-  margin-right: 5px; vertical-align: middle;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
 }
-.dot.normal { background: #22c55e; }
-.dot.warning { background: #f59e0b; }
-.dot.fault { background: #ef4444; }
-.dot.off { background: #64748b; }
+.dot.normal {
+  background: #22c55e;
+}
+.dot.warning {
+  background: #f59e0b;
+}
+.dot.fault {
+  background: #ef4444;
+}
+.dot.off {
+  background: #64748b;
+}
 
 .side-col {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.detail-panel { min-height: 160px; }
-.detail-empty { padding: 28px 8px; text-align: center; font-size: 13px; }
-.detail-sub { font-size: 12px; margin-bottom: 10px; }
+.detail-panel {
+  min-height: 160px;
+}
+.detail-empty {
+  padding: 28px 8px;
+  text-align: center;
+  font-size: 13px;
+}
+.detail-sub {
+  font-size: 12px;
+  margin-bottom: 10px;
+}
 .metrics-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -848,12 +1238,32 @@ onBeforeUnmount(stopTimer)
   border-radius: 8px;
   padding: 8px 10px;
 }
-.metric.hot { background: #3f2d12; border: 1px solid #f59e0b; }
-.mk { display: block; color: #64748b; font-size: 11px; }
-.mv { display: block; color: #e2e8f0; font-size: 16px; font-weight: 600; }
-.mv small { color: #94a3b8; font-size: 11px; font-weight: 400; }
+.metric.hot {
+  background: #3f2d12;
+  border: 1px solid #f59e0b;
+}
+.mk {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+}
+.mv {
+  display: block;
+  color: #e2e8f0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.mv small {
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 400;
+}
 
-.alarm-list-head { color: #f59e0b; font-size: 13px; margin: 12px 0 6px; }
+.alarm-list-head {
+  color: #f59e0b;
+  font-size: 13px;
+  margin: 12px 0 6px;
+}
 .alarm-item {
   display: grid;
   grid-template-columns: 48px 1fr auto;
@@ -865,18 +1275,51 @@ onBeforeUnmount(stopTimer)
   margin-bottom: 8px;
   cursor: pointer;
 }
-.alarm-item:hover { background: #273449; }
-.lv { font-size: 11px; padding: 2px 6px; border-radius: 4px; text-align: center; }
-.lv-crit { background: #7f1d1d; color: #fecaca; }
-.lv-warn { background: #78350f; color: #fde68a; }
-.lv-info { background: #1e3a5f; color: #bfdbfe; }
-.msg { color: #cbd5e1; font-size: 13px; }
-.time { color: #64748b; font-size: 11px; }
-.no-alarm { color: #22c55e; font-size: 13px; margin-top: 10px; }
+.alarm-item:hover {
+  background: #273449;
+}
+.lv {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-align: center;
+}
+.lv-crit {
+  background: #7f1d1d;
+  color: #fecaca;
+}
+.lv-warn {
+  background: #78350f;
+  color: #fde68a;
+}
+.lv-info {
+  background: #1e3a5f;
+  color: #bfdbfe;
+}
+.msg {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+.time {
+  color: #64748b;
+  font-size: 11px;
+}
+.no-alarm {
+  color: #22c55e;
+  font-size: 13px;
+  margin-top: 10px;
+}
 
-.trend-panel { min-height: 220px; }
-.range-tabs, .trend-metrics { display: flex; gap: 6px; }
-.range-tabs button, .trend-metrics button {
+.trend-panel {
+  min-height: 220px;
+}
+.range-tabs,
+.trend-metrics {
+  display: flex;
+  gap: 6px;
+}
+.range-tabs button,
+.trend-metrics button {
   background: #1e293b;
   color: #94a3b8;
   border: 1px solid #334155;
@@ -885,27 +1328,73 @@ onBeforeUnmount(stopTimer)
   font-size: 12px;
   cursor: pointer;
 }
-.range-tabs button.active, .trend-metrics button.active {
-  background: #0369a1; color: #e0f2fe; border-color: #38bdf8;
+.range-tabs button.active,
+.trend-metrics button.active {
+  background: #0369a1;
+  color: #e0f2fe;
+  border-color: #38bdf8;
 }
-.trend-body { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.chart-wrap { position: relative; }
-.trend-svg { width: 100%; height: 200px; background: #0b1220; border-radius: 8px; }
-.grid line { stroke: #1e293b; stroke-width: 1; }
-.trend-line { stroke: #38bdf8; stroke-width: 2; }
-.trend-line.danger { stroke: #ef4444; }
-.trend-area { fill: rgba(56, 189, 248, 0.12); stroke: none; }
-.trend-area.danger { fill: rgba(239, 68, 68, 0.14); }
-.axis-label { fill: #475569; font-size: 9px; }
-.axis-label.end { text-anchor: end; }
+.trend-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+.chart-wrap {
+  position: relative;
+}
+.trend-svg {
+  width: 100%;
+  height: 200px;
+  background: #0b1220;
+  border-radius: 8px;
+}
+.grid line {
+  stroke: #1e293b;
+  stroke-width: 1;
+}
+.trend-line {
+  stroke: #38bdf8;
+  stroke-width: 2;
+}
+.trend-line.danger {
+  stroke: #ef4444;
+}
+.trend-area {
+  fill: rgba(56, 189, 248, 0.12);
+  stroke: none;
+}
+.trend-area.danger {
+  fill: rgba(239, 68, 68, 0.14);
+}
+.axis-label {
+  fill: #475569;
+  font-size: 9px;
+}
+.axis-label.end {
+  text-anchor: end;
+}
 .trend-legend {
-  position: absolute; top: 8px; left: 12px;
-  display: flex; gap: 14px; align-items: baseline;
-  font-size: 12px; color: #94a3b8;
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  font-size: 12px;
+  color: #94a3b8;
 }
-.trend-legend .now { color: #e2e8f0; font-size: 18px; font-weight: 700; }
-.trend-legend .delta.up { color: #22c55e; }
-.trend-legend .delta.down { color: #ef4444; }
+.trend-legend .now {
+  color: #e2e8f0;
+  font-size: 18px;
+  font-weight: 700;
+}
+.trend-legend .delta.up {
+  color: #22c55e;
+}
+.trend-legend .delta.down {
+  color: #ef4444;
+}
 
 .alarm-bar {
   position: fixed;
@@ -923,28 +1412,71 @@ onBeforeUnmount(stopTimer)
   z-index: 60;
   max-width: 90vw;
 }
-.alarm-bar.lv-fault { border-color: #ef4444; }
-.ab-icon { color: #f59e0b; font-size: 18px; }
-.alarm-bar.lv-fault .ab-icon { color: #ef4444; }
-.ab-text { color: #e2e8f0; font-size: 13px; }
-.ab-btn {
-  background: #f59e0b; color: #1e293b; border: none;
-  border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 600;
+.alarm-bar.lv-fault {
+  border-color: #ef4444;
 }
-.alarm-bar.lv-fault .ab-btn { background: #ef4444; color: #fff; }
+.ab-icon {
+  color: #f59e0b;
+  font-size: 18px;
+}
+.alarm-bar.lv-fault .ab-icon {
+  color: #ef4444;
+}
+.ab-text {
+  color: #e2e8f0;
+  font-size: 13px;
+}
+.ab-btn {
+  background: #f59e0b;
+  color: #1e293b;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.alarm-bar.lv-fault .ab-btn {
+  background: #ef4444;
+  color: #fff;
+}
 
-.slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s; }
-.slide-up-enter-from, .slide-up-leave-to { opacity: 0; transform: translate(-50%, 20px); }
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s;
+}
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 20px);
+}
 
-.muted { color: #64748b; }
+.muted {
+  color: #64748b;
+}
 
 @media (max-width: 1100px) {
-  .main-grid { grid-template-columns: 1fr; }
-  .kpi-row { grid-template-columns: repeat(3, 1fr); }
+  .main-grid {
+    grid-template-columns: 1fr;
+  }
+  .kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 @media (max-width: 600px) {
-  .kpi-row { grid-template-columns: repeat(2, 1fr); }
-  .topo-wrap { height: 300px; }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .topo-wrap {
+    height: 300px;
+  }
 }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
 </style>

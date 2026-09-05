@@ -89,6 +89,34 @@ def capacity(db: Session = Depends(get_db)):
     return base
 
 
+class CapacityWhatIfRequest(BaseModel):
+    """上架模拟器请求: 新增机柜数 + 单柜功率 + 推演月数。"""
+    cabinets: int = 10            # 拟新增机柜数
+    kwPerCabinet: float = 8.0     # 单柜功率 kW
+    monthsHorizon: int = 24       # 推演月数 (6-36)
+    idcCode: str = "DC1"          # 目标园区 (预留给多站点)
+
+
+@router.post("/capacity/what-if", summary="上架模拟器 (容量 What-if 推演)")
+def capacity_what_if(req: CapacityWhatIfRequest, db: Session = Depends(get_db)):
+    from app.services import capacity_energy, capacity_whatif
+
+    base = capacity_energy.capacity(db, req.idcCode)
+    return capacity_whatif.simulate(
+        base,
+        cabinets=max(1, min(500, req.cabinets)),
+        kw_per_cabinet=max(0.5, min(50.0, req.kwPerCabinet)),
+        months_horizon=max(6, min(36, req.monthsHorizon)),
+    )
+
+
+@router.get("/capacity/what-if/baseline", summary="上架模拟器基线 (当前五维容量)")
+def capacity_what_if_baseline(db: Session = Depends(get_db)):
+    from app.services import capacity_energy
+
+    return capacity_energy.capacity(db)
+
+
 @router.get("/alarms", summary="Alarm center")
 def alarms():
     return agg.alarms()

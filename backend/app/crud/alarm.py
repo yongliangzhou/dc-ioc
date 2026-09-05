@@ -1,6 +1,7 @@
 """告警事件 CRUD + 统计 (对齐前端 /api/alarm-history 契约)。"""
 from __future__ import annotations
 
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -9,13 +10,16 @@ from sqlalchemy.orm import Session
 
 from app.models.alarm import AlarmEvent
 
+logger = logging.getLogger(__name__)
+
 
 def _parse_ts(ts: Optional[str]):
     if not ts:
         return None
     try:
         return datetime.fromisoformat(ts.replace("Z", "+00:00"))
-    except Exception:
+    except Exception as e:
+        logger.debug("时间戳参数解析失败, 已忽略该过滤条件: %s", e)
         return None
 
 

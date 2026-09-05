@@ -11,7 +11,7 @@
 
     <!-- 筛选 -->
     <Panel class="toolbar">
-      <select v-model="room" class="ipt" style="width: 130px" @change="refresh">
+      <select v-model="room" class="ipt" style="width: 130px" @change="applyFilters">
         <option value="">{{ tl('全部机房') }}</option>
         <option v-for="r in rooms" :key="r" :value="r">{{ r }}</option>
       </select>
@@ -20,9 +20,9 @@
         class="ipt"
         :placeholder="tl('搜索机柜编码')"
         style="width: 200px"
-        @keyup.enter="refresh"
+        @keyup.enter="applyFilters"
       />
-      <button class="btn-sm primary" @click="refresh">{{ tl('查询') }}</button>
+      <button class="btn-sm primary" @click="applyFilters">{{ tl('查询') }}</button>
       <span class="muted" style="margin-left: auto; font-size: 11px"
         >{{ tl('第') }} {{ page }}/{{ pages }} {{ tl('页') }} {{ tl('·') }} {{ total }}
         {{ tl('台') }}</span
@@ -95,11 +95,11 @@
 
     <!-- 分页 -->
     <div v-if="pages > 1" class="flex center gap8" style="margin: 10px 0">
-      <button class="btn-sm" :disabled="page <= 1" @click="page--; refresh()">
+      <button class="btn-sm" :disabled="page <= 1" @click="goPrev">
         {{ tl('上一页') }}
       </button>
       <span class="muted" style="font-size: 11px">{{ page }} / {{ pages }}</span>
-      <button class="btn-sm" :disabled="page >= pages" @click="page = page + 1; refresh()">
+      <button class="btn-sm" :disabled="page >= pages" @click="goNext">
         {{ tl('下一页') }}
       </button>
     </div>
@@ -205,6 +205,25 @@ async function fetchList(showLoading: boolean) {
 /** 显式刷新（首屏 / 点击查询 / 翻页）：可见加载态与错误态 */
 function refresh() {
   return fetchList(true)
+}
+/** 筛选/查询: 机房或关键字变更后回到第 1 页再查询 */
+function applyFilters() {
+  page.value = 1
+  return refresh()
+}
+
+function goPrev() {
+  if (page.value > 1) {
+    page.value--
+    void refresh()
+  }
+}
+
+function goNext() {
+  if (page.value < pages.value) {
+    page.value++
+    void refresh()
+  }
 }
 /** 后台轮询：静默更新列表 */
 async function poll() {

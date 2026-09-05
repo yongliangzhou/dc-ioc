@@ -107,17 +107,17 @@
           <div v-if="colMenuOpen" class="col-backdrop" @click="colMenuOpen = false"></div>
           <div v-if="colMenuOpen" class="col-menu" @click.stop>
             <label v-for="c in deviceColumns" :key="c.key" class="col-menu-item">
-              <input
-                type="checkbox"
-                :checked="visibleKeys.has(c.key)"
-                @change="toggleCol(c.key)"
-              />
+              <input type="checkbox" :checked="visibleKeys.has(c.key)" @change="toggleCol(c.key)" />
               <span>{{ c.label }}</span>
             </label>
           </div>
         </div>
       </div>
-      <DeviceTable :columns="visibleColumns" :rows="filteredDeviceRows" :count="filteredDeviceRows.length" />
+      <DeviceTable
+        :columns="visibleColumns"
+        :rows="filteredDeviceRows"
+        :count="filteredDeviceRows.length"
+      />
     </div>
 
     <!-- ========== 包间温度热力图 ========== -->
@@ -164,7 +164,9 @@
             class="room-filter-btn"
             :class="{ active: activeRoom === rg.roomName }"
             @click.stop="toggleRoom(rg.roomName)"
-          >{{ activeRoom === rg.roomName ? '取消筛选' : '列表筛选' }}</button>
+          >
+            {{ activeRoom === rg.roomName ? '取消筛选' : '列表筛选' }}
+          </button>
         </template>
         <!-- 环境传感器 -->
         <div class="rg-env">
@@ -858,8 +860,8 @@ const cracAlarms = computed(() => {
 
 // ===== QuickControl Handler =====
 function onRoomTempChange(roomId: string, value: number) {
-  console.log('Room temp change:', roomId, value)
-  // Future: POST to /api/hvac/crac/setpoint
+  // TODO: 待后端提供 /api/hvac/crac/setpoint 设定值接口后接入真实下发
+  console.debug('[HvacCrac] 房间温度设定(未下发):', roomId, value)
 }
 </script>
 

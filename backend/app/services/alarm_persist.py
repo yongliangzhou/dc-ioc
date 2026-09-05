@@ -41,8 +41,8 @@ def persist_alarm_event(alarm: dict) -> None:
         if db is not None:
             try:
                 db.rollback()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("告警落库失败后回滚也失败: %s", e)
     finally:
         if db is not None:
             db.close()

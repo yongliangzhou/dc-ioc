@@ -7,11 +7,14 @@ import functools
 import hashlib
 import inspect
 import json
+import logging
 from typing import Any
 
 from fastapi import Request
 
 from app.cache.redis_client import rds
+
+logger = logging.getLogger(__name__)
 
 try:
     import orjson  # 更快的 JSON 序列化
@@ -21,7 +24,9 @@ try:
 
     def _loads(s: str) -> Any:
         return orjson.loads(s)
-except Exception:  # pragma: no cover
+except Exception as e:  # pragma: no cover
+    logger.debug("orjson 导入失败, 回退标准 json 序列化: %s", e)
+
     def _dumps(obj: Any) -> str:
         return json.dumps(obj, default=str, ensure_ascii=False)
 
@@ -69,8 +74,9 @@ def cache_json(ttl: int = 30, key_prefix: str = "dc-ioc"):
                     cached = rds.get(key)
                     if cached:
                         return _loads(cached)
-                except Exception:
-                    pass  # Redis 不可用 -> 降级
+                except Exception as e:
+                    # Redis 不可用 -> 降级
+                    logger.debug("读取 Redis 缓存失败, 降级直查: %s", e)
 
             result = func(*args, **kwargs)
 
@@ -78,8 +84,8 @@ def cache_json(ttl: int = 30, key_prefix: str = "dc-ioc"):
             if key:
                 try:
                     rds.set(key, _dumps(_to_serializable(result)), ex=ttl)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug("写入 Redis 缓存失败, 本次不缓存: %s", e)
 
             return result
 
@@ -94,11 +100,13 @@ def invalidate_prefix(prefix: str) -> int:
     """5.7.3 缓存失效: 删除匹配 prefix 的缓存键, 返回删除数量 (Redis 不可用返回 0)。"""
     try:
         keys = rds.keys(f"cache:{prefix}:*") if hasattr(rds, "keys") else []
-    except Exception:
+    except Exception as e:
+        logger.debug("查询缓存键失败, 按 0 处理: %s", e)
         return 0
     if not keys:
         return 0
     try:
         return rds.delete(*keys) if hasattr(rds, "delete") else 0
-    except Exception:
+    except Exception as e:
+        logger.debug("批量删除缓存键失败, 按 0 处理: %s", e)
         return 0

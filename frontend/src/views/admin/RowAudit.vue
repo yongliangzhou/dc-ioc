@@ -56,12 +56,12 @@
           class="ipt"
           :placeholder="tl('操作人')"
           style="width: 140px"
-          @keyup.enter="reload"
+          @keyup.enter="applyFilters"
         />
         <input v-model="filters.start" class="ipt" type="datetime-local" style="width: 190px" />
         <span class="muted">~</span>
         <input v-model="filters.end" class="ipt" type="datetime-local" style="width: 190px" />
-        <button class="btn-sm primary" @click="reload">{{ tl('查询') }}</button>
+        <button class="btn-sm primary" @click="applyFilters">{{ tl('查询') }}</button>
         <button class="btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
         <span class="muted" style="margin-left: auto; font-size: 11px"
           >{{ tl('共') }} {{ total }} {{ tl('条') }}</span
@@ -253,6 +253,12 @@ function resetFilters() {
   filters.start = ''
   filters.end = ''
   selected.value = null
+  page.value = 1
+  reload()
+}
+
+/** 筛选/查询: 变更过滤条件后回到第 1 页再查询 */
+function applyFilters() {
   page.value = 1
   reload()
 }

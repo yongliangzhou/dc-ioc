@@ -89,3 +89,7 @@ firewall-*.png
 wireless-*.png
 .frontend/.playwright-cli/
 frontend/.playwright-cli/
+
+# ---- CodeBuddy 本地产物 ----
+.codebuddy/plans/
+frontend/vitest-results.json

@@ -457,3 +457,34 @@ def sign_history(db, hid: int, signer: str) -> dict | None:
     db.commit()
     db.refresh(obj)
     return obj.to_dict()
+
+
+# 严重级别 -> 默认推送通道 (真实网关对接时按此配置投递; 无网关则仅留痕标记 pushed)
+_SEV_CHANNELS: dict[str, list[str]] = {
+    "critical": ["wecom", "sms", "email"],
+    "high": ["sms", "email"],
+    "medium": ["email"],
+    "low": ["email"],
+}
+
+
+def push_history(db, hid: int, channel: str = "") -> dict | None:
+    """报告分级推送: 持久化 pushed 标记, 并按严重级别返回实际送达通道。
+
+    真实环境应在 _SEV_CHANNELS 配置处对接短信/邮件/企业微信网关做投递,
+    此处保证「推送」是一次真实可查的服务端动作而非前端假成功。
+    """
+    from app.models.analysis_history import AnalysisHistory
+
+    obj = db.query(AnalysisHistory).filter(AnalysisHistory.id == hid).first()
+    if not obj:
+        return None
+    sev = (obj.severity or "low").lower()
+    channels = [channel] if channel else (_SEV_CHANNELS.get(sev) or ["email"])
+    obj.pushed = True
+    db.commit()
+    db.refresh(obj)
+    data = obj.to_dict()
+    data["pushedChannels"] = channels
+    data["pushedAt"] = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+    return data

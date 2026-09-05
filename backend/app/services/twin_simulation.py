@@ -5,10 +5,13 @@ simulate(): 基于拓扑图与孪生图, 对指定场景做故障注入, 沿供�
 """
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 
 from app.services import twin_graph as tg
+
+logger = logging.getLogger(__name__)
 
 
 # 场景 -> 注入故障的设备 domain (None 表示全部)
@@ -228,8 +231,8 @@ def _power_snapshot() -> tuple[dict, str, list[float]]:
                 return snap, "real", trend
         finally:
             db.close()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("真实功率快照获取失败, 回退生成数据: %s", e)
 
     from app.services import dc_ioc_data as generated
 

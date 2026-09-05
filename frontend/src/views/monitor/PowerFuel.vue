@@ -6,7 +6,7 @@
       <span class="sub">{{
         tl('储油罐液位 · 日用油箱 · 供回油泵 · 消耗趋势 · 续航预测 · 补给管理')
       }}</span>
-      <MockDataBanner :level="mockLevel" />
+      <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
     <!-- Loading -->
@@ -92,6 +92,9 @@
             <span class="lg"><i class="dot a"></i>{{ tl('低位预警') }}</span>
             <span class="lg"><i class="dot r"></i>{{ tl('低位报警/高位') }}</span>
             <span class="lg muted">{{ tl('点击油罐 / 油泵查看详情') }}</span>
+            <button class="fuel-edit" @click="editOpen = true">
+              {{ tl('编辑') }}{{ hasGraphicEdits ? ' ●' : '' }}
+            </button>
           </div>
         </template>
         <div class="schematic-wrap">
@@ -114,24 +117,24 @@
                 <stop offset="0%" stop-color="#ef4444" stop-opacity="0.95" />
                 <stop offset="100%" stop-color="#991b1b" stop-opacity="0.75" />
               </linearGradient>
-              <clipPath v-for="(t, ti) in mainTanks" :key="'cp' + t.id" :id="'clip-main-' + ti">
-                <rect :x="mainX(ti)" :y="TANK_Y" :width="TANK_W" :height="TANK_H" rx="10" />
+              <clipPath v-for="(t, ti) in mainTanksView" :key="'cp' + t.id" :id="'clip-main-' + ti">
+                <rect :x="t.x" :y="TANK_Y" :width="TANK_W" :height="TANK_H" rx="10" />
               </clipPath>
-              <clipPath v-for="(d, di) in dayTanks" :key="'cpd' + d.id" :id="'clip-day-' + di">
-                <rect :x="dayX(di)" :y="DAY_Y" :width="DAY_W" :height="DAY_H" rx="6" />
+              <clipPath v-for="(d, di) in dayTanksView" :key="'cpd' + d.id" :id="'clip-day-' + di">
+                <rect :x="d.x" :y="DAY_Y" :width="DAY_W" :height="DAY_H" rx="6" />
               </clipPath>
             </defs>
 
             <!-- ── 主储油罐 ── -->
             <g
-              v-for="(t, ti) in mainTanks"
+              v-for="(t, ti) in mainTanksView"
               :key="'m' + t.id"
               class="tank-node"
               @click="selectTank(t, 'main')"
             >
               <!-- 罐体 -->
               <rect
-                :x="mainX(ti)"
+                :x="t.x"
                 :y="TANK_Y"
                 :width="TANK_W"
                 :height="TANK_H"
@@ -141,7 +144,7 @@
               <!-- 液体 (动画) -->
               <g :clip-path="`url(#clip-main-${ti})`">
                 <rect
-                  :x="mainX(ti)"
+                  :x="t.x"
                   :y="oilTop(t.level, TANK_Y, TANK_H)"
                   :width="TANK_W"
                   :height="oilH(t.level, TANK_H)"
@@ -150,13 +153,13 @@
                 />
                 <!-- 波浪 -->
                 <path
-                  :d="wavePath(mainX(ti), oilTop(t.level, TANK_Y, TANK_H), TANK_W)"
+                  :d="wavePath(t.x, oilTop(t.level, TANK_Y, TANK_H), TANK_W)"
                   :fill="oilFill(t.level)"
                   class="oil-wave"
                   opacity="0.55"
                 />
                 <path
-                  :d="wavePath(mainX(ti) - 20, oilTop(t.level, TANK_Y, TANK_H) + 3, TANK_W)"
+                  :d="wavePath(t.x - 20, oilTop(t.level, TANK_Y, TANK_H) + 3, TANK_W)"
                   :fill="oilFill(t.level)"
                   class="oil-wave slow"
                   opacity="0.35"
@@ -165,14 +168,14 @@
               <!-- 刻度线 -->
               <g v-for="mk in [10, 30, 70, 90]" :key="'mk' + mk">
                 <line
-                  :x1="mainX(ti)"
+                  :x1="t.x"
                   :y1="TANK_Y + TANK_H * (1 - mk / 100)"
-                  :x2="mainX(ti) + TANK_W"
+                  :x2="t.x + TANK_W"
                   :y2="TANK_Y + TANK_H * (1 - mk / 100)"
                   class="tick-line"
                 />
                 <text
-                  :x="mainX(ti) + TANK_W + 4"
+                  :x="t.x + TANK_W + 4"
                   :y="TANK_Y + TANK_H * (1 - mk / 100) + 3"
                   class="tick-text"
                 >
@@ -181,32 +184,26 @@
               </g>
               <!-- 数值 -->
               <text
-                :x="mainX(ti) + TANK_W / 2"
+                :x="t.x + TANK_W / 2"
                 :y="TANK_Y + TANK_H / 2 + 2"
                 class="tank-pct"
                 :class="levelTextCls(t.level)"
               >
                 {{ fmt(t.level, 1) }}%
               </text>
-              <text :x="mainX(ti) + TANK_W / 2" :y="TANK_Y + TANK_H / 2 + 18" class="tank-vol">
+              <text :x="t.x + TANK_W / 2" :y="TANK_Y + TANK_H / 2 + 18" class="tank-vol">
                 {{ fmtInt((t.cap * t.level) / 100) }} L
               </text>
-              <text :x="mainX(ti) + TANK_W / 2" :y="TANK_Y - 10" class="tank-id">{{ t.id }}</text>
+              <text :x="t.x + TANK_W / 2" :y="TANK_Y - 10" class="tank-id">{{ t.label }}</text>
               <!-- 出油管 → 供油泵 -->
               <line
-                :x1="mainX(ti) + TANK_W / 2"
+                :x1="t.x + TANK_W / 2"
                 :y1="TANK_Y + TANK_H"
-                :x2="mainX(ti) + TANK_W / 2"
+                :x2="t.x + TANK_W / 2"
                 :y2="PIPE_Y"
                 class="pipe"
               />
-              <line
-                :x1="mainX(ti) + TANK_W / 2"
-                :y1="PIPE_Y"
-                :x2="pumpX"
-                :y2="PIPE_Y"
-                class="pipe"
-              />
+              <line :x1="t.x + TANK_W / 2" :y1="PIPE_Y" :x2="pumpX" :y2="PIPE_Y" class="pipe" />
             </g>
 
             <!-- ── 供油主管 + 泵 ── -->
@@ -228,7 +225,7 @@
 
             <!-- ── 日用油箱 ── -->
             <g
-              v-for="(d, di) in dayTanks"
+              v-for="(d, di) in dayTanksView"
               :key="'d' + d.id"
               class="tank-node"
               @click="selectTank(d, 'day')"
@@ -236,28 +233,21 @@
               <line
                 :x1="dayBusX"
                 :y1="DAY_Y - 26"
-                :x2="dayX(di) + DAY_W / 2"
+                :x2="d.x + DAY_W / 2"
                 :y2="DAY_Y - 26"
                 class="pipe active"
               />
               <line
-                :x1="dayX(di) + DAY_W / 2"
+                :x1="d.x + DAY_W / 2"
                 :y1="DAY_Y - 26"
-                :x2="dayX(di) + DAY_W / 2"
+                :x2="d.x + DAY_W / 2"
                 :y2="DAY_Y"
                 class="pipe active"
               />
-              <rect
-                :x="dayX(di)"
-                :y="DAY_Y"
-                :width="DAY_W"
-                :height="DAY_H"
-                rx="6"
-                class="tank-shell"
-              />
+              <rect :x="d.x" :y="DAY_Y" :width="DAY_W" :height="DAY_H" rx="6" class="tank-shell" />
               <g :clip-path="`url(#clip-day-${di})`">
                 <rect
-                  :x="dayX(di)"
+                  :x="d.x"
                   :y="oilTop(d.level, DAY_Y, DAY_H)"
                   :width="DAY_W"
                   :height="oilH(d.level, DAY_H)"
@@ -265,30 +255,30 @@
                   class="oil-body"
                 />
                 <path
-                  :d="wavePath(dayX(di), oilTop(d.level, DAY_Y, DAY_H), DAY_W)"
+                  :d="wavePath(d.x, oilTop(d.level, DAY_Y, DAY_H), DAY_W)"
                   :fill="oilFill(d.level)"
                   class="oil-wave"
                   opacity="0.5"
                 />
               </g>
               <text
-                :x="dayX(di) + DAY_W / 2"
+                :x="d.x + DAY_W / 2"
                 :y="DAY_Y + DAY_H / 2 + 4"
                 class="day-pct"
                 :class="levelTextCls(d.level)"
               >
                 {{ fmt(d.level, 0) }}%
               </text>
-              <text :x="dayX(di) + DAY_W / 2" :y="DAY_Y - 6" class="day-id">{{ d.id }}</text>
+              <text :x="d.x + DAY_W / 2" :y="DAY_Y - 6" class="day-id">{{ d.label }}</text>
               <!-- 至柴发机组 -->
               <line
-                :x1="dayX(di) + DAY_W / 2"
+                :x1="d.x + DAY_W / 2"
                 :y1="DAY_Y + DAY_H"
-                :x2="dayX(di) + DAY_W / 2"
+                :x2="d.x + DAY_W / 2"
                 :y2="DAY_Y + DAY_H + 20"
                 class="pipe"
               />
-              <text :x="dayX(di) + DAY_W / 2" :y="DAY_Y + DAY_H + 32" class="day-load">
+              <text :x="d.x + DAY_W / 2" :y="DAY_Y + DAY_H + 32" class="day-load">
                 {{ tl('柴发') }}
               </text>
             </g>
@@ -312,6 +302,14 @@
           </div>
         </transition>
       </Panel>
+
+      <!-- 统一图形编辑入口: 对储油示意图的油罐节点做增删改 (覆盖层, 不影响接口数据) -->
+      <GraphicEditDrawer
+        v-model="editOpen"
+        :editor="graphicEditor"
+        :title="tl('储油系统示意图')"
+        :defaults="graphicDefaults"
+      />
 
       <!-- ======== 3.4.2 燃油消耗趋势 (日/周/月) ======== -->
       <Panel title="燃油消耗趋势">
@@ -551,6 +549,9 @@
       <!-- ======== 3.4.5 补给记录表 ======== -->
       <Panel class="scroll-x" title="燃油补给记录">
         <template #extra>
+          <button v-if="!refuelFallback" class="fuel-edit" @click="openRefuelForm()">
+            {{ tl('graphicEditor.newRefuel') }}
+          </button>
           <div class="head-stats">
             <span class="hs"
               ><span class="k">{{ tl('近12次累计') }}</span
@@ -602,9 +603,26 @@
                   :text="r.status"
                 />
               </td>
+              <td>
+                <template v-if="!refuelFallback && r.id != null">
+                  <button class="row-btn" @click="openRefuelForm(r)">
+                    {{ tl('graphicEditor.edit') }}
+                  </button>
+                  <button class="row-btn danger" @click="deleteRefuel(r)">
+                    {{ tl('graphicEditor.remove') }}
+                  </button>
+                </template>
+                <span v-else class="muted">-</span>
+              </td>
             </tr>
           </tbody>
         </table>
+        <div v-if="refuelFallback" class="refuel-hint muted">
+          {{ tl('后端不可用，当前为本地示例数据') }}
+        </div>
+        <div v-else-if="!refuelRecords.length" class="empty-tip muted">
+          {{ tl('graphicEditor.emptyRefuel') }}
+        </div>
       </Panel>
 
       <!-- ======== 实时告警 ======== -->
@@ -626,10 +644,89 @@
           </div>
           <div v-if="!alarms.length" class="empty-tip muted">{{ tl('当前无燃油系统告警') }}</div>
         </div>
+        <div class="muted" style="font-size: 11px; margin-top: 6px">
+          演示数据 · 真实通道与发送记录请前往「通知中心」管理
+        </div>
       </Panel>
 
       <!-- ======== 知识库 ======== -->
       <KnowledgePanels :knowledge="s.knowledge" />
+
+      <!-- 加油记录新增/编辑弹窗 -->
+      <transition name="fade">
+        <div v-if="refuelFormOpen" class="modal-mask" @click.self="refuelFormOpen = false">
+          <div class="modal-card">
+            <div class="modal-head">
+              <span class="modal-title">{{
+                refuelEditingId == null
+                  ? tl('graphicEditor.newRefuel')
+                  : tl('graphicEditor.editRefuel')
+              }}</span>
+              <button class="nd-close" @click="refuelFormOpen = false">×</button>
+            </div>
+            <div class="form-grid">
+              <div class="field">
+                <label>{{ tl('单号') }}</label>
+                <input v-model="refuelForm.no" type="text" />
+              </div>
+              <div class="field">
+                <label>{{ tl('日期') }}</label>
+                <input v-model="refuelForm.date" type="date" />
+              </div>
+              <div class="field">
+                <label>{{ tl('目标罐') }}</label>
+                <input v-model="refuelForm.tank" type="text" />
+              </div>
+              <div class="field">
+                <label>{{ tl('补给量') }}(L)</label>
+                <input v-model.number="refuelForm.amount" type="number" min="0" />
+              </div>
+              <div class="field">
+                <label>{{ tl('补给前') }}(%)</label>
+                <input v-model.number="refuelForm.before" type="number" min="0" max="100" />
+              </div>
+              <div class="field">
+                <label>{{ tl('补给后') }}(%)</label>
+                <input v-model.number="refuelForm.after" type="number" min="0" max="100" />
+              </div>
+              <div class="field">
+                <label>{{ tl('供应商') }}</label>
+                <input v-model="refuelForm.vendor" type="text" />
+              </div>
+              <div class="field">
+                <label>{{ tl('油品') }}</label>
+                <input v-model="refuelForm.grade" type="text" />
+              </div>
+              <div class="field">
+                <label>{{ tl('化验') }}</label>
+                <select v-model="refuelForm.qc">
+                  <option value="合格">合格</option>
+                  <option value="待复检">待复检</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>{{ tl('操作人') }}</label>
+                <input v-model="refuelForm.operator" type="text" />
+              </div>
+              <div class="field">
+                <label>{{ tl('状态') }}</label>
+                <select v-model="refuelForm.status">
+                  <option value="已完成">已完成</option>
+                  <option value="待执行">待执行</option>
+                </select>
+              </div>
+            </div>
+            <div class="modal-foot">
+              <button class="btn" @click="refuelFormOpen = false">
+                {{ tl('graphicEditor.cancel') }}
+              </button>
+              <button class="btn primary" :disabled="refuelSaving" @click="submitRefuel">
+                {{ refuelSaving ? tl('graphicEditor.saving') : tl('graphicEditor.ok') }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </transition>
     </template>
   </div>
 </template>
@@ -650,11 +747,17 @@ import {
 } from '@/api/power'
 import Panel from '@/components/common/Panel.vue'
 import KnowledgePanels from '@/components/KnowledgePanels.vue'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
+import { useGraphicEditor, type NodeAdapter } from '@/composables/useGraphicEditor'
+import type { GraphicNode } from '@/types/graphic'
+import { getRefuelRecords, createRefuelRecord, updateRefuelRecord, deleteRefuelRecord } from '@/api'
+import { useConfirm } from '@/hooks/useConfirm'
+import { useToast } from '@/hooks/useToast'
 
 const { t: tl } = useI18n()
 
 /** 后端无有效返回时页面会回退到本地 mockSummary()，必须让用户看见这是假的 */
-const { level: mockLevel, markMock, markReal } = useMockFlag()
+const { level: mockLevel, reason: mockReason, markMock, markPartial } = useMockFlag()
 
 // ──────────────────────────────────────────
 // 常量 / 布局
@@ -723,6 +826,98 @@ const selectedNode = ref<DetailNode | null>(null)
 
 const mainTanks = computed<FuelMainTankView[]>(() => s.value?.mainTanks ?? [])
 const dayTanks = computed<FuelDayTankView[]>(() => s.value?.dayTanks ?? [])
+
+/* ───────── 统一图形编辑入口 (储油系统示意图) ─────────
+ * 场景覆盖层: 改名/改坐标/改容量(参数)/改液位(状态) = 覆盖; 删除 = removed;
+ * 新增 = 自建节点。接口数据仍是默认值并持续刷新, 编辑只在其上叠加。 */
+const graphicEditor = useGraphicEditor('power-fuel-storage', { title: '储油系统示意图' })
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => graphicEditor.hasOverrides.value)
+
+/** 带布局坐标与显示名称的罐视图项 (编辑覆盖只影响示意图渲染) */
+interface MainTankItem extends FuelMainTankView {
+  x: number
+  label?: string
+}
+interface DayTankItem extends FuelDayTankView {
+  x: number
+  label?: string
+}
+
+/** 状态字段 = 液位百分比; 填了 0~100 的合法数字则覆盖实时液位 */
+function overrideLevel(g: GraphicNode, base?: { level: number }): number {
+  const v = Number(g.status)
+  if (g.status != null && g.status !== '' && Number.isFinite(v) && v >= 0 && v <= 100) return v
+  return base?.level ?? 0
+}
+
+const mainAdapter: NodeAdapter<MainTankItem> = {
+  toNode: (t) => ({
+    id: t.id,
+    label: t.label || t.id,
+    type: '主油罐',
+    x: t.x,
+    y: TANK_Y,
+    status: fmt(t.level, 1) + '%',
+    params: { cap: String(t.cap) },
+  }),
+  fromNode: (g, base) => ({
+    id: g.id,
+    label: g.label || base?.id || g.id,
+    cap: Number(g.params?.cap) || base?.cap || 0,
+    level: overrideLevel(g, base),
+    t: base?.t ?? 0,
+    water: base?.water ?? '正常',
+    leak: base?.leak ?? '正常',
+    valves: base?.valves ?? [],
+    switches: base?.switches ?? [],
+    protections: base?.protections ?? [],
+    x: g.x ?? base?.x ?? 0,
+  }),
+}
+
+const dayAdapter: NodeAdapter<DayTankItem> = {
+  toNode: (d) => ({
+    id: d.id,
+    label: d.label || d.id,
+    type: '日用油箱',
+    x: d.x,
+    y: DAY_Y,
+    status: fmt(d.level, 1) + '%',
+    params: { cap: String(d.cap) },
+  }),
+  fromNode: (g, base) => ({
+    id: g.id,
+    label: g.label || base?.id || g.id,
+    cap: Number(g.params?.cap) || base?.cap || 0,
+    level: overrideLevel(g, base),
+    leak: base?.leak ?? '正常',
+    valve: base?.valve ?? { name: '', state: '', level: '' },
+    switches: base?.switches ?? [],
+    protections: base?.protections ?? [],
+    x: g.x ?? base?.x ?? 0,
+  }),
+}
+
+/** 编辑覆盖后的示意图渲染清单 (被删除的节点不在数组中, 自动不渲染) */
+const mainTanksView = computed<MainTankItem[]>(() =>
+  graphicEditor.apply(
+    mainTanks.value.map((t, i) => ({ ...t, x: mainX(i), label: t.id })),
+    mainAdapter,
+  ),
+)
+const dayTanksView = computed<DayTankItem[]>(() =>
+  graphicEditor.apply(
+    dayTanks.value.map((d, i) => ({ ...d, x: dayX(i), label: d.id })),
+    dayAdapter,
+  ),
+)
+
+/** 编辑抽屉的可编辑项快照 (以页面原始数据为准, 不含覆盖层自建节点) */
+const graphicDefaults = (): GraphicNode[] => [
+  ...mainTanks.value.map((t, i) => mainAdapter.toNode({ ...t, x: mainX(i) })),
+  ...dayTanks.value.map((d, i) => dayAdapter.toNode({ ...d, x: dayX(i) })),
+]
 
 // ──────────────────────────────────────────
 // KPI 派生
@@ -1030,9 +1225,10 @@ const tankRows = computed<TankRow[]>(() => {
 })
 
 // ──────────────────────────────────────────
-// 3.4.5 补给记录 (确定性生成)
+// 3.4.5 补给记录 (后端真实数据 + 本地示例兜底)
 // ──────────────────────────────────────────
 interface RefuelRecord {
+  id?: number
   no: string
   date: string
   tank: string
@@ -1047,7 +1243,8 @@ interface RefuelRecord {
 }
 const VENDORS = ['中石化 · 华南分公司', '中石油 · 区域配送', '应急保障供应商 A']
 const OPERATORS = ['张启明', '李文涛', '王建国', '陈立平']
-const refuelRecords = computed<RefuelRecord[]>(() => {
+/** 后端不可用时的本地示例数据 (确定性生成, 仅作兜底展示) */
+function localRefuelRecords(): RefuelRecord[] {
   const tanks = mainTanks.value.length ? mainTanks.value.map((t) => t.id) : ['T-01', 'T-02']
   const out: RefuelRecord[] = []
   const now = new Date()
@@ -1067,11 +1264,121 @@ const refuelRecords = computed<RefuelRecord[]>(() => {
       grade: i % 4 === 0 ? '0# 柴油 (国VI)' : '-10# 柴油 (国VI)',
       qc: i === 5 ? '待复检' : '合格',
       operator: OPERATORS[i % OPERATORS.length],
-      status: i === 0 ? '已完成' : '已完成',
+      status: '已完成',
     })
   }
   return out
+}
+const refuelApiList = ref<RefuelRecord[] | null>(null)
+const refuelFallback = ref(false)
+const refuelRecords = computed<RefuelRecord[]>(() => refuelApiList.value ?? localRefuelRecords())
+
+async function loadRefuel() {
+  try {
+    const res = await getRefuelRecords()
+    refuelApiList.value = (res?.items ?? []).map((it) => ({
+      id: it.id,
+      no: it.no,
+      date: it.date,
+      tank: it.tank,
+      amount: Number(it.amount ?? 0),
+      before: Number(it.before ?? 0),
+      after: Number(it.after ?? 0),
+      vendor: it.vendor || '-',
+      grade: it.grade || '-',
+      qc: it.qc || '-',
+      operator: it.operator || '-',
+      status: it.status || '-',
+    }))
+    refuelFallback.value = false
+  } catch {
+    // 后端不可用: 保留本地示例数据兜底, 表格区给出灰字提示
+    refuelApiList.value = null
+    refuelFallback.value = true
+  }
+}
+
+// ── 加油记录新增/编辑/删除 ──
+const toast = useToast()
+const refuelFormOpen = ref(false)
+const refuelSaving = ref(false)
+const refuelEditingId = ref<number | null>(null)
+const refuelForm = reactive({
+  no: '',
+  date: '',
+  tank: '',
+  amount: 0,
+  before: 0,
+  after: 0,
+  vendor: '',
+  grade: '',
+  qc: '合格',
+  operator: '',
+  status: '已完成',
 })
+
+function genRefuelNo(): string {
+  const d = new Date()
+  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`
+  return `RF${ymd}-${String(d.getTime() % 1000).padStart(3, '0')}`
+}
+
+function openRefuelForm(r?: RefuelRecord) {
+  refuelEditingId.value = r?.id ?? null
+  refuelForm.no = r?.no ?? genRefuelNo()
+  refuelForm.date = r?.date ?? new Date().toISOString().slice(0, 10)
+  refuelForm.tank = r?.tank ?? mainTanks.value[0]?.id ?? 'T-01'
+  refuelForm.amount = r?.amount ?? 0
+  refuelForm.before = r?.before ?? 0
+  refuelForm.after = r?.after ?? 0
+  refuelForm.vendor = r?.vendor ?? VENDORS[0]
+  refuelForm.grade = r?.grade ?? '0# 柴油 (国VI)'
+  refuelForm.qc = r?.qc ?? '合格'
+  refuelForm.operator = r?.operator ?? OPERATORS[0]
+  refuelForm.status = r?.status ?? '已完成'
+  refuelFormOpen.value = true
+}
+
+async function submitRefuel() {
+  if (!refuelForm.no.trim() || !refuelForm.date) {
+    toast.warning(tl('请填写记录编号与日期'))
+    return
+  }
+  refuelSaving.value = true
+  try {
+    const payload = { ...refuelForm, no: refuelForm.no.trim() }
+    if (refuelEditingId.value == null) await createRefuelRecord(payload)
+    else await updateRefuelRecord(refuelEditingId.value, payload)
+    toast.success(tl('graphicEditor.saveRefuelSuccess'))
+    refuelFormOpen.value = false
+    await loadRefuel()
+  } catch (e: unknown) {
+    toast.error(toErrorMessage(e, tl('graphicEditor.saveRefuelFailed')))
+  } finally {
+    refuelSaving.value = false
+  }
+}
+
+async function deleteRefuel(r: RefuelRecord) {
+  if (r.id == null) return
+  await useConfirm({
+    title: tl('graphicEditor.refuel'),
+    message: tl('graphicEditor.confirmDelete'),
+    detail: `${r.no} · ${r.date} · ${r.tank}`,
+    danger: true,
+    confirmText: tl('graphicEditor.remove'),
+    onConfirm: async () => {
+      try {
+        await deleteRefuelRecord(r.id as number)
+        toast.success(tl('graphicEditor.deleteSuccess'))
+        await loadRefuel()
+      } catch (e: unknown) {
+        toast.error(toErrorMessage(e, tl('graphicEditor.loadRefuelFailed')))
+      }
+    },
+  })
+}
+
 const refuelTotal = computed(() => refuelRecords.value.reduce((a, r) => a + r.amount, 0))
 const refuelAvg = computed(() =>
   refuelRecords.value.length
@@ -1445,7 +1752,7 @@ async function loadData() {
     const data = await getPowerFuelDetailed()
     if (data && (data.mainTanks?.length || data.dayTanks?.length || data.pumps?.length)) {
       s.value = data
-      markReal()
+      markPartial('燃油补给记录与消耗/库存趋势为本地生成，其余读数来自实时接口')
     } else {
       s.value = mockSummary()
       markMock()
@@ -1460,6 +1767,7 @@ async function loadData() {
 
 onMounted(() => {
   loadData()
+  loadRefuel()
   timer = window.setInterval(loadData, 30000)
 })
 onUnmounted(() => {
@@ -1524,6 +1832,123 @@ onUnmounted(() => {
 .hs .v {
   color: var(--text-primary, #e5e7eb);
   font-weight: 600;
+}
+
+/* ── 图形编辑入口 / 加油记录操作 ── */
+.fuel-edit {
+  background: var(--bg2, #0f172a);
+  border: 1px solid var(--cyan, #22d3ee);
+  color: var(--cyan, #22d3ee);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.fuel-edit:hover {
+  background: rgba(34, 211, 238, 0.14);
+}
+.row-btn {
+  border: 1px solid var(--border, #334155);
+  background: transparent;
+  color: var(--text-secondary, #94a3b8);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-right: 4px;
+}
+.row-btn:hover {
+  color: #22d3ee;
+  border-color: rgba(34, 211, 238, 0.5);
+}
+.row-btn.danger:hover {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.5);
+}
+.refuel-hint {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+/* ── 加油记录表单弹窗 ── */
+.modal-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 60;
+}
+.modal-card {
+  width: min(640px, 92vw);
+  max-height: 86vh;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 1px solid var(--border, #334155);
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.modal-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #e5e7eb);
+}
+.modal-head .nd-close {
+  margin-left: auto;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px 14px;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.field label {
+  font-size: 11px;
+  color: var(--text-muted, #94a3b8);
+}
+.field input,
+.field select {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid var(--border, #334155);
+  border-radius: 6px;
+  color: var(--text-primary, #e5e7eb);
+  font-size: 12px;
+  padding: 6px 8px;
+  outline: none;
+}
+.field input:focus,
+.field select:focus {
+  border-color: rgba(34, 211, 238, 0.6);
+}
+.modal-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+.btn.primary {
+  background: rgba(34, 211, 238, 0.16);
+  border-color: rgba(34, 211, 238, 0.5);
+  color: #22d3ee;
+}
+.btn.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+@media (max-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ── SVG 油罐 ── */

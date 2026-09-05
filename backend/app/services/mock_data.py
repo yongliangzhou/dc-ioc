@@ -1,4 +1,6 @@
-# TODO: 旧版占位，待v2全量切换后删除
+# TODO: 旧版演示数据占位。当前仍被 crud/server.py、endpoints/cabinets.py、
+# endpoints/server.py 用作离线兜底 (U 位识别 / 机柜遥测)；待这三处全部切换
+# 真实数据后即可删除本文件。
 """Mock 数据生成服务: 供前端独立开发联调。
 
 说明: 使用以对象 id 为种子的随机数, 保证同一机柜多次请求曲线稳定。

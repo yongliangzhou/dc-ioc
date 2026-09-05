@@ -38,6 +38,9 @@ from app.models.tenant import Tenant  # noqa: F401
 from app.models.analysis_history import AnalysisHistory  # noqa: F401
 from app.models.kpi_history import KpiHistory  # noqa: F401
 from app.models.control_log import ControlLog  # noqa: F401
+from app.models.graphic_config import GraphicConfig  # noqa: F401
+from app.models.refuel_record import RefuelRecord  # noqa: F401
+from app.models.notification import NotificationChannel, NotificationRecord  # noqa: F401
 
 __all__ = [
     "Base",
@@ -80,4 +83,8 @@ __all__ = [
     "AlarmActiveState",
     "AlarmSuppressedDevice",
     "ControlLog",
+    "GraphicConfig",
+    "RefuelRecord",
+    "NotificationChannel",
+    "NotificationRecord",
 ]

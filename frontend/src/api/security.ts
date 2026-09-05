@@ -369,18 +369,17 @@ function mapFire(raw: RawItem): SecuritySystemSummary {
 
 // ---- API 调用 ----
 
-function emptySummary(): SecuritySystemSummary {
-  return { total: 0, online: 0, eventsToday: 0, alertsToday: 0, devices: [] }
-}
-
+/**
+ * 映射式拉取子系统摘要。
+ * 注意：此处**不再**吞咽异常——请求失败（后端宕机 / 5xx / 超时）必须上抛，
+ * 交由调用方的 useAsyncPage / AsyncSection 进入可视错误态并可重试，
+ * 否则后端不可用时页面会静默显示"全 0 设备"，掩盖真实故障。
+ */
 function fetchMapped(
   url: string,
   mapper: (raw: RawItem) => SecuritySystemSummary,
 ): Promise<SecuritySystemSummary> {
-  return request
-    .get<unknown, RawItem>(url)
-    .then((raw) => mapper(raw ?? {}))
-    .catch(() => emptySummary())
+  return request.get<unknown, RawItem>(url).then((raw) => mapper(raw ?? {}))
 }
 
 // ---- 详细视图 (子系统完整数据) ----
@@ -444,40 +443,28 @@ export function getSecurityCctv(): Promise<SecuritySystemSummary> {
   return fetchMapped('/api/security/cctv', mapCctv)
 }
 export function getSecurityCctvDetailed(): Promise<CctvSummary> {
-  return request
-    .get<unknown, RawItem>('/api/security/cctv')
-    .then((r) => mapCctvDetailed(r ?? {}))
-    .catch(() => mapCctvDetailed({}))
+  return request.get<unknown, RawItem>('/api/security/cctv').then((r) => mapCctvDetailed(r ?? {}))
 }
 
 export function getSecurityAcs(): Promise<SecuritySystemSummary> {
   return fetchMapped('/api/security/acs', mapAcs)
 }
 export function getSecurityAcsDetailed(): Promise<AcsSummary> {
-  return request
-    .get<unknown, RawItem>('/api/security/acs')
-    .then((r) => mapAcsDetailed(r ?? {}))
-    .catch(() => mapAcsDetailed({}))
+  return request.get<unknown, RawItem>('/api/security/acs').then((r) => mapAcsDetailed(r ?? {}))
 }
 
 export function getSecurityIds(): Promise<SecuritySystemSummary> {
   return fetchMapped('/api/security/ids', mapIds)
 }
 export function getSecurityIdsDetailed(): Promise<IdsSummary> {
-  return request
-    .get<unknown, RawItem>('/api/security/ids')
-    .then((r) => mapIdsDetailed(r ?? {}))
-    .catch(() => mapIdsDetailed({}))
+  return request.get<unknown, RawItem>('/api/security/ids').then((r) => mapIdsDetailed(r ?? {}))
 }
 
 export function getSecurityFire(): Promise<SecuritySystemSummary> {
   return fetchMapped('/api/security/fire', mapFire)
 }
 export function getSecurityFireDetailed(): Promise<FireSummary> {
-  return request
-    .get<unknown, RawItem>('/api/security/fire')
-    .then((r) => mapFireDetailed(r ?? {}))
-    .catch(() => mapFireDetailed({}))
+  return request.get<unknown, RawItem>('/api/security/fire').then((r) => mapFireDetailed(r ?? {}))
 }
 
 export function getSecurityOverview(): Promise<SecurityOverview> {

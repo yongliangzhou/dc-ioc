@@ -6,7 +6,7 @@
       <span class="sub">{{
         tl('N+1 并机机组 · 同期并车 · 负载母排 · 自动/手动控制 · 保护告警')
       }}</span>
-      <MockDataBanner :level="mockLevel" />
+      <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
     <!-- Loading -->
@@ -84,6 +84,9 @@
             <span class="lg"><i class="dot r"></i>{{ tl('停机/分闸') }}</span>
             <span class="lg"><i class="dot b"></i>{{ tl('热备/备用') }}</span>
             <span class="lg muted">{{ tl('点击机组/开关查看详情') }}</span>
+            <button class="gs-edit" @click="editOpen = true">
+              {{ tl('编辑') }}{{ hasGraphicEdits ? ' ●' : '' }}
+            </button>
           </div>
         </template>
         <div class="schematic-wrap">
@@ -125,47 +128,46 @@
               {{ tl('并机母线') }}
             </text>
 
-            <!-- 机组进线 + 出口断路器 G1..GN -->
-            <g v-for="(u, ui) in s.units" :key="'u' + u.id" class="feeder-line">
+            <!-- 机组进线 + 出口断路器 G1..GN (机组节点来自 s.units, 渲染用覆盖层合并后的 unitsView) -->
+            <g v-for="u in unitsView" :key="'u' + u.id" class="feeder-line">
               <!-- 机组框 -->
               <rect
-                :x="unitX(ui) - 46"
-                :y="unitY(ui) - 16"
+                :x="u.gx - 46"
+                :y="u.gy - 16"
                 width="92"
                 height="24"
                 rx="5"
                 :class="['unit-box', stateCls(u.state)]"
               />
-              <text :x="unitX(ui)" :y="unitY(ui) + 1" :class="['unit-text', stateTextCls(u.state)]">
-                {{ u.id }}
+              <text :x="u.gx" :y="u.gy + 1" :class="['unit-text', stateTextCls(u.state)]">
+                {{ u.dl }}
               </text>
               <!-- 进线连线 -->
-              <line
-                :x1="unitX(ui)"
-                :y1="unitY(ui) + 8"
-                :x2="unitX(ui)"
-                :y2="UNIT_BR_Y(ui) - BR_H / 2"
-              />
+              <line :x1="u.gx" :y1="u.gy + 8" :x2="u.gx" :y2="u.gy + UNIT_BR_DY - BR_H / 2" />
               <!-- 出口断路器 -->
-              <g class="breaker-node" @click="selectNode(unitBreakerNode(u, ui))">
+              <g class="breaker-node" @click="selectNode(unitBreakerNode(u))">
                 <rect
-                  :x="unitX(ui) - BR_W / 2"
-                  :y="UNIT_BR_Y(ui) - BR_H / 2"
+                  :x="u.gx - BR_W / 2"
+                  :y="u.gy + UNIT_BR_DY - BR_H / 2"
                   :width="BR_W"
                   :height="BR_H"
                   rx="5"
                   :class="['breaker-rect', breakerCls(u.breaker)]"
                 />
-                <text :x="unitX(ui)" :y="UNIT_BR_Y(ui) + 4" class="breaker-text">
+                <text :x="u.gx" :y="u.gy + UNIT_BR_DY + 4" class="breaker-text">
                   {{ u.id.replace(/[^0-9]/g, '') }}-CB
                 </text>
               </g>
               <!-- 至并机母线连线 -->
-              <line :x1="unitX(ui)" :y1="UNIT_BR_Y(ui) + BR_H / 2" :x2="unitX(ui)" :y2="BUS_P.y" />
+              <line :x1="u.gx" :y1="u.gy + UNIT_BR_DY + BR_H / 2" :x2="u.gx" :y2="BUS_P.y" />
             </g>
 
-            <!-- 并机母线 → 负载母排 联络断路器 QB -->
-            <g class="breaker-node" @click="selectNode(busTieNode)">
+            <!-- 并机母线 → 负载母排 联络断路器 QB (用户删除时隐藏) -->
+            <g
+              v-if="!busTieNodeView.hidden"
+              class="breaker-node"
+              @click="selectNode(busTieNodeView)"
+            >
               <line
                 :x1="BUS_P.x"
                 :y1="BUS_P.y + BUS_P.h"
@@ -174,14 +176,16 @@
                 class="feeder-line"
               />
               <rect
-                :x="BUS_P.x - BR_W / 2"
-                :y="BUS_L.y - BR_H / 2"
+                :x="busTieNodeView.x - BR_W / 2"
+                :y="busTieNodeView.y - BR_H / 2"
                 :width="BR_W"
                 :height="BR_H"
                 rx="5"
-                :class="['breaker-rect', breakerCls(busTieNode.breaker)]"
+                :class="['breaker-rect', breakerCls(busTieNodeView.breaker)]"
               />
-              <text :x="BUS_P.x" :y="BUS_L.y + 4" class="breaker-text">QB</text>
+              <text :x="busTieNodeView.x" :y="busTieNodeView.y + 4" class="breaker-text">
+                {{ busTieNodeView.code }}
+              </text>
             </g>
 
             <!-- 负载母排 -->
@@ -229,6 +233,14 @@
           </div>
         </transition>
       </Panel>
+
+      <!-- 统一图形编辑入口: 对并机一次图的机组/母联节点做增删改 (覆盖层, 不影响接口数据) -->
+      <GraphicEditDrawer
+        v-model="editOpen"
+        :editor="graphicEditor"
+        :title="tl('柴发并机系统一次图')"
+        :defaults="graphicDefaults"
+      />
 
       <!-- ======== 3.3.3 单机组电参量 + 趋势 ======== -->
       <div class="grid cols-2">
@@ -473,10 +485,13 @@ import { AlarmBadge } from '@dc-ioc/ui'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import { getPowerGensetDetailed, type GensetSummary, type GensetUnitView } from '@/api/power'
 import Panel from '@/components/common/Panel.vue'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
+import { useGraphicEditor, type NodeAdapter } from '@/composables/useGraphicEditor'
+import type { GraphicNode } from '@/types/graphic'
 const { t: tl } = useI18n()
 
 /** 后端无有效返回时页面会回退到本地 mockSummary()，必须让用户看见这是假的 */
-const { level: mockLevel, markMock, markReal } = useMockFlag()
+const { level: mockLevel, reason: mockReason, markMock, markPartial } = useMockFlag()
 
 // ──────────────────────────────────────────
 // SVG 几何
@@ -505,12 +520,8 @@ function unitX(i: number): number {
     span = right - left
   return n <= 1 ? (left + right) / 2 : Math.round(left + (span * i) / Math.max(1, n - 1))
 }
-function unitY(_i: number): number {
-  return 60
-}
-function UNIT_BR_Y(_i: number): number {
-  return 110
-}
+const UNIT_Y = 60 // 机组框默认 y (可被图形编辑覆盖)
+const UNIT_BR_DY = 50 // 机组框 → 出口断路器 的垂直距离
 
 interface BreakerNode {
   id: string
@@ -596,14 +607,14 @@ function selectUnit(id: string) {
 function selectNode(n: BreakerNode) {
   selectedNode.value = n
 }
-function unitBreakerNode(u: GensetUnitView, i: number): BreakerNode {
+function unitBreakerNode(u: UnitGraphic): BreakerNode {
   return {
     id: u.id,
     code: u.id.replace(/[^0-9]/g, '') + '-CB',
     label: u.id + ' ' + tl('出口断路器'),
     breaker: u.breaker,
-    x: unitX(i),
-    y: UNIT_BR_Y(i),
+    x: u.gx,
+    y: u.gy + UNIT_BR_DY,
     kvs: [
       { k: tl('开关状态'), v: u.breaker, cls: breakerCls(u.breaker) },
       { k: tl('机组状态'), v: u.state, cls: stateTextCls(u.state) },
@@ -633,6 +644,141 @@ const busTieNode = computed<BreakerNode>(() => {
     ],
   }
 })
+
+/* ───────── 统一图形编辑入口 (柴发并机系统一次图) ─────────
+ * 场景覆盖层: 机组节点来自 s.units, 改名/改状态/改坐标/改参数 = 覆盖;
+ * 删除 = removed (单节点 QB 用 hidden 隐藏); 新增 = 用户自建机组。 */
+const graphicEditor = useGraphicEditor('power-genset-parallel', {
+  title: '柴发并机系统一次图',
+})
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => graphicEditor.hasOverrides.value)
+
+/** 机组渲染节点: 接口数据 + 计算坐标 + 可覆盖显示名 */
+interface UnitGraphic extends GensetUnitView {
+  gx: number
+  gy: number
+  dl: string
+}
+
+/** BreakerNode ↔ GraphicNode 双向映射 (母联 QB 等) */
+const breakerAdapter: NodeAdapter<BreakerNode> = {
+  toNode: (n) => ({
+    id: n.id,
+    label: n.label,
+    type: n.code,
+    x: n.x,
+    y: n.y,
+    status: n.breaker,
+    params: Object.fromEntries((n.kvs ?? []).map((kv) => [kv.k, String(kv.v)])),
+  }),
+  fromNode: (g, base) => {
+    const src: BreakerNode = base ?? {
+      id: g.id,
+      code: g.type || g.id,
+      label: g.label || g.id,
+      breaker: g.status || tl('分闸'),
+      x: g.x ?? 0,
+      y: g.y ?? 0,
+      kvs: [],
+    }
+    const params = g.params ?? {}
+    const kvs = Object.keys(params).length
+      ? Object.entries(params).map(([k, v]) => ({ k, v }))
+      : src.kvs
+    return {
+      ...src,
+      id: g.id,
+      label: g.label || src.label,
+      code: g.type || src.code,
+      x: g.x ?? src.x,
+      y: g.y ?? src.y,
+      breaker: g.status || src.breaker,
+      kvs,
+    }
+  },
+}
+
+/** 机组节点双向映射: 名称/状态/坐标可覆盖, 电气参数进 params 供编辑 */
+const unitAdapter: NodeAdapter<UnitGraphic> = {
+  toNode: (u) => ({
+    id: u.id,
+    label: u.dl || u.id,
+    type: tl('柴发机组'),
+    x: u.gx,
+    y: u.gy,
+    status: u.state,
+    params: {
+      [tl('状态')]: u.state,
+      [tl('开关')]: u.breaker,
+      U: `${fmt(u.u, 0)} V`,
+      I: `${fmt(u.i, 0)} A`,
+      P: `${fmt(u.p, 0)} kW`,
+      PF: fmt(u.pf),
+      [tl('转速')]: `${fmt(u.rpm, 0)} rpm`,
+      [tl('水温')]: `${fmt(u.waterT, 0)} °C`,
+      [tl('油压')]: fmt(u.oilP, 1),
+      [tl('电池')]: `${fmt(u.battU)} V`,
+    },
+  }),
+  fromNode: (g, base) => {
+    if (!base) {
+      // 用户自建机组节点: 电气量给中性默认值, 仍可参与渲染与详情
+      return {
+        id: g.id,
+        state: g.status || tl('备用'),
+        breaker: tl('分闸'),
+        incomer: '',
+        ua: 0,
+        ub: 0,
+        uc: 0,
+        u: 0,
+        ia: 0,
+        ib: 0,
+        ic: 0,
+        i: 0,
+        p: 0,
+        q: 0,
+        pf: 1,
+        freq: 50,
+        energy: 0,
+        rpm: 1500,
+        waterT: 0,
+        oilP: 0,
+        battU: 0,
+        heater: '关',
+        startCnt: 0,
+        runHrs: 0,
+        faults: [],
+        protections: [],
+        gx: g.x ?? 0,
+        gy: g.y ?? UNIT_Y,
+        dl: g.label || g.id,
+      }
+    }
+    return {
+      ...base,
+      gx: g.x ?? base.gx,
+      gy: g.y ?? base.gy,
+      dl: g.label || base.dl || base.id,
+      state: g.status || base.state,
+    }
+  },
+}
+
+const unitsBase = computed<UnitGraphic[]>(() =>
+  (s.value?.units ?? []).map((u, i) => ({ ...u, gx: unitX(i), gy: UNIT_Y, dl: u.id })),
+)
+const unitsView = computed(() => graphicEditor.apply(unitsBase.value, unitAdapter))
+/** 单节点: 被用户删除时带 hidden 标记, 模板据此隐藏 */
+const busTieNodeView = computed(() => {
+  const arr = graphicEditor.apply([busTieNode.value], breakerAdapter)
+  return { ...(arr[0] ?? busTieNode.value), hidden: arr.length === 0 }
+})
+const graphicDefaults = (): GraphicNode[] => [
+  ...unitsBase.value.map(unitAdapter.toNode),
+  breakerAdapter.toNode(busTieNode.value),
+]
 
 // 控制动作 (本地演示, 不改变真实后端)
 function toggleAuto() {
@@ -900,7 +1046,7 @@ async function loadData() {
     const data = await getPowerGensetDetailed()
     if (data && data.units?.length) {
       s.value = data
-      markReal()
+      markPartial('机组运行趋势为本地随机生成，其余读数来自实时接口')
     } else {
       s.value = mockSummary()
       markMock()
@@ -1068,6 +1214,20 @@ onMounted(loadData)
 }
 .dot.b {
   background: #3b82f6;
+}
+
+/* 统一图形编辑入口按钮 */
+.gs-edit {
+  background: var(--bg2, #0f172a);
+  border: 1px solid var(--cyan, #22d3ee);
+  color: var(--cyan, #22d3ee);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.gs-edit:hover {
+  background: rgba(34, 211, 238, 0.14);
 }
 
 /* 节点详情 */

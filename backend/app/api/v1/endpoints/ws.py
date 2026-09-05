@@ -65,12 +65,14 @@ async def _handshake_auth(websocket: WebSocket) -> tuple[bool, dict | None]:
     except asyncio.TimeoutError:
         logger.warning("WS 握手超时 (%ss 内未收到 auth 消息)", AUTH_TIMEOUT_SEC)
         return False, None
-    except (WebSocketDisconnect, Exception):
+    except (WebSocketDisconnect, Exception) as e:
+        logger.debug("WS 握手接收失败 (客户端断开或连接异常): %s", e)
         return False, None
 
     try:
         msg = json.loads(raw)
-    except Exception:
+    except Exception as e:
+        logger.warning("WS 握手消息解析失败, 认证中止: %s", e)
         return False, None
 
     if isinstance(msg, dict) and (msg.get("type") == "auth" or msg.get("action") == "auth"):
@@ -117,8 +119,8 @@ async def telemetry_ws(websocket: WebSocket):
         else:
             try:
                 await websocket.send_json({"type": "auth_error", "message": "unauthorized"})
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("WS 认证失败通知发送失败: %s", e)
             await websocket.close(code=1008, reason="unauthorized")
             return
 
@@ -136,7 +138,8 @@ async def telemetry_ws(websocket: WebSocket):
             "stale_threshold_ms": settings.stale_threshold_ms,
             "message": "DC-IOC 实时遥测已连接",
         })
-    except Exception:
+    except Exception as e:
+        logger.warning("WS 连接初始化消息发送失败, 已注销客户端 %s: %s", cid, e)
         ws_broadcaster.unregister(cid)
         return
 
@@ -156,7 +159,8 @@ async def telemetry_ws(websocket: WebSocket):
                 break
             try:
                 msg = json.loads(raw)
-            except Exception:
+            except Exception as e:
+                logger.debug("WS 单帧消息解析失败, 忽略该帧: %s", e)
                 continue
             await _handle_command(websocket, cid, msg)
     except WebSocketDisconnect:

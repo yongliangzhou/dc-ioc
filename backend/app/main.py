@@ -125,7 +125,8 @@ def ready():
         db.execute(text("select 1"))
         db.close()
         checks["database"] = "ok"
-    except Exception:
+    except Exception as e:
+        logger.debug("就绪探针: 数据库不可达: %s", e)
         checks["database"] = "unavailable"
 
     try:
@@ -134,7 +135,8 @@ def ready():
         r.ping()
         r.close()
         checks["redis"] = "ok"
-    except Exception:
+    except Exception as e:
+        logger.debug("就绪探针: Redis 不可达: %s", e)
         checks["redis"] = "unavailable"
 
     all_ok = all(v == "ok" for v in checks.values())

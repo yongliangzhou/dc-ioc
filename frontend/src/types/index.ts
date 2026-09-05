@@ -1398,8 +1398,8 @@ export const TICKET_STATUS_LABEL: Record<TicketStatus, string> = {
 }
 export const TICKET_STATUS_ORDER: TicketStatus[] = ['open', 'doing', 'pending', 'done']
 
-/** 工单来源: 手动创建 / 告警自动转 / 巡检发现 / 机器人巡检 */
-export type TicketSource = 'manual' | 'alarm' | 'inspect' | 'patrol'
+/** 工单来源: 手动创建 / 告警自动转 / crit 告警自动建单 / 巡检发现 / 机器人巡检 */
+export type TicketSource = 'manual' | 'alarm' | 'auto-alarm' | 'inspect' | 'patrol'
 
 /** 工单操作日志 (生命周期留痕) */
 export interface TicketLog {
@@ -2187,4 +2187,70 @@ export interface FaultImpactResp {
   businesses: AffectedBusiness[]
   suggestion: string
   mitigations: Mitigation[]
+}
+
+/* ===== 统一告警触达中心 (通知中心 /api/ops/notifications) ===== */
+export type NotificationChannelType = 'dingtalk' | 'email' | 'wechat' | 'sms' | 'custom'
+export type NotifyLevel = 'crit' | 'warn' | 'info'
+export type NotificationRecordStatus = 'sent' | 'failed' | 'muted' | 'dedup'
+
+/** 触达通道 (GET/POST/PUT /api/ops/notifications/channels) */
+export interface NotificationChannel {
+  id: number
+  type: NotificationChannelType
+  name: string
+  url: string | null
+  minLevel: NotifyLevel
+  quietStart: string | null // "22:00" 可空
+  quietEnd: string | null
+  enabled: boolean
+  updatedBy?: string | null
+  updatedAt?: string | null
+}
+
+/** 通道创建/更新载荷 (PUT 字段可选, 支持部分更新) */
+export interface NotificationChannelPayload {
+  type?: NotificationChannelType
+  name?: string
+  url?: string | null
+  minLevel?: NotifyLevel
+  quietStart?: string | null
+  quietEnd?: string | null
+  enabled?: boolean
+}
+
+/** 发送记录 (GET /api/ops/notifications/records 元素) */
+export interface NotificationRecord {
+  id: number
+  alarmId: number | string | null
+  channelId: number
+  channelName: string
+  level: NotifyLevel
+  title: string
+  status: NotificationRecordStatus
+  error: string | null
+  retryCount: number
+  createdAt: string
+}
+
+export interface NotificationRecordsQuery {
+  page?: number
+  pageSize?: number
+  level?: NotifyLevel
+  channelId?: number
+  status?: NotificationRecordStatus
+}
+
+export interface NotificationRecordsResp {
+  items: NotificationRecord[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+/** 测试发送响应 (POST /api/ops/notifications/test) */
+export interface NotificationTestResp {
+  channelId: number
+  status: string
+  error: string | null
 }

@@ -25,6 +25,7 @@
     <!-- ========== Section 1: KPI（1 主 + 5 次） ========== -->
     <AsyncSection
       :page="overviewPage"
+      @retry="overviewPage.reload"
       skeleton-variant="skeleton"
       :skeleton-rows="3"
       min-height="128px"
@@ -51,11 +52,7 @@
             <span class="kp-sub">较上一周期</span>
           </div>
           <div class="kp-spark">
-            <TrendChart
-              :series="pueSpark"
-              :x-axis-data="pueSparklineX"
-              :height="52"
-            />
+            <TrendChart :series="pueSpark" :x-axis-data="pueSparklineX" :height="52" />
           </div>
         </div>
 
@@ -126,6 +123,7 @@
     </div>
     <AsyncSection
       :page="trendsPage"
+      @retry="trendsPage.reload"
       skeleton-variant="skeleton"
       :skeleton-rows="6"
       min-height="220px"
@@ -177,6 +175,7 @@
     </div>
     <AsyncSection
       :page="alarmsPage"
+      @retry="alarmsPage.reload"
       skeleton-variant="skeleton"
       :skeleton-rows="5"
       min-height="160px"
@@ -210,6 +209,7 @@
     </div>
     <AsyncSection
       :page="hvacPage"
+      @retry="hvacPage.reload"
       skeleton-variant="skeleton"
       :skeleton-rows="3"
       min-height="120px"
@@ -290,6 +290,7 @@
     </div>
     <AsyncSection
       :page="overviewPage"
+      @retry="overviewPage.reload"
       skeleton-variant="skeleton"
       :skeleton-rows="4"
       min-height="150px"
@@ -334,12 +335,7 @@
               <div class="domain-stat-item">
                 <StatusBadge :status="d.healthStatus" />
                 <span>设备 {{ d.onlineRate }}% 在线</span>
-                <DataBadge
-                  v-if="d.derived"
-                  tone="partial"
-                  label="派生"
-                  :tip="d.derivedTip"
-                />
+                <DataBadge v-if="d.derived" tone="partial" label="派生" :tip="d.derivedTip" />
               </div>
               <div class="domain-stat-item">
                 <StatusBadge :status="alarmSeverity" />
@@ -358,17 +354,18 @@
       <!-- 脚注: 说清数据怎么来的, 而不是让人误以为是真实分域采集 -->
       <p class="section-note">
         <template v-if="hasRealDomain">
-          分域在线率由后端按业务域<b>真实设备聚合</b>（暖通 / 电力 / 安防分别统计各自注册设备的在线数），
+          分域在线率由后端按业务域<b>真实设备聚合</b>（暖通 / 电力 /
+          安防分别统计各自注册设备的在线数），
           <b>非全局派生值</b>。
         </template>
         <template v-else>
           各域在线率由全局综合在线率派生（暖通 = 全局，电力 = 全局 − 1，安防 = 全局 + 1），
           <b>非真实分域采集</b>。
         </template>
-        告警数为<b>全局活跃告警总数</b>（{{ globalAlarmTotal }} 条，
-        严重 {{ ov.alarms?.crit ?? 0 }} · 警告 {{ ov.alarms?.warn ?? 0 }} · 提示
-        {{ ov.alarms?.info ?? 0 }}），四个域显示同一数值，
-        <b>不代表各域独立统计</b>——原页面硬编码的 3/1/0/0 属虚构数据，已移除。
+        告警数为<b>全局活跃告警总数</b>（{{ globalAlarmTotal }} 条， 严重
+        {{ ov.alarms?.crit ?? 0 }} · 警告 {{ ov.alarms?.warn ?? 0 }} · 提示
+        {{ ov.alarms?.info ?? 0 }}），四个域显示同一数值， <b>不代表各域独立统计</b>——原页面硬编码的
+        3/1/0/0 属虚构数据，已移除。
       </p>
     </AsyncSection>
 
@@ -378,6 +375,7 @@
     </div>
     <AsyncSection
       :page="campusPage"
+      @retry="campusPage.reload"
       skeleton-variant="skeleton"
       :skeleton-rows="3"
       min-height="120px"
@@ -397,7 +395,9 @@
           </div>
           <div class="campus-name">{{ c.name }}</div>
           <div class="campus-kpi-list">
-            <div class="campus-kpi"><span>PUE</span><span class="v">{{ fmtNum(c.pue) }}</span></div>
+            <div class="campus-kpi">
+              <span>PUE</span><span class="v">{{ fmtNum(c.pue) }}</span>
+            </div>
             <div class="campus-kpi">
               <span>在线率</span><span class="v">{{ fmtNum(c.online_rate) }}%</span>
             </div>
@@ -443,7 +443,12 @@ import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { RefreshCw } from 'lucide-vue-next'
 import { fmtNum } from '@/utils/format'
-import { getDashboardOverview, getActiveAlarms, getCampusComparison, getOverviewTrends } from '@/api/index'
+import {
+  getDashboardOverview,
+  getActiveAlarms,
+  getCampusComparison,
+  getOverviewTrends,
+} from '@/api/index'
 import { getHvacOverview } from '@/api/hvac'
 import type { DashboardOverview, Alarm, CampusComparisonItem } from '@/types'
 import type { HvacOverview } from '@/api/hvac'
@@ -480,6 +485,7 @@ const SOURCE_LABELS: Record<string, string> = {
   alarms: '实时告警',
   campus: '校区对比',
   hvac: '暖通总览',
+  trends: 'KPI 趋势',
 }
 const failedLabels = computed(() => failedKeys.value.map((k) => SOURCE_LABELS[k] ?? k))
 
@@ -548,8 +554,8 @@ const coolLoadStatus = computed<'normal' | 'warning'>(() =>
   coolLoadPct.value > 40 ? 'warning' : 'normal',
 )
 const freeCoolHours = computed(() => ov.value.free_cool_hours ?? 0)
-const freeCoolPct = computed(() =>
-  +Math.min((freeCoolHours.value / HOURS_PER_MONTH) * 100, 100).toFixed(1),
+const freeCoolPct = computed(
+  () => +Math.min((freeCoolHours.value / HOURS_PER_MONTH) * 100, 100).toFixed(1),
 )
 
 /* ------------------------------------------------------------------ */
@@ -729,17 +735,63 @@ const trendDatasets = computed(() => {
     const pts = trendsPoints.value
     return {
       pueWue: [
-        { name: 'PUE', type: 'line' as const, data: pts.map((p) => p.pue ?? 0), color: '#05b896', smooth: true, yAxisIndex: 0 },
-        { name: 'WUE', type: 'line' as const, data: pts.map((p) => p.wue ?? 0), color: '#3498db', smooth: true, yAxisIndex: 1 },
+        {
+          name: 'PUE',
+          type: 'line' as const,
+          data: pts.map((p) => p.pue ?? 0),
+          color: '#05b896',
+          smooth: true,
+          yAxisIndex: 0,
+        },
+        {
+          name: 'WUE',
+          type: 'line' as const,
+          data: pts.map((p) => p.wue ?? 0),
+          color: '#3498db',
+          smooth: true,
+          yAxisIndex: 1,
+        },
       ],
       loads: [
-        { name: 'IT负荷', type: 'line' as const, data: pts.map((p) => p.it_load_mw ?? 0), color: '#05b896', smooth: true },
-        { name: '总负荷', type: 'line' as const, data: pts.map((p) => p.total_load_mw ?? 0), color: '#f39c12', smooth: true },
-        { name: '制冷负荷', type: 'line' as const, data: pts.map((p) => p.cool_load_mw ?? 0), color: '#3498db', smooth: true },
+        {
+          name: 'IT负荷',
+          type: 'line' as const,
+          data: pts.map((p) => p.it_load_mw ?? 0),
+          color: '#05b896',
+          smooth: true,
+        },
+        {
+          name: '总负荷',
+          type: 'line' as const,
+          data: pts.map((p) => p.total_load_mw ?? 0),
+          color: '#f39c12',
+          smooth: true,
+        },
+        {
+          name: '制冷负荷',
+          type: 'line' as const,
+          data: pts.map((p) => p.cool_load_mw ?? 0),
+          color: '#3498db',
+          smooth: true,
+        },
       ],
       online: [
-        { name: '在线率', type: 'line' as const, data: pts.map((p) => p.online_rate ?? 0), color: '#05b896', smooth: true, yAxisIndex: 0 },
-        { name: '可用性', type: 'line' as const, data: pts.map((p) => p.availability ?? 0), color: '#9b59b6', smooth: true, yAxisIndex: 1 },
+        {
+          name: '在线率',
+          type: 'line' as const,
+          data: pts.map((p) => p.online_rate ?? 0),
+          color: '#05b896',
+          smooth: true,
+          yAxisIndex: 0,
+        },
+        {
+          name: '可用性',
+          type: 'line' as const,
+          data: pts.map((p) => p.availability ?? 0),
+          color: '#9b59b6',
+          smooth: true,
+          yAxisIndex: 1,
+        },
       ],
     }
   }

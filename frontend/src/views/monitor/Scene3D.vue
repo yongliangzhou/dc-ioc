@@ -1,5 +1,6 @@
 <template>
   <div class="scene3d" ref="root">
+    <MockDataBanner :level="mockLevel" :reason="mockReason" />
     <!-- 顶部工具条 -->
     <div class="ctrl-bar">
       <div class="cb-title">{{ tl('3D 视图') }}</div>
@@ -45,12 +46,24 @@
     <div class="info-card" v-if="selected">
       <button class="x" @click="selected = null">✕</button>
       <div class="ic-name">{{ selected.name || selected.device_id }}</div>
-      <div class="ic-row"><span>{{ tl('twin.category') }}</span><b>{{ selected.category || '—' }}</b></div>
-      <div class="ic-row"><span>{{ tl('twin.location') }}</span><b>{{ selected.location || '—' }}</b></div>
-      <div class="ic-row"><span>{{ tl('common.status') }}</span>
-        <b :class="selected.online ? 'on' : 'off'">{{ selected.online ? tl('common.online') : tl('common.offline') }}</b>
+      <div class="ic-row">
+        <span>{{ tl('twin.category') }}</span
+        ><b>{{ selected.category || '—' }}</b>
       </div>
-      <div class="ic-row"><span>{{ tl('twin.temp') }}</span><b>{{ tempOf(selected).toFixed(1) }} ℃</b></div>
+      <div class="ic-row">
+        <span>{{ tl('twin.location') }}</span
+        ><b>{{ selected.location || '—' }}</b>
+      </div>
+      <div class="ic-row">
+        <span>{{ tl('common.status') }}</span>
+        <b :class="selected.online ? 'on' : 'off'">{{
+          selected.online ? tl('common.online') : tl('common.offline')
+        }}</b>
+      </div>
+      <div class="ic-row">
+        <span>{{ tl('twin.temp') }}</span
+        ><b>{{ tempOf(selected).toFixed(1) }} ℃</b>
+      </div>
     </div>
 
     <div class="canvas-host" ref="host"></div>
@@ -68,11 +81,13 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { fetchTwinDevices, type TwinDevice } from '@/api/twin'
 import { useDatacenterStore } from '@/stores/datacenter'
-import { toErrorMessage } from '@/composables/useAsyncPage'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 
 const { t: tl } = useI18n()
 const dcStore = useDatacenterStore()
+const { level: mockLevel, reason: mockReason, markPartial } = useMockFlag()
 
 type LevelKey = 'campus' | 'building' | 'room' | 'cabinet'
 const levels: { key: LevelKey; label: string }[] = [
@@ -155,7 +170,7 @@ function buildScene() {
     const loc = (d.location || 'R00/C00').split('/')
     const room = loc[0] || 'R00'
     const cab = loc[1] || 'C00'
-    ;(byRoom[room] ||= {})
+    byRoom[room] ||= {}
     ;(byRoom[room][cab] ||= []).push(d)
   }
   const roomKeys = Object.keys(byRoom).sort()
@@ -179,7 +194,11 @@ function buildScene() {
       gCab.name = 'cab:' + room + '/' + cab
       gCab.position.set(cx, 0, 0)
       gRoom.add(gCab)
-      const mat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.3, roughness: 0.7 })
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0x1e293b,
+        metalness: 0.3,
+        roughness: 0.7,
+      })
       const rack = new THREE.Mesh(rackGeo, mat)
       rack.position.y = 2.5
       rack.userData.cab = room + '/' + cab
@@ -188,7 +207,10 @@ function buildScene() {
       dd.forEach((d, i) => {
         const m = new THREE.Mesh(
           devGeo,
-          new THREE.MeshStandardMaterial({ color: colorFor(d), emissive: colorFor(d).clone().multiplyScalar(0.25) }),
+          new THREE.MeshStandardMaterial({
+            color: colorFor(d),
+            emissive: colorFor(d).clone().multiplyScalar(0.25),
+          }),
         )
         m.position.y = 0.8 + i * 0.9
         m.userData.device = d
@@ -218,7 +240,12 @@ function buildScene() {
   scene.add(building)
   const bBox = new THREE.Mesh(
     new THREE.BoxGeometry(span + 8, 12, 16),
-    new THREE.MeshStandardMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.06, wireframe: true }),
+    new THREE.MeshStandardMaterial({
+      color: 0x0ea5e9,
+      transparent: true,
+      opacity: 0.06,
+      wireframe: true,
+    }),
   )
   bBox.position.set(span / 2, 6, 0)
   building.add(bBox)
@@ -229,7 +256,12 @@ function buildScene() {
   scene.add(campus)
   const cBox = new THREE.Mesh(
     new THREE.BoxGeometry(span + 40, 40, 60),
-    new THREE.MeshStandardMaterial({ color: 0x22c55e, transparent: true, opacity: 0.05, wireframe: true }),
+    new THREE.MeshStandardMaterial({
+      color: 0x22c55e,
+      transparent: true,
+      opacity: 0.05,
+      wireframe: true,
+    }),
   )
   cBox.position.set(span / 2, 20, 0)
   campus.add(cBox)
@@ -320,7 +352,8 @@ function fitCurrent() {
 
 const crumbs = computed(() => {
   const arr = [tl('园区')]
-  if (level.value === 'building' || level.value === 'room' || level.value === 'cabinet') arr.push(tl('楼栋'))
+  if (level.value === 'building' || level.value === 'room' || level.value === 'cabinet')
+    arr.push(tl('楼栋'))
   if (level.value === 'room' || level.value === 'cabinet') arr.push(tl('机房'))
   if (level.value === 'cabinet') arr.push(tl('机柜'))
   return arr
@@ -355,7 +388,10 @@ function onPick(ev: PointerEvent) {
   pointer.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1
   pointer.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1
   raycaster.setFromCamera(pointer, (controls?.object as THREE.Camera) || camera!)
-  const hits = raycaster.intersectObjects(meshes.map((m) => m.mesh), false)
+  const hits = raycaster.intersectObjects(
+    meshes.map((m) => m.mesh),
+    false,
+  )
   if (hits.length) {
     const hit = meshes.find((m) => m.mesh === hits[0].object)
     if (hit) {
@@ -391,6 +427,7 @@ async function load() {
     const r = await fetchTwinDevices({ idcId: dcStore.currentIdcId || undefined })
     devices.value = r.items || []
     buildScene()
+    markPartial('设备温度为本地派生，非真实遥测；其余位置/状态来自实时接口')
   } catch (e) {
     devices.value = []
     error.value = toErrorMessage(e) || '3D 设备加载失败'
@@ -449,38 +486,201 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-.scene3d { position: relative; height: 100%; width: 100%; overflow: hidden; background: #0a0f1c; }
-.canvas-host { position: absolute; inset: 0; }
-.ctrl-bar {
-  position: absolute; top: 14px; left: 14px; z-index: 5;
-  display: flex; align-items: center; gap: 8px;
-  padding: 8px 12px; border-radius: 12px;
-  background: rgba(17, 24, 39, 0.72); backdrop-filter: blur(8px);
-  border: 1px solid rgba(34, 211, 238, 0.2); flex-wrap: wrap;
+.scene3d {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: #0a0f1c;
 }
-.cb-title { font-weight: 700; color: var(--cyan); font-size: 13px; }
-.cb-sep { width: 1px; height: 18px; background: var(--line); }
-.lv-btn { color: var(--txt2); border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
-.lv-btn.on { color: var(--cyan); border-color: rgba(34, 211, 238, 0.5); background: rgba(34, 211, 238, 0.1); }
-.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.seg button { color: var(--txt2); background: transparent; border: none; padding: 4px 12px; font-size: 12px; cursor: pointer; }
-.seg button.on { color: #06121f; background: var(--cyan); font-weight: 700; }
-.btn-sm { color: var(--cyan); border: 1px solid rgba(34, 211, 238, 0.3); background: transparent; border-radius: 8px; padding: 4px 10px; font-size: 12px; cursor: pointer; }
-.crumbs { position: absolute; top: 64px; left: 14px; z-index: 5; display: flex; gap: 2px; font-size: 12px; color: var(--txt2); padding: 6px 12px; border-radius: 10px; background: rgba(17,24,39,0.72); backdrop-filter: blur(8px); border: 1px solid var(--line); }
-.crumbs span { cursor: pointer; }
-.crumbs span.cur { color: var(--cyan); cursor: default; }
-.legend { position: absolute; bottom: 14px; left: 14px; z-index: 5; display: flex; gap: 14px; padding: 8px 12px; border-radius: 10px; background: rgba(17, 24, 39, 0.72); backdrop-filter: blur(8px); border: 1px solid var(--line); }
-.lg { font-size: 12px; color: var(--txt2); display: flex; align-items: center; gap: 6px; }
-.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-.dot.online { background: #22d3ee; box-shadow: 0 0 8px #22d3ee; }
-.dot.off { background: #475569; }
-.dot.hot { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-.info-card { position: absolute; top: 14px; right: 14px; z-index: 6; width: 220px; padding: 14px; border-radius: 12px; background: rgba(17, 24, 39, 0.88); backdrop-filter: blur(8px); border: 1px solid rgba(34, 211, 238, 0.25); color: var(--txt); }
-.ic-name { font-weight: 700; color: var(--cyan); margin-bottom: 10px; word-break: break-all; }
-.ic-row { display: flex; justify-content: space-between; font-size: 12px; padding: 4px 0; border-top: 1px solid var(--line); }
-.ic-row b.on { color: #22c55e; }
-.ic-row b.off { color: #94a3b8; }
-.x { position: absolute; top: 8px; right: 10px; background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; }
-.loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
-.loaderr { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 0 24px; z-index: 7; }
+.canvas-host {
+  position: absolute;
+  inset: 0;
+}
+.ctrl-bar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(34, 211, 238, 0.2);
+  flex-wrap: wrap;
+}
+.cb-title {
+  font-weight: 700;
+  color: var(--cyan);
+  font-size: 13px;
+}
+.cb-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--line);
+}
+.lv-btn {
+  color: var(--txt2);
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.lv-btn.on {
+  color: var(--cyan);
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(34, 211, 238, 0.1);
+}
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.seg button {
+  color: var(--txt2);
+  background: transparent;
+  border: none;
+  padding: 4px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.seg button.on {
+  color: #06121f;
+  background: var(--cyan);
+  font-weight: 700;
+}
+.btn-sm {
+  color: var(--cyan);
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  background: transparent;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.crumbs {
+  position: absolute;
+  top: 64px;
+  left: 14px;
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--txt2);
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+}
+.crumbs span {
+  cursor: pointer;
+}
+.crumbs span.cur {
+  color: var(--cyan);
+  cursor: default;
+}
+.legend {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 5;
+  display: flex;
+  gap: 14px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(17, 24, 39, 0.72);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+}
+.lg {
+  font-size: 12px;
+  color: var(--txt2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.dot.online {
+  background: #22d3ee;
+  box-shadow: 0 0 8px #22d3ee;
+}
+.dot.off {
+  background: #475569;
+}
+.dot.hot {
+  background: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+.info-card {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 6;
+  width: 220px;
+  padding: 14px;
+  border-radius: 12px;
+  background: rgba(17, 24, 39, 0.88);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(34, 211, 238, 0.25);
+  color: var(--txt);
+}
+.ic-name {
+  font-weight: 700;
+  color: var(--cyan);
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+.ic-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 4px 0;
+  border-top: 1px solid var(--line);
+}
+.ic-row b.on {
+  color: #22c55e;
+}
+.ic-row b.off {
+  color: #94a3b8;
+}
+.x {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+.loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+.loaderr {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  z-index: 7;
+}
 </style>

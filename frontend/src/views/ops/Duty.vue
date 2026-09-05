@@ -4,12 +4,33 @@
       <h1>{{ tl('nav.duty') }}</h1>
       <span class="sub">{{ tl('人员值班与交接班管理') }}</span>
     </div>
-    <AsyncSection :page="page" @retry="page.reload">
+    <ErrorBanner :count="all.errorCount" :labels="failedLabels" @retry="all.reloadFailed" />
+
+    <AsyncSection :page="statsPage" @retry="statsPage.reload" :min-height="'110px'">
       <div class="grid cols-3" v-if="stats">
-      <MetricCard metric-name="duty-total" :label="tl('总班次')" :value="stats.totalShifts" quality="good" :online="true" />
-      <MetricCard metric-name="duty-today" :label="tl('今日班次')" :value="stats.todayShifts" quality="good" :online="true" />
-      <MetricCard metric-name="duty-handover" :label="tl('交接记录')" :value="handovers.length" quality="good" :online="true" />
-    </div>
+        <MetricCard
+          metric-name="duty-total"
+          :label="tl('总班次')"
+          :value="stats.totalShifts"
+          quality="good"
+          :online="true"
+        />
+        <MetricCard
+          metric-name="duty-today"
+          :label="tl('今日班次')"
+          :value="stats.todayShifts"
+          quality="good"
+          :online="true"
+        />
+        <MetricCard
+          metric-name="duty-handover"
+          :label="tl('交接记录')"
+          :value="handovers.length"
+          quality="good"
+          :online="true"
+        />
+      </div>
+    </AsyncSection>
 
     <!-- 排班表 -->
     <Panel style="margin-top: 16px">
@@ -24,30 +45,48 @@
           </button>
         </div>
       </div>
-      <div class="tbl" v-if="shifts.length">
-        <div class="tbl-head">
-          <span class="col w-d-date">{{ tl('日期') }}</span>
-          <span class="col w-d-type">{{ tl('班次') }}</span>
-          <span class="col w-d-leader">{{ tl('值班长') }}</span>
-          <span class="col w-d-members">{{ tl('成员') }}</span>
-          <span class="col w-d-note">{{ tl('备注') }}</span>
-          <span class="col w-d-op">{{ tl('操作') }}</span>
+      <AsyncSection
+        :page="shiftsPage"
+        @retry="shiftsPage.reload"
+        empty-title="暂无排班"
+        :min-height="'120px'"
+      >
+        <div class="tbl" v-if="shifts.length">
+          <div class="tbl-head">
+            <span class="col w-d-date">{{ tl('日期') }}</span>
+            <span class="col w-d-type">{{ tl('班次') }}</span>
+            <span class="col w-d-leader">{{ tl('值班长') }}</span>
+            <span class="col w-d-members">{{ tl('成员') }}</span>
+            <span class="col w-d-note">{{ tl('备注') }}</span>
+            <span class="col w-d-op">{{ tl('操作') }}</span>
+          </div>
+          <div v-for="s in shifts" :key="s.id" class="tbl-row">
+            <span class="col w-d-date">{{ s.date }}</span>
+            <span class="col w-d-type">
+              <span class="pill-tag" :class="s.shift === 'day' ? 'b' : ''">{{
+                s.shift === 'day' ? tl('白班') : tl('夜班')
+              }}</span>
+            </span>
+            <span class="col w-d-leader fw">{{
+              parseMembers(s.members)[0]?.name || s.leader || '-'
+            }}</span>
+            <span class="col w-d-members muted">{{
+              parseMembers(s.members)
+                .map((m) => m.name)
+                .join('、') || '-'
+            }}</span>
+            <span class="col w-d-note muted">{{ s.note || '-' }}</span>
+            <span class="col w-d-op p-ops">
+              <button class="link" v-bind="authState('write')" @click="openShiftEdit(s)">
+                {{ tl('编辑') }}
+              </button>
+              <button class="link danger" v-bind="authState('write')" @click="removeShift(s)">
+                {{ tl('删除') }}
+              </button>
+            </span>
+          </div>
         </div>
-        <div v-for="s in shifts" :key="s.id" class="tbl-row">
-          <span class="col w-d-date">{{ s.date }}</span>
-          <span class="col w-d-type">
-            <span class="pill-tag" :class="s.shift === 'day' ? 'b' : ''">{{ s.shift === 'day' ? tl('白班') : tl('夜班') }}</span>
-          </span>
-          <span class="col w-d-leader fw">{{ parseMembers(s.members)[0]?.name || s.leader || '-' }}</span>
-          <span class="col w-d-members muted">{{ parseMembers(s.members).map((m) => m.name).join('、') || '-' }}</span>
-          <span class="col w-d-note muted">{{ s.note || '-' }}</span>
-          <span class="col w-d-op p-ops">
-            <button class="link" v-bind="authState('write')" @click="openShiftEdit(s)">{{ tl('编辑') }}</button>
-            <button class="link danger" v-bind="authState('write')" @click="removeShift(s)">{{ tl('删除') }}</button>
-          </span>
-        </div>
-      </div>
-      <div class="empty" v-else>{{ tl('暂无排班') }}</div>
+      </AsyncSection>
     </Panel>
 
     <!-- 交接班 -->
@@ -58,32 +97,43 @@
           {{ tl('新增交接') }}
         </button>
       </div>
-      <div class="tbl" v-if="handovers.length">
-        <div class="tbl-head">
-          <span class="col w-h-date">{{ tl('班次日期') }}</span>
-          <span class="col w-h-type">{{ tl('班次') }}</span>
-          <span class="col w-h-from">{{ tl('交班人') }}</span>
-          <span class="col w-h-to">{{ tl('接班人') }}</span>
-          <span class="col w-h-items">{{ tl('交接事项') }}</span>
-          <span class="col w-h-op">{{ tl('操作') }}</span>
+      <AsyncSection :page="handoversPage" @retry="handoversPage.reload" :min-height="'120px'">
+        <div class="tbl" v-if="handovers.length">
+          <div class="tbl-head">
+            <span class="col w-h-date">{{ tl('班次日期') }}</span>
+            <span class="col w-h-type">{{ tl('班次') }}</span>
+            <span class="col w-h-from">{{ tl('交班人') }}</span>
+            <span class="col w-h-to">{{ tl('接班人') }}</span>
+            <span class="col w-h-items">{{ tl('交接事项') }}</span>
+            <span class="col w-h-op">{{ tl('操作') }}</span>
+          </div>
+          <div v-for="h in handovers" :key="h.id" class="tbl-row">
+            <span class="col w-h-date">{{ h.shiftDate }}</span>
+            <span class="col w-h-type">
+              <span class="pill-tag" :class="h.shiftType === 'day' ? 'b' : ''">{{
+                h.shiftType === 'day' ? tl('白班') : tl('夜班')
+              }}</span>
+            </span>
+            <span class="col w-h-from fw">{{ h.fromUser || '-' }}</span>
+            <span class="col w-h-to fw">{{ h.toUser || '-' }}</span>
+            <span class="col w-h-items muted">{{
+              parseItems(h.items)
+                .map((i) => i.text)
+                .join('；') || '-'
+            }}</span>
+            <span class="col w-h-op p-ops">
+              <button class="link" v-bind="authState('write')" @click="openHandoverEdit(h)">
+                {{ tl('编辑') }}
+              </button>
+              <button class="link danger" v-bind="authState('write')" @click="removeHandover(h)">
+                {{ tl('删除') }}
+              </button>
+            </span>
+          </div>
         </div>
-        <div v-for="h in handovers" :key="h.id" class="tbl-row">
-          <span class="col w-h-date">{{ h.shiftDate }}</span>
-          <span class="col w-h-type">
-            <span class="pill-tag" :class="h.shiftType === 'day' ? 'b' : ''">{{ h.shiftType === 'day' ? tl('白班') : tl('夜班') }}</span>
-          </span>
-          <span class="col w-h-from fw">{{ h.fromUser || '-' }}</span>
-          <span class="col w-h-to fw">{{ h.toUser || '-' }}</span>
-          <span class="col w-h-items muted">{{ parseItems(h.items).map((i) => i.text).join('；') || '-' }}</span>
-          <span class="col w-h-op p-ops">
-            <button class="link" v-bind="authState('write')" @click="openHandoverEdit(h)">{{ tl('编辑') }}</button>
-            <button class="link danger" v-bind="authState('write')" @click="removeHandover(h)">{{ tl('删除') }}</button>
-          </span>
-        </div>
-      </div>
-      <div class="empty" v-else>{{ tl('暂无交接记录') }}</div>
+        <div v-if="!handovers.length" class="empty">{{ tl('暂无交接记录') }}</div>
+      </AsyncSection>
     </Panel>
-    </AsyncSection>
 
     <!-- 排班抽屉 -->
     <div class="drawer-mask" v-if="shiftDrawer" @click.self="shiftDrawer = false">
@@ -94,19 +144,34 @@
         </div>
         <div class="form">
           <div class="row">
-            <label>{{ tl('日期') }}<input v-model="shiftForm.date" class="ipt" type="date" /></label>
-            <label>{{ tl('班次') }}
+            <label
+              >{{ tl('日期') }}<input v-model="shiftForm.date" class="ipt" type="date"
+            /></label>
+            <label
+              >{{ tl('班次') }}
               <select v-model="shiftForm.shift" class="ipt">
                 <option value="day">{{ tl('白班') }}</option>
                 <option value="night">{{ tl('夜班') }}</option>
               </select>
             </label>
           </div>
-          <label>{{ tl('值班长') }}<input v-model.trim="shiftForm.leader" class="ipt" :placeholder="tl('如 王工')" /></label>
-          <label>{{ tl('成员 (每行一个, 姓名/角色/电话)') }}
-            <textarea v-model="memberText" class="ipt" rows="4" :placeholder="tl('张三/主值/13800000000')"></textarea>
+          <label
+            >{{ tl('值班长')
+            }}<input v-model.trim="shiftForm.leader" class="ipt" :placeholder="tl('如 王工')"
+          /></label>
+          <label
+            >{{ tl('成员 (每行一个, 姓名/角色/电话)') }}
+            <textarea
+              v-model="memberText"
+              class="ipt"
+              rows="4"
+              :placeholder="tl('张三/主值/13800000000')"
+            ></textarea>
           </label>
-          <label>{{ tl('备注') }}<textarea v-model.trim="shiftForm.note" class="ipt" rows="2"></textarea></label>
+          <label
+            >{{ tl('备注')
+            }}<textarea v-model.trim="shiftForm.note" class="ipt" rows="2"></textarea>
+          </label>
           <div v-if="shiftErr" class="err">{{ shiftErr }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="shiftDrawer = false">{{ tl('取消') }}</button>
@@ -127,8 +192,11 @@
         </div>
         <div class="form">
           <div class="row">
-            <label>{{ tl('班次日期') }}<input v-model="handoverForm.shiftDate" class="ipt" type="date" /></label>
-            <label>{{ tl('班次') }}
+            <label
+              >{{ tl('班次日期') }}<input v-model="handoverForm.shiftDate" class="ipt" type="date"
+            /></label>
+            <label
+              >{{ tl('班次') }}
               <select v-model="handoverForm.shiftType" class="ipt">
                 <option value="day">{{ tl('白班') }}</option>
                 <option value="night">{{ tl('夜班') }}</option>
@@ -136,13 +204,26 @@
             </label>
           </div>
           <div class="row">
-            <label>{{ tl('交班人') }}<input v-model.trim="handoverForm.fromUser" class="ipt" /></label>
-            <label>{{ tl('接班人') }}<input v-model.trim="handoverForm.toUser" class="ipt" /></label>
+            <label
+              >{{ tl('交班人') }}<input v-model.trim="handoverForm.fromUser" class="ipt"
+            /></label>
+            <label
+              >{{ tl('接班人') }}<input v-model.trim="handoverForm.toUser" class="ipt"
+            /></label>
           </div>
-          <label>{{ tl('交接事项 (每行一条, 可加前缀 紧急:/警告:)') }}
-            <textarea v-model="itemText" class="ipt" rows="5" :placeholder="tl('紧急: 2 号冷机滤网压差偏高')"></textarea>
+          <label
+            >{{ tl('交接事项 (每行一条, 可加前缀 紧急:/警告:)') }}
+            <textarea
+              v-model="itemText"
+              class="ipt"
+              rows="5"
+              :placeholder="tl('紧急: 2 号冷机滤网压差偏高')"
+            ></textarea>
           </label>
-          <label>{{ tl('补充说明') }}<textarea v-model.trim="handoverForm.note" class="ipt" rows="2"></textarea></label>
+          <label
+            >{{ tl('补充说明')
+            }}<textarea v-model.trim="handoverForm.note" class="ipt" rows="2"></textarea>
+          </label>
           <div v-if="handoverErr" class="err">{{ handoverErr }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="handoverDrawer = false">{{ tl('取消') }}</button>
@@ -157,12 +238,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import MetricCard from '@/components/common/MetricCard.vue'
 import Panel from '@/components/common/Panel.vue'
 import AsyncSection from '@/components/common/AsyncSection.vue'
+import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import {
   getDutyShifts,
   getDutyStats,
@@ -182,7 +264,7 @@ import {
 import { useToast } from '@/hooks/useToast'
 import { useConfirm } from '@/hooks/useConfirm'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
-import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
+import { useAsyncPageAll, toErrorMessage } from '@/composables/useAsyncPage'
 const toast = useToast()
 const { can, denyTip } = usePermission()
 function authState(action: PermAction) {
@@ -221,20 +303,47 @@ function parseItems(s: string): HandoverItem[] {
 const shiftDrawer = ref(false)
 const shiftSaving = ref(false)
 const shiftErr = ref('')
-const shiftForm = ref<Partial<ShiftView> & { date: string; shift: string; leader: string; note: string; members: ShiftMember[] }>({
-  date: '', shift: 'day', leader: '', note: '', members: [],
+const shiftForm = ref<
+  Partial<ShiftView> & {
+    date: string
+    shift: string
+    leader: string
+    note: string
+    members: ShiftMember[]
+  }
+>({
+  date: '',
+  shift: 'day',
+  leader: '',
+  note: '',
+  members: [],
 })
 const memberText = ref('')
 
 function openShiftCreate() {
-  shiftForm.value = { date: new Date().toISOString().slice(0, 10), shift: 'day', leader: '', note: '', members: [] }
+  shiftForm.value = {
+    date: new Date().toISOString().slice(0, 10),
+    shift: 'day',
+    leader: '',
+    note: '',
+    members: [],
+  }
   memberText.value = ''
   shiftErr.value = ''
   shiftDrawer.value = true
 }
 function openShiftEdit(s: ShiftView) {
-  shiftForm.value = { id: s.id, date: s.date, shift: s.shift, leader: s.leader, note: s.note, members: parseMembers(s.members) }
-  memberText.value = parseMembers(s.members).map((m) => `${m.name}/${m.role || ''}/${m.phone || ''}`).join('\n')
+  shiftForm.value = {
+    id: s.id,
+    date: s.date,
+    shift: s.shift,
+    leader: s.leader,
+    note: s.note,
+    members: parseMembers(s.members),
+  }
+  memberText.value = parseMembers(s.members)
+    .map((m) => `${m.name}/${m.role || ''}/${m.phone || ''}`)
+    .join('\n')
   shiftErr.value = ''
   shiftDrawer.value = true
 }
@@ -264,7 +373,7 @@ async function saveShift() {
     if (shiftForm.value.id != null) await updateDutyShift(shiftForm.value.id, payload)
     else await createDutyShift(payload)
     shiftDrawer.value = false
-    await page.reload()
+    await all.reloadAll()
     toast.success(tl('已保存'))
   } catch (ex: unknown) {
     const raw = toErrorMessage(ex)
@@ -290,7 +399,7 @@ async function removeShift(s: ShiftView) {
     },
   })
   if (ok) {
-    await page.reload()
+    await all.reloadAll()
     toast.success(tl('已删除'))
   }
 }
@@ -299,19 +408,48 @@ async function removeShift(s: ShiftView) {
 const handoverDrawer = ref(false)
 const handoverSaving = ref(false)
 const handoverErr = ref('')
-const handoverForm = ref<Partial<HandoverView> & { shiftDate: string; shiftType: string; fromUser: string; toUser: string; note: string; items: string }>({
-  shiftDate: '', shiftType: 'day', fromUser: '', toUser: '', note: '', items: '[]',
+const handoverForm = ref<
+  Partial<HandoverView> & {
+    shiftDate: string
+    shiftType: string
+    fromUser: string
+    toUser: string
+    note: string
+    items: string
+  }
+>({
+  shiftDate: '',
+  shiftType: 'day',
+  fromUser: '',
+  toUser: '',
+  note: '',
+  items: '[]',
 })
 const itemText = ref('')
 
 function openHandoverCreate() {
-  handoverForm.value = { shiftDate: new Date().toISOString().slice(0, 10), shiftType: 'day', fromUser: '', toUser: '', note: '', items: '[]' }
+  handoverForm.value = {
+    shiftDate: new Date().toISOString().slice(0, 10),
+    shiftType: 'day',
+    fromUser: '',
+    toUser: '',
+    note: '',
+    items: '[]',
+  }
   itemText.value = ''
   handoverErr.value = ''
   handoverDrawer.value = true
 }
 function openHandoverEdit(h: HandoverView) {
-  handoverForm.value = { id: h.id, shiftDate: h.shiftDate, shiftType: h.shiftType, fromUser: h.fromUser, toUser: h.toUser, note: h.note, items: h.items }
+  handoverForm.value = {
+    id: h.id,
+    shiftDate: h.shiftDate,
+    shiftType: h.shiftType,
+    fromUser: h.fromUser,
+    toUser: h.toUser,
+    note: h.note,
+    items: h.items,
+  }
   itemText.value = parseItems(h.items)
     .map((i) => `${i.level === 'critical' ? '紧急:' : i.level === 'warn' ? '警告:' : ''}${i.text}`)
     .join('\n')
@@ -342,7 +480,7 @@ async function saveHandover() {
     if (handoverForm.value.id != null) await updateHandover(handoverForm.value.id, payload)
     else await createHandover(payload)
     handoverDrawer.value = false
-    await page.reload()
+    await all.reloadAll()
     toast.success(tl('已保存'))
   } catch (ex: unknown) {
     const raw = toErrorMessage(ex)
@@ -367,30 +505,60 @@ async function removeHandover(h: HandoverView) {
     },
   })
   if (ok) {
-    await page.reload()
+    await all.reloadAll()
     toast.success(tl('已删除'))
   }
 }
 
-const page = useAsyncPage<ShiftView[]>(
-  async () => {
-    const [s, st, h] = await Promise.all([
-      getDutyShifts(fromStr.value || undefined, toStr.value || undefined),
-      getDutyStats(),
-      getHandovers(),
-    ])
-    shifts.value = s
-    stats.value = st
-    handovers.value = h.items
-    return shifts.value
+/** 三源并行拉取: 排班 / 统计 / 交接互不影响, 任一失败只标注所在区块, 不再整页报错 */
+const all = useAsyncPageAll(
+  {
+    shifts: () => getDutyShifts(fromStr.value || undefined, toStr.value || undefined),
+    stats: getDutyStats,
+    handovers: getHandovers,
   },
-  { autoLoad: false, isEmpty: (d) => !d || d.length === 0 },
+  { autoLoad: false },
 )
-watch([fromStr, toStr], () => page.reload())
+const shiftsPage = all.pages.shifts
+const statsPage = all.pages.stats
+const handoversPage = all.pages.handovers
+const SRC_LABELS: Record<string, string> = {
+  shifts: tl('值班表'),
+  stats: tl('值班统计'),
+  handovers: tl('交接班记录'),
+}
+const failedLabels = computed(() => all.failedKeys.value.map((k) => SRC_LABELS[k] ?? k))
+
+watch(
+  () => shiftsPage.data.value,
+  (v) => {
+    if (v) shifts.value = v
+  },
+)
+watch(
+  () => statsPage.data.value,
+  (v) => {
+    if (v) stats.value = v
+  },
+)
+watch(
+  () => handoversPage.data.value,
+  (v) => {
+    if (v && v.items) handovers.value = v.items
+  },
+)
+
+// 日期初始化为本次范围后一次性加载; 之后再改日期只刷新排班表
+let dateReady = false
+watch([fromStr, toStr], () => {
+  if (!dateReady) return
+  void shiftsPage.reload()
+})
 onMounted(async () => {
   fromStr.value = new Date().toISOString().slice(0, 10)
   toStr.value = new Date(Date.now() + 6 * 86400000).toISOString().slice(0, 10)
-  await page.reload()
+  dateReady = true
+  await all.reloadAll()
 })
 </script>
 
@@ -418,19 +586,45 @@ onMounted(async () => {
 .col {
   flex-shrink: 0;
 }
-.w-d-date { width: 110px; }
-.w-d-type { width: 80px; }
-.w-d-leader { width: 100px; }
-.w-d-members { width: 220px; }
-.w-d-note { flex: 1; }
-.w-d-op { width: 100px; }
-.w-h-date { width: 110px; }
-.w-h-type { width: 80px; }
-.w-h-from { width: 100px; }
-.w-h-to { width: 100px; }
-.w-h-items { flex: 1; }
-.w-h-op { width: 100px; }
-.fw { font-weight: 500; }
+.w-d-date {
+  width: 110px;
+}
+.w-d-type {
+  width: 80px;
+}
+.w-d-leader {
+  width: 100px;
+}
+.w-d-members {
+  width: 220px;
+}
+.w-d-note {
+  flex: 1;
+}
+.w-d-op {
+  width: 100px;
+}
+.w-h-date {
+  width: 110px;
+}
+.w-h-type {
+  width: 80px;
+}
+.w-h-from {
+  width: 100px;
+}
+.w-h-to {
+  width: 100px;
+}
+.w-h-items {
+  flex: 1;
+}
+.w-h-op {
+  width: 100px;
+}
+.fw {
+  font-weight: 500;
+}
 .pill-tag {
   font-size: 10.5px;
   padding: 1px 8px;

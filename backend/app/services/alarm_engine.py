@@ -541,8 +541,8 @@ def _lookup_rule(rule_id: str) -> dict | None:
                     "enabled": bool(cols.get("enabled", True)),
                     "silenced": bool(cols.get("silenced", False)),
                 }
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("规则 %s 查询 DB 失败, 回退 DEFAULT_RULES: %s", rule_id, e)
         finally:
             db.close()
     # fallback to DEFAULT_RULES

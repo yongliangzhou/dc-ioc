@@ -14,6 +14,8 @@
       </div>
     </div>
 
+    <MockDataBanner :level="mockLevel" :reason="mockReason" />
+
     <!-- 加载态 -->
     <Panel v-if="loading && !s" class="center-box">
       <span class="muted">{{ tl('加载中...') }}</span>
@@ -136,7 +138,13 @@
       <!-- ============ 3.5.4 电池组拓扑图 (SVG) ============ -->
       <Panel title="电池组拓扑">
         <template #extra>
-          <span class="pill b">{{ tl('并机直流母线') }}</span>
+          <div class="topo-extra">
+            <span class="pill b">{{ tl('并机直流母线') }}</span>
+            <!-- 统一图形编辑入口: 对电池组节点做增删改 (覆盖层, 不影响接口数据) -->
+            <button class="btn-refresh" @click="editOpen = true">
+              {{ tl('编辑') }}{{ hasGraphicEdits ? ' ●' : '' }}
+            </button>
+          </div>
         </template>
         <div class="topo-wrap">
           <svg viewBox="0 0 920 320" class="topo-svg" preserveAspectRatio="xMidYMid meet">
@@ -178,14 +186,14 @@
               marker-end="url(#arrow)"
             />
 
-            <!-- 电池组节点 -->
+            <!-- 电池组节点 (groupsView = 接口数据 + 图形编辑覆盖层) -->
             <g
-              v-for="(g, idx) in groups"
-              :key="g.id"
+              v-for="gv in groupsView"
+              :key="gv.g.id"
               class="topo-node"
-              :class="groupStatusClass(g)"
-              @click="selectGroup(g)"
-              :transform="`translate(${140 + idx * (640 / Math.max(groups.length - 1, 1))}, 150)`"
+              :class="groupStatusClass(gv.g)"
+              @click="selectGroup(gv.g)"
+              :transform="`translate(${gv.x}, ${gv.y})`"
             >
               <rect
                 x="0"
@@ -193,29 +201,29 @@
                 width="120"
                 height="150"
                 rx="8"
-                :fill="groupFill(g)"
-                :stroke="groupStroke(g)"
+                :fill="groupFill(gv.g)"
+                :stroke="groupStroke(gv.g)"
                 stroke-width="2"
               />
               <!-- 组 SOC 填充条 -->
               <rect
                 x="4"
-                :y="146 - 142 * ((g.soc ?? 0) / 100)"
+                :y="146 - 142 * ((gv.g.soc ?? 0) / 100)"
                 width="112"
-                :height="Math.max(0, 142 * ((g.soc ?? 0) / 100))"
+                :height="Math.max(0, 142 * ((gv.g.soc ?? 0) / 100))"
                 rx="5"
-                :fill="socBarColor(g.soc ?? 0)"
+                :fill="socBarColor(gv.g.soc ?? 0)"
                 opacity="0.35"
               />
               <!-- 组号 -->
-              <text x="60" y="22" class="topo-g-id" text-anchor="middle">{{ g.id }}</text>
-              <text x="60" y="40" class="topo-g-type" text-anchor="middle">{{ g.type }}</text>
+              <text x="60" y="22" class="topo-g-id" text-anchor="middle">{{ gv.g.id }}</text>
+              <text x="60" y="40" class="topo-g-type" text-anchor="middle">{{ gv.g.type }}</text>
               <!-- 电压/电流 -->
               <text x="60" y="66" class="topo-g-metric" text-anchor="middle">
-                {{ fmt(g.u, 1) }} V
+                {{ fmt(gv.g.u, 1) }} V
               </text>
               <text x="60" y="84" class="topo-g-metric" text-anchor="middle">
-                {{ fmt(g.i, 1) }} A
+                {{ fmt(gv.g.i, 1) }} A
               </text>
               <!-- SOC 大字 -->
               <text
@@ -223,17 +231,17 @@
                 y="112"
                 class="topo-g-soc"
                 text-anchor="middle"
-                :fill="socTextColor(g.soc)"
+                :fill="socTextColor(gv.g.soc)"
               >
-                {{ g.soc }}%
+                {{ gv.g.soc }}%
               </text>
               <!-- 状态标签 -->
-              <text x="60" y="134" class="topo-g-state" text-anchor="middle">{{ g.state }}</text>
+              <text x="60" y="134" class="topo-g-state" text-anchor="middle">{{ gv.g.state }}</text>
               <!-- 告警角标 -->
-              <g v-if="groupAlarmCount(g) > 0">
+              <g v-if="groupAlarmCount(gv.g) > 0">
                 <circle cx="108" cy="10" r="11" fill="var(--red)" />
                 <text x="108" y="14" class="topo-badge" text-anchor="middle">
-                  {{ groupAlarmCount(g) }}
+                  {{ groupAlarmCount(gv.g) }}
                 </text>
               </g>
             </g>
@@ -281,6 +289,14 @@
           <button class="close-btn" @click="selectedGroupObj = null">×</button>
         </div>
       </Panel>
+
+      <!-- 统一图形编辑入口: 电池组拓扑节点增删改 (覆盖层, 不影响接口数据) -->
+      <GraphicEditDrawer
+        v-model="editOpen"
+        :editor="batteryEditor"
+        :title="tl('电池组拓扑')"
+        :defaults="graphicDefaults"
+      />
 
       <!-- ============ 电池组概览表 ============ -->
       <Panel class="scroll-x" title="电池组参数">
@@ -531,9 +547,10 @@
 </template>
 
 <script setup lang="ts">
-import { toErrorMessage } from '@/composables/useAsyncPage'
+import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import ErrorRetry from '@/components/common/ErrorRetry.vue'
 import EmptyStateCard from '@/components/common/EmptyStateCard.vue'
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt } from '@/utils/format'
@@ -548,7 +565,11 @@ import {
   type BatteryGroupView,
   type BatteryCellView,
 } from '@/api/power'
+import GraphicEditDrawer from '@/components/common/GraphicEditDrawer.vue'
+import { useGraphicEditor, type NodeAdapter } from '@/composables/useGraphicEditor'
+import type { GraphicNode } from '@/types/graphic'
 const { t: tl } = useI18n()
+const { level: mockLevel, reason: mockReason, markPartial } = useMockFlag()
 
 const s = ref<BatterySummary | null>(null)
 const error = ref('')
@@ -557,6 +578,117 @@ const loading = ref(false)
 const groups = computed(() => s.value?.groups ?? [])
 /** 后端连上了但一个电池组都没返回 —— 属于空态，不是加载中，也不是错误 */
 const hasData = computed(() => groups.value.length > 0)
+
+/* ───────── 统一图形编辑入口 (电池组拓扑) ─────────
+ * 场景覆盖层: 改名/改状态/改坐标/改参数 = 覆盖; 删除 = removed; 新增 = 自建节点。
+ * 电池组实时数据仍是默认值并持续刷新, 编辑只在其上叠加, 不污染数据源。 */
+const batteryEditor = useGraphicEditor('power-battery-topology', { title: '电池组拓扑' })
+const editOpen = ref(false)
+const hasGraphicEdits = computed(() => batteryEditor.hasOverrides.value)
+
+/** 拓扑节点坐标: 与原模板公式一致 (x 按索引均分 140~780, y 固定 150), 作为编辑覆盖的默认值 */
+const groupsWithPos = computed(() => {
+  const arr = groups.value
+  return arr.map((g, idx) => ({
+    g,
+    x: 140 + idx * (640 / Math.max(arr.length - 1, 1)),
+    y: 150,
+  }))
+})
+interface BatteryGroupPos {
+  g: BatteryGroupView
+  x: number
+  y: number
+}
+
+/** 电池组可编辑参数 (键名同时用于抽屉展示与 fromNode 回填) */
+function groupParams(g: BatteryGroupView): Record<string, string> {
+  return {
+    'SOC(%)': String(g.soc ?? 0),
+    '电压(V)': String(g.u ?? 0),
+    '电流(A)': String(g.i ?? 0),
+    充放电: String(g.cdState ?? ''),
+    '最高温(°C)': String(g.maxT ?? 0),
+    内阻: String(g.ir ?? '正常'),
+    最差单体: String(g.worstCell ?? '-'),
+  }
+}
+
+/** BatteryGroupPos ↔ GraphicNode 双向映射 (页面节点 → 可编辑项 / 编辑结果 → 页面节点) */
+const groupAdapter: NodeAdapter<BatteryGroupPos> = {
+  toNode: (it) => ({
+    id: it.g.id,
+    label: it.g.id,
+    type: it.g.type,
+    x: it.x,
+    y: it.y,
+    status: it.g.state,
+    params: groupParams(it.g),
+  }),
+  fromNode: (n, base) => {
+    if (!base) {
+      // 用户自建节点: 用参数表合成一个可渲染的电池组 (无单体数据, 不参与告警统计)
+      const p = n.params ?? {}
+      const num = (k: string, fb: number) => {
+        const v = Number(p[k])
+        return p[k] != null && p[k] !== '' && Number.isFinite(v) ? v : fb
+      }
+      return {
+        g: {
+          id: n.label || n.id,
+          type: n.type || tl('自定义'),
+          soc: num('SOC(%)', 0),
+          u: num('电压(V)', 0),
+          i: num('电流(A)', 0),
+          cdState: p['充放电'] || '-',
+          maxT: num('最高温(°C)', 0),
+          worstCell: p['最差单体'] || '-',
+          ir: p['内阻'] || '正常',
+          state: n.status || tl('浮充'),
+          cells: [],
+        },
+        x: n.x ?? 140,
+        y: n.y ?? 150,
+      }
+    }
+    // 页面自带组: 只应用用户改过的字段 (与实时值比较判断), 其余跟随接口实时刷新
+    const p = n.params ?? {}
+    const live = groupParams(base.g)
+    const pickStr = (k: string, fb: string) => {
+      const v = p[k]
+      return v != null && v !== '' && String(v) !== live[k] ? String(v) : fb
+    }
+    const pickNum = (k: string, fb: number) => {
+      const v = p[k]
+      if (v == null || v === '' || String(v) === live[k]) return fb
+      const num = Number(v)
+      return Number.isFinite(num) ? num : fb
+    }
+    return {
+      g: {
+        ...base.g,
+        id: n.label || base.g.id,
+        type: n.type || base.g.type,
+        soc: pickNum('SOC(%)', base.g.soc),
+        u: pickNum('电压(V)', base.g.u),
+        i: pickNum('电流(A)', base.g.i),
+        cdState: pickStr('充放电', base.g.cdState),
+        maxT: pickNum('最高温(°C)', base.g.maxT),
+        worstCell: pickStr('最差单体', base.g.worstCell),
+        ir: pickStr('内阻', base.g.ir),
+        state: n.status || base.g.state,
+      },
+      x: n.x ?? base.x,
+      y: n.y ?? base.y,
+    }
+  },
+}
+
+/** 拓扑渲染清单 = 接口电池组 + 覆盖层 (改名/改坐标/改参数/删除/自建) */
+const groupsView = computed(() => batteryEditor.apply(groupsWithPos.value, groupAdapter))
+
+/** 抽屉默认节点快照: 当前实时电池组 + 默认坐标 */
+const graphicDefaults = (): GraphicNode[] => groupsWithPos.value.map(groupAdapter.toNode)
 
 // 选中态
 const selectedGroupObj = ref<BatteryGroupView | null>(null)
@@ -1005,6 +1137,7 @@ async function load() {
   error.value = ''
   try {
     s.value = await getPowerBatteryDetailed()
+    markPartial('历史曲线与历史统计为本地随机生成，其余读数为实时接口')
     if (s.value?.groups?.length && !selectedGroupObj.value) {
       selectedGroupObj.value = s.value.groups[0]
     }
@@ -1144,6 +1277,11 @@ onUnmounted(() => {
 }
 
 /* topo */
+.topo-extra {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
 .topo-wrap {
   width: 100%;
   overflow-x: auto;

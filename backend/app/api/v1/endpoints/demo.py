@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import logging
 import random
 from datetime import datetime, timezone
 
@@ -14,6 +15,8 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.services import dc_aggregator as agg
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -72,8 +75,8 @@ def demo_devices(limit: int = 30) -> DemoDeviceList:
                     metric_count=i.metric_count,
                 ) for i in items],
             )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("演示设备列表真实数据查询失败, 回退生成演示设备: %s", e)
 
     # 兜底：生成演示设备
     rng = random.Random(7)

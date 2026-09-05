@@ -42,6 +42,11 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '操作审计', requiredRoles: ['admin', 'operator'] },
       },
       {
+        path: 'admin/row-audit',
+        component: () => import('@/views/admin/RowAudit.vue'),
+        meta: { title: '行级审计', requiredRoles: ['admin', 'operator'] },
+      },
+      {
         path: 'ops/collector',
         component: () => import('@/views/ops/Collector.vue'),
         meta: { title: '采集器接入', requiredRoles: ['admin', 'operator'] },
@@ -263,6 +268,11 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '应急演练', requiredRoles: ['admin', 'operator'] },
       },
       {
+        path: 'ops/notifications',
+        component: () => import('@/views/ops/NotificationCenter.vue'),
+        meta: { title: '通知中心', requiredRoles: ['admin', 'operator'] },
+      },
+      {
         path: 'ops/supplier',
         component: () => import('@/views/ops/Supplier.vue'),
         meta: { title: '供应商管理', requiredRoles: ['admin', 'operator'] },
@@ -297,6 +307,11 @@ const routes: RouteRecordRaw[] = [
         path: 'ops/u-position',
         component: () => import('@/views/ops/UPosition.vue'),
         meta: { title: 'U 位识别', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/capacity-whatif',
+        component: () => import('@/views/ops/CapacityWhatIf.vue'),
+        meta: { title: '上架模拟器', requiredRoles: ['admin', 'operator'] },
       },
 
       // Phase 4 · 物模型与多数据中心 (阶段0 占位, 后续阶段实现)
@@ -364,11 +379,26 @@ export function isTokenValid(token: string | null): boolean {
 }
 
 /** 导出守卫本体便于单元测试 (to: 目标路由; 返回值经 next 执行) */
+/** “不记住我”会话: 仅当前标签页生命周期有效。SPA 内部跳转不拦截, 但每次整页
+ *  加载(刷新/重开/新标签)都会清空会话并要求重新登录 —— 与“会话 Cookie”语义一致 */
+let sessionChecked = false
+function enforceSessionScope() {
+  if (sessionChecked) return
+  sessionChecked = true
+  const remember = localStorage.getItem('dc_ioc_remember')
+  if (remember === '0' && localStorage.getItem('dc_ioc_token')) {
+    localStorage.removeItem('dc_ioc_token')
+    localStorage.removeItem('dc_ioc_refresh')
+    localStorage.removeItem('dc_ioc_user')
+  }
+}
+
 export function authGuard(
   to: { path: string; meta: Record<string, unknown> },
   _from: unknown,
   next: (target?: string) => void,
 ): void {
+  enforceSessionScope()
   if (localStorage.getItem('dc_ioc_bypass') === '1') return next()
   const token = localStorage.getItem('dc_ioc_token')
   const user = JSON.parse(localStorage.getItem('dc_ioc_user') || 'null')
