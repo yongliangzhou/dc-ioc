@@ -154,8 +154,11 @@ import {
   type RouteView,
 } from '@/api/inspection'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
-import { useAsyncPage } from '@/composables/useAsyncPage'
+import { useAsyncPage, toErrorMessage } from '@/composables/useAsyncPage'
 import AsyncSection from '@/components/common/AsyncSection.vue'
+import { useToast } from '@/hooks/useToast'
+import { useConfirm } from '@/hooks/useConfirm'
+const toast = useToast()
 
 const { t: tl } = useI18n()
 const { can, denyTip } = usePermission()
@@ -180,18 +183,42 @@ function openTpl(r?: RouteView) {
 }
 async function saveTpl() {
   if (!editing.value) return
-  const payload = {
-    code: editing.value.code || editing.value.name,
-    freq: editing.value.freq,
-    note: editing.value.description ?? undefined,
+  const name = (editing.value.name || '').trim()
+  // 名称必填: 后端 RouteCreate 虽未强制, 但空名模板在列表不可辨识
+  if (!name) {
+    toast.error(tl('路线名称为必填'))
+    return
   }
-  if (editing.value.id) await updateInspectionRoute(editing.value.id, payload)
-  else await createInspectionRoute(payload)
+  const desc = editing.value.description || ''
+  // code/name/description/freq/state 全量提交: 只发 code+note 会导致新建模板名称为空
+  const payload = {
+    code: (editing.value.code || '').trim() || name,
+    name,
+    description: desc,
+    freq: editing.value.freq,
+    state: editing.value.state || 'active',
+    note: desc,
+  }
+  try {
+    if (editing.value.id) await updateInspectionRoute(editing.value.id, payload)
+    else await createInspectionRoute(payload)
+    toast.success(tl('已保存'))
+  } catch (e) {
+    toast.error(toErrorMessage(e, tl('保存失败')))
+    return
+  }
   editing.value = null
   await routesPage.reload()
 }
 async function delTpl(r: RouteView) {
-  if (r.id) await deleteInspectionRoute(r.id)
+  if (!(await useConfirm({ message: tl('确认删除路线'), danger: true }))) return
+  try {
+    if (r.id) await deleteInspectionRoute(r.id)
+    toast.success(tl('已删除'))
+  } catch (e) {
+    toast.error(toErrorMessage(e, tl('删除失败')))
+    return
+  }
   if (editing.value?.id === r.id) editing.value = null
   await routesPage.reload()
 }

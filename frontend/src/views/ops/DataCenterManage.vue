@@ -83,11 +83,11 @@
           <div class="c-region">{{ d.region }} · {{ d.address || '—' }}</div>
           <div class="c-metrics">
             <div>
-              <span>{{ d.powerCapacityMw.toFixed(1) }}</span
+              <span>{{ fmtMw(d.powerCapacityMw) }}</span
               ><label>{{ tl('datacenter.kpiPower') }}</label>
             </div>
             <div>
-              <span>{{ d.coolingCapacityMw.toFixed(1) }}</span
+              <span>{{ fmtMw(d.coolingCapacityMw) }}</span
               ><label>{{ tl('datacenter.kpiCooling') }}</label>
             </div>
             <div>
@@ -358,6 +358,11 @@ function statusClass(s: string) {
   if (s === 'disabled' || s === '下线') return 'r'
   if (s === '建设') return 'a'
   return 'b'
+}
+/** 容量字段防御式格式化: 后端可能返回 null, 兜底数据可能缺字段 (避免 toFixed 崩溃) */
+function fmtMw(v: unknown) {
+  const n = Number(v)
+  return Number.isFinite(n) ? n.toFixed(1) : '0.0'
 }
 function statusLabel(s: string) {
   if (s === 'disabled') return tl('datacenter.statusDisabled')

@@ -3052,5 +3052,6 @@
     "lvCrit": "Critical",
     "lvWarn": "Warning",
     "lvInfo": "Info"
-  }
+  },
+  "行级审计表未创建": "Row audit table not created: run 'alembic upgrade head' to create it and its triggers"
 }

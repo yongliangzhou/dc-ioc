@@ -49,48 +49,9 @@ def list_shifts(
     return shift_crud.list_items(db, start=s, end=e)
 
 
-@router.get("/{item_id}", response_model=ShiftOut, summary="排班详情")
-def get_shift(item_id: int, db: Session = Depends(get_db), _u: User = Depends(get_current_user)):
-    item = shift_crud.get(db, item_id)
-    if not item:
-        raise HTTPException(404, "排班记录不存在")
-    return item
-
-
-@router.post("", response_model=ShiftOut, status_code=201, summary="新建排班")
-def create_shift(
-    req: ShiftCreate,
-    db: Session = Depends(get_db),
-    _u: User = Depends(require_role("admin", "operator")),
-):
-    return shift_crud.create(db, data=req.model_dump())
-
-
-@router.put("/{item_id}", response_model=ShiftOut, summary="更新排班")
-def update_shift(
-    item_id: int,
-    req: ShiftUpdate,
-    db: Session = Depends(get_db),
-    _u: User = Depends(require_role("admin", "operator")),
-):
-    data = {k: v for k, v in req.model_dump().items() if v is not None}
-    item = shift_crud.update(db, item_id, data=data)
-    if not item:
-        raise HTTPException(404, "排班记录不存在")
-    return item
-
-
-@router.delete("/{item_id}", status_code=204, summary="删除排班")
-def delete_shift(
-    item_id: int,
-    db: Session = Depends(get_db),
-    _u: User = Depends(require_role("admin", "operator")),
-):
-    if not shift_crud.delete(db, item_id):
-        raise HTTPException(404, "排班记录不存在")
-
-
 # ===== 交接班记录 =====
+# 注意: 必须声明在 /{item_id} 之前, 否则 "/handover" 会被 /{item_id} 抢先匹配
+# (FastAPI 按注册顺序匹配, 会出现 item_id 无法解析为整数的 422)。
 @router.get("/handover", summary="交接班记录列表")
 def list_handovers(
     shiftDate: str = Query(default="", alias="shiftDate"),
@@ -145,3 +106,47 @@ def delete_handover(
 ):
     if not shift_crud.delete_handover(db, hid):
         raise HTTPException(404, "交接班记录不存在")
+
+
+@router.get("/{item_id}", response_model=ShiftOut, summary="排班详情")
+def get_shift(item_id: int, db: Session = Depends(get_db), _u: User = Depends(get_current_user)):
+    item = shift_crud.get(db, item_id)
+    if not item:
+        raise HTTPException(404, "排班记录不存在")
+    return item
+
+
+@router.post("", response_model=ShiftOut, status_code=201, summary="新建排班")
+def create_shift(
+    req: ShiftCreate,
+    db: Session = Depends(get_db),
+    _u: User = Depends(require_role("admin", "operator")),
+):
+    return shift_crud.create(db, data=req.model_dump())
+
+
+@router.put("/{item_id}", response_model=ShiftOut, summary="更新排班")
+def update_shift(
+    item_id: int,
+    req: ShiftUpdate,
+    db: Session = Depends(get_db),
+    _u: User = Depends(require_role("admin", "operator")),
+):
+    data = {k: v for k, v in req.model_dump().items() if v is not None}
+    item = shift_crud.update(db, item_id, data=data)
+    if not item:
+        raise HTTPException(404, "排班记录不存在")
+    return item
+
+
+@router.delete("/{item_id}", status_code=204, summary="删除排班")
+def delete_shift(
+    item_id: int,
+    db: Session = Depends(get_db),
+    _u: User = Depends(require_role("admin", "operator")),
+):
+    if not shift_crud.delete(db, item_id):
+        raise HTTPException(404, "排班记录不存在")
+
+
+# 交接班记录路由见文件前部 (必须早于 /{item_id} 注册)。

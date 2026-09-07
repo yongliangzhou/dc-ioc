@@ -8,6 +8,11 @@
       >
     </div>
 
+    <!-- 表未创建: 提示执行迁移, 避免显示为加载失败 -->
+    <div class="muted" v-if="unavailable" style="margin: 10px 0; color: #f59e0b">
+      ⓘ {{ tl('行级审计表未创建') }}: {{ unavailableHint || 'alembic upgrade head' }}
+    </div>
+
     <!-- 统计概览 (可视化) -->
     <div class="stats" v-if="stats">
       <div class="stat-card">
@@ -192,6 +197,9 @@ const page = ref(1)
 const pageSize = ref(50)
 const selected = ref<RowAuditItem | null>(null)
 const stats = ref<RowAuditStats | null>(null)
+/** 表未创建 (未执行 alembic upgrade head) 时后端返回 200 + unavailable, 用提示条代替错误态 */
+const unavailable = ref(false)
+const unavailableHint = ref('')
 const filters = reactive<{
   table_name: string
   action: string
@@ -230,6 +238,9 @@ async function reload() {
     rows.value = res?.items ?? []
     total.value = res?.total ?? 0
     totalPages.value = Math.max(1, Math.ceil(total.value / pageSize.value))
+    // 后端降级: 表不存在时返回空集 + 提示, 不再抛错打断页面
+    unavailable.value = Boolean((res as { unavailable?: boolean } | null)?.unavailable)
+    unavailableHint.value = (res as { hint?: string } | null)?.hint || ''
   } catch (e) {
     rows.value = []
     error.value = toErrorMessage(e) || '行级审计加载失败'

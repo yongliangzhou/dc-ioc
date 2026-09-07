@@ -258,8 +258,13 @@ import { getKnowledgeItems, reviewKnowledge, deleteKnowledgeItem } from '@/api/k
 import type { KnowledgeItem } from '@/types'
 import { useConfirm } from '@/hooks/useConfirm'
 
-const { t: rawT } = useI18n()
-const t = rawT('knowledgeCollab') as any
+const { t: rawT, tm } = useI18n()
+/**
+ * 命名空间文案对象: 必须用 tm() 取。
+ * t('knowledgeCollab') 对对象型 key 不保证返回对象 (可能返回字符串),
+ * 一旦拿到字符串则 t.xxx 全为 undefined, 表现为按钮/标签文案空白。
+ */
+const t = (tm('knowledgeCollab') || {}) as Record<string, string>
 /** 通用动作文案（common 命名空间），用于图标按钮的 title / aria-label */
 const tc = (k: string) => (rawT('common.' + k) as string) || ''
 const auth = useAuthStore()
@@ -402,7 +407,7 @@ function sendComment(id: number) {
   commentText.value = ''
 }
 async function remove(it: KnowledgeItem) {
-  if (!(await useConfirm({ message: t.confirmDelete, danger: true }))) return
+  if (!(await useConfirm({ message: t.confirmDelete || tc('delete'), danger: true }))) return
   try {
     await deleteKnowledgeItem(it.id)
   } catch {

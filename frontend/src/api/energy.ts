@@ -42,6 +42,13 @@ interface RawEnergy {
   carbon?: { greenPct?: number; pv?: string; monthCO2?: number }
 }
 
+/** n 天前的日期 (YYYY-MM-DD), 用于 7 日趋势的真实日期轴 */
+function dateDaysAgo(n: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - n)
+  return d.toISOString().slice(0, 10)
+}
+
 function mapEnergy(raw: RawEnergy): EnergyOverview {
   const pueTrend = raw.pueTrend ?? []
   const lastPue = pueTrend.length ? pueTrend[pueTrend.length - 1] : null
@@ -52,12 +59,16 @@ function mapEnergy(raw: RawEnergy): EnergyOverview {
   const coolKwh = cool?.kw ?? null
   const todayTotal = raw.todayKwh ?? null
 
-  const weekTrend: EnergyTrend[] = pueTrend.map((p, i) => ({
-    date: `D${i + 1}`,
+  // 7 日趋势: 取 pueTrend 末尾 7 点, 并回填真实日期 (YYYY-MM-DD)。
+  // 此前用 "D1..D7" 占位, 页面按 date.slice(5) 取 MM-DD 会得到空串 (联动按钮标签空白)。
+  const trend = pueTrend.slice(-7)
+  const len = Math.max(1, trend.length)
+  const weekTrend: EnergyTrend[] = trend.map((p, i) => ({
+    date: dateDaysAgo(trend.length - 1 - i),
     pue: p,
-    totalKwh: todayTotal ? Math.round(todayTotal / Math.max(1, pueTrend.length)) : 0,
-    itKwh: itKwh ? Math.round(itKwh / Math.max(1, pueTrend.length)) : 0,
-    coolingKwh: coolKwh ? Math.round(coolKwh / Math.max(1, pueTrend.length)) : 0,
+    totalKwh: todayTotal ? Math.round(todayTotal / len) : 0,
+    itKwh: itKwh ? Math.round(itKwh / len) : 0,
+    coolingKwh: coolKwh ? Math.round(coolKwh / len) : 0,
   }))
 
   return {
@@ -119,6 +130,11 @@ export function adoptEnergyAdvice(payload: EnergyAdviceAdoptIn): Promise<EnergyA
   return request.post<unknown, EnergyAdviceAdoptRecord>('/api/ops/energy/advice', payload)
 }
 
-export function getEnergyAdvice(action = ''): Promise<{ records: EnergyAdviceAdoptRecord[]; stats: { total: number; adopted: number; ignored: number; adoptedSavingKw: number } }> {
+export function getEnergyAdvice(
+  action = '',
+): Promise<{
+  records: EnergyAdviceAdoptRecord[]
+  stats: { total: number; adopted: number; ignored: number; adoptedSavingKw: number }
+}> {
   return request.get('/api/ops/energy/advice', { params: action ? { action } : {} })
 }
