@@ -1,6 +1,8 @@
 # DC-IOC Platform · 数据中心智能运营中心
 
-> **v0.12.0** | 统一图形编辑入口（12 个图形页）· 统一告警触达中心 · 告警自动建单 · 上架模拟器 · 全项目体检（41 用例测试基线 / i18n 对齐门禁 / 裸 except 可观测）| 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）
+> **v0.16.0** | 四阶段升级完成：文档体系/质量门禁（P1）· 全量 OpenAPI 契约 + CMDB 关系层（P2）· IPAM/自动发现/采购盘点/自定义字段（P3）· 插件化/GraphQL/多租户隔离/可配置仪表盘（P4）| 技术栈: **Vue 3 + TypeScript + Vite**（前端） · **Python FastAPI**（后端） · **PostgreSQL/TimescaleDB + Redis**（存储） · **three.js**（3D 孪生）· **strawberry-graphql**（可选 GraphQL 只读出口）
+>
+> 详细实施计划与进度：[docs/IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) · 变更日志：[CHANGELOG.md](./CHANGELOG.md) · 插件开发：[docs/PLUGIN_GUIDE.md](./docs/PLUGIN_GUIDE.md) · English: [README.en.md](./README.en.md)
 
 ---
 

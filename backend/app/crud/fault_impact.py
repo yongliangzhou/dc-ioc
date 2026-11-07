@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections import defaultdict
 from datetime import datetime, timezone
 
+from app.crud import ci_relation as ci_crud
 from app.services import twin_graph as tg
 from app.services.equipment_health import _score
 
@@ -298,6 +299,11 @@ def analyze(fault_ids: list[int], scope: dict | None = None) -> dict:
     suggestion = _build_suggestion(failed, affected, all_nodes, businesses, critical_count)
     mitigations = _build_mitigations(failed, affected, all_nodes, businesses, critical_count, edges)
 
+    # 阶段二: 叠加 CMDB 真实关系链 (向后兼容 —— 未建关系时仅多两个默认字段)
+    real_relations = ci_crud.relations_for_faults(sorted(failed))
+    topology_source = "real+legacy" if real_relations else "legacy"
+    summary["realRelationCount"] = len(real_relations)
+
     return {
         "faultIds": list(failed),
         "generatedAt": datetime.now(timezone.utc).isoformat(),
@@ -308,6 +314,8 @@ def analyze(fault_ids: list[int], scope: dict | None = None) -> dict:
         "businesses": businesses,
         "suggestion": suggestion,
         "mitigations": mitigations,
+        "topologySource": topology_source,
+        "realRelations": real_relations,
     }
 
 

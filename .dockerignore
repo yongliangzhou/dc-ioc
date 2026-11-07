@@ -1,0 +1,31 @@
+# =========================================================
+# Docker 构建上下文忽略规则
+# 作用范围: context = 项目根目录 的构建 (即 frontend 服务)
+# ---------------------------------------------------------
+# 背景: frontend/Dockerfile 的 dev / build 阶段都会执行 `COPY frontend/. .`,
+# 而 Docker 只读取「构建上下文根目录」下的 .dockerignore, frontend/.dockerignore
+# 不生效。结果是宿主机的 frontend/node_modules 被整体拷入镜像, 与第 27 行
+# 创建的 /app/node_modules/@dc-ioc/ui 软链接冲突, 构建报错:
+#   cannot copy to non-directory: .../app/node_modules/@dc-ioc/ui
+# =========================================================
+
+# 依赖目录: 一律由镜像内 npm install 重新安装 (含 packages/dc-ioc-ui 的依赖)
+**/node_modules
+node_modules
+frontend/node_modules
+packages/dc-ioc-ui/node_modules
+
+# Python 虚拟环境与缓存: 后端以 backend/ 作为独立上下文, 此处仅避免拖入前端上下文
+**/.venv
+.venv
+**/__pycache__
+**/*.py[cod]
+**/.pytest_cache
+**/.ruff_cache
+
+# 版本控制数据与日志
+**/.git
+**/*.log
+
+# 注意: 不要忽略 **/dist —— packages/dc-ioc-ui/dist 是必须随镜像带上的预构建产物
+# 注意: 不要忽略 frontend/.env.development —— vite 需要它注入 VITE_* 变量

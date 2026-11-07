@@ -42,6 +42,8 @@ class Equipment(Base, TimestampMixin):
     redundancy: Mapped[str] = mapped_column(String(16), default="", comment="N+1/2N/主备")
     # 异构参数 (COP/频率/液位/SOC/电压等按类别存放, 与参考文件各业务单元测点对应)
     attrs: Mapped[dict] = mapped_column(JSON, default=dict, comment="类别专属参数")
+    # 阶段三: 自定义字段值 (定义见 custom_field_def, 泛型 JSON 兼容 PG/SQLite)
+    custom_attributes: Mapped[dict] = mapped_column(JSON, default=dict, comment="自定义扩展字段值")
 
     __table_args__ = (
         Index("uq_equipment_idc_code", "idc_id", "code", unique=True),

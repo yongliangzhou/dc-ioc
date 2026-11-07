@@ -1,5 +1,5 @@
 ﻿<template>
-  <div class="dashboard-index">
+  <div class="dashboard-index" :class="{ 'custom-layout': customized }">
     <!-- ========== Header ========== -->
     <div class="page-head">
       <div class="ph-left">
@@ -12,6 +12,27 @@
         <RefreshCw :size="13" :class="{ 'is-spin': anyLoading }" />
         {{ anyLoading ? '刷新中' : '手动刷新' }}
       </button>
+      <button class="ph-refresh" @click="showLayoutEditor = !showLayoutEditor">个性化</button>
+    </div>
+
+    <!-- ========== 阶段四: 可配置仪表盘 (显隐 + 拖拽排序, 后端不可达回退本地) ========== -->
+    <div v-if="showLayoutEditor" class="layout-editor">
+      <div v-for="(item, i) in layout" :key="item.id" class="layout-chip">
+        <input
+          type="checkbox"
+          :checked="item.visible"
+          :aria-label="labelOf(item.id)"
+          @change="onToggleSection(item.id)"
+        />
+        <span>{{ labelOf(item.id) }}</span>
+        <button :disabled="i === 0" @click="onMoveSection(item.id, -1)">↑</button>
+        <button :disabled="i === layout.length - 1" @click="onMoveSection(item.id, 1)">↓</button>
+      </div>
+      <button class="layout-save" @click="onSaveLayout">保存布局</button>
+      <button class="layout-save" @click="onResetLayout">恢复默认</button>
+      <span v-if="layoutSource !== 'default'" class="layout-source">
+        来源: {{ layoutSource === 'server' ? '服务端' : '本地草稿' }}
+      </span>
     </div>
 
     <!-- ========== 部分失败汇总: 绝不允许静默降级 ========== -->
@@ -23,418 +44,431 @@
     />
 
     <!-- ========== Section 1: KPI（1 主 + 5 次） ========== -->
-    <AsyncSection
-      :page="overviewPage"
-      @retry="overviewPage.reload"
-      skeleton-variant="skeleton"
-      :skeleton-rows="3"
-      min-height="128px"
-      empty-title="暂无总览数据"
-      empty-desc="后端未返回驾驶舱指标"
-    >
-      <div class="kpi-row">
-        <!-- 主指标 -->
-        <div class="kpi-primary">
-          <div class="kp-head">
-            <span class="kp-label">PUE</span>
-            <DataBadge
-              v-if="!hasRealTrends"
-              tone="sample"
-              label="趋势为示例"
-              tip="迷你趋势与环比由前端基于当前 PUE 合成，后端暂无历史时序接口，不可作为能效考核依据"
-            />
+    <div class="dashboard-section" v-show="layoutVisible('kpi')" :style="layoutStyle('kpi')">
+      <AsyncSection
+        :page="overviewPage"
+        @retry="overviewPage.reload"
+        skeleton-variant="skeleton"
+        :skeleton-rows="3"
+        min-height="128px"
+        empty-title="暂无总览数据"
+        empty-desc="后端未返回驾驶舱指标"
+      >
+        <div class="kpi-row">
+          <!-- 主指标 -->
+          <div class="kpi-primary">
+            <div class="kp-head">
+              <span class="kp-label">PUE</span>
+              <DataBadge
+                v-if="!hasRealTrends"
+                tone="sample"
+                label="趋势为示例"
+                tip="迷你趋势与环比由前端基于当前 PUE 合成，后端暂无历史时序接口，不可作为能效考核依据"
+              />
+            </div>
+            <div class="kp-value">{{ fmtNum(ov.pue) }}</div>
+            <div class="kp-foot">
+              <span class="kp-trend" :class="pueTrendPercent >= 0 ? 'up' : 'down'">
+                {{ pueTrendPercent >= 0 ? '▲' : '▼' }} {{ Math.abs(pueTrendPercent).toFixed(1) }}%
+              </span>
+              <span class="kp-sub">较上一周期</span>
+            </div>
+            <div class="kp-spark">
+              <TrendChart :series="pueSpark" :x-axis-data="pueSparklineX" :height="52" />
+            </div>
           </div>
-          <div class="kp-value">{{ fmtNum(ov.pue) }}</div>
-          <div class="kp-foot">
-            <span class="kp-trend" :class="pueTrendPercent >= 0 ? 'up' : 'down'">
-              {{ pueTrendPercent >= 0 ? '▲' : '▼' }} {{ Math.abs(pueTrendPercent).toFixed(1) }}%
-            </span>
-            <span class="kp-sub">较上一周期</span>
-          </div>
-          <div class="kp-spark">
-            <TrendChart :series="pueSpark" :x-axis-data="pueSparklineX" :height="52" />
+
+          <!-- 次指标 -->
+          <KpiCard
+            title="IT 负载"
+            :value="fmtNum(ov.it_load_mw)"
+            unit="MW"
+            size="sm"
+            subtitle="设计 4.8 MW"
+            :bar-value="itLoadPct"
+          />
+          <KpiCard
+            title="总负载"
+            :value="fmtNum(ov.total_load_mw)"
+            unit="MW"
+            size="sm"
+            :subtitle="`制冷占比 ${coolLoadPct}%`"
+            :trend="totalLoadTrend"
+          />
+          <KpiCard
+            title="制冷负载"
+            :value="fmtNum(ov.cool_load_mw)"
+            unit="MW"
+            size="sm"
+            subtitle="冷源贡献"
+            :status="coolLoadStatus"
+          />
+          <KpiCard
+            title="设备在线率"
+            :value="fmtNum(ov.online_rate)"
+            unit="%"
+            size="sm"
+            :subtitle="`${ov.online_devices ?? 0}/${ov.total_devices ?? 0} 台`"
+            :bar-value="ov.online_rate || 0"
+            :status="(ov.online_rate || 100) >= 95 ? 'normal' : 'warning'"
+          />
+
+          <!-- 次指标 · 告警（可点击跳转，最 actionable） -->
+          <div class="kpi-cell alarm-cell" @click="goAlarms">
+            <div class="alarm-kpi-top">
+              <span class="alarm-kpi-label">活跃告警</span>
+              <span class="alarm-kpi-val">{{ ov.today_alarms ?? 0 }}</span>
+              <span class="alarm-kpi-unit">条</span>
+            </div>
+            <div class="alarm-kpi-badges">
+              <AlarmBadge level="critical" :count="ov.alarms?.crit ?? 0" />
+              <AlarmBadge level="warning" :count="ov.alarms?.warn ?? 0" />
+              <AlarmBadge level="info" :count="ov.alarms?.info ?? 0" />
+            </div>
           </div>
         </div>
-
-        <!-- 次指标 -->
-        <KpiCard
-          title="IT 负载"
-          :value="fmtNum(ov.it_load_mw)"
-          unit="MW"
-          size="sm"
-          subtitle="设计 4.8 MW"
-          :bar-value="itLoadPct"
-        />
-        <KpiCard
-          title="总负载"
-          :value="fmtNum(ov.total_load_mw)"
-          unit="MW"
-          size="sm"
-          :subtitle="`制冷占比 ${coolLoadPct}%`"
-          :trend="totalLoadTrend"
-        />
-        <KpiCard
-          title="制冷负载"
-          :value="fmtNum(ov.cool_load_mw)"
-          unit="MW"
-          size="sm"
-          subtitle="冷源贡献"
-          :status="coolLoadStatus"
-        />
-        <KpiCard
-          title="设备在线率"
-          :value="fmtNum(ov.online_rate)"
-          unit="%"
-          size="sm"
-          :subtitle="`${ov.online_devices ?? 0}/${ov.total_devices ?? 0} 台`"
-          :bar-value="ov.online_rate || 0"
-          :status="(ov.online_rate || 100) >= 95 ? 'normal' : 'warning'"
-        />
-
-        <!-- 次指标 · 告警（可点击跳转，最 actionable） -->
-        <div class="kpi-cell alarm-cell" @click="goAlarms">
-          <div class="alarm-kpi-top">
-            <span class="alarm-kpi-label">活跃告警</span>
-            <span class="alarm-kpi-val">{{ ov.today_alarms ?? 0 }}</span>
-            <span class="alarm-kpi-unit">条</span>
-          </div>
-          <div class="alarm-kpi-badges">
-            <AlarmBadge level="critical" :count="ov.alarms?.crit ?? 0" />
-            <AlarmBadge level="warning" :count="ov.alarms?.warn ?? 0" />
-            <AlarmBadge level="info" :count="ov.alarms?.info ?? 0" />
-          </div>
-        </div>
-      </div>
-    </AsyncSection>
+      </AsyncSection>
+    </div>
 
     <!-- ========== Section 2: 关键趋势（可点选时段联动下方告警） ========== -->
-    <div class="section-bar">
-      <h3 class="section-title">关键趋势</h3>
-      <div class="sb-actions">
-        <DataBadge
-          v-if="!hasRealTrends"
-          tone="sample"
-          tip="三条曲线均由前端基于当前指标合成示例数据（后端暂无历史时序接口），仅用于观察量级与趋势形态；点击曲线可选取时段筛选下方告警"
-        />
-        <button v-if="selectedHour" class="filter-chip" @click="selectedHour = null">
-          时段 {{ selectedHour }} <span class="fc-x">×</span>
-        </button>
+    <div class="dashboard-section" v-show="layoutVisible('trends')" :style="layoutStyle('trends')">
+      <div class="section-bar">
+        <h3 class="section-title">关键趋势</h3>
+        <div class="sb-actions">
+          <DataBadge
+            v-if="!hasRealTrends"
+            tone="sample"
+            tip="三条曲线均由前端基于当前指标合成示例数据（后端暂无历史时序接口），仅用于观察量级与趋势形态；点击曲线可选取时段筛选下方告警"
+          />
+          <button v-if="selectedHour" class="filter-chip" @click="selectedHour = null">
+            时段 {{ selectedHour }} <span class="fc-x">×</span>
+          </button>
+        </div>
       </div>
+      <AsyncSection
+        :page="trendsPage"
+        @retry="trendsPage.reload"
+        skeleton-variant="skeleton"
+        :skeleton-rows="6"
+        min-height="220px"
+        empty-title="暂无趋势数据"
+        empty-desc="后端未返回 KPI 趋势时序"
+      >
+        <div class="trends-grid">
+          <div class="trend-card">
+            <TrendChart
+              title="PUE & WUE 趋势"
+              :series="trendDatasets.pueWue"
+              :x-axis-data="trendBaselineX"
+              :height="200"
+              clickable
+              @point-click="onTrendPointClick"
+            />
+          </div>
+          <div class="trend-card">
+            <TrendChart
+              title="IT / 总负载 / 制冷负载 (MW)"
+              :series="trendDatasets.loads"
+              :x-axis-data="trendBaselineX"
+              :height="200"
+              clickable
+              @point-click="onTrendPointClick"
+            />
+          </div>
+          <div class="trend-card">
+            <TrendChart
+              title="设备在线率 & 可用性 (%)"
+              :series="trendDatasets.online"
+              :x-axis-data="trendBaselineX"
+              :height="200"
+              clickable
+              @point-click="onTrendPointClick"
+            />
+          </div>
+        </div>
+      </AsyncSection>
     </div>
-    <AsyncSection
-      :page="trendsPage"
-      @retry="trendsPage.reload"
-      skeleton-variant="skeleton"
-      :skeleton-rows="6"
-      min-height="220px"
-      empty-title="暂无趋势数据"
-      empty-desc="后端未返回 KPI 趋势时序"
-    >
-      <div class="trends-grid">
-        <div class="trend-card">
-          <TrendChart
-            title="PUE & WUE 趋势"
-            :series="trendDatasets.pueWue"
-            :x-axis-data="trendBaselineX"
-            :height="200"
-            clickable
-            @point-click="onTrendPointClick"
-          />
-        </div>
-        <div class="trend-card">
-          <TrendChart
-            title="IT / 总负载 / 制冷负载 (MW)"
-            :series="trendDatasets.loads"
-            :x-axis-data="trendBaselineX"
-            :height="200"
-            clickable
-            @point-click="onTrendPointClick"
-          />
-        </div>
-        <div class="trend-card">
-          <TrendChart
-            title="设备在线率 & 可用性 (%)"
-            :series="trendDatasets.online"
-            :x-axis-data="trendBaselineX"
-            :height="200"
-            clickable
-            @point-click="onTrendPointClick"
-          />
-        </div>
-      </div>
-    </AsyncSection>
 
     <!-- ========== Section 3: 实时告警联动 ========== -->
-    <div class="section-bar">
-      <h3 class="section-title">
-        实时告警联动 <span class="alarm-count-badge">{{ activeAlarms.length }} 条活跃</span>
-      </h3>
-      <button v-if="selectedHour" class="filter-chip" @click="selectedHour = null">
-        已按时段 {{ selectedHour }} 过滤 <span class="fc-x">×</span>
-      </button>
-    </div>
-    <AsyncSection
-      :page="alarmsPage"
-      @retry="alarmsPage.reload"
-      skeleton-variant="skeleton"
-      :skeleton-rows="5"
-      min-height="160px"
-      empty-title="当前无活跃告警"
-      empty-desc="所有监控对象运行正常"
-    >
-      <template #empty-actions>
-        <button class="link-btn" @click="goAlarms">查看告警历史</button>
-      </template>
-      <div class="alarm-feed">
-        <div v-if="!filteredAlarms.length" class="alarm-empty">
-          时段 {{ selectedHour }} 内无告警
-          <button class="link-btn" @click="selectedHour = null">清除筛选</button>
-        </div>
-        <div
-          v-for="a in filteredAlarms.slice(0, 8)"
-          :key="a.id ?? a.message"
-          class="alarm-row"
-          @click="goAlarms"
-        >
-          <AlarmBadge :level="a.level ?? 'info'" :count="0" />
-          <span class="alarm-msg">{{ a.title || a.message }}</span>
-          <span class="alarm-time">{{ formatAlarmTime(a.time || a.created_at) }}</span>
-        </div>
+    <div class="dashboard-section" v-show="layoutVisible('alarms')" :style="layoutStyle('alarms')">
+      <div class="section-bar">
+        <h3 class="section-title">
+          实时告警联动 <span class="alarm-count-badge">{{ activeAlarms.length }} 条活跃</span>
+        </h3>
+        <button v-if="selectedHour" class="filter-chip" @click="selectedHour = null">
+          已按时段 {{ selectedHour }} 过滤 <span class="fc-x">×</span>
+        </button>
       </div>
-    </AsyncSection>
+      <AsyncSection
+        :page="alarmsPage"
+        @retry="alarmsPage.reload"
+        skeleton-variant="skeleton"
+        :skeleton-rows="5"
+        min-height="160px"
+        empty-title="当前无活跃告警"
+        empty-desc="所有监控对象运行正常"
+      >
+        <template #empty-actions>
+          <button class="link-btn" @click="goAlarms">查看告警历史</button>
+        </template>
+        <div class="alarm-feed">
+          <div v-if="!filteredAlarms.length" class="alarm-empty">
+            时段 {{ selectedHour }} 内无告警
+            <button class="link-btn" @click="selectedHour = null">清除筛选</button>
+          </div>
+          <div
+            v-for="a in filteredAlarms.slice(0, 8)"
+            :key="a.id ?? a.message"
+            class="alarm-row"
+            @click="goAlarms"
+          >
+            <AlarmBadge :level="a.level ?? 'info'" :count="0" />
+            <span class="alarm-msg">{{ a.title || a.message }}</span>
+            <span class="alarm-time">{{ formatAlarmTime(a.time || a.created_at) }}</span>
+          </div>
+        </div>
+      </AsyncSection>
+    </div>
 
     <!-- ========== Section 4: 制冷系统总览 ========== -->
-    <div class="section-bar">
-      <h3 class="section-title">制冷系统总览</h3>
-    </div>
-    <AsyncSection
-      :page="hvacPage"
-      @retry="hvacPage.reload"
-      skeleton-variant="skeleton"
-      :skeleton-rows="3"
-      min-height="120px"
-      empty-title="暂无暖通数据"
-      empty-desc="后端未返回暖通总览"
-    >
-      <div class="cooling-entry-row">
-        <div class="cooling-entry" @click="goMonitor('/monitor/hvac/chiller')">
-          <KpiCard
-            title="冷源 COP"
-            :value="coolingStats.cop ?? '--'"
-            size="sm"
-            subtitle="冷源系统群控"
-            :clickable="true"
-          />
-          <div class="entry-foot">
-            <DataBadge
-              v-if="coolingStats.cop == null"
-              tone="partial"
-              label="无运行机组"
-              tip="系统 COP 取运行机组的平均单机 COP；当前没有处于运行状态的冷机，因此无法计算（待机/检修机的 cop 为 0，不计入）"
-            />
-            <span class="entry-hint">点击进入 → 冷源群控</span>
-          </div>
-        </div>
-
-        <div class="cooling-entry" @click="goMonitor('/monitor/hvac/crac')">
-          <KpiCard
-            title="空调 SHR"
-            :value="coolingStats.shr ?? '--'"
-            size="sm"
-            subtitle="精密空调末端"
-            :clickable="true"
-          />
-          <div class="entry-foot">
-            <DataBadge
-              v-if="coolingStats.shr == null"
-              tone="partial"
-              label="样本不足"
-              tip="系统 SHR 由运行机组的送/回风干球温度与相对湿度按 ASHRAE 简化式计算；当前无有效样本（可能无运行机组，或温湿度测点缺失/机组处于加湿工况）"
-            />
-            <span class="entry-hint">点击进入 → 空调末端</span>
-          </div>
-        </div>
-
-        <div class="cooling-entry" @click="goMonitor('/monitor/hvac/liquid')">
-          <KpiCard
-            title="液冷 PUE 贡献"
-            :value="coolingStats.pueC ?? '--'"
-            size="sm"
-            subtitle="液冷系统"
-            :clickable="true"
-          />
-          <div class="entry-foot">
-            <span class="entry-hint">点击进入 → 液冷系统</span>
-          </div>
-        </div>
-
-        <div class="cooling-entry">
-          <KpiCard
-            title="自然冷却时"
-            :value="fmtNum(freeCoolHours)"
-            unit="h"
-            size="sm"
-            subtitle="本月累计"
-            :bar-value="freeCoolPct"
-          />
-          <div class="entry-foot">
-            <span class="entry-hint">占本月 {{ freeCoolPct }}%</span>
-          </div>
-        </div>
+    <div class="dashboard-section" v-show="layoutVisible('hvac')" :style="layoutStyle('hvac')">
+      <div class="section-bar">
+        <h3 class="section-title">制冷系统总览</h3>
       </div>
-    </AsyncSection>
+      <AsyncSection
+        :page="hvacPage"
+        @retry="hvacPage.reload"
+        skeleton-variant="skeleton"
+        :skeleton-rows="3"
+        min-height="120px"
+        empty-title="暂无暖通数据"
+        empty-desc="后端未返回暖通总览"
+      >
+        <div class="cooling-entry-row">
+          <div class="cooling-entry" @click="goMonitor('/monitor/hvac/chiller')">
+            <KpiCard
+              title="冷源 COP"
+              :value="coolingStats.cop ?? '--'"
+              size="sm"
+              subtitle="冷源系统群控"
+              :clickable="true"
+            />
+            <div class="entry-foot">
+              <DataBadge
+                v-if="coolingStats.cop == null"
+                tone="partial"
+                label="无运行机组"
+                tip="系统 COP 取运行机组的平均单机 COP；当前没有处于运行状态的冷机，因此无法计算（待机/检修机的 cop 为 0，不计入）"
+              />
+              <span class="entry-hint">点击进入 → 冷源群控</span>
+            </div>
+          </div>
+
+          <div class="cooling-entry" @click="goMonitor('/monitor/hvac/crac')">
+            <KpiCard
+              title="空调 SHR"
+              :value="coolingStats.shr ?? '--'"
+              size="sm"
+              subtitle="精密空调末端"
+              :clickable="true"
+            />
+            <div class="entry-foot">
+              <DataBadge
+                v-if="coolingStats.shr == null"
+                tone="partial"
+                label="样本不足"
+                tip="系统 SHR 由运行机组的送/回风干球温度与相对湿度按 ASHRAE 简化式计算；当前无有效样本（可能无运行机组，或温湿度测点缺失/机组处于加湿工况）"
+              />
+              <span class="entry-hint">点击进入 → 空调末端</span>
+            </div>
+          </div>
+
+          <div class="cooling-entry" @click="goMonitor('/monitor/hvac/liquid')">
+            <KpiCard
+              title="液冷 PUE 贡献"
+              :value="coolingStats.pueC ?? '--'"
+              size="sm"
+              subtitle="液冷系统"
+              :clickable="true"
+            />
+            <div class="entry-foot">
+              <span class="entry-hint">点击进入 → 液冷系统</span>
+            </div>
+          </div>
+
+          <div class="cooling-entry">
+            <KpiCard
+              title="自然冷却时"
+              :value="fmtNum(freeCoolHours)"
+              unit="h"
+              size="sm"
+              subtitle="本月累计"
+              :bar-value="freeCoolPct"
+            />
+            <div class="entry-foot">
+              <span class="entry-hint">占本月 {{ freeCoolPct }}%</span>
+            </div>
+          </div>
+        </div>
+      </AsyncSection>
+    </div>
 
     <!-- ========== Section 5: 业务域健康度 ========== -->
-    <div class="section-bar">
-      <h3 class="section-title">业务域健康度</h3>
-    </div>
-    <AsyncSection
-      :page="overviewPage"
-      @retry="overviewPage.reload"
-      skeleton-variant="skeleton"
-      :skeleton-rows="4"
-      min-height="150px"
-      empty-title="暂无健康度数据"
-      empty-desc="后端未返回总览指标"
-    >
-      <div class="domain-health-row">
-        <div v-for="d in domainCards" :key="d.key" class="domain-card">
-          <div class="domain-card-header">
-            <StatusBadge :status="d.healthStatus" />
-            <span class="domain-card-title">{{ d.title }}</span>
-          </div>
-          <div class="domain-card-inner">
-            <div class="domain-ring">
-              <svg viewBox="0 0 100 100" class="ring-svg">
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" stroke-width="8" />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  :stroke="d.ringColor"
-                  stroke-width="8"
-                  stroke-linecap="round"
-                  :stroke-dasharray="`${d.ringRate * 2.64} 264`"
-                  stroke-dashoffset="0"
-                  transform="rotate(-90 50 50)"
-                />
-                <text
-                  x="50"
-                  y="52"
-                  text-anchor="middle"
-                  fill="#c8d6e5"
-                  font-size="16"
-                  font-weight="700"
-                >
-                  {{ d.ringRate }}%
-                </text>
-              </svg>
+    <div class="dashboard-section" v-show="layoutVisible('health')" :style="layoutStyle('health')">
+      <div class="section-bar">
+        <h3 class="section-title">业务域健康度</h3>
+      </div>
+      <AsyncSection
+        :page="overviewPage"
+        @retry="overviewPage.reload"
+        skeleton-variant="skeleton"
+        :skeleton-rows="4"
+        min-height="150px"
+        empty-title="暂无健康度数据"
+        empty-desc="后端未返回总览指标"
+      >
+        <div class="domain-health-row">
+          <div v-for="d in domainCards" :key="d.key" class="domain-card">
+            <div class="domain-card-header">
+              <StatusBadge :status="d.healthStatus" />
+              <span class="domain-card-title">{{ d.title }}</span>
             </div>
-            <div class="domain-stats">
-              <div class="domain-stat-item">
-                <StatusBadge :status="d.healthStatus" />
-                <span>设备 {{ d.onlineRate }}% 在线</span>
-                <DataBadge v-if="d.derived" tone="partial" label="派生" :tip="d.derivedTip" />
+            <div class="domain-card-inner">
+              <div class="domain-ring">
+                <svg viewBox="0 0 100 100" class="ring-svg">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" stroke-width="8" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    :stroke="d.ringColor"
+                    stroke-width="8"
+                    stroke-linecap="round"
+                    :stroke-dasharray="`${d.ringRate * 2.64} 264`"
+                    stroke-dashoffset="0"
+                    transform="rotate(-90 50 50)"
+                  />
+                  <text
+                    x="50"
+                    y="52"
+                    text-anchor="middle"
+                    fill="#c8d6e5"
+                    font-size="16"
+                    font-weight="700"
+                  >
+                    {{ d.ringRate }}%
+                  </text>
+                </svg>
               </div>
-              <div class="domain-stat-item">
-                <StatusBadge :status="alarmSeverity" />
-                <span>告警 {{ globalAlarmTotal }} 条</span>
-                <DataBadge
-                  tone="partial"
-                  label="全局"
-                  tip="分域告警数需后端按业务域聚合，当前未接入。此处展示的是全局活跃告警总数，并非该业务域的独立统计，请勿按域解读"
-                />
+              <div class="domain-stats">
+                <div class="domain-stat-item">
+                  <StatusBadge :status="d.healthStatus" />
+                  <span>设备 {{ d.onlineRate }}% 在线</span>
+                  <DataBadge v-if="d.derived" tone="partial" label="派生" :tip="d.derivedTip" />
+                </div>
+                <div class="domain-stat-item">
+                  <StatusBadge :status="alarmSeverity" />
+                  <span>告警 {{ globalAlarmTotal }} 条</span>
+                  <DataBadge
+                    tone="partial"
+                    label="全局"
+                    tip="分域告警数需后端按业务域聚合，当前未接入。此处展示的是全局活跃告警总数，并非该业务域的独立统计，请勿按域解读"
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- 脚注: 说清数据怎么来的, 而不是让人误以为是真实分域采集 -->
-      <p class="section-note">
-        <template v-if="hasRealDomain">
-          分域在线率由后端按业务域<b>真实设备聚合</b>（暖通 / 电力 /
-          安防分别统计各自注册设备的在线数），
-          <b>非全局派生值</b>。
-        </template>
-        <template v-else>
-          各域在线率由全局综合在线率派生（暖通 = 全局，电力 = 全局 − 1，安防 = 全局 + 1），
-          <b>非真实分域采集</b>。
-        </template>
-        告警数为<b>全局活跃告警总数</b>（{{ globalAlarmTotal }} 条， 严重
-        {{ ov.alarms?.crit ?? 0 }} · 警告 {{ ov.alarms?.warn ?? 0 }} · 提示
-        {{ ov.alarms?.info ?? 0 }}），四个域显示同一数值， <b>不代表各域独立统计</b>——原页面硬编码的
-        3/1/0/0 属虚构数据，已移除。
-      </p>
-    </AsyncSection>
+        <!-- 脚注: 说清数据怎么来的, 而不是让人误以为是真实分域采集 -->
+        <p class="section-note">
+          <template v-if="hasRealDomain">
+            分域在线率由后端按业务域<b>真实设备聚合</b>（暖通 / 电力 /
+            安防分别统计各自注册设备的在线数），
+            <b>非全局派生值</b>。
+          </template>
+          <template v-else>
+            各域在线率由全局综合在线率派生（暖通 = 全局，电力 = 全局 − 1，安防 = 全局 + 1），
+            <b>非真实分域采集</b>。
+          </template>
+          告警数为<b>全局活跃告警总数</b>（{{ globalAlarmTotal }} 条， 严重
+          {{ ov.alarms?.crit ?? 0 }} · 警告 {{ ov.alarms?.warn ?? 0 }} · 提示
+          {{ ov.alarms?.info ?? 0 }}），四个域显示同一数值，
+          <b>不代表各域独立统计</b>——原页面硬编码的 3/1/0/0 属虚构数据，已移除。
+        </p>
+      </AsyncSection>
+    </div>
 
     <!-- ========== Section 6: 校区总览 ========== -->
-    <div class="section-bar">
-      <h3 class="section-title">校区总览</h3>
-    </div>
-    <AsyncSection
-      :page="campusPage"
-      @retry="campusPage.reload"
-      skeleton-variant="skeleton"
-      :skeleton-rows="3"
-      min-height="120px"
-      empty-title="暂无校区数据"
-      empty-desc="后端未返回校区对比数据"
-    >
-      <div class="campus-row">
-        <div
-          v-for="c in campuses"
-          :key="c.code ?? c.id ?? c.name"
-          class="campus-card"
-          :class="{ 'is-active': selectedCampusCode === (c.code ?? c.id) }"
-          @click="selectCampus(c)"
-        >
-          <div class="campus-status">
-            <StatusBadge :status="computeCampusStatus(c)" />
-          </div>
-          <div class="campus-name">{{ c.name }}</div>
-          <div class="campus-kpi-list">
-            <div class="campus-kpi">
-              <span>PUE</span><span class="v">{{ fmtNum(c.pue) }}</span>
+    <div class="dashboard-section" v-show="layoutVisible('campus')" :style="layoutStyle('campus')">
+      <div class="section-bar">
+        <h3 class="section-title">校区总览</h3>
+      </div>
+      <AsyncSection
+        :page="campusPage"
+        @retry="campusPage.reload"
+        skeleton-variant="skeleton"
+        :skeleton-rows="3"
+        min-height="120px"
+        empty-title="暂无校区数据"
+        empty-desc="后端未返回校区对比数据"
+      >
+        <div class="campus-row">
+          <div
+            v-for="c in campuses"
+            :key="c.code ?? c.id ?? c.name"
+            class="campus-card"
+            :class="{ 'is-active': selectedCampusCode === (c.code ?? c.id) }"
+            @click="selectCampus(c)"
+          >
+            <div class="campus-status">
+              <StatusBadge :status="computeCampusStatus(c)" />
             </div>
-            <div class="campus-kpi">
-              <span>在线率</span><span class="v">{{ fmtNum(c.online_rate) }}%</span>
-            </div>
-            <div class="campus-kpi">
-              <span>IT负载</span><span class="v">{{ fmtNum(c.it_load_mw) }}MW</span>
-            </div>
-            <div class="campus-kpi">
-              <span>告警</span><span class="v">{{ c.today_alarms ?? 0 }}</span>
+            <div class="campus-name">{{ c.name }}</div>
+            <div class="campus-kpi-list">
+              <div class="campus-kpi">
+                <span>PUE</span><span class="v">{{ fmtNum(c.pue) }}</span>
+              </div>
+              <div class="campus-kpi">
+                <span>在线率</span><span class="v">{{ fmtNum(c.online_rate) }}%</span>
+              </div>
+              <div class="campus-kpi">
+                <span>IT负载</span><span class="v">{{ fmtNum(c.it_load_mw) }}MW</span>
+              </div>
+              <div class="campus-kpi">
+                <span>告警</span><span class="v">{{ c.today_alarms ?? 0 }}</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div v-if="selectedCampus" class="campus-detail">
-        <div class="cd-head">
-          <span class="cd-title">{{ selectedCampus.name }} · 明细</span>
-          <button class="link-btn" @click="selectedCampus = null">收起</button>
+        <div v-if="selectedCampus" class="campus-detail">
+          <div class="cd-head">
+            <span class="cd-title">{{ selectedCampus.name }} · 明细</span>
+            <button class="link-btn" @click="selectedCampus = null">收起</button>
+          </div>
+          <div class="cd-grid">
+            <div class="cd-item">
+              <span class="cd-k">PUE</span
+              ><span class="cd-v">{{ fmtNum(selectedCampus.pue) }}</span>
+            </div>
+            <div class="cd-item">
+              <span class="cd-k">在线率</span>
+              <span class="cd-v">{{ fmtNum(selectedCampus.online_rate) }}%</span>
+            </div>
+            <div class="cd-item">
+              <span class="cd-k">IT 负载</span>
+              <span class="cd-v">{{ fmtNum(selectedCampus.it_load_mw) }} MW</span>
+            </div>
+            <div class="cd-item">
+              <span class="cd-k">今日告警</span>
+              <span class="cd-v">{{ selectedCampus.today_alarms ?? 0 }} 条</span>
+            </div>
+          </div>
         </div>
-        <div class="cd-grid">
-          <div class="cd-item">
-            <span class="cd-k">PUE</span><span class="cd-v">{{ fmtNum(selectedCampus.pue) }}</span>
-          </div>
-          <div class="cd-item">
-            <span class="cd-k">在线率</span>
-            <span class="cd-v">{{ fmtNum(selectedCampus.online_rate) }}%</span>
-          </div>
-          <div class="cd-item">
-            <span class="cd-k">IT 负载</span>
-            <span class="cd-v">{{ fmtNum(selectedCampus.it_load_mw) }} MW</span>
-          </div>
-          <div class="cd-item">
-            <span class="cd-k">今日告警</span>
-            <span class="cd-v">{{ selectedCampus.today_alarms ?? 0 }} 条</span>
-          </div>
-        </div>
-      </div>
-    </AsyncSection>
+      </AsyncSection>
+    </div>
   </div>
 </template>
 
@@ -458,9 +492,56 @@ import AsyncSection from '@/components/common/AsyncSection.vue'
 import DataBadge from '@/components/common/DataBadge.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { useAsyncPageAll } from '@/composables/useAsyncPage'
+import {
+  DASHBOARD_SECTIONS,
+  defaultLayout,
+  isDefaultLayout,
+  isVisible as layoutIsVisible,
+  sectionStyle as layoutSectionStyle,
+  moveSection,
+  toggleSection,
+  loadDashboardLayout,
+  saveDashboardLayout,
+  resetDashboardLayout,
+  type LayoutItem,
+  type SectionId,
+} from '@/composables/useDashboardLayout'
 import { seeded as seededRnd, sampleSeries as genSeries } from '@/utils/sample'
 
 const router = useRouter()
+
+/* ------------------------------------------------------------------ *
+ * 阶段四 · 可配置仪表盘: 显隐 / 上移下移 / 保存 / 恢复默认
+ * 未自定义时 customized=false, 布局与 v0.12 完全一致 (不启用 flex 排序)。
+ * ------------------------------------------------------------------ */
+const layout = ref<LayoutItem[]>(defaultLayout())
+const layoutSource = ref<'server' | 'local' | 'default'>('default')
+const showLayoutEditor = ref(false)
+const customized = computed(() => !isDefaultLayout(layout.value))
+const layoutVisible = (id: SectionId) => layoutIsVisible(layout.value, id)
+const layoutStyle = (id: SectionId) => layoutSectionStyle(layout.value, id)
+const labelOf = (id: SectionId) => DASHBOARD_SECTIONS.find((s) => s.id === id)?.labelZh ?? id
+const onToggleSection = (id: SectionId) => {
+  layout.value = toggleSection(layout.value, id)
+}
+const onMoveSection = (id: SectionId, delta: number) => {
+  layout.value = moveSection(layout.value, id, delta)
+}
+async function onSaveLayout() {
+  const result = await saveDashboardLayout(layout.value)
+  layoutSource.value = result === 'server' ? 'server' : 'local'
+}
+async function onResetLayout() {
+  layout.value = defaultLayout()
+  await resetDashboardLayout()
+  layoutSource.value = 'default'
+}
+onMounted(() => {
+  void loadDashboardLayout().then((r) => {
+    layout.value = r.layout
+    layoutSource.value = r.source
+  })
+})
 
 /* ------------------------------------------------------------------ */
 /* 数据源: 4 路并发, 单源失败不影响其它区块渲染, 但必须显式露出          */
@@ -978,6 +1059,55 @@ onUnmounted(() => {
   margin: 0 auto;
   color: #c8d6e5;
   font-size: 13px;
+}
+/* 阶段四: 仅「已自定义布局」时才启用 flex 排序, 默认渲染与原版一致 */
+.dashboard-index.custom-layout {
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-index.custom-layout > .dashboard-section {
+  width: 100%;
+}
+.layout-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(34, 227, 255, 0.25);
+  background: rgba(34, 227, 255, 0.05);
+  border-radius: 8px;
+}
+.layout-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.layout-chip button,
+.layout-save {
+  background: rgba(34, 227, 255, 0.12);
+  border: 1px solid rgba(34, 227, 255, 0.3);
+  color: #8ff0ff;
+  border-radius: 4px;
+  padding: 2px 7px;
+  cursor: pointer;
+  font-size: 12px;
+}
+.layout-chip button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.layout-save {
+  padding: 5px 12px;
+}
+.layout-source {
+  font-size: 11px;
+  color: #facc15;
 }
 
 /* ===== Header ===== */

@@ -7,6 +7,7 @@ version: "3.9"
 services:
   # ---------- 关系型数据库 ----------
   postgres:
+    platform: linux/amd64
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: dcuser
@@ -27,6 +28,7 @@ services:
 
   # ---------- 缓存 / 消息代理 ----------
   redis:
+    platform: linux/amd64
     image: redis:7-alpine
     command: redis-server --appendonly yes
     ports:
@@ -42,9 +44,12 @@ services:
 
   # ---------- 后端 (FastAPI + Uvicorn) ----------
   backend:
+    platform: linux/amd64
     build:
       context: ./backend
       target: prod
+      platforms:
+        - linux/amd64
     environment:
       APP_ENV: prod
       APP_DEBUG: "false"
@@ -76,10 +81,13 @@ services:
 
   # ---------- 前端 (Nginx 托管 + 反向代理) ----------
   frontend:
+    platform: linux/amd64
     build:
       context: .                          # 项目根目录 (需要访问 packages/)
       dockerfile: ./frontend/Dockerfile
       target: prod
+      platforms:
+        - linux/amd64
     ports:
       - "8080:80"
     depends_on:

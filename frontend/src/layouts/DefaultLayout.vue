@@ -52,13 +52,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import TopBar from '@/components/layout/TopBar.vue'
 import NavIcon from '@/components/layout/NavIcon.vue'
 import ErrorBoundary from '@/components/common/ErrorBoundary.vue'
 import { realtimeLinkage } from '@/engine/realtimeLinkage'
+import {
+  FALLBACK_MANIFEST,
+  fetchPluginManifest,
+  mergePluginNav,
+  type PluginItem,
+} from '@/plugins/manifest'
 
 const route = useRoute()
 const isActive = (p: string) => route.path === p || route.path.startsWith(p + '/')
@@ -79,7 +85,7 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const nav = computed<NavGroup[]>(() => [
+const staticNav = computed<NavGroup[]>(() => [
   // G1 · 总览
   {
     id: 'overview',
@@ -275,6 +281,12 @@ const nav = computed<NavGroup[]>(() => [
   },
 ])
 
+/* ---- 阶段四: 插件清单动态合并 (后端清单优先, 离线回退内置清单) ---- */
+const plugins = ref<PluginItem[]>(FALLBACK_MANIFEST)
+const nav = computed<NavGroup[]>(() =>
+  mergePluginNav(staticNav.value, plugins.value, (key) => t(key)),
+)
+
 /* ---- 分组折叠: 默认全部展开; 状态按分组 id 记忆, 语言切换不会错位 ---- */
 const collapsed = reactive<Record<string, boolean>>(
   Object.fromEntries(nav.value.map((g): [string, boolean] => [g.id, false])),
@@ -294,6 +306,9 @@ watch(() => route.path, expandActiveGroup, { immediate: true })
 /* 实时联动 (应用级, 不在模板中使用, 不会驱动 router-view 重渲染) */
 onMounted(() => {
   realtimeLinkage.start(Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000))
+  void fetchPluginManifest().then((list) => {
+    plugins.value = list
+  })
 })
 onBeforeUnmount(() => {
   realtimeLinkage.stop()

@@ -155,6 +155,32 @@
     </div>
 
     <template v-else-if="result">
+      <!-- 阶段二: 标注影响来源 (真实 CMDB 关系链 vs 仅内置拓扑) -->
+      <div
+        class="card"
+        style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px"
+      >
+        <span
+          class="tag"
+          :style="{
+            color: result.topologySource === 'real+legacy' ? 'var(--green)' : 'var(--txt2)',
+            borderColor: result.topologySource === 'real+legacy' ? 'var(--green)' : 'var(--txt2)',
+          }"
+        >
+          {{ tr('ciRelation.sourceLabel') }}:
+          {{
+            result.topologySource === 'real+legacy'
+              ? tr('ciRelation.realTopology').replace(
+                  '{n}',
+                  String((result.realRelations || []).length),
+                )
+              : tr('ciRelation.legacyTopology')
+          }}
+        </span>
+        <router-link class="btn-ghost" to="/ops/ci-relations">
+          {{ tr('ciRelation.goMaintain') }}
+        </router-link>
+      </div>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <!-- 影响链路图 (按 hop 分层) -->
         <div class="lg:col-span-2 card">
@@ -500,7 +526,7 @@ import { downloadText } from '@/utils/export'
 import { useToast } from '@/hooks/useToast'
 
 const toast = useToast()
-const { tm } = useI18n()
+const { tm, t: tr } = useI18n()
 const t = new Proxy({} as any, {
   get(_t, key) {
     const ns = (tm('faultImpact') || {}) as any

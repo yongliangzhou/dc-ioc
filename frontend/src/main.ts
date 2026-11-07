@@ -5,6 +5,8 @@ import router from './router'
 import i18n, { setupI18nMessages } from './i18n'
 import Toast from './components/ui/Toast.vue'
 import './assets/styles/index.scss'
+import './styles/p3.css' // 阶段三业务页共享样式
+import './styles/print.css' // 阶段四打印样式
 import './theme' // 应用持久化主题 (data-theme)
 
 const app = createApp(App)

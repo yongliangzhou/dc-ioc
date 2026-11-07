@@ -37,7 +37,7 @@ except RuntimeError as e:
 
 app = FastAPI(
     title=settings.APP_NAME,
-    version="0.6.0",
+    version="0.16.0",
     debug=settings.APP_DEBUG,
     lifespan=lifespan,
 )
@@ -57,8 +57,25 @@ app.add_middleware(
 # 操作审计 (记录所有 CRUD 写操作)
 app.add_middleware(AuditMiddleware)
 
+# 阶段四: 请求级租户上下文 (行级过滤, 无租户上下文时零行为变化)
+from app.core.tenant_middleware import TenantMiddleware  # noqa: E402
+
+app.add_middleware(TenantMiddleware)
+
 # 全部业务域 API 统一挂载于 /api
 app.include_router(api_router, prefix="/api")
+
+# 阶段四: GraphQL 只读出口 (可选依赖, 未安装时跳过挂载, 不影响启动)
+try:
+    from strawberry.fastapi import GraphQLRouter  # noqa: E402
+
+    from app.graphql.schema import schema  # noqa: E402
+
+    if schema is not None:
+        app.include_router(GraphQLRouter(schema), prefix="/graphql", tags=["graphql"])
+        logger.info("GraphQL 只读出口已挂载: /graphql")
+except ImportError as exc:
+    logger.warning("GraphQL 未启用 (缺少可选依赖 strawberry): %s", exc)
 
 # 上传文件静态访问 (/uploads/<date>/<file>) — 目录不存在时跳过, 不影响启动
 _upload_root = os.path.join(os.path.dirname(__file__), "..", "uploads")
@@ -109,7 +126,7 @@ def health():
         "status": "ok",
         "app": settings.APP_NAME,
         "env": settings.APP_ENV,
-        "version": "0.6.0",
+        "version": "0.16.0",
         "debug": settings.APP_DEBUG,
     }
 

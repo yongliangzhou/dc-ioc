@@ -4,16 +4,21 @@ version: "3.9"
 
 services:
   postgres:
+    platform: linux/amd64
     ports:
       - "5432:5432"
 
   redis:
+    platform: linux/amd64
     ports:
       - "6379:6379"
 
   backend:
+    platform: linux/amd64
     build:
       target: dev
+      platforms:
+        - linux/amd64
     environment:
       APP_ENV: dev
       APP_DEBUG: "true"
@@ -41,6 +46,7 @@ services:
       - kafka
 
   kafka:
+    platform: linux/amd64
     # Apache 官方免费镜像 (Bitnami 已转订阅制), 单节点 KRaft 模式
     image: apache/kafka:3.7.2
     ports:
@@ -66,10 +72,13 @@ services:
       retries: 12
 
   frontend:
+    platform: linux/amd64
     build:
       context: .                          # 项目根目录 (确保 COPY 能访问 packages/)
       dockerfile: ./frontend/Dockerfile
       target: dev
+      platforms:
+        - linux/amd64
     ports:
       - "5173:5173"
     environment:
@@ -88,6 +97,7 @@ services:
 
   # Prometheus (仅开发)
   prometheus:
+    platform: linux/amd64
     image: prom/prometheus:v2.54.1
     ports:
       - "9090:9090"

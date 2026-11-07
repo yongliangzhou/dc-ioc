@@ -1,0 +1,65 @@
+/* 阶段四 · 打印/导出样式: 报告、风险矩阵、对比页导出 PDF 时去掉暗色背景。 */
+@media print {
+  :root {
+    --bg: #ffffff;
+    --txt: #101828;
+    --txt2: #475467;
+    --line: #d0d5dd;
+  }
+  html,
+  body,
+  #app,
+  .app,
+  .main,
+  .page-wrap,
+  .p3-page {
+    background: #ffffff !important;
+    color: #101828 !important;
+  }
+  .side,
+  .topbar,
+  .view-head .vh-right,
+  .p3-btn,
+  .p3-tabs,
+  .filters,
+  .no-print,
+  .btn,
+  .btn-sm,
+  .btn-ghost {
+    display: none !important;
+  }
+  .card,
+  .p3-card,
+  .result,
+  table {
+    background: #ffffff !important;
+    border: 1px solid #d0d5dd !important;
+    color: #101828 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+  }
+  th,
+  td,
+  h1,
+  h2,
+  h3,
+  p,
+  span,
+  .mono,
+  .p3-mono {
+    color: #101828 !important;
+  }
+  .p3-bar {
+    background: #e4e7ec !important;
+  }
+  .p3-bar > i {
+    background: #1570ef !important;
+  }
+  a {
+    color: #101828 !important;
+    text-decoration: none !important;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

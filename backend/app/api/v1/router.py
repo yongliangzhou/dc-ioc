@@ -8,6 +8,7 @@ from app.api.v1.endpoints import (
     audit,
     auth,
     cabinets,
+    ci_relation,
     dashboard,
     demo,
     domain,
@@ -24,6 +25,8 @@ from app.api.v1.endpoints import (
     network,
     notification,
     ops,
+    p3,
+    plugins,
     power,
     risk,
     row_audit,
@@ -109,6 +112,28 @@ api_router.include_router(
 )
 # 通用文件上传 (头像/附件/批量)
 api_router.include_router(uploads.router, tags=["uploads"], dependencies=_auth)
+# CMDB 关系层 (阶段二: 关系 CRUD / 关系图 / 影响扩散 / CI 选项)
+api_router.include_router(
+    ci_relation.router, prefix="/ops/ci-relations", tags=["ci-relation"], dependencies=_auth
+)
+# 阶段三: IPAM / 自动发现 / 采购盘点 / 自定义字段
+api_router.include_router(p3.ipam_router, prefix="/ipam", tags=["ipam"], dependencies=_auth)
+api_router.include_router(
+    p3.discovery_router, prefix="/ops/discovery", tags=["discovery"], dependencies=_auth
+)
+api_router.include_router(
+    p3.procurement_router, prefix="/ops/procurement", tags=["procurement"], dependencies=_auth
+)
+api_router.include_router(
+    p3.stocktake_router, prefix="/ops/stocktake", tags=["stocktake"], dependencies=_auth
+)
+api_router.include_router(
+    p3.custom_field_router, prefix="/ops/custom-fields", tags=["custom-fields"], dependencies=_auth
+)
+# 阶段四: 插件清单 (前端导航动态合并; 接口不可达时前端回落内置清单)
+api_router.include_router(
+    plugins.router, prefix="/plugins", tags=["plugins"], dependencies=_auth
+)
 # WebSocket 遥测在 main 中单独挂载于 /ws
 
 # v2 演示 / 兜底数据路由 (新版实现, 与旧版占位解耦; 挂载于 /api/demo)

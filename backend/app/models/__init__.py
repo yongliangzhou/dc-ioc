@@ -41,6 +41,13 @@ from app.models.control_log import ControlLog  # noqa: F401
 from app.models.graphic_config import GraphicConfig  # noqa: F401
 from app.models.refuel_record import RefuelRecord  # noqa: F401
 from app.models.notification import NotificationChannel, NotificationRecord  # noqa: F401
+from app.models.ci_relation import CiRelation  # noqa: F401
+from app.models.p3 import (  # noqa: F401
+    IpVlan, IpSubnet, IpAddress,
+    DiscoveryCandidate,
+    PurchaseOrder, StocktakeTask, StocktakeItem,
+    CustomFieldDef,
+)
 
 __all__ = [
     "Base",
@@ -87,4 +94,13 @@ __all__ = [
     "RefuelRecord",
     "NotificationChannel",
     "NotificationRecord",
+    "CiRelation",
+    "IpVlan",
+    "IpSubnet",
+    "IpAddress",
+    "DiscoveryCandidate",
+    "PurchaseOrder",
+    "StocktakeTask",
+    "StocktakeItem",
+    "CustomFieldDef",
 ]

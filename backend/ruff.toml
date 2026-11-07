@@ -7,6 +7,9 @@ line-length = 100
 [lint]
 # 与历史 CI 一致: 仅检查 E4/E7/E9 (pycodestyle 错误) 与 F (Pyflakes),
 # 不含 E5(行长度)/E1(缩进)/E2(空白)/E3(空行) 等, 避免引入额外失败。
+# E722 (裸 except:) 属于 E7 规则族, 已由本配置强制启用; 显式列出以固化约定。
+# BLE001 (blind except Exception) 暂不全局开启: 存量模块量大, 由
+# scripts/check_except_hygiene.py 只针对 P2+ 新增模块做 AST 门禁 (防回潮)。
 select = ["E4", "E7", "E9", "F"]
 
 [lint.per-file-ignores]

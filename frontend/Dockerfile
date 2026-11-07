@@ -4,7 +4,7 @@
 # =========================================================
 
 # ---- Dev 阶段: Vite dev server (热更新) ----
-FROM node:20-alpine AS dev
+FROM --platform=linux/amd64 node:20-alpine AS dev
 WORKDIR /app
 
 # 使用国内镜像源 + 超时/重试，避免受限网络下 npm install 静默挂起
@@ -40,7 +40,7 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 
 # ---- Build 阶段: 编译 ----
-FROM node:20-alpine AS build
+FROM --platform=linux/amd64 node:20-alpine AS build
 WORKDIR /app
 
 ENV npm_config_registry=https://registry.npmmirror.com \
@@ -60,7 +60,7 @@ RUN npm run build
 
 
 # ---- Prod 阶段: Nginx 托管 ----
-FROM nginx:1.27-alpine AS prod
+FROM --platform=linux/amd64 nginx:1.27-alpine AS prod
 
 RUN rm -f /etc/nginx/conf.d/default.conf
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf

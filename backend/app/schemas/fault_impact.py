@@ -99,3 +99,6 @@ class FaultImpactResp(BaseModel):
     businesses: list[AffectedBusiness]
     suggestion: str  # 处置建议 (摘要)
     mitigations: list[Mitigation] = []  # 结构化处置缓解措施清单
+    # 阶段二: 真实 CMDB 关系链 (无关系时为 legacy + 空列表, 与旧版输出兼容)
+    topologySource: str = "legacy"  # real+legacy | legacy
+    realRelations: list[dict] = []

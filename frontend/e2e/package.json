@@ -1,0 +1,15 @@
+{
+  "name": "dc-ioc-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent Playwright E2E baseline for dc-ioc-platform (does not touch the main frontend lockfile)",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.1"
+  }
+}

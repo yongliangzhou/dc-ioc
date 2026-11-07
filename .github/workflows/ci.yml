@@ -74,6 +74,17 @@ jobs:
       - name: Lint (Ruff)
         run: ruff check app/ --output-format=github
 
+      - name: Exception hygiene (new modules)
+        # 防止 P2+ 新增模块回潮裸 except / 静默吞异常 (存量模块不纳入, 见脚本 --paths)
+        run: python ../scripts/check_except_hygiene.py
+
+      - name: OpenAPI contract drift guard
+        # 纯 stdlib 静态提取, 校验 frontend/openapi.json 覆盖全部后端路由
+        run: python ../scripts/check_api_contract.py
+
+      - name: Nav / route consistency guard
+        run: python ../scripts/check_nav_routes.py
+
       - name: Security scan (Bandit)
         run: bandit -r app/ -f json -o bandit-report.json || true
 
@@ -82,10 +93,13 @@ jobs:
 
       - name: Test
         run: |
-          pytest tests/ -v --tb=short --timeout=30 \
+          pytest tests/ ../tests/ -v --tb=short --timeout=30 \
             -k "not db and not integration" \
             --junitxml=junit.xml \
-            --cov=app --cov-report=term-missing --cov-report=xml
+            --cov=app --cov-report=term-missing --cov-report=xml \
+            --cov-fail-under=15
+          # 覆盖率"只升不降"棘轮: 首次 CI 后按实测 term-missing 报告上调该阈值
+          # (建议节奏 15 → 25 → 35 → 45), 避免一次性设高导致门禁长期红灯。
         env:
           APP_ENV: test
           SECRET_KEY: ci-test-key-32-chars-minimum!!
@@ -190,3 +204,44 @@ jobs:
           format: table
           exit-code: 0
           severity: CRITICAL,HIGH
+
+  # ================================================================
+  # E2E: Playwright 冒烟 (手动触发, 独立 npm 包, 不污染主 lockfile)
+  # ================================================================
+  e2e:
+    name: "E2E Smoke (Playwright)"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install E2E dependencies
+        working-directory: frontend/e2e
+        run: npm install
+
+      - name: Install Chromium
+        working-directory: frontend/e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E smoke
+        working-directory: frontend/e2e
+        run: npm test
+
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: frontend/e2e/playwright-report/
+          retention-days: 7

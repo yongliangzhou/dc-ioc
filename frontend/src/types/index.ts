@@ -2187,6 +2187,9 @@ export interface FaultImpactResp {
   businesses: AffectedBusiness[]
   suggestion: string
   mitigations: Mitigation[]
+  /** 阶段二: 真实 CMDB 关系链标记 (旧版响应无此字段, 故为可选) */
+  topologySource?: 'real+legacy' | 'legacy'
+  realRelations?: Array<Record<string, unknown>>
 }
 
 /* ===== 统一告警触达中心 (通知中心 /api/ops/notifications) ===== */

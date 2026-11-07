@@ -7,7 +7,7 @@
 ARG PIP_INDEX_URL=https://mirrors.aliyun.com/pypi/simple
 
 # ---- Dev 阶段: 含热重载, 挂载源码 ----
-FROM python:3.12-slim AS dev
+FROM --platform=linux/amd64 python:3.12-slim AS dev
 ARG PIP_INDEX_URL
 
 WORKDIR /app
@@ -23,7 +23,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload
 
 
 # ---- Prod 阶段: 精简镜像, 等 PostgreSQL 就绪 ----
-FROM python:3.12-slim AS prod
+FROM --platform=linux/amd64 python:3.12-slim AS prod
 ARG PIP_INDEX_URL
 
 WORKDIR /app

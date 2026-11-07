@@ -313,6 +313,33 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/ops/CapacityWhatIf.vue'),
         meta: { title: '上架模拟器', requiredRoles: ['admin', 'operator'] },
       },
+      // Phase 2 · CMDB 关系图谱
+      {
+        path: 'ops/ci-relations',
+        component: () => import('@/views/ops/CiRelations.vue'),
+        meta: { title: 'CI 关系图谱', requiredRoles: ['admin', 'operator'] },
+      },
+      // Phase 3 · IPAM / 自动发现 / 采购盘点 / 自定义字段
+      {
+        path: 'ops/ipam',
+        component: () => import('@/views/ops/Ipam.vue'),
+        meta: { title: 'IP 地址管理', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/discovery',
+        component: () => import('@/views/ops/Discovery.vue'),
+        meta: { title: '资产自动发现', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/asset-business',
+        component: () => import('@/views/ops/AssetBusiness.vue'),
+        meta: { title: '采购合同与盘点', requiredRoles: ['admin', 'operator'] },
+      },
+      {
+        path: 'ops/custom-fields',
+        component: () => import('@/views/ops/CustomFields.vue'),
+        meta: { title: '自定义字段', requiredRoles: ['admin', 'operator'] },
+      },
 
       // Phase 4 · 物模型与多数据中心 (阶段0 占位, 后续阶段实现)
       {
