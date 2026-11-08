@@ -353,14 +353,30 @@ python scripts/check_api_contract.py         # 契约漂移 0
 python scripts/check_nav_routes.py --strict  # 0 死链 / 0 孤儿路由
 ```
 
-**本机未能执行的部分（依赖缺失，需在 CI / 开发环境补跑）**
+**推送前本机 CI 复现结果（2026-11-08，补齐依赖后实跑）**
 
-| 命令 | 缺失 | 说明 |
+| CI 步骤 | 结果 |
+|---|---|
+| `ruff check app/` | 通过，0 告警 |
+| `pytest tests/ ../tests/ --cov=app --cov-fail-under=15` | **115 passed / 1 skipped**，覆盖率 31.04%（>15） |
+| `npx vue-tsc --noEmit` | 0 错误 |
+| `npm run test:run`（Vitest） | **9 文件 / 52 用例全通过** |
+| `npm run build` | 成功（本机需先修复 `node_modules/@dc-ioc/ui` 链接；CI 的 `npm ci` 会自动创建） |
+| `check_except_hygiene` / `check_api_contract` / `check_nav_routes --strict` / `check_i18n_keys` / `sql_guard` | 全部通过 |
+| 远端最近一次 CI（run #61 / `02dd232a`） | `success`（但对应 9 月旧提交，不含本次改动） |
+
+复现中发现并修复 4 个真实问题：`useDashboardLayout.spec.ts` 的 TS2367、
+`relations_for_faults()` 会话创建失败未降级、IPv6 子网统计少算一个地址且超大前缀会全量展开、
+租户过滤对 `Query.count()` 等聚合查询失效。详见 `CHANGELOG.md` 的 Fixed 段。
+
+**本机仍未能执行的部分**
+
+| 项目 | 原因 | 说明 |
 |---|---|---|
-| `pytest tests/ -q` | `pytest` 等后端依赖未安装 | CI 会 `pip install -r backend/requirements.txt` 后执行（已新增约 30 个用例） |
-| `npx vue-tsc --noEmit` / `npm run build` | Node/npx 不在 PATH | CI 的 frontend job 会执行 |
-| `cd frontend/e2e && npm test` | 同上 + Playwright 浏览器 | `workflow_dispatch` 手动触发的 e2e job |
-| `alembic upgrade head` | 无本地数据库 + 依赖 | 存量环境按 0013→0018 顺序执行；新环境由 lifespan `create_all` 覆盖 |
+| `backend/tests/test_rate_limit.py` | 需要真实 Postgres/Redis（CI 以 service 容器提供），本机 Docker daemon 未启动 | 该存量用例在远端 CI 中通过；本次 `main.py` 仅追加中间件与 GraphQL 挂载 |
+| Docker 镜像构建 job | 本机 Docker daemon 未启动 | CI 的 docker job 仅 `main` 分支触发 |
+| `frontend/e2e` Playwright | 未安装浏览器；e2e job 仅 `workflow_dispatch` 触发 | 推送后可手动触发 |
+| `alembic upgrade head` | 无本地数据库 | 存量环境按 0013→0018 顺序执行；新环境由 lifespan `create_all` 覆盖 |
 
 **与计划的偏差（均已记录）**
 
