@@ -1,14 +1,21 @@
 import { test, expect, type Page } from '@playwright/test'
+import { installApiMocks } from '../fixtures/mockApi'
 
 /**
  * 10 条关键路径冒烟用例。
  *
  * 设计原则:
- * - 不依赖真实后端: 前端 request.ts 有 Mock 兜底, 后端不可达时页面仍渲染。
+ * - 不依赖真实后端: 每个 page 预装 fixtures/mockApi.ts 的 API 桩, 所有 /api/**
+ *   返回结构兼容的数据, /ws 由本地模拟连接保持打开。页面走完整成功态渲染路径,
+ *   不会因 Vite 代理 ECONNREFUSED 而出现 "加载失败" 错误态。
  * - 不依赖 Mock 具体数值: 只断言结构 / 可见文本 / URL / 控件存在。
  * - 认证通过注入一个结构合法、未过期的 JWT 与用户对象完成 (authGuard 仅校验 exp),
  *   因此无需后端登录接口; 单独覆盖登录页时改用 dc_ioc_bypass 跳过守卫重定向。
  */
+
+test.beforeEach(async ({ page }) => {
+  await installApiMocks(page)
+})
 
 function fakeJwt(): string {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
@@ -68,6 +75,8 @@ test('2. 登录表单可提交且凭证有效时可进入驾驶舱', async ({ pa
 test('3. 驾驶舱: KPI 区域渲染, 无未捕获错误横幅', async ({ page }) => {
   await openPage(page, '/overview')
   await expect(page.locator('main').locator('*').first()).toBeVisible()
+  // 先等数据真正落到 KPI 区 (避免断言跑在请求完成前的假通过), 再检查没有错误横幅
+  await expect(page.locator('.kpi-primary .kp-value')).toContainText(/\d/)
   await expect(page.getByText(/加载失败|ErrorBoundary|Something went wrong/i)).toHaveCount(0)
 })
 
@@ -92,9 +101,8 @@ test('6. 工单中心: 列表/筛选控件渲染', async ({ page }) => {
 
 test('7. 统一设备台账: 表格或卡片容器渲染', async ({ page }) => {
   await openPage(page, '/ops/equipment')
-  expect(await page.locator('main').locator('table, .card, .panel, .grid').count()).toBeGreaterThan(
-    0,
-  )
+  // 轮询等待异步区块完成, 而不是在请求发出瞬间取一次 count()
+  await expect(page.locator('main').locator('table, .card, .panel, .grid').first()).toBeVisible()
 })
 
 test('8. 机柜管理: 页面可达且无白屏', async ({ page }) => {

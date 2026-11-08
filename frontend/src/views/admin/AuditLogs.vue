@@ -48,6 +48,7 @@
         />
         <button class="btn-sm primary" @click="applyFilters">{{ tl('查询') }}</button>
         <button class="btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
+        <button class="btn-sm" :disabled="!rows.length" @click="exportCsv">导出 CSV</button>
         <span class="muted" style="margin-left: auto; font-size: 11px"
           >{{ tl('共') }} {{ total }} {{ tl('条') }}</span
         >
@@ -197,6 +198,54 @@ async function reload() {
   } finally {
     loading.value = false
   }
+}
+
+/** RFC4180 转义: 含逗号/引号/换行的字段加双引号, 内部引号翻倍 */
+function csvCell(value: unknown): string {
+  const s = value == null ? '' : String(value)
+  return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+/** 导出当前页已加载的记录 (不额外请求后端, 后端不可达时同样可用) */
+function exportCsv() {
+  const header = [
+    '时间',
+    '方法',
+    '动作',
+    '资源',
+    '路径',
+    '操作人',
+    '客户端 IP',
+    '状态码',
+    '请求详情',
+  ]
+  const lines = rows.value.map((r) =>
+    [
+      fmtTime(r.ts),
+      r.method,
+      r.action ?? '',
+      r.resource,
+      r.path,
+      r.username ?? '',
+      r.ip,
+      r.status_code ?? '',
+      r.detail,
+    ]
+      .map(csvCell)
+      .join(','),
+  )
+  // BOM 保证中文在 Excel 中不乱码
+  const blob = new Blob(['\uFEFF' + [header.join(','), ...lines].join('\r\n')], {
+    type: 'text/csv;charset=utf-8',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
 function resetFilters() {

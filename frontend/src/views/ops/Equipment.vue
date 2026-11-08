@@ -94,7 +94,7 @@
                 >
               </td>
               <td class="mono">{{ e.load_pct }}%</td>
-              <td class="mono muted">{{ e.run_hours.toLocaleString() }}</td>
+              <td class="mono muted">{{ Number(e.run_hours ?? 0).toLocaleString() }}</td>
               <td>
                 <button class="btn-sm" @click.stop="openEq(e)">{{ tl('遥测') }}</button>
               </td>
@@ -228,9 +228,12 @@ const metaError = ref('')
 async function loadMeta() {
   try {
     const r = await listEquipment({ page_size: 10000 })
-    allItems.value = r.items
+    // 后端/Mock 返回残缺结构时不能把 undefined 赋给数组 ref:
+    // domainOptions / categoryOptions 会直接调用 .map 触发 ErrorBoundary。
+    allItems.value = Array.isArray(r?.items) ? r.items : []
     metaError.value = ''
   } catch (e) {
+    allItems.value = []
     metaError.value = toErrorMessage(e) || '筛选选项加载失败'
   }
 }
@@ -249,8 +252,8 @@ async function fetchList(showLoading: boolean) {
       page: page.value,
       page_size: pageSize.value,
     })
-    items.value = r.items
-    total.value = r.total
+    items.value = Array.isArray(r?.items) ? r.items : []
+    total.value = Number(r?.total) || 0
   } catch (e) {
     // 轮询失败静默（保留上一次成功数据）；显式刷新才暴露错误
     if (showLoading) error.value = toErrorMessage(e) || '设备列表加载失败'
@@ -345,10 +348,7 @@ let timer = 0
 onMounted(() => {
   loadMeta()
   refresh()
-  timer = window.setInterval(
-    () => poll(),
-    Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 15000),
-  )
+  timer = window.setInterval(() => poll(), Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 15000))
 })
 onBeforeUnmount(() => clearInterval(timer))
 </script>

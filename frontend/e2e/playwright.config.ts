@@ -3,8 +3,8 @@ import { defineConfig, devices } from '@playwright/test'
 /**
  * 独立 E2E 基线配置。
  *
- * - 不依赖后端服务: 前端 `src/api/request.ts` 具备 Mock 兜底, 后端不可达时
- *   页面仍可渲染, 因此本套用例可在纯前端 dev server 下运行。
+ * - 不依赖后端服务: specs/smoke.spec.ts 的 beforeEach 安装 fixtures/mockApi.ts
+ *   的浏览器侧 API 桩 (含 /ws 模拟连接), 页面走成功态渲染, 代理不会被触发。
  * - webServer 从 frontend/ 目录启动 Vite; CI 中不复用已有服务。
  * - 目录独立于 frontend/ 主工程, 不修改 package-lock.json / npm ci。
  */

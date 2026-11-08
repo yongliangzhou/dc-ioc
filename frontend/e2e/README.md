@@ -6,7 +6,7 @@
 
 ```bash
 cd frontend/e2e
-npm install
+npm ci                     # 本包自带 package-lock.json, 固定 @playwright/test 版本
 npx playwright install chromium
 npm test              # 自动拉起 frontend/ 的 Vite dev server 并跑 10 条关键路径
 npm run test:ui       # 交互模式
@@ -15,7 +15,18 @@ npm run report        # 查看 HTML 报告
 
 ## 为什么不需要后端
 
-`frontend/src/api/request.ts` 在后端不可达时会走 `mockData.ts` 兜底，登录与业务列表页仍可渲染。因此 E2E 断言只针对**页面结构与导航行为**（可见文本 / URL / 控件存在），不依赖具体数值，也不强依赖某个 Mock 字段。若将来关闭 Mock 兜底，需要在 `playwright.config.ts` 的 `webServer` 中追加后端启动命令（或在 CI 里用 `docker compose up -d backend`）。
+`specs/smoke.spec.ts` 的 `beforeEach` 会为每个 page 安装 `fixtures/mockApi.ts` 的 API 桩：
+
+- 拦截全部 `**/api/**`，按端点返回**结构兼容**的最小数据（未登记的端点回落到字段齐全的空集合）；
+- `page.routeWebSocket('**/ws')` 用本地模拟连接替代后端 WebSocket，客户端 `onopen` 正常触发。
+
+因此 Vite 的 `/api`、`/ws` 代理完全不会被触发，CI 日志里不再有 `ECONNREFUSED` 刷屏，页面走的是**完整成功态渲染路径**：驾驶舱无「加载失败」横幅、设备台账表格真实渲染。
+
+> 为什么不用 `request.ts` 的 Mock 兜底：兜底只在 500/502/404 等失败时触发，且只覆盖 `mockData.ts` 显式登记的端点；未命中的数据源会落入 `AsyncSection` 错误态，让冒烟用例变成假失败。更重要的是，把「任意接口失败都返回空数据」写进生产兜底会掩盖真实后端故障，违背项目「绝不静默降级」的约定 —— 所以补齐数据这件事只放在 E2E 桩里。
+
+若将来需要对接真实后端，可在 `playwright.config.ts` 的 `webServer` 中追加后端启动命令（或 CI 里 `docker compose up -d backend`），并移除 `beforeEach` 的桩安装。
+
+E2E 断言只针对**页面结构与导航行为**（可见文本 / URL / 控件存在），不依赖具体数值。
 
 ## 用例清单（`specs/smoke.spec.ts`）
 

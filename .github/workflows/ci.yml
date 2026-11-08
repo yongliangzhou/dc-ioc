@@ -228,7 +228,8 @@ jobs:
 
       - name: Install E2E dependencies
         working-directory: frontend/e2e
-        run: npm install
+        # 独立包已提交自己的 package-lock.json, 用 npm ci 固定 Playwright 版本
+        run: npm ci
 
       - name: Install Chromium
         working-directory: frontend/e2e

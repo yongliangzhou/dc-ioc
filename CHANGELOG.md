@@ -5,7 +5,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); version
 
 ## [Unreleased]
 
-_Nothing pending. Next: calibrate the CI coverage ratchet against the first full CI report._
+### Fixed
+
+- **E2E self-contained API mocks**: added `frontend/e2e/fixtures/mockApi.ts` and installed it in `beforeEach`. The smoke suite now intercepts only top-level `/api/**` (anchored regex, not `**/api/**` which also matched Vite's `/src/api/*.ts` modules) and mocks the same-origin `/ws` connection. No Vite proxy `ECONNREFUSED` noise, no false "加载失败" error states; `npm test` is 10/10 both locally and with `CI=1` (retries=1, 2 workers).
+- **E2E flakiness**: dashboard test now waits for a rendered KPI value before asserting zero error banners; equipment ledger test polls for the async table instead of taking a one-shot `count()` right after navigation.
+- **Equipment ledger crash**: `views/ops/Equipment.vue` normalized `r?.items ?? []` / `r?.total ?? 0` and guarded `run_hours`, fixing `Cannot read properties of undefined (reading 'map')` caught by `ErrorBoundary` when a list response is malformed.
+- **Audit log CSV export**: added the missing `导出 CSV` button + client-side RFC4180 CSV encoder (BOM for Excel) to `views/admin/AuditLogs.vue`; previously the E2E assertion expected a control that did not exist.
+
+### Pending
+
+- Calibrate the CI coverage ratchet against the first full CI report.
 
 ## [0.16.0] - 2026-11-08
 

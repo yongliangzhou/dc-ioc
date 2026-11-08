@@ -373,10 +373,25 @@ python scripts/check_nav_routes.py --strict  # 0 死链 / 0 孤儿路由
 
 | 项目 | 原因 | 说明 |
 |---|---|---|
-| `backend/tests/test_rate_limit.py` | 需要真实 Postgres/Redis（CI 以 service 容器提供），本机 Docker daemon 未启动 | 该存量用例在远端 CI 中通过；本次 `main.py` 仅追加中间件与 GraphQL 挂载 |
-| Docker 镜像构建 job | 本机 Docker daemon 未启动 | CI 的 docker job 仅 `main` 分支触发 |
-| `frontend/e2e` Playwright | 未安装浏览器；e2e job 仅 `workflow_dispatch` 触发 | 推送后可手动触发 |
+| `backend/tests/test_rate_limit.py` | 需要真实 Postgres/Redis（CI 以 service 容器提供），本机 Docker daemon 未启动 | 远端 CI run #62 的 `Backend CI / Test` 已通过，该用例在 service 容器下无问题 |
+| Docker 镜像构建 job | 本机 Docker daemon 未启动 | 远端 CI run #62 的 `Docker Build` 已通过 |
 | `alembic upgrade head` | 无本地数据库 | 存量环境按 0013→0018 顺序执行；新环境由 lifespan `create_all` 覆盖 |
+
+**E2E 补充（2026-11-08，手动触发 `workflow_dispatch` 后发现并修复）**
+
+首次远端 E2E 为 `3 failed / 7 passed`。根因是 `webServer` 只启动 Vite，`/api/*` 与 `/ws` 代理全部 `ECONNREFUSED`；前端 Mock 兜底未覆盖的端点落入 `AsyncSection` 错误态，另有两处真实缺陷（设备台账 `undefined.map` 崩溃、审计页无导出控件）。
+
+修复后新增 `frontend/e2e/fixtures/mockApi.ts` 浏览器侧 API 桩（仅拦截顶层 `/api/**` 与同源 `/ws`），并补齐产品缺陷与用例竞态。本机安装 Chromium 后实跑：
+
+```text
+npm test            10 passed (26.2s)   # 无 [WebServer] 代理报错
+CI=1 npm test       10 passed (29.9s)   # retries=1 / 2 workers
+vue-tsc --noEmit    0 errors
+npm run test:run    9 files / 52 tests passed
+npm run build       ✓ built
+```
+
+远端 CI run #62（`643ff43`）：`Backend CI` / `Frontend CI` / `Docker Build` 全部 success，`E2E Smoke` 按 `workflow_dispatch` 设计 skipped。
 
 **与计划的偏差（均已记录）**
 
