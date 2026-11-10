@@ -32,6 +32,8 @@ def _gen_cabinets() -> list[CabinetItem]:
                     u_total=42, u_used=u_used,
                     rated_power_kw=10.0,
                     current_power_kw=round(rng.uniform(2, 9.5), 2),
+                    cooling_capability=rng.choice(["风冷", "风冷", "液冷", "背板"]),
+                    cooling_capacity_kw=round(rng.uniform(5, 20), 2),
                     status=rng.choice(["在用", "在用", "在用", "预留"]),
                 ))
                 cid += 1

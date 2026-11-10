@@ -147,9 +147,9 @@
 .p3-bar > i {
   display: block;
   height: 100%;
-  background: #22e3ff;
+  background: var(--cyan);
 }
-@media (max-width: 760px) {
+@media (max-width: 768px) {
   .p3-page {
     padding: 14px;
   }

@@ -137,7 +137,41 @@ def _normalize(prefix: str, route: str) -> str:
 
 
 def static_openapi() -> dict:
-    """纯 AST 生成覆盖全部端点的 OpenAPI 3.1 文档 (Schema 为通用 object)。"""
+    """纯 AST 生成覆盖全部端点的 OpenAPI 3.1 文档 (Schema 为通用 object)。
+
+    静态模式无法解析 Pydantic response_model；对已在前端消费、且需要字段级契约
+    的端点在此登记 Schema 覆盖，保证重新导出时字段定义不会丢失（决策 1）。
+    """
+    def response_schema(full: str) -> dict:
+        if full == "/api/cabinets":
+            cabinet_item = {
+                "type": "object",
+                "properties": {
+                    "id": {"type": "integer"},
+                    "idc_id": {"type": "integer"},
+                    "code": {"type": "string"},
+                    "room": {"type": "string"},
+                    "row": {"type": "string"},
+                    "u_total": {"type": "integer"},
+                    "u_used": {"type": "integer"},
+                    "rated_power_kw": {"type": "number"},
+                    "current_power_kw": {"type": "number"},
+                    "cooling_capability": {"type": "string", "description": "制冷方式: 风冷/液冷/背板/无"},
+                    "cooling_capacity_kw": {"type": "number", "description": "机柜额定制冷容量 kW"},
+                    "status": {"type": "string"},
+                },
+            }
+            return {
+                "type": "object",
+                "properties": {
+                    "total": {"type": "integer"},
+                    "page": {"type": "integer"},
+                    "size": {"type": "integer"},
+                    "items": {"type": "array", "items": cabinet_item},
+                },
+            }
+        return {"type": "object"}
+
     paths: dict[str, dict] = {}
     for inc in _router_includes():
         routes = _routes_of(inc["module"]).get(inc["router_var"], [])
@@ -155,7 +189,7 @@ def static_openapi() -> dict:
                 "responses": {
                     "200": {
                         "description": "Successful Response",
-                        "content": {"application/json": {"schema": {"type": "object"}}},
+                        "content": {"application/json": {"schema": response_schema(full)}},
                     }
                 },
             }

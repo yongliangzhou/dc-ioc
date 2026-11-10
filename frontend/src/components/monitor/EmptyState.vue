@@ -1,38 +1,22 @@
 <template>
-  <div class="empty-state">
-    <span class="empty-icon">{{ icon }}</span>
-    <span class="empty-text">{{ text }}</span>
-  </div>
+  <EmptyStateCard :title="text" :icon="resolvedIcon" :min-height="minHeight">
+    <template v-if="$slots.actions" #actions><slot name="actions" /></template>
+  </EmptyStateCard>
 </template>
 
 <script setup lang="ts">
-withDefaults(
-  defineProps<{
-    text?: string
-    icon?: string
-  }>(),
-  {
-    text: '暂无数据',
-    icon: '📊',
-  },
+/** 薄适配层：保留旧的 text/icon 签名，实际渲染统一空态组件。
+ *  旧版默认 emoji 图标 📊 已移除，改用 lucide-vue-next 的 Inbox 图标。 */
+import { computed } from 'vue'
+import { Inbox } from 'lucide-vue-next'
+import EmptyStateCard from '@/components/common/EmptyStateCard.vue'
+
+const props = withDefaults(defineProps<{ text?: string; icon?: string; minHeight?: string }>(), {
+  text: '暂无数据',
+  minHeight: '160px',
+})
+
+const resolvedIcon = computed(() =>
+  props.icon && typeof props.icon !== 'string' ? props.icon : Inbox,
 )
 </script>
-
-<style scoped>
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 40px 16px;
-  color: var(--txt3);
-}
-.empty-icon {
-  font-size: 32px;
-  opacity: 0.5;
-}
-.empty-text {
-  font-size: 13px;
-}
-</style>

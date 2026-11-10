@@ -59,6 +59,10 @@
     color: #101828 !important;
     text-decoration: none !important;
   }
+  /* 吸收 views/ops/HealthReport.vue 的页内打印规则，全库 @media print 仅此一处 */
+  .modal-mask {
+    display: none !important;
+  }
   @page {
     margin: 14mm;
   }

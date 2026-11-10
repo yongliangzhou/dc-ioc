@@ -936,15 +936,9 @@ onMounted(() => {
   color: var(--txt2);
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1024px) {
   .hr-overview-body {
     gap: 18px;
-  }
-}
-
-@media print {
-  .modal-mask {
-    display: none !important;
   }
 }
 </style>

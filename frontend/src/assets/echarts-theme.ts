@@ -1,78 +1,99 @@
 /**
- * 统一 ECharts 深色主题 and 颜色板
- * 所有图表组件共用此配置
+ * 统一 ECharts 主题与颜色板（monitor 侧图表基础设施）
+ * 颜色不再硬编码：全部通过 chartVars() 从 :root 的 CSS 变量解析，
+ * 用 getter 保证主题切换后每次构造 option 都取到当前主题值。
  */
 import echarts from '@/utils/echarts'
 import type * as echartsTypes from 'echarts'
+import { chartVars } from '@/components/charts/options'
 
-// ---- 统一调色板 ----
+// ---- 统一调色板（getter：跟随主题） ----
 export const CHART_COLORS = {
-  cyan: '#06b6d4',
-  blue: '#3b82f6',
-  green: '#22c55e',
-  orange: '#f97316',
-  red: '#ef4444',
-  purple: '#8b5cf6',
-  yellow: '#eab308',
-  amber: '#ffb020',
-  pink: '#ec4899',
-  teal: '#14b8a6',
-  // 多系列图自动轮换
-  palette: [
-    '#06b6d4',
-    '#f97316',
-    '#8b5cf6',
-    '#22c55e',
-    '#3b82f6',
-    '#ef4444',
-    '#eab308',
-    '#ec4899',
-    '#14b8a6',
-    '#fb923c',
-  ],
-} as const
+  get cyan() {
+    return chartVars().accent
+  },
+  get blue() {
+    return chartVars().palette[1]
+  },
+  get green() {
+    return chartVars().palette[3]
+  },
+  get orange() {
+    return chartVars().amber
+  },
+  get red() {
+    return chartVars().red
+  },
+  get purple() {
+    return chartVars().palette[2]
+  },
+  get yellow() {
+    return chartVars().amber
+  },
+  get amber() {
+    return chartVars().amber
+  },
+  get pink() {
+    return chartVars().palette[5]
+  },
+  get teal() {
+    return chartVars().accent
+  },
+  get palette() {
+    return chartVars().palette
+  },
+}
 
-// ---- 图表基础颜色 ----
+// ---- 图表基础颜色（getter：跟随主题） ----
 export const CHART_BASE = {
   background: 'transparent',
-  textColor: '#94a3b8',
-  labelColor: '#64748b',
-  splitLine: '#1e293b',
-  axisLine: '#334155',
-  transparent: 'rgba(6,182,212,0.08)',
+  get textColor() {
+    return chartVars().axisLabel
+  },
+  get labelColor() {
+    return chartVars().axisLabel
+  },
+  get splitLine() {
+    return chartVars().axisLine
+  },
+  get axisLine() {
+    return chartVars().axisLine
+  },
+  get transparent() {
+    return chartVars().transparent
+  },
 }
 
 // ---- 基础 grid 配置 ----
-export function baseGrid(overrides?: Partial<echartsTypes.GridComponentOption>): echartsTypes.GridComponentOption {
-  return {
-    left: 55,
-    right: 20,
-    top: 20,
-    bottom: 30,
-    containLabel: false,
-    ...overrides,
-  }
+export function baseGrid(
+  overrides?: Partial<echartsTypes.GridComponentOption>,
+): echartsTypes.GridComponentOption {
+  return { left: 55, right: 20, top: 20, bottom: 30, containLabel: false, ...overrides }
 }
 
 // ---- 基础 tooltip 配置 ----
 export function baseTooltip(
   overrides?: Partial<echartsTypes.TooltipComponentOption>,
 ): echartsTypes.TooltipComponentOption {
+  const v = chartVars()
   return {
     trigger: 'axis',
-    backgroundColor: 'rgba(15, 27, 51, 0.95)',
-    borderColor: CHART_BASE.splitLine,
-    textStyle: { color: CHART_BASE.textColor, fontSize: 12 },
+    backgroundColor: v.tooltipBg,
+    borderColor: v.tooltipBorder,
+    textStyle: { color: v.tooltipTxt, fontSize: 12 },
     ...overrides,
   }
 }
 
 // ---- 基础 xAxis 配置 ----
-export function baseXAxis(overrides?: Partial<echartsTypes.XAXisComponentOption>): echartsTypes.XAXisComponentOption {
+export function baseXAxis(
+  overrides?: Partial<echartsTypes.XAXisComponentOption>,
+): echartsTypes.XAXisComponentOption {
+  const v = chartVars()
   return {
     type: 'category',
-    axisLabel: { color: CHART_BASE.labelColor, fontSize: 10 },
-    axisLine: { lineStyle: { color: CHART_BASE.axisLine } },
+    axisLabel: { color: v.axisLabel, fontSize: 10 },
+    axisLine: { lineStyle: { color: v.axisLine } },
     axisTick: { show: false },
     splitLine: { show: false },
     ...overrides,
@@ -80,22 +101,23 @@ export function baseXAxis(overrides?: Partial<echartsTypes.XAXisComponentOption>
 }
 
 // ---- 基础 yAxis 配置 ----
-export function baseYAxis(overrides?: Partial<echartsTypes.YAXisComponentOption>): echartsTypes.YAXisComponentOption {
+export function baseYAxis(
+  overrides?: Partial<echartsTypes.YAXisComponentOption>,
+): echartsTypes.YAXisComponentOption {
+  const v = chartVars()
   return {
     type: 'value',
-    axisLabel: { color: CHART_BASE.labelColor },
-    splitLine: { lineStyle: { color: CHART_BASE.splitLine } },
+    axisLabel: { color: v.axisLabel },
+    splitLine: { lineStyle: { color: v.splitLine } },
     ...overrides,
   }
 }
 
 // ---- 基础 legend 配置 ----
-export function baseLegend(overrides?: Partial<echartsTypes.LegendComponentOption>): echartsTypes.LegendComponentOption {
-  return {
-    bottom: 0,
-    textStyle: { color: CHART_BASE.textColor, fontSize: 11 },
-    ...overrides,
-  }
+export function baseLegend(
+  overrides?: Partial<echartsTypes.LegendComponentOption>,
+): echartsTypes.LegendComponentOption {
+  return { bottom: 0, textStyle: { color: chartVars().axisLabel, fontSize: 11 }, ...overrides }
 }
 
 // ---- 柱状图渐变填充 ----

@@ -7,131 +7,142 @@
 
     <AsyncSection :page="page" @retry="page.reload">
       <div class="grid cols-5" v-if="stats">
-      <MetricCard
-        metric-name="mnt-plans"
-        :label="tl('维保计划')"
-        :value="stats.totalPlans"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="mnt-active"
-        :label="tl('进行中')"
-        :value="stats.activePlans"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="mnt-overdue"
-        :label="tl('逾期')"
-        :value="stats.overduePlans"
-        unit="项"
-        :quality="stats.overduePlans ? 'bad' : 'good'"
-        :severity="stats.overduePlans ? 'crit' : 'normal'"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="mnt-records"
-        :label="tl('执行记录')"
-        :value="stats.totalRecords"
-        unit="条"
-        quality="good"
-        :online="true"
-      />
-      <MetricCard
-        metric-name="mnt-completed"
-        :label="tl('已完成')"
-        :value="stats.completedRecords"
-        unit="条"
-        quality="good"
-        :online="true"
-      />
-    </div>
+        <MetricCard
+          metric-name="mnt-plans"
+          :label="tl('维保计划')"
+          :value="stats.totalPlans"
+          quality="good"
+          :online="true"
+        />
+        <MetricCard
+          metric-name="mnt-active"
+          :label="tl('进行中')"
+          :value="stats.activePlans"
+          quality="good"
+          :online="true"
+        />
+        <MetricCard
+          metric-name="mnt-overdue"
+          :label="tl('逾期')"
+          :value="stats.overduePlans"
+          unit="项"
+          :quality="stats.overduePlans ? 'bad' : 'good'"
+          :severity="stats.overduePlans ? 'crit' : 'normal'"
+          :online="true"
+        />
+        <MetricCard
+          metric-name="mnt-records"
+          :label="tl('执行记录')"
+          :value="stats.totalRecords"
+          unit="条"
+          quality="good"
+          :online="true"
+        />
+        <MetricCard
+          metric-name="mnt-completed"
+          :label="tl('已完成')"
+          :value="stats.completedRecords"
+          unit="条"
+          quality="good"
+          :online="true"
+        />
+      </div>
 
-    <div class="grid cols-4-6" style="margin-top: 16px">
-      <!-- 维保计划 -->
-      <Panel>
-        <div class="panel-head">
-          <h5 class="section-title">{{ tl('维保计划') }}</h5>
-          <button class="btn-sm primary" v-bind="authState('write')" @click="openPlanCreate">
-            {{ tl('新建计划') }}
-          </button>
-        </div>
-        <div class="plan-list" v-if="plans.length">
-          <div
-            v-for="p in plans"
-            :key="p.id"
-            class="plan-row"
-            :class="{ sel: selectedPlanId === p.id }"
-            @click="selectPlan(p.id)"
-          >
-            <div class="p-top">
-              <div>
-                <span class="p-name">{{ p.name }}</span>
-                <span class="p-code">{{ p.code }}</span>
+      <div class="grid cols-4-6" style="margin-top: 16px">
+        <!-- 维保计划 -->
+        <Panel>
+          <div class="panel-head">
+            <h5 class="section-title">{{ tl('维保计划') }}</h5>
+            <button class="btn-sm primary" v-bind="authState('write')" @click="openPlanCreate">
+              {{ tl('新建计划') }}
+            </button>
+          </div>
+          <div class="plan-list" v-if="plans.length">
+            <div
+              v-for="p in plans"
+              :key="p.id"
+              class="plan-row"
+              :class="{ sel: selectedPlanId === p.id }"
+              @click="selectPlan(p.id)"
+            >
+              <div class="p-top">
+                <div>
+                  <span class="p-name">{{ p.name }}</span>
+                  <span class="p-code">{{ p.code }}</span>
+                </div>
+                <span
+                  class="pill-tag"
+                  :class="p.status === 'active' ? 'b' : p.status === 'paused' ? 'a' : ''"
+                >
+                  {{ statusLabel(p.status) }}
+                </span>
               </div>
-              <span class="pill-tag" :class="p.status === 'active' ? 'b' : p.status === 'paused' ? 'a' : ''">
-                {{ statusLabel(p.status) }}
-              </span>
-            </div>
-            <div class="p-meta">
-              <span class="p-eq">{{ p.equipmentCode }}</span>
-              <span class="pill-tag" :class="freqCls(p.frequency)">{{
-                freqLabel(p.frequency)
-              }}</span>
-              <span class="pill-tag" :class="p.overdue ? 'r' : 'g'">
-                {{ fmtDate(p.nextDueDate) }}
-              </span>
-              <span class="p-ops" @click.stop>
-                <button class="link" v-bind="authState('write')" @click="openPlanEdit(p)">{{ tl('编辑') }}</button>
-                <button class="link danger" v-bind="authState('write')" @click="removePlan(p)">{{ tl('删除') }}</button>
-              </span>
+              <div class="p-meta">
+                <span class="p-eq">{{ p.equipmentCode }}</span>
+                <span class="pill-tag" :class="freqCls(p.frequency)">{{
+                  freqLabel(p.frequency)
+                }}</span>
+                <span class="pill-tag" :class="p.overdue ? 'r' : 'g'">
+                  {{ fmtDate(p.nextDueDate) }}
+                </span>
+                <span class="p-ops" @click.stop>
+                  <button class="link" v-bind="authState('write')" @click="openPlanEdit(p)">
+                    {{ tl('编辑') }}
+                  </button>
+                  <button class="link danger" v-bind="authState('write')" @click="removePlan(p)">
+                    {{ tl('删除') }}
+                  </button>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-        <div class="empty" v-else>{{ tl('暂无计划, 点击右上角新建') }}</div>
-      </Panel>
+          <div class="empty" v-else>{{ tl('暂无计划, 点击右上角新建') }}</div>
+        </Panel>
 
-      <!-- 执行记录 -->
-      <Panel>
-        <div class="panel-head">
-          <h5 class="section-title">{{ selectedPlanName || tl('执行记录') }}</h5>
-          <button class="btn-sm primary" v-bind="authState('write')" @click="openRecCreate">
-            {{ tl('录入记录') }}
-          </button>
-        </div>
-        <div class="tbl" v-if="records.length">
-          <div class="tbl-head">
-            <span class="col w-by">{{ tl('维保人') }}</span>
-            <span class="col w-time">{{ tl('时间') }}</span>
-            <span class="col w-stat">{{ tl('状态') }}</span>
-            <span class="col w-res">{{ tl('结果') }}</span>
-            <span class="col w-desc">{{ tl('内容') }}</span>
-            <span class="col w-op">{{ tl('操作') }}</span>
+        <!-- 执行记录 -->
+        <Panel>
+          <div class="panel-head">
+            <h5 class="section-title">{{ selectedPlanName || tl('执行记录') }}</h5>
+            <button class="btn-sm primary" v-bind="authState('write')" @click="openRecCreate">
+              {{ tl('录入记录') }}
+            </button>
           </div>
-          <div v-for="r in records" :key="r.id" class="tbl-row">
-            <span class="col w-by">{{ r.maintainedBy }}</span>
-            <span class="col w-time muted">{{ r.startedAt }}</span>
-            <span class="col w-stat"
-              ><span class="pill-tag" :class="r.status === 'completed' ? 'g' : 'a'">{{
-                r.status === 'completed' ? tl('已完成') : tl('进行中')
-              }}</span></span
-            >
-            <span class="col w-res"
-              ><span class="pill-tag" :class="r.result === 'pass' ? 'g' : 'r'">{{
-                r.result || '-'
-              }}</span></span
-            >
-            <span class="col w-desc muted">{{ r.actionDescription || '-' }}</span>
-            <span class="col w-op p-ops">
-              <button class="link" v-bind="authState('write')" @click="openRecEdit(r)">{{ tl('编辑') }}</button>
-              <button class="link danger" v-bind="authState('write')" @click="removeRec(r)">{{ tl('删除') }}</button>
-            </span>
+          <div class="tbl" v-if="records.length">
+            <div class="tbl-head">
+              <span class="col w-by">{{ tl('维保人') }}</span>
+              <span class="col w-time">{{ tl('时间') }}</span>
+              <span class="col w-stat">{{ tl('状态') }}</span>
+              <span class="col w-res">{{ tl('结果') }}</span>
+              <span class="col w-desc">{{ tl('内容') }}</span>
+              <span class="col w-op">{{ tl('操作') }}</span>
+            </div>
+            <div v-for="r in records" :key="r.id" class="tbl-row">
+              <span class="col w-by">{{ r.maintainedBy }}</span>
+              <span class="col w-time muted">{{ r.startedAt }}</span>
+              <span class="col w-stat"
+                ><span class="pill-tag" :class="r.status === 'completed' ? 'g' : 'a'">{{
+                  r.status === 'completed' ? tl('已完成') : tl('进行中')
+                }}</span></span
+              >
+              <span class="col w-res"
+                ><span class="pill-tag" :class="r.result === 'pass' ? 'g' : 'r'">{{
+                  r.result || '-'
+                }}</span></span
+              >
+              <span class="col w-desc muted">{{ r.actionDescription || '-' }}</span>
+              <span class="col w-op p-ops">
+                <button class="link" v-bind="authState('write')" @click="openRecEdit(r)">
+                  {{ tl('编辑') }}
+                </button>
+                <button class="link danger" v-bind="authState('write')" @click="removeRec(r)">
+                  {{ tl('删除') }}
+                </button>
+              </span>
+            </div>
           </div>
-        </div>
-        <div class="empty" v-else>{{ tl('暂无记录') }}</div>
-      </Panel>
-    </div>
+          <div class="empty" v-else>{{ tl('暂无记录') }}</div>
+        </Panel>
+      </div>
     </AsyncSection>
 
     <!-- 执行记录抽屉 -->
@@ -142,17 +153,20 @@
           <button class="x" @click="recDrawer = false">✕</button>
         </div>
         <div class="form">
-          <label>{{ tl('维保人') }}
+          <label
+            >{{ tl('维保人') }}
             <input v-model.trim="recForm.maintainedBy" class="ipt" :placeholder="tl('如 李四')" />
           </label>
           <div class="row">
-            <label>{{ tl('状态') }}
+            <label
+              >{{ tl('状态') }}
               <select v-model="recForm.status" class="ipt">
                 <option value="completed">{{ tl('已完成') }}</option>
                 <option value="in_progress">{{ tl('进行中') }}</option>
               </select>
             </label>
-            <label>{{ tl('结果') }}
+            <label
+              >{{ tl('结果') }}
               <select v-model="recForm.result" class="ipt">
                 <option value="pass">{{ tl('合格') }}</option>
                 <option value="fail">{{ tl('不合格') }}</option>
@@ -160,13 +174,16 @@
               </select>
             </label>
           </div>
-          <label>{{ tl('开始时间') }}
+          <label
+            >{{ tl('开始时间') }}
             <input v-model.trim="recForm.startedAt" class="ipt" type="datetime-local" />
           </label>
-          <label>{{ tl('维保内容') }}
+          <label
+            >{{ tl('维保内容') }}
             <textarea v-model.trim="recForm.actionDescription" class="ipt" rows="2"></textarea>
           </label>
-          <label>{{ tl('备注') }}
+          <label
+            >{{ tl('备注') }}
             <textarea v-model.trim="recForm.notes" class="ipt" rows="2"></textarea>
           </label>
           <div v-if="recErr" class="err">{{ recErr }}</div>
@@ -188,17 +205,33 @@
           <button class="x" @click="planDrawer = false">✕</button>
         </div>
         <div class="form">
-          <label>{{ tl('计划编号') }}
-            <input v-model.trim="planForm.code" class="ipt" :placeholder="tl('留空自动生成 PM-xxxxxx')" />
+          <label
+            >{{ tl('计划编号') }}
+            <input
+              v-model.trim="planForm.code"
+              class="ipt"
+              :placeholder="tl('留空自动生成 PM-xxxxxx')"
+            />
           </label>
-          <label>{{ tl('计划名称') }}
-            <input v-model.trim="planForm.name" class="ipt" :placeholder="tl('如 机房空调季度保养')" />
+          <label
+            >{{ tl('计划名称') }}
+            <input
+              v-model.trim="planForm.name"
+              class="ipt"
+              :placeholder="tl('如 机房空调季度保养')"
+            />
           </label>
-          <label>{{ tl('关联设备') }}
-            <input v-model.trim="planForm.equipmentCode" class="ipt" :placeholder="tl('设备编号, 选填')" />
+          <label
+            >{{ tl('关联设备') }}
+            <input
+              v-model.trim="planForm.equipmentCode"
+              class="ipt"
+              :placeholder="tl('设备编号, 选填')"
+            />
           </label>
           <div class="row">
-            <label>{{ tl('周期') }}
+            <label
+              >{{ tl('周期') }}
               <select v-model="planForm.frequency" class="ipt">
                 <option value="daily">{{ tl('日') }}</option>
                 <option value="weekly">{{ tl('周') }}</option>
@@ -207,7 +240,8 @@
                 <option value="yearly">{{ tl('年') }}</option>
               </select>
             </label>
-            <label>{{ tl('状态') }}
+            <label
+              >{{ tl('状态') }}
               <select v-model="planForm.status" class="ipt">
                 <option value="active">{{ tl('启用') }}</option>
                 <option value="paused">{{ tl('暂停') }}</option>
@@ -215,13 +249,16 @@
               </select>
             </label>
           </div>
-          <label>{{ tl('责任人') }}
+          <label
+            >{{ tl('责任人') }}
             <input v-model.trim="planForm.owner" class="ipt" :placeholder="tl('如 王工')" />
           </label>
-          <label>{{ tl('下次到期') }}
+          <label
+            >{{ tl('下次到期') }}
             <input v-model.trim="planForm.nextDueDate" class="ipt" type="datetime-local" />
           </label>
-          <label>{{ tl('说明') }}
+          <label
+            >{{ tl('说明') }}
             <textarea v-model.trim="planForm.description" class="ipt" rows="2"></textarea>
           </label>
           <div v-if="planErr" class="err">{{ planErr }}</div>
@@ -238,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
 import Panel from '@/components/common/Panel.vue'
@@ -282,7 +319,12 @@ const recDrawer = ref(false)
 const recSaving = ref(false)
 const recErr = ref('')
 const recForm = ref<Partial<RecordView> & RecordCreate>({
-  maintainedBy: '', status: 'completed', result: 'pass', startedAt: '', actionDescription: '', notes: '',
+  maintainedBy: '',
+  status: 'completed',
+  result: 'pass',
+  startedAt: '',
+  actionDescription: '',
+  notes: '',
 })
 
 function freqLabel(f: string) {
@@ -313,8 +355,12 @@ function fmtDate(d: string | null) {
 
 function openRecCreate() {
   recForm.value = {
-    maintainedBy: '', status: 'completed', result: 'pass',
-    startedAt: '', actionDescription: '', notes: '',
+    maintainedBy: '',
+    status: 'completed',
+    result: 'pass',
+    startedAt: '',
+    actionDescription: '',
+    notes: '',
   }
   recErr.value = ''
   recDrawer.value = true
@@ -369,7 +415,9 @@ async function removeRec(r: RecordView) {
     message: tl('确认删除该维保记录?'),
     danger: true,
     confirmText: tl('删除'),
-    onConfirm: async () => { await deleteMaintenanceRecord(r.id) },
+    onConfirm: async () => {
+      await deleteMaintenanceRecord(r.id)
+    },
   })
   if (ok) {
     records.value = await getMaintenanceRecords(selectedPlanId.value ?? undefined)
@@ -383,19 +431,41 @@ const planDrawer = ref(false)
 const planSaving = ref(false)
 const planErr = ref('')
 const planForm = ref<Partial<PlanView> & PlanCreate>({
-  code: '', name: '', equipmentCode: '', description: '', frequency: 'monthly', nextDueDate: '', status: 'active', owner: '',
+  code: '',
+  name: '',
+  equipmentCode: '',
+  description: '',
+  frequency: 'monthly',
+  nextDueDate: '',
+  status: 'active',
+  owner: '',
 })
 
 function openPlanCreate() {
-  planForm.value = { code: '', name: '', equipmentCode: '', description: '', frequency: 'monthly', nextDueDate: '', status: 'active', owner: '' }
+  planForm.value = {
+    code: '',
+    name: '',
+    equipmentCode: '',
+    description: '',
+    frequency: 'monthly',
+    nextDueDate: '',
+    status: 'active',
+    owner: '',
+  }
   planErr.value = ''
   planDrawer.value = true
 }
 function openPlanEdit(p: PlanView) {
   planForm.value = {
-    id: Number(p.id), code: p.code, name: p.name, equipmentCode: p.equipmentCode,
-    description: p.description ?? '', frequency: p.frequency, nextDueDate: p.nextDueDate ?? '',
-    status: p.status, owner: p.owner,
+    id: Number(p.id),
+    code: p.code,
+    name: p.name,
+    equipmentCode: p.equipmentCode,
+    description: p.description ?? '',
+    frequency: p.frequency,
+    nextDueDate: p.nextDueDate ?? '',
+    status: p.status,
+    owner: p.owner,
   }
   planErr.value = ''
   planDrawer.value = true
@@ -436,7 +506,9 @@ async function removePlan(p: PlanView) {
     message: tl('确认删除该维保计划? 已产生的执行记录不会被删除。'),
     danger: true,
     confirmText: tl('删除'),
-    onConfirm: async () => { await deleteMaintenancePlan(Number(p.id)) },
+    onConfirm: async () => {
+      await deleteMaintenancePlan(Number(p.id))
+    },
   })
   if (ok) {
     await page.reload()

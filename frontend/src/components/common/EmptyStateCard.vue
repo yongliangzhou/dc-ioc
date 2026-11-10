@@ -39,33 +39,34 @@ const isComponent = computed(() => typeof props.icon !== 'string' && props.icon 
 </script>
 
 <style scoped>
+/* 颜色只来自全局 :root token，无硬编码兜底 */
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 40px 24px;
+  gap: var(--space-2, 8px);
+  padding: 40px var(--space-5, 24px);
   text-align: center;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
 }
 .es-icon {
-  color: rgba(255, 255, 255, 0.18);
-  margin-bottom: 4px;
+  color: var(--txt3);
+  margin-bottom: var(--space-1, 4px);
 }
 .es-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
-  color: var(--txt, #e6edf3);
+  color: var(--txt-strong);
 }
 .es-desc {
   font-size: 12px;
   line-height: 1.6;
   max-width: 320px;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
 }
 .es-actions {
-  margin-top: 12px;
+  margin-top: var(--space-3, 12px);
   display: flex;
   gap: 10px;
 }

@@ -4,8 +4,16 @@ import axios, {
   type AxiosRequestConfig,
   type InternalAxiosRequestConfig,
 } from 'axios'
+import { ref } from 'vue'
 import router from '@/router'
 import { mockForUrl, mockWriteForUrl } from './mockData'
+
+/**
+ * 本地 mock 兜底发生次数（响应式）。
+ * 页面可用「加载前后差值」判断本次数据是否走了兜底，再驱动 useMockFlag 的
+ * none/partial/full 三档，避免把模拟数据当成真实遥测（docs/design/03 §5.1）。
+ */
+export const mockFallbackCount = ref(0)
 
 declare module 'axios' {
   interface InternalAxiosRequestConfig {
@@ -133,7 +141,10 @@ function tryLocalFallback(err: AxiosError): unknown {
   if (!isWriteMethod(method)) {
     const data = mockForUrl(url, cfg)
     if (data !== undefined) {
-      console.warn(`[mock-fallback] 后端不可达, 兜底返回旧版模拟数据: ${method.toUpperCase()} ${url}`)
+      mockFallbackCount.value += 1
+      console.warn(
+        `[mock-fallback] 后端不可达, 兜底返回旧版模拟数据: ${method.toUpperCase()} ${url}`,
+      )
       return data
     }
     return undefined

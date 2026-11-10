@@ -26,6 +26,12 @@ class Cabinet(Base, TimestampMixin):
     u_used: Mapped[int] = mapped_column(Integer, default=0, comment="已用U位")
     rated_power_kw: Mapped[float] = mapped_column(Numeric(8, 2), default=10.0, comment="额定功率 kW")
     current_power_kw: Mapped[float] = mapped_column(Numeric(8, 2), default=0, comment="当前功率 kW")
+    cooling_capability: Mapped[str] = mapped_column(
+        String(16), default="风冷", comment="制冷方式: 风冷/液冷/背板/无"
+    )
+    cooling_capacity_kw: Mapped[float] = mapped_column(
+        Numeric(8, 2), default=0, comment="机柜额定制冷容量 kW"
+    )
     status: Mapped[str] = mapped_column(String(16), default="在用", index=True, comment="在用/预留/停用")
 
     idc: Mapped["IDC"] = relationship(back_populates="cabinets")

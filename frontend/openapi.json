@@ -608,6 +608,63 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "properties": {
+                    "items": {
+                      "items": {
+                        "properties": {
+                          "code": {
+                            "type": "string"
+                          },
+                          "cooling_capability": {
+                            "description": "制冷方式: 风冷/液冷/背板/无",
+                            "type": "string"
+                          },
+                          "cooling_capacity_kw": {
+                            "description": "机柜额定制冷容量 kW",
+                            "type": "number"
+                          },
+                          "current_power_kw": {
+                            "type": "number"
+                          },
+                          "id": {
+                            "type": "integer"
+                          },
+                          "idc_id": {
+                            "type": "integer"
+                          },
+                          "rated_power_kw": {
+                            "type": "number"
+                          },
+                          "room": {
+                            "type": "string"
+                          },
+                          "row": {
+                            "type": "string"
+                          },
+                          "status": {
+                            "type": "string"
+                          },
+                          "u_total": {
+                            "type": "integer"
+                          },
+                          "u_used": {
+                            "type": "integer"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
+                    "page": {
+                      "type": "integer"
+                    },
+                    "size": {
+                      "type": "integer"
+                    },
+                    "total": {
+                      "type": "integer"
+                    }
+                  },
                   "type": "object"
                 }
               }

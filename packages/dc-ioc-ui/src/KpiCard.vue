@@ -26,7 +26,7 @@ const props = withDefaults(
   {
     size: 'md',
     decimals: 1,
-    barColor: 'linear-gradient(90deg, var(--cyan, #06b6d4), var(--blue, #3b82f6))',
+    barColor: 'linear-gradient(90deg, var(--cyan), var(--blue))',
     clickable: false,
   },
 )
@@ -34,16 +34,10 @@ const props = withDefaults(
 defineEmits<{ click: [] }>()
 
 const sizeClass = computed(() => `dui-kpi-${props.size}`)
-
 const barVal = computed(() => props.barValue ?? props.progress)
-
 const _barColor = computed(
-  () =>
-    props.barColor ??
-    props.progressColor ??
-    'linear-gradient(90deg, var(--cyan, #06b6d4), var(--blue, #3b82f6))',
+  () => props.barColor ?? props.progressColor ?? 'linear-gradient(90deg, var(--cyan), var(--blue))',
 )
-
 const formattedValue = computed(() => {
   const v = props.value
   if (v === undefined || v === null || v === '') return '-'
@@ -51,7 +45,6 @@ const formattedValue = computed(() => {
   if (Number.isInteger(v)) return String(v)
   return v.toFixed(props.decimals)
 })
-
 const computedValueClass = computed(() => {
   const parts: string[] = []
   if (props.status === 'danger') parts.push('dui-cv-danger')
@@ -94,15 +87,12 @@ const computedValueClass = computed(() => {
 
 <style scoped>
 /* KpiCard — @dc-ioc/ui
-   Requires CSS variables: --txt2, --txt3, --txt-strong, --red, --amber,
-   --green, --cyan, --blue, --track (optional, fall back to #334155).
-   Also provides self-contained .dui-kpi-card base styles (no .card dependency). */
-
+   颜色只来自全局 :root token（frontend/src/assets/styles/index.scss），无硬编码兜底。 */
 .dui-kpi-card {
-  background: linear-gradient(180deg, #1e293b, #0f172a);
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 14px;
+  background: linear-gradient(180deg, var(--panel), var(--bg2));
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 12px);
+  padding: var(--space-3, 12px);
   position: relative;
   overflow: hidden;
   min-width: 110px;
@@ -112,117 +102,51 @@ const computedValueClass = computed(() => {
   position: absolute;
   inset: 0 0 auto 0;
   height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgba(34, 227, 255, 0.5),
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, var(--accent-50), transparent);
 }
+.dui-kpi-sm { padding: 10px var(--space-3, 12px); }
+.dui-kpi-sm .dui-kpi-cv { font-size: 18px; }
+.dui-kpi-lg { padding: var(--space-4, 16px); }
+.dui-kpi-lg .dui-kpi-cv { font-size: 28px; }
 
-.dui-kpi-sm {
-  padding: 10px 12px;
-}
-.dui-kpi-sm .dui-kpi-cv {
-  font-size: 18px;
-}
-
-.dui-kpi-lg {
-  padding: 18px;
-}
-.dui-kpi-lg .dui-kpi-cv {
-  font-size: 28px;
-}
-
-.dui-kpi-clickable {
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-.dui-kpi-clickable:hover {
-  border-color: rgba(34, 227, 255, 0.5);
-}
+.dui-kpi-clickable { cursor: pointer; transition: border-color .2s; }
+.dui-kpi-clickable:hover { border-color: var(--accent-50); }
 
 .dui-kpi-ct {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  color: var(--txt2, #94a3b8);
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--txt2);
+  letter-spacing: .5px;
+  margin-bottom: var(--space-2, 8px);
 }
-.dui-kpi-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.dui-kpi-sub {
-  font-size: 10px;
-  color: var(--txt3, #64748b);
-  margin-left: auto;
-}
-.dui-kpi-target {
-  font-size: 10px;
-  color: var(--txt3, #64748b);
-  margin-left: auto;
-}
+.dui-kpi-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dui-kpi-sub, .dui-kpi-target { font-size: 10px; color: var(--txt3); margin-left: auto; }
 
 .dui-kpi-cv {
   font-size: 24px;
-  font-weight: 800;
-  line-height: 1;
+  font-weight: 700;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
-  color: var(--txt-strong, #f1f5f9);
+  color: var(--txt-strong);
 }
-.dui-kpi-cv small {
-  font-size: 12px;
-  color: var(--txt2, #94a3b8);
-  font-weight: 500;
-  margin-left: 3px;
-}
+.dui-kpi-cv small { font-size: 11px; color: var(--txt2); font-weight: 500; margin-left: 3px; }
+.dui-cv-danger { color: var(--red); }
+.dui-cv-warning { color: var(--amber); }
+.dui-cv-prefix { font-size: 14px; color: var(--txt2); font-weight: 500; margin-right: 2px; }
 
-.dui-cv-danger {
-  color: var(--red, #ef4444);
-}
-.dui-cv-warning {
-  color: var(--amber, #f59e0b);
-}
-.dui-cv-prefix {
-  font-size: 14px;
-  color: var(--txt2, #94a3b8);
-  font-weight: 500;
-  margin-right: 2px;
-}
-
-.dui-kpi-trend {
-  margin-top: 6px;
-  font-size: 11px;
-}
-.dui-up {
-  color: var(--red, #ef4444);
-}
-.dui-down {
-  color: var(--green, #22c55e);
-}
+.dui-kpi-trend { margin-top: 6px; font-size: 11px; }
+.dui-up { color: var(--red); }
+.dui-down { color: var(--green); }
 
 .dui-kpi-bar {
   height: 6px;
-  border-radius: 4px;
-  background: var(--track, #334155);
+  border-radius: var(--space-1, 4px);
+  background: var(--track);
   margin-top: 10px;
   overflow: hidden;
 }
-.dui-kpi-bar > i {
-  display: block;
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.5s ease;
-}
-
-.dui-kpi-detail {
-  margin-top: 6px;
-  font-size: 10px;
-  color: var(--txt3, #64748b);
-}
+.dui-kpi-bar > i { display: block; height: 100%; border-radius: var(--space-1, 4px); transition: width .5s ease; }
+.dui-kpi-detail { margin-top: 6px; font-size: 10px; color: var(--txt3); }
 </style>

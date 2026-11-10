@@ -37,26 +37,27 @@ function blockWidth(n: number) {
 </script>
 
 <style scoped>
+/* 颜色只来自全局 :root token，无硬编码兜底（亮色主题同样可见） */
 .loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 14px;
-  padding: 24px;
-  color: var(--txt2, #8892b0);
+  padding: var(--space-5, 24px);
+  color: var(--txt2);
 }
 .ls-text {
   font-size: 13px;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
   letter-spacing: 0.02em;
 }
 .ls-spinner {
   width: 28px;
   height: 28px;
   border-radius: 50%;
-  border: 2.5px solid var(--line, rgba(255, 255, 255, 0.14));
-  border-top-color: #42a5f5;
+  border: 2.5px solid var(--line);
+  border-top-color: var(--cyan);
   animation: ls-spin 0.7s linear infinite;
 }
 @keyframes ls-spin {
@@ -72,7 +73,7 @@ function blockWidth(n: number) {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #42a5f5;
+  background: var(--cyan);
   animation: ls-bounce 1.1s infinite ease-in-out;
 }
 .ls-dots span:nth-child(2) {
@@ -101,12 +102,7 @@ function blockWidth(n: number) {
 .ls-skel-block {
   height: 100%;
   border-radius: 6px;
-  background: linear-gradient(
-    90deg,
-    rgba(255, 255, 255, 0.05) 25%,
-    rgba(255, 255, 255, 0.11) 37%,
-    rgba(255, 255, 255, 0.05) 63%
-  );
+  background: linear-gradient(90deg, var(--track) 25%, var(--accent-08) 37%, var(--track) 63%);
   background-size: 400% 100%;
   animation: ls-shimmer 1.3s ease infinite;
 }

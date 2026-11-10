@@ -1,8 +1,13 @@
 import type { EChartsOption } from '@/hooks/useECharts'
 import type { DefaultLabelFormatterCallbackParams } from 'echarts'
 import { themeMode } from '@/theme'
+import { BAR_THRESHOLDS } from '@/config/metricsCatalog'
 
-/* 主题调色板 (暗/亮) */
+/* 主题调色板：优先从 :root 的 CSS 变量读取（唯一色彩来源）。
+   DARK/LIGHT 常量仅作为 jsdom / SSR 等「无 CSS 计算样式」环境的镜像兜底，
+   其值与 frontend/src/assets/styles/index.scss 的 :root 定义保持一致。 */
+const PALETTE_KEYS = ['--cyan', '--blue', '--purple', '--green', '--amber', '--pink', '--red']
+
 export const PALETTE = ['#22e3ff', '#3b82f6', '#9b6bff', '#2bd47a', '#ffb020', '#ff5fa2', '#ff4d5e']
 const PALETTE_LIGHT = ['#0891b2', '#2563eb', '#7c3aed', '#16a34a', '#d97706', '#db2777', '#dc2626']
 
@@ -19,6 +24,9 @@ interface ChartVars {
   strong: string
   pieBorder: string
   accent: string
+  red: string
+  amber: string
+  transparent: string
 }
 
 const DARK: ChartVars = {
@@ -27,13 +35,16 @@ const DARK: ChartVars = {
   axisLabel: '#7e93b8',
   splitLine: 'rgba(29,47,79,.6)',
   legendTxt: '#7e93b8',
-  tooltipBg: 'rgba(15,27,51,.95)',
+  tooltipBg: '#0f1b33',
   tooltipBorder: '#1d2f4f',
   tooltipTxt: '#cfe0ff',
   track: '#13233f',
-  strong: '#fff',
+  strong: '#ffffff',
   pieBorder: '#0a1220',
   accent: '#22e3ff',
+  red: '#ff4d5e',
+  amber: '#ffb020',
+  transparent: 'rgba(34,227,255,.08)',
 }
 const LIGHT: ChartVars = {
   palette: PALETTE_LIGHT,
@@ -41,18 +52,49 @@ const LIGHT: ChartVars = {
   axisLabel: '#5a6c88',
   splitLine: 'rgba(212,222,236,.8)',
   legendTxt: '#5a6c88',
-  tooltipBg: 'rgba(255,255,255,.97)',
+  tooltipBg: '#ffffff',
   tooltipBorder: '#d4deec',
   tooltipTxt: '#1e2a3c',
   track: '#dbe4f0',
   strong: '#0b1524',
   pieBorder: '#ffffff',
   accent: '#0891b2',
+  red: '#dc2626',
+  amber: '#d97706',
+  transparent: 'rgba(8,145,178,.08)',
 }
 
-/** 读取当前主题取色 (访问 themeMode.value => 在 computed 中调用可响应主题切换) */
+/** 读取 :root 上真实生效的 CSS 变量；无 DOM / 无 CSS 时回退到主题镜像值。 */
+function cssVar(name: string, fallback: string): string {
+  if (typeof document === 'undefined' || typeof window === 'undefined') return fallback
+  try {
+    const v = window.getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+    return v || fallback
+  } catch {
+    return fallback
+  }
+}
+
+/** 读取当前主题取色（访问 themeMode.value => 在 computed 中调用可响应主题切换） */
 export function chartVars(): ChartVars {
-  return themeMode.value === 'light' ? LIGHT : DARK
+  const base = themeMode.value === 'light' ? LIGHT : DARK
+  return {
+    palette: PALETTE_KEYS.map((k, i) => cssVar(k, base.palette[i])),
+    axisLine: cssVar('--line', base.axisLine),
+    axisLabel: cssVar('--txt2', base.axisLabel),
+    splitLine: cssVar('--td-line', base.splitLine),
+    legendTxt: cssVar('--txt2', base.legendTxt),
+    tooltipBg: cssVar('--panel', base.tooltipBg),
+    tooltipBorder: cssVar('--line', base.tooltipBorder),
+    tooltipTxt: cssVar('--txt', base.tooltipTxt),
+    track: cssVar('--track', base.track),
+    strong: cssVar('--txt-strong', base.strong),
+    pieBorder: cssVar('--map-bg', base.pieBorder),
+    accent: cssVar('--cyan', base.accent),
+    red: cssVar('--red', base.red),
+    amber: cssVar('--amber', base.amber),
+    transparent: cssVar('--accent-08', base.transparent),
+  }
 }
 
 function baseParts() {
@@ -140,12 +182,16 @@ export function pieOption(
   } as EChartsOption
 }
 
-/* 横向柱状图 */
+/* 横向柱状图：阈值色来自状态 token，不再写 hex 字面量 */
 export function barOption(y: string[], data: number[], unit = '%'): EChartsOption {
   const { v, axis, tooltip } = baseParts()
   return {
     backgroundColor: 'transparent',
-    tooltip: { ...tooltip, trigger: 'item', formatter: (p: DefaultLabelFormatterCallbackParams) => `${p.name}: ${p.value}${unit}` },
+    tooltip: {
+      ...tooltip,
+      trigger: 'item',
+      formatter: (p: DefaultLabelFormatterCallbackParams) => `${p.name}: ${p.value}${unit}`,
+    },
     grid: { left: 8, right: 30, top: 10, bottom: 4, containLabel: true },
     xAxis: { type: 'value', max: 100, ...axis, splitLine: { show: false } },
     yAxis: { type: 'category', data: y, ...axis },
@@ -156,7 +202,12 @@ export function barOption(y: string[], data: number[], unit = '%'): EChartsOptio
         barWidth: 10,
         itemStyle: {
           borderRadius: [0, 5, 5, 0],
-          color: (p: DefaultLabelFormatterCallbackParams) => (Number(p.value) > 85 ? '#ff4d5e' : Number(p.value) > 70 ? '#ffb020' : v.accent),
+          color: (p: DefaultLabelFormatterCallbackParams) =>
+            Number(p.value) > BAR_THRESHOLDS.danger
+              ? v.red
+              : Number(p.value) > BAR_THRESHOLDS.warn
+                ? v.amber
+                : v.accent,
         },
         label: {
           show: true,

@@ -78,6 +78,8 @@ class CabinetItem(BaseModel):
     u_used: int
     rated_power_kw: float
     current_power_kw: float
+    cooling_capability: str = "风冷"
+    cooling_capacity_kw: float = 0.0
     status: str
 
 
