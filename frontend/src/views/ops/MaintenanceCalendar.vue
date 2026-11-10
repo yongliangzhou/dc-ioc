@@ -89,7 +89,7 @@
 
     <!-- 详情/新建抽屉 -->
     <div v-if="drawer" class="modal-mask" @click.self="drawer = null">
-      <aside class="drawer">
+      <aside class="modal as-drawer">
         <header class="drawer-head">
           <h2>
             {{ drawerMode === 'new' ? t.clickNew : drawer.kind === 'due' ? t.duePlans : t.records }}
@@ -394,7 +394,7 @@ onMounted(() => {
 }
 .nav-btn:hover {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121a;
+  color: var(--txt3);
 }
 .nav-label {
   min-width: 96px;
@@ -415,7 +415,7 @@ onMounted(() => {
 }
 .seg-btn.active {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121a;
+  color: var(--txt3);
   font-weight: 700;
 }
 .legend {
@@ -434,14 +434,14 @@ onMounted(() => {
   margin-left: 12px;
 }
 .lg.due {
-  background: #fbbf24;
+  background: var(--amber);
 }
 .lg.done {
-  background: #4ade80;
+  background: var(--green);
 }
 .lg-tip {
   margin-left: auto;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   font-size: 11px;
 }
 .cal-empty {
@@ -528,14 +528,14 @@ onMounted(() => {
   font-size: 10px;
 }
 .ev.due {
-  background: rgba(245, 158, 11, 0.16);
-  color: #fbbf24;
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  color: var(--amber);
 }
 .ev.done {
-  background: rgba(34, 197, 94, 0.14);
-  color: #4ade80;
+  background: color-mix(in srgb, var(--green) 14%, transparent);
+  color: var(--green);
 }
-.drawer {
+.as-drawer {
   width: 420px;
   max-width: 92vw;
   background: var(--panel);
@@ -574,10 +574,10 @@ onMounted(() => {
   color: var(--txt-strong);
 }
 .row b.bad {
-  color: #fbbf24;
+  color: var(--amber);
 }
 .row b.good {
-  color: #4ade80;
+  color: var(--green);
 }
 .content {
   font-size: 13px;
@@ -633,7 +633,7 @@ onMounted(() => {
   margin-top: 12px;
 }
 @media (max-width: 720px) {
-  .drawer {
+  .as-drawer {
     width: 100%;
   }
 }

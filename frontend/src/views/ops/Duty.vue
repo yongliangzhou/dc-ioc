@@ -40,7 +40,7 @@
           <input type="date" v-model="fromStr" class="d-inp" />
           <span class="muted">~</span>
           <input type="date" v-model="toStr" class="d-inp" />
-          <button class="btn-sm primary" v-bind="authState('write')" @click="openShiftCreate">
+          <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openShiftCreate">
             {{ tl('新建排班') }}
           </button>
         </div>
@@ -93,7 +93,7 @@
     <Panel style="margin-top: 16px">
       <div class="flex between" style="margin-bottom: 12px">
         <h5 class="section-title" style="margin: 0">{{ tl('交接班记录') }}</h5>
-        <button class="btn-sm primary" v-bind="authState('write')" @click="openHandoverCreate">
+        <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openHandoverCreate">
           {{ tl('新增交接') }}
         </button>
       </div>
@@ -136,8 +136,8 @@
     </Panel>
 
     <!-- 排班抽屉 -->
-    <div class="drawer-mask" v-if="shiftDrawer" @click.self="shiftDrawer = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="shiftDrawer" @click.self="shiftDrawer = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ shiftForm.id ? tl('编辑排班') : tl('新建排班') }}</span>
           <button class="x" @click="shiftDrawer = false">✕</button>
@@ -175,7 +175,7 @@
           <div v-if="shiftErr" class="err">{{ shiftErr }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="shiftDrawer = false">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="shiftSaving" @click="saveShift">
+            <button class="btn-sm btn-primary" :disabled="shiftSaving" @click="saveShift">
               {{ shiftSaving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -184,8 +184,8 @@
     </div>
 
     <!-- 交接抽屉 -->
-    <div class="drawer-mask" v-if="handoverDrawer" @click.self="handoverDrawer = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="handoverDrawer" @click.self="handoverDrawer = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ handoverForm.id ? tl('编辑交接') : tl('新增交接') }}</span>
           <button class="x" @click="handoverDrawer = false">✕</button>
@@ -227,7 +227,7 @@
           <div v-if="handoverErr" class="err">{{ handoverErr }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="handoverDrawer = false">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="handoverSaving" @click="saveHandover">
+            <button class="btn-sm btn-primary" :disabled="handoverSaving" @click="saveHandover">
               {{ handoverSaving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -576,12 +576,12 @@ onMounted(async () => {
 }
 .tbl-head {
   font-weight: 600;
-  color: var(--muted);
-  border-bottom: 2px solid var(--border);
+  color: var(--txt2);
+  border-bottom: 2px solid var(--line);
   font-size: 12px;
 }
 .tbl-row {
-  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--line);
 }
 .col {
   flex-shrink: 0;
@@ -632,7 +632,7 @@ onMounted(async () => {
   background: var(--bg2);
 }
 .pill-tag.b {
-  background: rgba(64, 150, 255, 0.12);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
   color: var(--blue);
 }
 .p-ops {
@@ -642,7 +642,7 @@ onMounted(async () => {
 .empty {
   text-align: center;
   padding: 32px;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
 }
 .flex {
@@ -661,9 +661,9 @@ onMounted(async () => {
 .d-inp {
   padding: 4px 8px;
   border-radius: 6px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--bg);
-  color: var(--text);
+  color: var(--txt);
   font-size: 12px;
 }
 .btn-sm {
@@ -677,7 +677,7 @@ onMounted(async () => {
 }
 .btn-sm.primary {
   background: var(--cyan);
-  color: #04121f;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -696,10 +696,10 @@ onMounted(async () => {
 .link.danger {
   color: var(--red);
 }
-.drawer-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -707,14 +707,14 @@ onMounted(async () => {
   padding: 6vh 16px;
   z-index: 40;
 }
-.drawer {
+.as-drawer {
   width: 460px;
   max-width: 94vw;
   background: var(--panel);
   padding: 18px;
   overflow: auto;
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
   border: 1px solid var(--line);
 }
 .drawer-head {
@@ -728,7 +728,7 @@ onMounted(async () => {
 .x {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 16px;
   cursor: pointer;
 }

@@ -524,7 +524,7 @@ const detSummary = computed(() => {
 const ringStyle = computed(() => {
   const total = s.value.points || 1
   const ok = ((detSummary.value.normal / total) * 100).toFixed(1)
-  return { background: `conic-gradient(var(--green, #2fae6b) ${ok}%, var(--track, #2a3645) 0)` }
+  return { background: `conic-gradient(var(--green) ${ok}%, var(--track) 0)` }
 })
 const filteredDets = computed(() => {
   if (detFilter.value === 'all') return s.value.detectors
@@ -722,7 +722,7 @@ onUnmounted(() => {
 }
 .page-sub {
   margin: 2px 0 0;
-  color: var(--text-2);
+  color: var(--txt2);
   font-size: 12px;
 }
 .head-actions {
@@ -736,29 +736,29 @@ onUnmounted(() => {
   border-radius: 20px;
 }
 .host-badge.g {
-  background: rgba(47, 174, 107, 0.12);
-  color: #2fae6b;
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  color: var(--green);
 }
 .host-badge.a {
-  background: rgba(208, 106, 58, 0.12);
-  color: #d06a3a;
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  color: var(--amber);
 }
 .btn {
   padding: 6px 14px;
-  border: 1px solid var(--border);
-  background: var(--bg-1);
-  color: var(--text-1);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt);
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
 }
 .btn:hover {
-  border-color: var(--brand);
-  color: var(--brand);
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 .mock-flag-sm {
   font-size: 12px;
-  color: #d06a3a;
+  color: var(--amber);
 }
 
 .kpi-row {
@@ -784,7 +784,7 @@ onUnmounted(() => {
   display: flex;
   gap: 10px;
   font-size: 11px;
-  color: var(--text-2);
+  color: var(--txt2);
   flex-wrap: wrap;
 }
 .lg {
@@ -799,22 +799,22 @@ onUnmounted(() => {
   display: inline-block;
 }
 .lg-dot.sm {
-  background: #3f9fcf;
+  background: var(--blue-bg);
 }
 .lg-dot.tm {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .lg-dot.sp {
-  background: #5b8def;
+  background: var(--blue);
 }
 .lg-dot.mb {
-  background: #c065d6;
+  background: var(--purple);
 }
 .lg-dot.hy {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .lg-dot.a {
-  background: #d23b3b;
+  background: var(--red-bg);
 }
 .plan-wrap {
   display: flex;
@@ -823,61 +823,61 @@ onUnmounted(() => {
 }
 .plan-svg {
   width: 100%;
-  background: var(--bg-2);
+  background: var(--bg2);
   border-radius: 8px;
 }
 .floor {
-  fill: #0d141d;
-  stroke: #243240;
+  fill: var(--txt3);
+  stroke: var(--txt3);
   stroke-width: 1.5;
 }
 .corridor {
-  fill: #14202c;
-  stroke: #2a3d4d;
+  fill: var(--txt3);
+  stroke: var(--txt3);
 }
 .zone-block {
-  fill: #101b26;
-  stroke: #243240;
+  fill: var(--txt3);
+  stroke: var(--txt3);
   stroke-dasharray: 3 3;
 }
 .s-label {
-  fill: #7d93a8;
+  fill: var(--txt2);
   font-size: 12px;
   font-weight: 600;
 }
 .z-label {
-  fill: #8aa2b5;
+  fill: var(--txt2);
   font-size: 11px;
 }
 .fp {
-  stroke: #0a0e14;
+  stroke: var(--txt3);
   stroke-width: 1;
 }
 .fp.smoke {
-  fill: #3f9fcf;
+  fill: var(--blue);
 }
 .fp.temp {
-  fill: #d06a3a;
+  fill: var(--amber);
 }
 .fp.sprinkler {
-  fill: #5b8def;
+  fill: var(--blue);
 }
 .fp.manual {
-  fill: #c065d6;
+  fill: var(--purple);
 }
 .fp.hydrant {
-  fill: #2fae6b;
+  fill: var(--green);
 }
 .fp.alarm {
-  fill: #d23b3b;
+  fill: var(--red);
 }
 .fp.fault {
-  fill: #d23b3b;
-  stroke: #d23b3b;
+  fill: var(--red);
+  stroke: var(--red);
 }
 .fp-pulse {
   fill: none;
-  stroke: #d23b3b;
+  stroke: var(--red);
   stroke-width: 1.5;
   animation: fppulse 1.4s ease-out infinite;
 }
@@ -892,42 +892,42 @@ onUnmounted(() => {
   }
 }
 .fp-name {
-  fill: #9fb3c5;
+  fill: var(--txt);
   font-size: 8px;
 }
 .pop-bg {
-  fill: #14202c;
-  stroke: #d23b3b;
+  fill: var(--txt3);
+  stroke: var(--red);
   stroke-width: 1.5;
 }
 .pop-t {
-  fill: #d23b3b;
+  fill: var(--red);
   font-size: 11px;
   font-weight: 600;
 }
 .pop-d {
-  fill: #7d93a8;
+  fill: var(--txt2);
   font-size: 9px;
 }
 .z-info {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
-  background: var(--bg-2);
+  background: var(--bg2);
   font-size: 12px;
 }
 /* 统一图形编辑入口按钮 */
 .plan-edit {
-  background: var(--bg-1);
-  border: 1px solid var(--brand);
-  color: var(--brand);
+  background: var(--bg2);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
   border-radius: 6px;
   padding: 3px 10px;
   font-size: 11px;
   cursor: pointer;
 }
 .plan-edit:hover {
-  background: rgba(63, 159, 191, 0.14);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
 }
 
 .z-info-h {
@@ -942,7 +942,7 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 16px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 /* 主机面板 */
@@ -960,21 +960,21 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 2px;
   padding: 6px 0;
-  border-bottom: 1px dashed var(--border);
+  border-bottom: 1px dashed var(--line);
 }
 .host-kv .k {
   font-size: 11px;
-  color: var(--text-3);
+  color: var(--txt3);
 }
 .host-kv .v {
   font-size: 13px;
   font-weight: 600;
 }
 .g {
-  color: #2fae6b;
+  color: var(--green);
 }
 .a {
-  color: #d06a3a;
+  color: var(--amber);
 }
 .host-vesda {
   margin-top: 10px;
@@ -983,7 +983,7 @@ onUnmounted(() => {
   font-size: 12px;
   font-weight: 600;
   margin-bottom: 6px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .hv-list {
   display: flex;
@@ -1000,25 +1000,25 @@ onUnmounted(() => {
   border-radius: 5px;
 }
 .hv-row.ok {
-  background: rgba(47, 174, 107, 0.08);
+  background: color-mix(in srgb, var(--green) 8%, transparent);
 }
 .hv-row.warn {
-  background: rgba(208, 106, 58, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
 }
 .hv-id {
   font-weight: 500;
 }
 .hv-val {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .hv-lv {
   font-size: 11px;
 }
 .hv-lv.ok {
-  color: #2fae6b;
+  color: var(--green);
 }
 .hv-lv.warn {
-  color: #d06a3a;
+  color: var(--amber);
 }
 
 /* 探测器统计 */
@@ -1031,16 +1031,16 @@ onUnmounted(() => {
 .det-tab {
   font-size: 12px;
   padding: 3px 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-1);
-  color: var(--text-2);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt2);
   border-radius: 14px;
   cursor: pointer;
 }
 .det-tab.active {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
+  background: var(--cyan);
+  color: var(--txt-strong);
+  border-color: var(--cyan);
 }
 .stat-row {
   display: flex;
@@ -1058,7 +1058,7 @@ onUnmounted(() => {
   position: relative;
 }
 .sp-center {
-  background: var(--bg-1);
+  background: var(--bg2);
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -1072,7 +1072,7 @@ onUnmounted(() => {
 }
 .sp-center em {
   font-size: 10px;
-  color: var(--text-2);
+  color: var(--txt2);
   font-style: normal;
 }
 .stat-legend {
@@ -1093,16 +1093,16 @@ onUnmounted(() => {
   border-radius: 50%;
 }
 .sl-dot.g {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .sl-dot.a {
-  background: #d23b3b;
+  background: var(--red-bg);
 }
 .sl-dot.w {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .sl-dot.o {
-  background: #8a93a0;
+  background: var(--panel2);
 }
 .sl b {
   margin-left: 4px;
@@ -1124,22 +1124,22 @@ onUnmounted(() => {
   font-size: 12px;
 }
 .det-row:hover {
-  background: var(--bg-2);
+  background: var(--bg2);
 }
 .det-row.warn {
-  background: rgba(208, 106, 58, 0.1);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
 }
 .d-name {
   font-weight: 500;
 }
 .d-st {
-  color: var(--text-2);
+  color: var(--txt2);
   text-align: right;
 }
 .d-bar {
   height: 8px;
   border-radius: 4px;
-  background: var(--track, #2a3645);
+  background: var(--track);
   overflow: hidden;
 }
 .d-fill {
@@ -1148,10 +1148,18 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 .d-fill.ok {
-  background: linear-gradient(90deg, rgba(47, 174, 107, 0.5), rgba(47, 174, 107, 0.85));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--green) 50%, transparent),
+    color-mix(in srgb, var(--green) 85%, transparent)
+  );
 }
 .d-fill.warn {
-  background: linear-gradient(90deg, rgba(208, 106, 58, 0.5), rgba(208, 106, 58, 0.85));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--amber) 50%, transparent),
+    color-mix(in srgb, var(--amber) 85%, transparent)
+  );
 }
 
 /* 联动设备 */
@@ -1166,18 +1174,18 @@ onUnmounted(() => {
   gap: 10px;
   padding: 10px;
   border-radius: 8px;
-  background: var(--bg-2);
-  border: 1px solid var(--border);
+  background: var(--bg2);
+  border: 1px solid var(--line);
 }
 .link-item.ok {
-  border-color: rgba(47, 174, 107, 0.3);
+  border-color: color-mix(in srgb, var(--green) 30%, transparent);
 }
 .link-item.act {
-  border-color: rgba(210, 59, 59, 0.4);
-  background: rgba(210, 59, 59, 0.08);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .link-item.fault {
-  border-color: rgba(208, 106, 58, 0.4);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
 }
 .li-ico {
   width: 34px;
@@ -1186,16 +1194,16 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-1);
+  background: var(--bg2);
 }
 .link-item.ok .li-ico {
-  color: #2fae6b;
+  color: var(--green);
 }
 .link-item.act .li-ico {
-  color: #d23b3b;
+  color: var(--red);
 }
 .link-item.fault .li-ico {
-  color: #d06a3a;
+  color: var(--amber);
 }
 .li-name {
   font-size: 13px;
@@ -1205,17 +1213,17 @@ onUnmounted(() => {
   font-size: 11px;
 }
 .li-st.ok {
-  color: #2fae6b;
+  color: var(--green);
 }
 .li-st.act {
-  color: #d23b3b;
+  color: var(--red);
 }
 .li-st.fault {
-  color: #d06a3a;
+  color: var(--amber);
 }
 .qie-fei {
   margin-top: 10px;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--line);
   padding-top: 8px;
 }
 .qf-row {
@@ -1225,11 +1233,11 @@ onUnmounted(() => {
   padding: 3px 0;
 }
 .qf-row .k {
-  color: var(--text-3);
+  color: var(--txt3);
   min-width: 60px;
 }
 .qf-row .v {
-  color: var(--text-1);
+  color: var(--txt);
 }
 
 /* 告警列表 */
@@ -1246,14 +1254,14 @@ onUnmounted(() => {
   gap: 8px;
   padding: 5px 0;
   font-size: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .evt-ts {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .evt-desc {
   flex: 1;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 @media (max-width: 1100px) {

@@ -225,6 +225,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -743,14 +744,14 @@ const graphicDefaults = (): GraphicNode[] => nodes.value.map(linkageAdapter.toNo
 
 const groups = computed<LinkGroup[]>(() => {
   const defs: Array<{ key: string; title: string; kind: Kind; color: string }> = [
-    { key: 'g-gens', title: tl('柴发并机系统'), kind: 'gens', color: '#f97316' },
-    { key: 'g-mains', title: tl('市电输入'), kind: 'mains', color: '#f43f5e' },
-    { key: 'g-hv', title: tl('中压配电'), kind: 'hvbus', color: '#f59e0b' },
-    { key: 'g-tx', title: tl('变压器'), kind: 'tx', color: '#eab308' },
-    { key: 'g-lv', title: tl('低压配电'), kind: 'lvbus', color: '#22c55e' },
-    { key: 'g-ups', title: tl('UPS'), kind: 'ups', color: '#3b82f6' },
-    { key: 'g-battery', title: tl('电池组'), kind: 'battery', color: '#a855f7' },
-    { key: 'g-cab', title: tl('机柜负载'), kind: 'cab', color: '#475569' },
+    { key: 'g-gens', title: tl('柴发并机系统'), kind: 'gens', color: cssToken('--amber') },
+    { key: 'g-mains', title: tl('市电输入'), kind: 'mains', color: cssToken('--red') },
+    { key: 'g-hv', title: tl('中压配电'), kind: 'hvbus', color: cssToken('--amber') },
+    { key: 'g-tx', title: tl('变压器'), kind: 'tx', color: cssToken('--amber') },
+    { key: 'g-lv', title: tl('低压配电'), kind: 'lvbus', color: cssToken('--green') },
+    { key: 'g-ups', title: tl('UPS'), kind: 'ups', color: cssToken('--blue') },
+    { key: 'g-battery', title: tl('电池组'), kind: 'battery', color: cssToken('--purple') },
+    { key: 'g-cab', title: tl('机柜负载'), kind: 'cab', color: cssToken('--txt3') },
   ]
   const present = defs.filter((d) => byKindHas(d.kind))
   return present.map((d) => {
@@ -1096,10 +1097,10 @@ onBeforeUnmount(stopTimer)
 .view-head h1 {
   font-size: 20px;
   margin: 0 0 4px;
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .sub {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 13px;
 }
 .head-actions {
@@ -1112,10 +1113,10 @@ onBeforeUnmount(stopTimer)
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #64748b;
+  color: var(--txt2);
 }
 .live.on {
-  color: #22c55e;
+  color: var(--green);
 }
 .live-dot {
   width: 8px;
@@ -1125,9 +1126,9 @@ onBeforeUnmount(stopTimer)
   animation: pulse 1.4s infinite;
 }
 .refresh {
-  background: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
+  background: var(--bg2);
+  color: var(--txt);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
@@ -1136,7 +1137,7 @@ onBeforeUnmount(stopTimer)
   gap: 6px;
 }
 .refresh:hover {
-  background: #273449;
+  background: var(--bg2);
 }
 .refresh:disabled {
   opacity: 0.5;
@@ -1150,8 +1151,8 @@ onBeforeUnmount(stopTimer)
   margin: 16px 0;
 }
 .kpi {
-  background: #0f172a;
-  border: 1px solid #1e293b;
+  background: var(--bg2);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
   display: flex;
@@ -1159,16 +1160,16 @@ onBeforeUnmount(stopTimer)
   gap: 4px;
 }
 .k-label {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 12px;
 }
 .k-val {
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-size: 22px;
   font-weight: 700;
 }
 .k-val.warn {
-  color: #f59e0b;
+  color: var(--amber);
 }
 
 .main-grid {
@@ -1188,7 +1189,7 @@ onBeforeUnmount(stopTimer)
   gap: 14px;
   align-items: center;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--txt2);
 }
 .legend .dot {
   display: inline-block;
@@ -1199,16 +1200,16 @@ onBeforeUnmount(stopTimer)
   vertical-align: middle;
 }
 .dot.normal {
-  background: #22c55e;
+  background: var(--green-bg);
 }
 .dot.warning {
-  background: #f59e0b;
+  background: var(--amber-bg);
 }
 .dot.fault {
-  background: #ef4444;
+  background: var(--red);
 }
 .dot.off {
-  background: #64748b;
+  background: var(--panel2);
 }
 
 .side-col {
@@ -1234,33 +1235,33 @@ onBeforeUnmount(stopTimer)
   gap: 8px;
 }
 .metric {
-  background: #1e293b;
+  background: var(--bg2);
   border-radius: 8px;
   padding: 8px 10px;
 }
 .metric.hot {
-  background: #3f2d12;
-  border: 1px solid #f59e0b;
+  background: var(--bg2);
+  border: 1px solid var(--amber-line);
 }
 .mk {
   display: block;
-  color: #64748b;
+  color: var(--txt2);
   font-size: 11px;
 }
 .mv {
   display: block;
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-size: 16px;
   font-weight: 600;
 }
 .mv small {
-  color: #94a3b8;
+  color: var(--txt2);
   font-size: 11px;
   font-weight: 400;
 }
 
 .alarm-list-head {
-  color: #f59e0b;
+  color: var(--amber);
   font-size: 13px;
   margin: 12px 0 6px;
 }
@@ -1271,12 +1272,12 @@ onBeforeUnmount(stopTimer)
   align-items: center;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #1e293b;
+  background: var(--bg2);
   margin-bottom: 8px;
   cursor: pointer;
 }
 .alarm-item:hover {
-  background: #273449;
+  background: var(--bg2);
 }
 .lv {
   font-size: 11px;
@@ -1285,27 +1286,27 @@ onBeforeUnmount(stopTimer)
   text-align: center;
 }
 .lv-crit {
-  background: #7f1d1d;
-  color: #fecaca;
+  background: var(--red-bg);
+  color: var(--txt-strong);
 }
 .lv-warn {
-  background: #78350f;
-  color: #fde68a;
+  background: var(--amber-bg);
+  color: var(--amber);
 }
 .lv-info {
-  background: #1e3a5f;
-  color: #bfdbfe;
+  background: var(--blue-bg);
+  color: var(--txt);
 }
 .msg {
-  color: #cbd5e1;
+  color: var(--txt);
   font-size: 13px;
 }
 .time {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 11px;
 }
 .no-alarm {
-  color: #22c55e;
+  color: var(--green);
   font-size: 13px;
   margin-top: 10px;
 }
@@ -1320,9 +1321,9 @@ onBeforeUnmount(stopTimer)
 }
 .range-tabs button,
 .trend-metrics button {
-  background: #1e293b;
-  color: #94a3b8;
-  border: 1px solid #334155;
+  background: var(--bg2);
+  color: var(--txt2);
+  border: 1px solid var(--line);
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 12px;
@@ -1330,9 +1331,9 @@ onBeforeUnmount(stopTimer)
 }
 .range-tabs button.active,
 .trend-metrics button.active {
-  background: #0369a1;
-  color: #e0f2fe;
-  border-color: #38bdf8;
+  background: var(--blue-bg);
+  color: var(--txt-strong);
+  border-color: var(--blue-line);
 }
 .trend-body {
   display: flex;
@@ -1346,29 +1347,29 @@ onBeforeUnmount(stopTimer)
 .trend-svg {
   width: 100%;
   height: 200px;
-  background: #0b1220;
+  background: var(--bg);
   border-radius: 8px;
 }
 .grid line {
-  stroke: #1e293b;
+  stroke: var(--txt3);
   stroke-width: 1;
 }
 .trend-line {
-  stroke: #38bdf8;
+  stroke: var(--blue);
   stroke-width: 2;
 }
 .trend-line.danger {
-  stroke: #ef4444;
+  stroke: var(--red);
 }
 .trend-area {
-  fill: rgba(56, 189, 248, 0.12);
+  fill: color-mix(in srgb, var(--blue) 12%, transparent);
   stroke: none;
 }
 .trend-area.danger {
-  fill: rgba(239, 68, 68, 0.14);
+  fill: color-mix(in srgb, var(--red) 14%, transparent);
 }
 .axis-label {
-  fill: #475569;
+  fill: var(--txt3);
   font-size: 9px;
 }
 .axis-label.end {
@@ -1382,18 +1383,18 @@ onBeforeUnmount(stopTimer)
   gap: 14px;
   align-items: baseline;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--txt2);
 }
 .trend-legend .now {
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-size: 18px;
   font-weight: 700;
 }
 .trend-legend .delta.up {
-  color: #22c55e;
+  color: var(--green);
 }
 .trend-legend .delta.down {
-  color: #ef4444;
+  color: var(--red);
 }
 
 .alarm-bar {
@@ -1404,31 +1405,31 @@ onBeforeUnmount(stopTimer)
   display: flex;
   align-items: center;
   gap: 12px;
-  background: #1e293b;
-  border: 1px solid #f59e0b;
+  background: var(--bg2);
+  border: 1px solid var(--amber-line);
   border-radius: 12px;
   padding: 10px 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 30px var(--accent-50);
   z-index: 60;
   max-width: 90vw;
 }
 .alarm-bar.lv-fault {
-  border-color: #ef4444;
+  border-color: var(--red-line);
 }
 .ab-icon {
-  color: #f59e0b;
+  color: var(--amber);
   font-size: 18px;
 }
 .alarm-bar.lv-fault .ab-icon {
-  color: #ef4444;
+  color: var(--red);
 }
 .ab-text {
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-size: 13px;
 }
 .ab-btn {
-  background: #f59e0b;
-  color: #1e293b;
+  background: var(--amber-bg);
+  color: var(--txt3);
   border: none;
   border-radius: 8px;
   padding: 6px 12px;
@@ -1436,8 +1437,8 @@ onBeforeUnmount(stopTimer)
   font-weight: 600;
 }
 .alarm-bar.lv-fault .ab-btn {
-  background: #ef4444;
-  color: #fff;
+  background: var(--red);
+  color: var(--txt-strong);
 }
 
 .slide-up-enter-active,
@@ -1451,7 +1452,7 @@ onBeforeUnmount(stopTimer)
 }
 
 .muted {
-  color: #64748b;
+  color: var(--txt2);
 }
 
 @media (max-width: 1100px) {

@@ -7,17 +7,13 @@
       <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="grid cols-4">
-      <SkeletonCard v-for="i in 8" :key="i" />
-    </div>
-
-    <!-- Error -->
-    <Panel v-else-if="error" class="err-card">
-      <div class="err-title">{{ tl('加载失败') }}</div>
-      <div class="err-detail">{{ error }}</div>
-      <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </Panel>
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="!s && !loading && !error"
+      :retrying="loading"
+      @retry="loadData"
+    />
 
     <!-- 2.2.1 KpiCard × 4 -->
     <div v-if="s && s.routerList.length" class="grid cols-4">
@@ -35,7 +31,7 @@
         :value="s.avgMem"
         unit="%"
         :bar-value="s.avgMem"
-        bar-color="var(--violet)"
+        bar-color="var(--purple)"
         :status="s.avgMem > 80 ? 'danger' : s.avgMem > 60 ? 'warning' : 'normal'"
         size="sm"
       />
@@ -286,13 +282,14 @@
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps, utilCls, genHours } from '@/utils/format'
 import { KpiCard } from '@dc-ioc/ui'
-import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import { StatusBadge } from '@dc-ioc/ui'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import Panel from '@/components/common/Panel.vue'
@@ -770,17 +767,17 @@ function mockData() {
     {
       name: 'Core-R1',
       data: genTimeData(N, 75e9, 15e9, 8e9),
-      color: '#22c55e',
+      color: cssToken('--green'),
     },
     {
       name: 'Core-R2',
       data: genTimeData(N, 60e9, 12e9, 6e9),
-      color: '#3b82f6',
+      color: cssToken('--blue'),
     },
     {
       name: 'Edge-R1',
       data: genTimeData(N, 42e9, 10e9, 5e9),
-      color: '#f59e0b',
+      color: cssToken('--amber'),
     },
   ]
 
@@ -929,12 +926,12 @@ onMounted(() => {
 .view-head h1 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   margin: 0;
 }
 .view-head .sub {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-top: 2px;
   display: block;
 }
@@ -975,23 +972,23 @@ onMounted(() => {
 .port-table th {
   position: sticky;
   top: 0;
-  background: #1e293b;
+  background: var(--bg2);
   z-index: 2;
   text-align: left;
   padding: 8px 10px;
   font-weight: 600;
-  color: var(--text-muted, #6b7280);
-  border-bottom: 1px solid var(--border, #334155);
+  color: var(--txt3);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 .port-table td {
   padding: 7px 10px;
-  color: var(--text-secondary, #94a3b8);
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  color: var(--txt2);
+  border-bottom: 1px solid var(--accent-50);
   white-space: nowrap;
 }
 .port-table .row-offline td {
-  color: #4b5563;
+  color: var(--txt3);
 }
 
 /* ── Session gauge ── */
@@ -1002,19 +999,19 @@ onMounted(() => {
 .gauge-value {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   line-height: 1.2;
 }
 .gauge-value small {
   font-size: 0.75rem;
   font-weight: 400;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-left: 4px;
 }
 .gauge-bar {
   height: 10px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--accent-08);
   overflow: hidden;
   margin: 6px auto 0;
   max-width: 320px;
@@ -1025,14 +1022,14 @@ onMounted(() => {
   transition: width 0.4s ease;
 }
 .gauge-fill-cyan {
-  background: linear-gradient(90deg, #06b6d4, #22d3ee);
+  background: linear-gradient(90deg, var(--cyan-bg), var(--cyan-bg));
 }
 .gauge-fill-blue {
-  background: linear-gradient(90deg, #3b82f6, #60a5fa);
+  background: linear-gradient(90deg, var(--blue), var(--blue));
 }
 .gauge-meta {
   font-size: 0.6875rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-top: 4px;
 }
 .mt3 {
@@ -1046,15 +1043,15 @@ onMounted(() => {
   gap: 10px;
 }
 .proto-card {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid var(--border, #334155);
+  background: var(--accent-50);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
   transition: border-color 0.25s;
 }
 .proto-card.proto-flake {
-  border-color: rgba(245, 158, 11, 0.4);
-  background: rgba(245, 158, 11, 0.04);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
+  background: color-mix(in srgb, var(--amber) 4%, transparent);
 }
 .proto-head {
   display: flex;
@@ -1065,13 +1062,13 @@ onMounted(() => {
 .proto-device {
   font-size: 0.6875rem;
   font-weight: 600;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 .proto-title {
   font-size: 0.925rem;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   margin-bottom: 8px;
 }
 .proto-body {
@@ -1086,19 +1083,19 @@ onMounted(() => {
 }
 .proto-k {
   font-size: 0.625rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 .proto-v {
   font-size: 0.7875rem;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
 }
 .proto-desc {
   font-size: 0.6875rem;
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(51, 65, 85, 0.4);
+  border-top: 1px solid var(--accent-35);
   line-height: 1.4;
 }
 
@@ -1113,15 +1110,15 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 5px 0;
-  border-bottom: 1px dotted rgba(51, 65, 85, 0.5);
+  border-bottom: 1px dotted var(--accent-50);
 }
 .rt-k {
   font-size: 0.6875rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
 }
 .rt-v {
   font-size: 0.7875rem;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   font-weight: 500;
 }
 
@@ -1143,13 +1140,13 @@ onMounted(() => {
 }
 
 .a-text {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .g-text {
-  color: #22c55e;
+  color: var(--green);
 }
 .w-text {
-  color: #facc15;
+  color: var(--amber);
 }
 
 /* ── Error / Empty ── */
@@ -1160,12 +1157,12 @@ onMounted(() => {
 .err-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #ef4444;
+  color: var(--red);
   margin-bottom: 8px;
 }
 .err-detail {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-bottom: 14px;
 }
 .btn {
@@ -1174,15 +1171,15 @@ onMounted(() => {
   gap: 6px;
   padding: 6px 18px;
   border-radius: 6px;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--line);
   background: transparent;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   font-size: 0.75rem;
   cursor: pointer;
   transition: background 0.2s;
 }
 .btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--accent-08);
 }
 .empty-card {
   text-align: center;

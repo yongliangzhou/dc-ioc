@@ -109,7 +109,7 @@ const statusClass = computed(() => {
 }
 
 .dc-fault {
-  border-color: rgba(255, 77, 94, 0.3);
+  border-color: color-mix(in srgb, var(--red) 30%, transparent);
 }
 .dc-standby {
   opacity: 0.7;

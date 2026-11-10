@@ -9,7 +9,14 @@
           stroke-width="2"
           stroke-linecap="round"
         />
-        <path d="M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+          d="M21 3v5h-5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
         <path
           d="M12 21a9 9 0 0 1-8.49-6"
           fill="none"
@@ -17,7 +24,14 @@
           stroke-width="2"
           stroke-linecap="round"
         />
-        <path d="M3 21v-5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <path
+          d="M3 21v-5h5"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
       </svg>
     </div>
     <div class="er-title">{{ title }}</div>
@@ -58,19 +72,19 @@ defineEmits<{ retry: [] }>()
   text-align: center;
 }
 .er-icon {
-  color: #ffb020;
+  color: var(--amber);
   margin-bottom: 2px;
 }
 .er-title {
   font-size: 15px;
   font-weight: 600;
-  color: var(--txt, #e6edf3);
+  color: var(--txt);
 }
 .er-message {
   font-size: 12px;
   line-height: 1.6;
   max-width: 360px;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
   word-break: break-word;
 }
 .er-actions {
@@ -87,21 +101,21 @@ defineEmits<{ retry: [] }>()
   align-items: center;
   gap: 7px;
   background: transparent;
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
-  color: var(--txt2, #8892b0);
+  border: 1px solid var(--line);
+  color: var(--txt2);
   transition: all 0.2s;
 }
 .er-btn:hover:not(:disabled) {
-  color: var(--txt, #e6edf3);
-  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--txt);
+  border-color: var(--accent-35);
 }
 .er-btn.primary {
-  background: rgba(66, 165, 245, 0.15);
-  border-color: rgba(66, 165, 245, 0.4);
-  color: #42a5f5;
+  background: color-mix(in srgb, var(--blue) 15%, transparent);
+  border-color: color-mix(in srgb, var(--blue) 40%, transparent);
+  color: var(--blue);
 }
 .er-btn.primary:hover:not(:disabled) {
-  background: rgba(66, 165, 245, 0.25);
+  background: color-mix(in srgb, var(--blue) 25%, transparent);
 }
 .er-btn:disabled {
   opacity: 0.6;
@@ -111,8 +125,8 @@ defineEmits<{ retry: [] }>()
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  border: 2px solid rgba(66, 165, 245, 0.3);
-  border-top-color: #42a5f5;
+  border: 2px solid color-mix(in srgb, var(--blue) 30%, transparent);
+  border-top-color: var(--blue-line);
   animation: er-spin 0.6s linear infinite;
 }
 @keyframes er-spin {

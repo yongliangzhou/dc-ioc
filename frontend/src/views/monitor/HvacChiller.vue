@@ -126,7 +126,7 @@
               width="60"
               height="100"
               rx="4"
-              fill="rgba(6,182,212,0.08)"
+              fill="color-mix(in srgb, var(--cyan) 8%, transparent)"
               stroke="var(--cyan)"
               stroke-width="1"
             />
@@ -173,7 +173,7 @@
               x="180"
               y="200"
               text-anchor="middle"
-              :fill="groupStatus(0) === 'online' ? '#22c55e' : 'var(--txt3)'"
+              :fill="groupStatus(0) === 'online' ? 'var(--green)' : 'var(--txt3)'"
               font-size="18"
               font-weight="800"
             >
@@ -224,7 +224,7 @@
               x="340"
               y="200"
               text-anchor="middle"
-              :fill="groupStatus(1) === 'online' ? '#22c55e' : 'var(--txt3)'"
+              :fill="groupStatus(1) === 'online' ? 'var(--green)' : 'var(--txt3)'"
               font-size="18"
               font-weight="800"
             >
@@ -275,7 +275,7 @@
               x="500"
               y="200"
               text-anchor="middle"
-              :fill="groupStatus(2) === 'online' ? '#22c55e' : 'var(--txt3)'"
+              :fill="groupStatus(2) === 'online' ? 'var(--green)' : 'var(--txt3)'"
               font-size="18"
               font-weight="800"
             >
@@ -307,7 +307,7 @@
               width="60"
               height="100"
               rx="4"
-              fill="rgba(34,197,94,0.08)"
+              fill="color-mix(in srgb, var(--green) 8%, transparent)"
               stroke="var(--green)"
               stroke-width="1"
             />
@@ -335,7 +335,7 @@
               width="90"
               height="100"
               rx="6"
-              fill="rgba(249,115,22,0.06)"
+              fill="color-mix(in srgb, var(--amber) 6%, transparent)"
               stroke="var(--amber)"
               stroke-width="1"
               stroke-dasharray="4"
@@ -369,7 +369,7 @@
               width="120"
               height="40"
               rx="4"
-              fill="rgba(6,182,212,0.06)"
+              fill="color-mix(in srgb, var(--cyan) 6%, transparent)"
               stroke="var(--line)"
               stroke-width="1"
             />
@@ -386,7 +386,7 @@
               width="120"
               height="40"
               rx="4"
-              fill="rgba(249,115,22,0.06)"
+              fill="color-mix(in srgb, var(--amber) 6%, transparent)"
               stroke="var(--line)"
               stroke-width="1"
             />
@@ -403,17 +403,11 @@
               width="120"
               height="40"
               rx="4"
-              fill="rgba(139,92,246,0.06)"
+              fill="color-mix(in srgb, var(--purple) 6%, transparent)"
               stroke="var(--line)"
               stroke-width="1"
             />
-            <text
-              x="500"
-              y="318"
-              text-anchor="middle"
-              fill="var(--purple2, #8b5cf6)"
-              font-size="11"
-            >
+            <text x="500" y="318" text-anchor="middle" fill="var(--purple)" font-size="11">
               ❰ {{ geLabel('hex', '板式换热器') }}
             </text>
           </g>
@@ -504,7 +498,7 @@
               width="120"
               height="52"
               rx="6"
-              fill="rgba(34,211,238,0.06)"
+              fill="color-mix(in srgb, var(--cyan) 6%, transparent)"
               stroke="var(--cyan)"
               stroke-width="1"
               stroke-dasharray="4"
@@ -921,13 +915,13 @@
       </div>
     </div>
 
-    <!-- ========== 加载骨架屏 / 空状态 ========== -->
-    <SkeletonCard v-if="loading && !chiller" size="lg" />
-    <EmptyState v-if="!loading && !chiller" text="冷源系统数据加载失败，请刷新重试" />
+    <AsyncSection :loading="loading" :empty="!chiller" @retry="refresh" />
   </div>
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import echarts, {
   type EChartsType,
@@ -970,8 +964,6 @@ import {
   HeatmapView,
   TimeRangePicker,
   QuickControl,
-  EmptyState,
-  SkeletonCard,
 } from '@/components/monitor'
 import { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 import { CHART_COLORS } from '@/assets/echarts-theme'
@@ -1309,20 +1301,20 @@ function renderCopRla() {
           return `${v[2]}<br/>RLA: ${v[0]}% | COP: ${v[1]}`
         },
       },
-      legend: { data: chIds, bottom: 0, textStyle: { color: '#94a3b8', fontSize: 11 } },
+      legend: { data: chIds, bottom: 0, textStyle: { color: cssToken('--txt2'), fontSize: 11 } },
       grid: { left: 55, right: 20, top: 20, bottom: 35 },
       xAxis: {
         type: 'value',
         name: 'RLA (%)',
-        nameTextStyle: { color: '#94a3b8' },
-        axisLabel: { color: '#64748b' },
+        nameTextStyle: { color: cssToken('--txt2') },
+        axisLabel: { color: cssToken('--txt2') },
         splitLine: { lineStyle: { color: 'var(--line)' } },
       },
       yAxis: {
         type: 'value',
         name: 'COP',
-        nameTextStyle: { color: '#94a3b8' },
-        axisLabel: { color: '#64748b' },
+        nameTextStyle: { color: cssToken('--txt2') },
+        axisLabel: { color: cssToken('--txt2') },
         splitLine: { lineStyle: { color: 'var(--line)' } },
       },
       series: chIds.map((ch, i) => ({
@@ -1383,21 +1375,21 @@ function renderPumpFreqFlow() {
       legend: {
         data: ['冷冻泵', '冷却泵'],
         bottom: 0,
-        textStyle: { color: '#94a3b8', fontSize: 11 },
+        textStyle: { color: cssToken('--txt2'), fontSize: 11 },
       },
       grid: { left: 55, right: 20, top: 20, bottom: 35 },
       xAxis: {
         type: 'value',
         name: '频率 (Hz)',
-        nameTextStyle: { color: '#94a3b8' },
-        axisLabel: { color: '#64748b' },
+        nameTextStyle: { color: cssToken('--txt2') },
+        axisLabel: { color: cssToken('--txt2') },
         splitLine: { lineStyle: { color: 'var(--line)' } },
       },
       yAxis: {
         type: 'value',
         name: '流量 (m³/h)',
-        nameTextStyle: { color: '#94a3b8' },
-        axisLabel: { color: '#64748b' },
+        nameTextStyle: { color: cssToken('--txt2') },
+        axisLabel: { color: cssToken('--txt2') },
         splitLine: { lineStyle: { color: 'var(--line)' } },
       },
       series: [
@@ -1589,9 +1581,9 @@ onUnmounted(() => clearInterval(refreshTimer))
 /* 统一图形编辑入口按钮 */
 .flow-edit-btn {
   margin-left: 10px;
-  background: var(--bg2, #0f172a);
-  border: 1px solid var(--cyan, #22d3ee);
-  color: var(--cyan, #22d3ee);
+  background: var(--bg2);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
   border-radius: 6px;
   padding: 2px 10px;
   font-size: 11px;
@@ -1599,7 +1591,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   vertical-align: middle;
 }
 .flow-edit-btn:hover {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .chiller-page {
   display: flex;
@@ -1692,40 +1684,40 @@ onUnmounted(() => clearInterval(refreshTimer))
   flex-shrink: 0;
 }
 .dot.c0 {
-  background: #06b6d4;
+  background: var(--cyan-bg);
 }
 .dot.c1 {
-  background: #06b6d4;
+  background: var(--cyan-bg);
 }
 .dot.c2 {
-  background: #f97316;
+  background: var(--amber-bg);
 }
 .dot.c3 {
-  background: #ef4444;
+  background: var(--red);
 }
 .dot.c4 {
-  background: #22c55e;
+  background: var(--green-bg);
 }
 .dot.c5 {
-  background: #8b5cf6;
+  background: var(--purple);
 }
 .dot.c6 {
-  background: #eab308;
+  background: var(--amber-bg);
 }
 .dot.c7 {
-  background: #3b82f6;
+  background: var(--blue);
 }
 .dot.c8 {
-  background: #06b6d4;
+  background: var(--cyan-bg);
 }
 .dot.danger {
-  background: #ef4444;
+  background: var(--red);
 }
 
 .alarm-count {
   font-size: 11px;
   color: var(--txt);
-  background: rgba(239, 68, 68, 0.15);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
   padding: 1px 8px;
   border-radius: 10px;
   margin-left: auto;
@@ -1802,12 +1794,12 @@ onUnmounted(() => clearInterval(refreshTimer))
   text-align: center;
 }
 .pump-label.chw {
-  background: rgba(6, 182, 212, 0.15);
-  color: #06b6d4;
+  background: color-mix(in srgb, var(--cyan) 15%, transparent);
+  color: var(--cyan);
 }
 .pump-label.cw {
-  background: rgba(249, 115, 22, 0.15);
-  color: #f97316;
+  background: color-mix(in srgb, var(--amber) 15%, transparent);
+  color: var(--amber);
 }
 .pump-id {
   font-weight: 600;
@@ -1835,7 +1827,7 @@ onUnmounted(() => clearInterval(refreshTimer))
   color: var(--txt3);
 }
 .tank-status.on {
-  color: #22c55e;
+  color: var(--green);
 }
 
 /* Subsystem */
@@ -1919,14 +1911,14 @@ onUnmounted(() => clearInterval(refreshTimer))
 }
 .alarm-row.emergency {
   border-left: 3px solid var(--red);
-  background: rgba(239, 68, 68, 0.05);
+  background: color-mix(in srgb, var(--red) 5%, transparent);
 }
 .alarm-row.critical {
-  border-left: 3px solid var(--amber, #f97316);
-  background: rgba(249, 115, 22, 0.04);
+  border-left: 3px solid var(--amber);
+  background: color-mix(in srgb, var(--amber) 4%, transparent);
 }
 .alarm-row.warning {
-  border-left: 3px solid #eab308;
+  border-left: 3px solid var(--amber-line);
 }
 .alarm-ts {
   color: var(--txt3);

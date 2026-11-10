@@ -79,7 +79,7 @@
                   x="3"
                   :y="axisY(0, ring) + 2"
                   font-size="6"
-                  fill="var(--txt3, #8595ad)"
+                  fill="var(--txt3)"
                 >
                   {{ ring * 100 }}
                 </text>
@@ -95,7 +95,7 @@
                 />
                 <polygon
                   :points="radarDataPoints"
-                  fill="rgba(37,99,235,0.18)"
+                  fill="color-mix(in srgb, var(--blue) 18%, transparent)"
                   stroke="var(--blue)"
                   stroke-width="2"
                 />
@@ -199,7 +199,7 @@
 
     <!-- 评分构成钻取 -->
     <div v-if="detail" class="modal-mask" @click.self="detail = null">
-      <div class="modal-box">
+      <div class="modal">
         <div class="modal-head">
           <h3>{{ t.detailTitle }} · {{ detail.name }}</h3>
           <button
@@ -224,6 +224,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -334,7 +335,13 @@ function pct(n: number, d: number) {
 }
 
 function scoreColor(v: number) {
-  return v >= 85 ? '#16a34a' : v >= 70 ? '#2563eb' : v >= 60 ? '#d97706' : '#dc2626'
+  return v >= 85
+    ? cssToken('--green')
+    : v >= 70
+      ? cssToken('--blue')
+      : v >= 60
+        ? cssToken('--amber')
+        : cssToken('--red')
 }
 
 // 雷达图坐标 (轴数随域数量动态取, 当前 8 维; 不再写死 7 导致第 8 点与第一点重叠、多边形错位)
@@ -784,7 +791,7 @@ onMounted(() => {
 }
 .hr-meta {
   font-size: 0.72rem;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   margin-top: 8px;
 }
 .hr-meta.sm {
@@ -847,7 +854,7 @@ onMounted(() => {
 }
 .domain-more {
   font-size: 0.66rem;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   margin-top: 6px;
 }
 .domain-card:focus-visible {
@@ -873,14 +880,14 @@ onMounted(() => {
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: var(--mask, rgba(3, 8, 18, 0.62));
+  background: var(--mask);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 50;
   padding: 16px;
 }
-.modal-box {
+.modal {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;

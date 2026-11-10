@@ -33,20 +33,20 @@
           </span>
         </div>
         <div class="kpi-row">
-          <KpiCard title="系统模式" :value="data.systemMode" dot="#8b5cf6" />
+          <KpiCard title="系统模式" :value="data.systemMode" dot="var(--purple)" />
           <KpiCard
             title="室外温度"
             :value="data.outdoorT"
             unit="℃"
             :decimals="1"
-            dot="#f97316"
+            dot="var(--amber)"
             :subtitle="`RH ${data.outdoorRH}%`"
           />
           <KpiCard
             title="总制冷能力"
             :value="data.totalCoolingCap"
             unit="kW"
-            dot="#06b6d4"
+            dot="var(--cyan)"
             :detail="`使用 ${data.coolingCapUsed} kW · 率 ${data.capRate}%`"
             :barValue="data.capRate"
             barColor="linear-gradient(90deg, var(--cyan), var(--blue))"
@@ -55,7 +55,7 @@
             title="PUE 贡献"
             :value="data.pueContribution"
             :decimals="3"
-            dot="#22c55e"
+            dot="var(--green)"
             :subtitle="`自然冷却 ${data.freeCoolingHours}h`"
             :detail="`余热回收 ${data.heatRecoveryMW} MW`"
           />
@@ -76,28 +76,28 @@
           :value="data.primarySupplyTemp"
           unit="℃"
           :decimals="1"
-          dot="#3b82f6"
+          dot="var(--blue)"
         />
         <KpiCard
           title="一次侧回水温度"
           :value="data.primaryReturnTemp"
           unit="℃"
           :decimals="1"
-          dot="#f97316"
+          dot="var(--amber)"
         />
         <KpiCard
           title="一次侧流量"
           :value="data.primaryFlow"
           unit="m³/h"
           :decimals="1"
-          dot="#06b6d4"
+          dot="var(--cyan)"
         />
         <KpiCard
           title="一次侧压力"
           :value="data.primaryPressure"
           unit="bar"
           :decimals="1"
-          dot="#8b5cf6"
+          dot="var(--purple)"
         />
       </div>
     </div>
@@ -105,7 +105,7 @@
     <!-- ========== KPI Row 3: 二次侧 ========== -->
     <div class="kpi-group" v-if="data">
       <div class="kpi-group-head">
-        <span class="kpi-group-dot" style="background: var(--orange)"></span>
+        <span class="kpi-group-dot" style="background: var(--amber)"></span>
         <span class="kpi-group-name">二次侧回路</span>
         <span class="kpi-group-meta">
           末端侧 · 温差 ΔT {{ data.deltaT }}℃{{ Math.abs(data.deltaT) > 8 ? ' · 偏大' : '' }}
@@ -117,22 +117,28 @@
           :value="data.secSupplyTemp"
           unit="℃"
           :decimals="1"
-          dot="#3b82f6"
+          dot="var(--blue)"
         />
         <KpiCard
           title="二次侧回水温度"
           :value="data.secReturnTemp"
           unit="℃"
           :decimals="1"
-          dot="#f97316"
+          dot="var(--amber)"
         />
-        <KpiCard title="二次侧流量" :value="data.secFlow" unit="m³/h" :decimals="1" dot="#06b6d4" />
+        <KpiCard
+          title="二次侧流量"
+          :value="data.secFlow"
+          unit="m³/h"
+          :decimals="1"
+          dot="var(--cyan)"
+        />
         <KpiCard
           title="温差 ΔT"
           :value="data.deltaT"
           unit="℃"
           :decimals="1"
-          dot="#eab308"
+          dot="var(--amber)"
           :status="Math.abs(data.deltaT) > 8 ? 'warning' : 'normal'"
         />
       </div>
@@ -183,7 +189,7 @@
       </div>
       <div class="manifold-half" v-if="data?.manifoldsReturn?.length">
         <h3 class="section-title">
-          <span class="section-dot" style="background: var(--orange)"></span>
+          <span class="section-dot" style="background: var(--amber)"></span>
           回水集管
           <span class="section-sum">{{ data.manifoldsReturn.length }} 节点</span>
         </h3>
@@ -220,7 +226,7 @@
     <!-- ========== 冷却液水质 ========== -->
     <div class="section" v-if="data?.coolantQuality">
       <h3 class="section-title">
-        <span class="section-dot" style="background: var(--teal)"></span>
+        <span class="section-dot" style="background: var(--cyan)"></span>
         冷却液水质
         <StatusBadge :status="data.coolantQuality.status" />
         <span class="section-sum-s" v-if="data.coolantQuality.lastTested"
@@ -270,7 +276,7 @@
     <!-- ========== 排热系统 ========== -->
     <div class="section" v-if="hasRejection">
       <h3 class="section-title">
-        <span class="section-dot" style="background: var(--orange)"></span>
+        <span class="section-dot" style="background: var(--amber)"></span>
         排热系统
         <span class="section-sum"
           >排热量 {{ data!.totalHeatRejected }} kW · 逼近温度 {{ data!.approachTemp }}℃</span
@@ -282,7 +288,7 @@
         v-if="data?.towerFans?.length"
         :title="`冷却塔风机 · ${data.towerFans.length} 台`"
         :subtitle="`自然冷却${data.freeCoolingAvailable ? '可用' : '不可用'}`"
-        dotColor="var(--orange)"
+        dotColor="var(--amber)"
       >
         <DeviceTable :columns="towerFanCols" :rows="towerFanRows" />
       </GroupCard>
@@ -326,7 +332,7 @@
             unit="℃"
             size="sm"
             :decimals="1"
-            dot="var(--orange)"
+            dot="var(--amber)"
           />
           <KpiCard
             title="回流温度"
@@ -408,7 +414,7 @@
     <!-- ========== 趋势图 ========== -->
     <div class="section" v-if="hasTrends">
       <h3 class="section-title">
-        <span class="section-dot" style="background: var(--yellow)"></span>
+        <span class="section-dot" style="background: var(--amber)"></span>
         运行趋势 (48h)
       </h3>
       <div class="trend-grid">
@@ -636,7 +642,9 @@ const coldPlateCols = [
   { key: 'inletTemp', label: '入口(℃)', width: '75px' },
   { key: 'outletTemp', label: '出口(℃)', width: '75px' },
   { key: 'deltaT', label: 'ΔT(℃)', width: '65px' },
-  { key: 'flow', label: '流量(L/min)', width: '85px' },
+  // 冷板支路流量单位为 L/min（后端 mock_collector.py:298），与主管 m³/h 是不同量纲；
+  // 见 metricsCatalog 的 hvac.liquid.coldPlateFlow / mainFlow 定义，不做换算、只显式标注。
+  { key: 'flow', label: '流量(L/min, 冷板支路)', width: '125px' },
   { key: 'dp', label: '压差(Pa)', width: '75px' },
   { key: 'gpuTemp', label: 'GPU 温度', width: '140px' },
 ]
@@ -960,17 +968,17 @@ const liquidAlarms = computed(() => {
   font-weight: 600;
 }
 .ph-badge.ok {
-  background: rgba(34, 197, 94, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .ph-badge.loading {
-  background: rgba(148, 163, 184, 0.1);
+  background: var(--accent-12);
   color: var(--txt3);
 }
 .ph-mode {
   font-size: 11px;
   color: var(--purple);
-  background: rgba(139, 92, 246, 0.1);
+  background: color-mix(in srgb, var(--purple) 10%, transparent);
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -1035,25 +1043,30 @@ const liquidAlarms = computed(() => {
   min-width: 0;
 }
 /* 卡片：hover 抬升 + 顶部高亮描边（dui 包内组件，需 :deep 穿透） */
-.kpi-row :deep(.dui-kpi-card) {
+.kpi-row:deep(.dui-kpi-card) {
   transition:
     transform 0.18s ease,
     border-color 0.18s ease,
     box-shadow 0.18s ease;
 }
-.kpi-row :deep(.dui-kpi-card:hover) {
+.kpi-row:deep(.dui-kpi-card:hover) {
   transform: translateY(-2px);
-  border-color: rgba(34, 227, 255, 0.4);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+  border-color: var(--cyan-line);
+  box-shadow: 0 8px 22px var(--accent-35);
 }
-.kpi-row :deep(.dui-kpi-card:hover)::after {
+.kpi-row:deep(.dui-kpi-card:hover)::after {
   height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(34, 227, 255, 0.9), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--cyan) 90%, transparent),
+    transparent
+  );
 }
-.kpi-row :deep(.dui-kpi-cv) {
+.kpi-row:deep(.dui-kpi-cv) {
   font-size: 26px;
 }
-.kpi-row :deep(.dui-kpi-detail) {
+.kpi-row:deep(.dui-kpi-detail) {
   margin-top: 8px;
   line-height: 1.5;
 }
@@ -1239,8 +1252,8 @@ const liquidAlarms = computed(() => {
   padding: 6px 10px;
   border-radius: 5px;
   font-size: 11px;
-  background: rgba(239, 68, 68, 0.04);
-  border: 1px solid rgba(239, 68, 68, 0.1);
+  background: color-mix(in srgb, var(--red) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 10%, transparent);
 }
 .alarm-msg {
   color: var(--txt);

@@ -502,8 +502,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   color: var(--cyan);
-  background: linear-gradient(180deg, rgba(34, 227, 255, 0.16), rgba(34, 227, 255, 0.02));
-  border: 1px solid rgba(34, 227, 255, 0.35);
+  background: linear-gradient(180deg, var(--accent-16), var(--accent-02));
+  border: 1px solid var(--accent-35);
   box-shadow: var(--glow);
 }
 .sub {
@@ -537,7 +537,7 @@ onMounted(() => {
 .tab.active {
   color: var(--cyan);
   border-bottom-color: var(--cyan);
-  background: linear-gradient(180deg, rgba(34, 227, 255, 0.08), transparent);
+  background: linear-gradient(180deg, var(--accent-08), transparent);
 }
 .tab-ic {
   font-size: 12px;
@@ -680,7 +680,7 @@ onMounted(() => {
 /* buttons */
 .btn-primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   font-weight: 700;
   font-size: 12.5px;
   border: none;
@@ -770,14 +770,14 @@ onMounted(() => {
   gap: 8px;
 }
 .result.ok {
-  background: rgba(43, 212, 122, 0.1);
+  background: var(--green-bg);
   color: var(--green);
-  border: 1px solid rgba(43, 212, 122, 0.35);
+  border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
 }
 .result.bad {
-  background: rgba(255, 77, 94, 0.1);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
   color: var(--red);
-  border: 1px solid rgba(255, 77, 94, 0.35);
+  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
 }
 .r-ic {
   font-weight: 800;

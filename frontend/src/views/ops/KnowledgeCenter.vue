@@ -19,6 +19,12 @@
         />
         <button class="kb-search-btn" @click="doSearch">{{ tl('搜索') }}</button>
       </div>
+      <FilterBar
+        compact
+        view-key="knowledge-center"
+        :capture="captureView"
+        :apply="applySavedView"
+      />
       <div class="kb-actions">
         <button class="kb-act-btn primary" v-bind="authState('write')" @click="showCreate = true">
           {{ tl('新建条目') }}
@@ -61,7 +67,12 @@
     <div v-if="reviewTab === 'pending'" class="kb-pending">
       <div class="kb-pending-head">
         <span>{{ tl('待审核知识条目') }}（{{ pendingCount }}）</span>
-        <button class="kb-act-btn" v-bind="authState('write')" @click="loadPending" :disabled="loadingPending">
+        <button
+          class="kb-act-btn"
+          v-bind="authState('write')"
+          @click="loadPending"
+          :disabled="loadingPending"
+        >
           {{ tl('刷新') }}
         </button>
       </div>
@@ -75,12 +86,18 @@
             <span class="kb-review-tag p">{{ tl('待审核') }}</span>
           </div>
           <h3 class="kb-card-title">{{ item.title }}</h3>
-          <p class="kb-card-summary">{{ item.summary || (item.content || '').slice(0, 120) + '…' }}</p>
+          <p class="kb-card-summary">
+            {{ item.summary || (item.content || '').slice(0, 120) + '…' }}
+          </p>
           <div class="kb-card-foot">
             <span class="kb-version">v{{ item.version }}</span>
             <span class="kb-review-actions">
-              <button class="kb-act-btn primary sm" @click.stop="approve(item)">{{ tl('通过') }}</button>
-              <button class="kb-act-btn danger sm" @click.stop="openReview(item)">{{ tl('驳回') }}</button>
+              <button class="kb-act-btn primary sm" @click.stop="approve(item)">
+                {{ tl('通过') }}
+              </button>
+              <button class="kb-act-btn danger sm" @click.stop="openReview(item)">
+                {{ tl('驳回') }}
+              </button>
             </span>
           </div>
         </article>
@@ -119,26 +136,18 @@
     </div>
 
     <!-- 分页 -->
-    <div class="kb-pager" v-if="total > pageSize">
-      <button
-        :disabled="page <= 1"
-        @click="page = page - 1; listPage.reload()"
-      >
-        {{ tl('上一页') }}
-      </button>
-      <span>{{ page }} / {{ Math.ceil(total / pageSize) }}</span>
-      <button
-        :disabled="page * pageSize >= total"
-        @click="page++; listPage.reload()"
-      >
-        {{ tl('下一页') }}
-      </button>
-    </div>
+    <Pagination
+      :total="total"
+      :page="page"
+      :size="pageSize"
+      @change="onPageChange"
+      @size-change="onSizeChange"
+    />
 
     <!-- ===== 详情弹窗 ===== -->
     <transition name="fade">
-      <div v-if="detailItem" class="kb-modal-mask" @click.self="detailItem = null">
-        <div class="kb-modal">
+      <div v-if="detailItem" class="modal-mask" @click.self="detailItem = null">
+        <div class="modal">
           <div class="kb-modal-head">
             <h2>{{ detailItem.title }}</h2>
             <button class="kb-modal-close" @click="detailItem = null">✕</button>
@@ -191,8 +200,8 @@
 
     <!-- ===== 新建/编辑弹窗 ===== -->
     <transition name="fade">
-      <div v-if="showCreate" class="kb-modal-mask" @click.self="closeCreate">
-        <div class="kb-modal">
+      <div v-if="showCreate" class="modal-mask" @click.self="closeCreate">
+        <div class="modal">
           <div class="kb-modal-head">
             <h2>{{ editItem ? tl('编辑知识条目') : tl('新建知识条目') }}</h2>
             <button class="kb-modal-close" @click="closeCreate">✕</button>
@@ -235,8 +244,8 @@
 
     <!-- ===== 审核弹窗 ===== -->
     <transition name="fade">
-      <div v-if="reviewItem" class="kb-modal-mask" @click.self="reviewItem = null">
-        <div class="kb-modal">
+      <div v-if="reviewItem" class="modal-mask" @click.self="reviewItem = null">
+        <div class="modal">
           <div class="kb-modal-head">
             <h2>{{ tl('审核知识条目') }}</h2>
             <button class="kb-modal-close" @click="reviewItem = null">✕</button>
@@ -270,12 +279,19 @@
             </div>
             <div class="kb-section">
               <h4>{{ tl('审核意见') }}</h4>
-              <textarea v-model="reviewNote" class="kb-input" rows="2" :placeholder="tl('可选，驳回时填写原因')" />
+              <textarea
+                v-model="reviewNote"
+                class="kb-input"
+                rows="2"
+                :placeholder="tl('可选，驳回时填写原因')"
+              />
             </div>
           </div>
           <div class="kb-modal-foot">
             <button class="kb-act-btn danger" @click="reject(reviewItem)">{{ tl('驳回') }}</button>
-            <button class="kb-act-btn primary" @click="approve(reviewItem)">{{ tl('通过入库') }}</button>
+            <button class="kb-act-btn primary" @click="approve(reviewItem)">
+              {{ tl('通过入库') }}
+            </button>
           </div>
         </div>
       </div>
@@ -284,6 +300,10 @@
 </template>
 
 <script setup lang="ts">
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { FilterView } from '@/composables/useViewPreferences'
+import { useFilterQuery } from '@/composables/useFilterQuery'
+import Pagination from '@/components/Pagination.vue'
 import { ref, reactive, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { KnowledgeItem } from '@/types'
@@ -319,7 +339,7 @@ const items = ref<KnowledgeItem[]>([])
 const categories = ref<{ name: string; count: number }[]>([])
 const total = ref(0)
 const page = ref(1)
-const pageSize = 20
+const pageSize = ref(20)
 const searchQ = ref('')
 const activeCat = ref('')
 
@@ -354,21 +374,19 @@ const importMsg = ref('')
 const importErr = ref(false)
 
 const typeLabel = (t: string) =>
-  (
-    ({
-      sop: 'SOP',
-      drawing: tl('图纸'),
-      manual: tl('指导书'),
-      emergency: tl('应急'),
-      case: tl('案例'),
-      training: tl('培训'),
-    })
-  )[t] || t
+  ({
+    sop: 'SOP',
+    drawing: tl('图纸'),
+    manual: tl('指导书'),
+    emergency: tl('应急'),
+    case: tl('案例'),
+    training: tl('培训'),
+  })[t] || t
 
 // ---- load (统一由 useAsyncPage 管理加载/错误/空态；失败时可见且可重试，不再静默清空) ----
 const listPage = useAsyncPage<KnowledgeItem[]>(
   async () => {
-    const params: Record<string, unknown> = { page: page.value, page_size: pageSize }
+    const params: Record<string, unknown> = { page: page.value, page_size: pageSize.value }
     if (activeCat.value) params.category = activeCat.value
     if (searchQ.value) params.q = searchQ.value
     const r = await getKnowledgeItems(params)
@@ -544,8 +562,15 @@ async function handleImport(e: Event) {
     const imported = r.created ?? r.imported ?? 0
     const skipped = r.skipped ?? 0
     importMsg.value =
-      tl('导入完成') + '：' + imported + ' ' + tl('条新增') +
-      (skipped ? '，' + skipped + ' ' + tl('条重复跳过') : '') + '（' + tl('待审核') + '）'
+      tl('导入完成') +
+      '：' +
+      imported +
+      ' ' +
+      tl('条新增') +
+      (skipped ? '，' + skipped + ' ' + tl('条重复跳过') : '') +
+      '（' +
+      tl('待审核') +
+      '）'
     listPage.reload()
     loadCats()
     loadPending()
@@ -555,11 +580,16 @@ async function handleImport(e: Event) {
     // 对常见错误原因做友好翻译 (知识库导入失败的根因诊断)
     let cause: string
     if (/404|405|Not Found|Method Not Allowed/.test(String(rawDetail))) {
-      cause = tl('后端导入接口未实现或路径不匹配') + ' (HTTP 404/405)，' + tl('当前已切换到前端演示模式进行导入')
+      cause =
+        tl('后端导入接口未实现或路径不匹配') +
+        ' (HTTP 404/405)，' +
+        tl('当前已切换到前端演示模式进行导入')
     } else if (/502|503|504|network|Network/.test(String(rawDetail))) {
-      cause = tl('后端服务未启动或网络不通') + ' (HTTP 5xx)，' + tl('当前已切换到前端演示模式进行导入')
+      cause =
+        tl('后端服务未启动或网络不通') + ' (HTTP 5xx)，' + tl('当前已切换到前端演示模式进行导入')
     } else if (!rawDetail) {
-      cause = tl('后端无响应') + '，' + tl('请检查后端服务是否启动，或检查文件格式 (.txt/.pdf/.docx)')
+      cause =
+        tl('后端无响应') + '，' + tl('请检查后端服务是否启动，或检查文件格式 (.txt/.pdf/.docx)')
     } else {
       cause = rawDetail
     }
@@ -574,6 +604,34 @@ onMounted(() => {
   loadCats()
   loadPending()
 })
+
+function onPageChange(p: number) {
+  page.value = p
+  void listPage.reload()
+}
+function onSizeChange(s: number) {
+  pageSize.value = s
+  page.value = 1
+  void listPage.reload()
+}
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useFilterQuery({ searchQ, activeCat, page, pageSize })
+
+// 04 §6.2: 统一筛选栏的保存视图（compact 模式，查询/重置仍由本页提供）
+function captureView() {
+  return { filters: { searchQ: searchQ.value, activeCat: activeCat.value } }
+}
+
+function applySavedView(v: FilterView) {
+  const f = v.filters
+  const refs: Record<string, { value: string }> = { searchQ, activeCat }
+  for (const [k, val] of Object.entries(f)) {
+    const slot = refs[k]
+    if (slot && typeof val === 'string') slot.value = val
+  }
+  void doSearch()
+}
 </script>
 
 <style scoped>
@@ -589,7 +647,7 @@ onMounted(() => {
   color: var(--txt);
 }
 .sub {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
 }
 .pill {
@@ -625,7 +683,7 @@ onMounted(() => {
 }
 .kb-search-btn {
   background: var(--cyan);
-  color: #04181d;
+  color: var(--txt3);
   border: none;
   border-radius: 8px;
   padding: 8px 16px;
@@ -651,13 +709,13 @@ onMounted(() => {
 }
 .kb-act-btn.primary {
   background: var(--cyan);
-  color: #04181d;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
 .kb-act-btn.danger {
-  color: #f87171;
-  border-color: #f87171;
+  color: var(--red);
+  border-color: var(--red-line);
 }
 
 /* cats */
@@ -669,7 +727,7 @@ onMounted(() => {
 }
 .kb-cats button {
   background: var(--bg2);
-  color: var(--muted);
+  color: var(--txt2);
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 5px 14px;
@@ -682,7 +740,7 @@ onMounted(() => {
 }
 .kb-cats button.on {
   background: var(--cyan);
-  color: #04181d;
+  color: var(--txt3);
   border-color: var(--cyan);
 }
 
@@ -699,11 +757,11 @@ onMounted(() => {
   border-radius: 999px;
 }
 .kb-review-tag.p {
-  background: rgba(250, 173, 20, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
   color: var(--amber);
 }
 .kb-review-tag.r {
-  background: rgba(255, 77, 79, 0.12);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
   color: var(--red);
 }
 .kb-pending {
@@ -715,7 +773,7 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 10px;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .kb-review-actions {
   display: flex;
@@ -726,14 +784,14 @@ onMounted(() => {
   font-size: 12px;
 }
 .kb-import-msg.ok {
-  background: rgba(34, 197, 94, 0.1);
-  border: 1px solid #22c55e;
-  color: #22c55e;
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  border: 1px solid var(--green-line);
+  color: var(--green);
 }
 .kb-import-msg.err {
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid #f87171;
-  color: #f87171;
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border: 1px solid var(--red-line);
+  color: var(--red);
 }
 
 /* card list */
@@ -766,36 +824,36 @@ onMounted(() => {
   font-weight: 600;
 }
 .t-sop {
-  background: #dcfce7;
-  color: #166534;
+  background: var(--panel);
+  color: var(--green);
 }
 .t-drawing {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--panel);
+  color: var(--blue);
 }
 .t-manual {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--panel2);
+  color: var(--amber);
 }
 .t-emergency {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--panel);
+  color: var(--red);
 }
 .t-case {
-  background: #f3e8ff;
-  color: #6b21a8;
+  background: var(--panel);
+  color: var(--purple);
 }
 .t-training {
-  background: #e0e7ff;
-  color: #3730a3;
+  background: var(--panel);
+  color: var(--blue);
 }
 .kb-domain {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .kb-hot {
   font-size: 11px;
-  color: #f59e0b;
+  color: var(--amber);
 }
 .kb-card-title {
   margin: 0 0 6px;
@@ -805,7 +863,7 @@ onMounted(() => {
 .kb-card-summary {
   margin: 0 0 10px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   line-height: 1.6;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -828,17 +886,17 @@ onMounted(() => {
   border-radius: 999px;
   padding: 2px 8px;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .kb-version {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 
 .kb-empty {
   text-align: center;
   padding: 48px 0;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 14px;
 }
 
@@ -850,7 +908,7 @@ onMounted(() => {
   gap: 16px;
   margin-top: 16px;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .kb-pager button {
   background: var(--bg2);
@@ -866,16 +924,16 @@ onMounted(() => {
 }
 
 /* modal */
-.kb-modal-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--accent-50);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.kb-modal {
+.modal {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -898,7 +956,7 @@ onMounted(() => {
 .kb-modal-close {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 18px;
   cursor: pointer;
 }
@@ -908,7 +966,7 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 16px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .kb-modal-body {
   display: flex;
@@ -923,7 +981,7 @@ onMounted(() => {
 .kb-section p {
   margin: 0;
   font-size: 13px;
-  color: var(--muted);
+  color: var(--txt2);
   line-height: 1.7;
 }
 .kb-content {
@@ -941,7 +999,7 @@ onMounted(() => {
 .kb-steps {
   margin: 0;
   padding-left: 20px;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
   line-height: 1.8;
 }
@@ -961,7 +1019,7 @@ onMounted(() => {
 }
 .kb-form label {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 4px;
 }
 .kb-input {

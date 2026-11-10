@@ -164,13 +164,13 @@ async function handleRegister() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #0a0e27 0%, #161d3b 50%, #0d1230 100%);
+  background: linear-gradient(135deg, var(--bg) 0%, var(--bg2) 50%, var(--bg2) 100%);
 }
 .login-card {
   width: 380px;
   padding: 40px 36px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--accent-02);
+  border: 1px solid var(--accent-08);
   border-radius: 12px;
 }
 .login-header {
@@ -179,41 +179,41 @@ async function handleRegister() {
 }
 .login-header h1 {
   font-size: 22px;
-  color: #22e3ff;
+  color: var(--cyan);
   margin: 0 0 6px;
   font-weight: 700;
 }
 .login-header p {
-  color: #8892b0;
+  color: var(--txt2);
   font-size: 13px;
   margin: 0;
 }
 label {
   display: block;
-  color: #ccd6f6;
+  color: var(--txt-strong);
   font-size: 13px;
   margin: 14px 0 6px;
 }
 input {
   width: 100%;
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--accent-08);
+  border: 1px solid var(--accent-12);
   border-radius: 6px;
-  color: #e6f1ff;
+  color: var(--txt-strong);
   font-size: 14px;
   outline: none;
   box-sizing: border-box;
 }
 input:focus {
-  border-color: #22e3ff;
+  border-color: var(--cyan);
 }
 input.invalid {
-  border-color: #ff6b6b;
-  background: rgba(255, 107, 107, 0.08);
+  border-color: var(--red-line);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .err {
-  color: #ff6b6b;
+  color: var(--red);
   font-size: 12px;
   margin: 10px 0 0;
 }
@@ -228,27 +228,27 @@ input.invalid {
   align-items: center;
   gap: 6px;
   margin: 0;
-  color: #ccd6f6;
+  color: var(--txt-strong);
   font-size: 13px;
   cursor: pointer;
 }
 .remember-cb {
   width: auto;
   margin: 0;
-  accent-color: #22e3ff;
+  accent-color: var(--cyan);
 }
 .remember-tip {
-  color: #5a6380;
+  color: var(--txt3);
   font-size: 11px;
 }
 button {
   width: 100%;
   margin-top: 22px;
   padding: 11px;
-  background: linear-gradient(135deg, #1a73e8, #22e3ff);
+  background: linear-gradient(135deg, var(--blue-bg), var(--cyan));
   border: none;
   border-radius: 6px;
-  color: #fff;
+  color: var(--txt-strong);
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
@@ -259,7 +259,7 @@ button:disabled {
 }
 .login-footer {
   text-align: center;
-  color: #5a6380;
+  color: var(--txt3);
   font-size: 11px;
   margin-top: 20px;
 }
@@ -270,7 +270,7 @@ button:disabled {
 .link-btn {
   background: none;
   border: none;
-  color: #22e3ff;
+  color: var(--cyan);
   font-size: 12px;
   cursor: pointer;
   margin: 0;
@@ -285,6 +285,6 @@ button:disabled {
 }
 .register-form button {
   margin-top: 4px;
-  background: linear-gradient(135deg, #2a3a5e, #3a4a6e);
+  background: linear-gradient(135deg, var(--panel2), var(--panel2));
 }
 </style>

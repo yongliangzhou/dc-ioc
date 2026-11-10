@@ -118,8 +118,8 @@
     </AsyncSection>
 
     <!-- 详情抽屉 -->
-    <div v-if="detail" class="mask" @click.self="detail = null">
-      <aside class="drawer">
+    <div v-if="detail" class="modal-mask" @click.self="detail = null">
+      <aside class="modal as-drawer">
         <header class="drawer-head">
           <h2>{{ detail.title }}</h2>
           <button
@@ -211,8 +211,8 @@
     </div>
 
     <!-- 评审抽屉 -->
-    <div v-if="reviewing" class="mask" @click.self="reviewing = null">
-      <aside class="drawer">
+    <div v-if="reviewing" class="modal-mask" @click.self="reviewing = null">
+      <aside class="modal as-drawer">
         <header class="drawer-head">
           <h2>{{ t.review }}：{{ reviewing.title }}</h2>
           <button
@@ -481,7 +481,7 @@ onMounted(() => page.reload())
   font-weight: 700;
 }
 .page-sub {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
   margin-top: 4px;
 }
@@ -491,9 +491,9 @@ onMounted(() => page.reload())
   align-items: center;
 }
 .inp {
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--text);
+  color: var(--txt);
   border-radius: 8px;
   padding: 7px 10px;
   min-width: 220px;
@@ -519,7 +519,7 @@ onMounted(() => page.reload())
 }
 .kpi-l {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 4px;
 }
 .tabs {
@@ -529,9 +529,9 @@ onMounted(() => page.reload())
   margin-bottom: 14px;
 }
 .tab {
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--txt2);
   padding: 6px 14px;
   border-radius: 999px;
   cursor: pointer;
@@ -539,7 +539,7 @@ onMounted(() => page.reload())
 }
 .tab.active {
   background: var(--cyan);
-  color: #04121a;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -575,14 +575,14 @@ onMounted(() => page.reload())
 }
 .card-desc {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   line-height: 1.5;
 }
 .card-meta {
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .chips {
   display: flex;
@@ -591,8 +591,8 @@ onMounted(() => page.reload())
 }
 .chip {
   font-size: 11px;
-  background: var(--panel-2);
-  color: var(--muted);
+  background: var(--panel2);
+  color: var(--txt2);
   border-radius: 6px;
   padding: 2px 6px;
 }
@@ -606,7 +606,7 @@ onMounted(() => page.reload())
   display: flex;
   gap: 12px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   border-top: 1px dashed var(--line);
   padding-top: 8px;
 }
@@ -614,7 +614,7 @@ onMounted(() => page.reload())
   margin-left: auto;
   background: transparent;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 16px;
   cursor: pointer;
 }
@@ -624,25 +624,25 @@ onMounted(() => page.reload())
   border-radius: 999px;
 }
 .badge.green {
-  background: rgba(34, 197, 94, 0.16);
-  color: #4ade80;
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green);
 }
 .badge.amber {
-  background: rgba(245, 158, 11, 0.16);
-  color: #fbbf24;
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  color: var(--amber);
 }
 .badge.red {
-  background: rgba(239, 68, 68, 0.16);
-  color: #f87171;
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red);
 }
 .badge.gray {
-  background: var(--panel-2);
-  color: var(--muted);
+  background: var(--panel2);
+  color: var(--txt2);
 }
 .btn {
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
+  background: var(--panel2);
+  color: var(--txt);
   border-radius: 8px;
   padding: 7px 12px;
   cursor: pointer;
@@ -656,19 +656,19 @@ onMounted(() => page.reload())
   background: transparent;
 }
 .btn.soft {
-  background: rgba(34, 211, 238, 0.12);
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
   color: var(--cyan);
   border-color: transparent;
 }
 .btn.green {
   background: var(--green);
-  color: #04121a;
+  color: var(--txt3);
   border-color: var(--green);
   font-weight: 600;
 }
 .btn.red {
-  background: rgba(239, 68, 68, 0.16);
-  color: #f87171;
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red);
   border-color: transparent;
 }
 .btn:disabled {
@@ -678,18 +678,18 @@ onMounted(() => page.reload())
 .empty {
   grid-column: 1/-1;
   text-align: center;
-  color: var(--muted);
+  color: var(--txt2);
   padding: 40px;
 }
-.mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--accent-50);
   display: flex;
   justify-content: flex-end;
   z-index: 50;
 }
-.drawer {
+.as-drawer {
   width: 460px;
   max-width: 92vw;
   background: var(--panel);
@@ -709,17 +709,17 @@ onMounted(() => page.reload())
 .row {
   font-size: 13px;
   margin: 6px 0;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .row b {
-  color: var(--text);
+  color: var(--txt);
 }
 .content {
   font-size: 13px;
   line-height: 1.7;
-  color: var(--text);
+  color: var(--txt);
   white-space: pre-wrap;
-  background: var(--panel-2);
+  background: var(--panel2);
   border-radius: 10px;
   padding: 12px;
   margin: 10px 0;
@@ -747,7 +747,7 @@ onMounted(() => page.reload())
   cursor: pointer;
 }
 .star.on {
-  color: #fbbf24;
+  color: var(--amber);
 }
 .cite-row {
   display: flex;
@@ -757,9 +757,9 @@ onMounted(() => page.reload())
 .area {
   width: 100%;
   min-height: 90px;
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--text);
+  color: var(--txt);
   border-radius: 8px;
   padding: 10px;
   resize: vertical;
@@ -771,7 +771,7 @@ onMounted(() => page.reload())
   margin-bottom: 10px;
 }
 .comment {
-  background: var(--panel-2);
+  background: var(--panel2);
   border-radius: 8px;
   padding: 8px 10px;
 }
@@ -785,7 +785,7 @@ onMounted(() => page.reload())
   margin-top: 4px;
 }
 .muted {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .small {
   font-size: 12px;

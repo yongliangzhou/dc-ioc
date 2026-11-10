@@ -42,6 +42,26 @@ const powerGenset = '/api/power/genset'
 const networkOverview = '/api/network/overview'
 
 export const metricsCatalog: Record<string, MetricDef> = {
+  // ---- 液冷流量单位（HvacLiquid.vue）----
+  // 一次侧/二次侧主管与冷板支路是两种不同量纲，不是「单位不一致」：
+  // 后端 mock_collector.py:48/65 主管 flow_rate 为 m³/h，:298 冷板 flow_rate 为 L/min。
+  // 这里只登记单位口径，禁止在前端把两者混用或做数值换算。
+  'hvac.liquid.mainFlow': {
+    key: 'hvac.liquid.mainFlow',
+    unit: 'm³/h',
+    precision: 1,
+    priority: 'P1',
+    source: '/api/hvac/liquid-cooling',
+    group: 'hvac',
+  },
+  'hvac.liquid.coldPlateFlow': {
+    key: 'hvac.liquid.coldPlateFlow',
+    unit: 'L/min',
+    precision: 1,
+    priority: 'P1',
+    source: '/api/hvac/liquid-cooling',
+    group: 'hvac',
+  },
   // ---- 燃油系统（PowerFuel.vue :74 :414 :428 :442）----
   'power.fuel.pressure': {
     key: 'power.fuel.pressure',

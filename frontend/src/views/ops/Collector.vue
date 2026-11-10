@@ -29,7 +29,7 @@
     <div class="section-title">{{ tl('设备注册状态') }}</div>
     <Panel>
       <div class="flex gap8 wrap" style="align-items: center">
-        <button class="btn-sm primary" @click="openAdd">＋ {{ tl('添加设备') }}</button>
+        <button class="btn-sm btn-primary" @click="openAdd">＋ {{ tl('添加设备') }}</button>
         <input
           v-model.trim="filters.domain"
           class="ipt"
@@ -44,9 +44,10 @@
           style="width: 200px"
           @keyup.enter="load"
         />
-        <button class="btn-sm" @click="load">{{ tl('查询') }}</button>
-        <button class="btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
-        <button class="btn-sm primary" :disabled="!selected" @click="metricDefsOpen = true">
+        <button class="btn-primary btn-sm" @click="load">{{ tl('查询') }}</button>
+        <button class="btn-ghost btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
+        <FilterBar compact view-key="collector" :capture="captureView" :apply="applySavedView" />
+        <button class="btn-sm btn-primary" :disabled="!selected" @click="metricDefsOpen = true">
           {{ tl('测点管理') }}
         </button>
         <span class="muted" style="margin-left: auto; font-size: 11px">{{
@@ -73,7 +74,7 @@
         @confirm-delete="confirmDelete"
       />
       <template #empty-actions>
-        <button class="btn-sm primary" @click="openAdd">＋ 添加设备</button>
+        <button class="btn-sm btn-primary" @click="openAdd">＋ 添加设备</button>
       </template>
     </AsyncSection>
 
@@ -146,6 +147,9 @@
 </template>
 
 <script setup lang="ts">
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { FilterView } from '@/composables/useViewPreferences'
+import { useReactiveFilterQuery } from '@/composables/useFilterQuery'
 import type { ErrorLike } from '@/utils/error'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
@@ -222,8 +226,7 @@ async function load() {
       else closeMetrics()
     }
   } catch (e: unknown) {
-    loadError.value =
-      toErrorMessage(e) || '设备列表加载失败，请检查外部契约端点是否就绪'
+    loadError.value = toErrorMessage(e) || '设备列表加载失败，请检查外部契约端点是否就绪'
   } finally {
     loading.value = false
   }
@@ -430,6 +433,22 @@ onMounted(() => {
   timer = window.setInterval(load, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 3000))
 })
 onBeforeUnmount(() => clearInterval(timer))
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useReactiveFilterQuery(filters)
+
+// 04 §6.2: 统一筛选栏的保存视图（compact 模式，查询/重置仍由本页提供）
+function captureView() {
+  return { filters: { ...filters } }
+}
+
+function applySavedView(v: FilterView) {
+  const f = v.filters
+  for (const [k, val] of Object.entries(f)) {
+    if (typeof val === 'string' && k in filters) Object.assign(filters, { [k]: val })
+  }
+  void load()
+}
 </script>
 
 <style scoped>
@@ -447,21 +466,21 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
 .btn-sm.danger {
-  background: rgba(242, 63, 63, 0.15);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
   color: var(--red);
-  border-color: rgba(242, 63, 63, 0.4);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
 }
 .btn-sm.danger:disabled {
   opacity: 0.6;
   cursor: default;
 }
 .btn-sm.danger:hover:not(:disabled) {
-  background: rgba(242, 63, 63, 0.3);
+  background: color-mix(in srgb, var(--red) 30%, transparent);
 }
 .result {
   margin-top: 12px;
@@ -470,19 +489,19 @@ onBeforeUnmount(() => clearInterval(timer))
   font-size: 12px;
 }
 .result.ok {
-  background: rgba(43, 212, 122, 0.1);
+  background: var(--green-bg);
   color: var(--green);
-  border: 1px solid rgba(43, 212, 122, 0.3);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
 }
 .result.warn {
-  background: rgba(255, 176, 32, 0.1);
+  background: var(--amber-bg);
   color: var(--amber);
-  border: 1px solid rgba(255, 176, 32, 0.3);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
 }
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -495,7 +514,7 @@ onBeforeUnmount(() => clearInterval(timer))
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
   overflow: hidden;
 }
 .modal-head {

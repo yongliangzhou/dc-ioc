@@ -356,7 +356,7 @@
           <div class="grid cols-3">
             <div
               class="card"
-              style="padding: 12px; text-align: center; border-color: rgba(255, 77, 94, 0.4)"
+              style="padding: 12px; text-align: center; border-color: var(--red-line)"
             >
               <div class="text-xl font-bold" style="color: var(--red)">
                 {{ sevText(previewRes.summary?.severity) }}
@@ -367,7 +367,7 @@
             </div>
             <div
               class="card"
-              style="padding: 12px; text-align: center; border-color: rgba(255, 176, 32, 0.4)"
+              style="padding: 12px; text-align: center; border-color: var(--amber-line)"
             >
               <div class="text-xl font-bold" style="color: var(--amber)">
                 {{ previewRes.summary?.affectedCount ?? '—' }}
@@ -378,7 +378,11 @@
             </div>
             <div
               class="card"
-              style="padding: 12px; text-align: center; border-color: rgba(139, 92, 246, 0.4)"
+              style="
+                padding: 12px;
+                text-align: center;
+                border-color: color-mix(in srgb, var(--purple) 40%, transparent);
+              "
             >
               <div class="text-xl font-bold" style="color: var(--blue)">
                 {{ previewRes.summary?.criticalPaths ?? '—' }}

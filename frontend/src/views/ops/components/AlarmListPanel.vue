@@ -333,84 +333,84 @@ function goDevice(alarm: Alarm) {
   flex-shrink: 0;
 }
 .src-chiller {
-  color: #22e3ff;
-  background: rgba(34, 227, 255, 0.1);
-  border: 1px solid rgba(34, 227, 255, 0.2);
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cyan) 20%, transparent);
 }
 .src-chiller .source-dot {
-  background: #22e3ff;
-  box-shadow: 0 0 4px #22e3ff;
+  background: var(--cyan);
+  box-shadow: 0 0 4px var(--cyan);
 }
 .src-crac {
-  color: #2bd47a;
-  background: rgba(43, 212, 122, 0.1);
-  border: 1px solid rgba(43, 212, 122, 0.2);
+  color: var(--green);
+  background: var(--green-bg);
+  border: 1px solid color-mix(in srgb, var(--green) 20%, transparent);
 }
 .src-crac .source-dot {
-  background: #2bd47a;
-  box-shadow: 0 0 4px #2bd47a;
+  background: var(--green);
+  box-shadow: 0 0 4px var(--green);
 }
 .src-liquid {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: var(--blue);
+  background: var(--blue-bg);
+  border: 1px solid color-mix(in srgb, var(--blue) 20%, transparent);
 }
 .src-liquid .source-dot {
-  background: #3b82f6;
-  box-shadow: 0 0 4px #3b82f6;
+  background: var(--blue);
+  box-shadow: 0 0 4px var(--blue);
 }
 .src-power {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 20%, transparent);
 }
 .src-power .source-dot {
-  background: #f59e0b;
-  box-shadow: 0 0 4px #f59e0b;
+  background: var(--amber-bg);
+  box-shadow: 0 0 4px var(--amber-bg);
 }
 .src-fire {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 20%, transparent);
 }
 .src-fire .source-dot {
-  background: #ef4444;
-  box-shadow: 0 0 4px #ef4444;
+  background: var(--red);
+  box-shadow: 0 0 4px var(--red);
 }
 .src-security {
-  color: #a78bfa;
-  background: rgba(167, 139, 250, 0.1);
-  border: 1px solid rgba(167, 139, 250, 0.2);
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--purple) 20%, transparent);
 }
 .src-security .source-dot {
-  background: #a78bfa;
-  box-shadow: 0 0 4px #a78bfa;
+  background: var(--purple);
+  box-shadow: 0 0 4px var(--purple);
 }
 .src-network {
-  color: #94a3b8;
-  background: rgba(148, 163, 184, 0.1);
-  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: var(--txt2);
+  background: var(--accent-12);
+  border: 1px solid var(--accent-16);
 }
 .src-network .source-dot {
-  background: #94a3b8;
-  box-shadow: 0 0 4px #94a3b8;
+  background: var(--panel2);
+  box-shadow: 0 0 4px var(--panel2);
 }
 .src-hvac {
-  color: #05b896;
-  background: rgba(5, 184, 150, 0.1);
-  border: 1px solid rgba(5, 184, 150, 0.2);
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cyan) 20%, transparent);
 }
 .src-hvac .source-dot {
-  background: #05b896;
-  box-shadow: 0 0 4px #05b896;
+  background: var(--cyan-bg);
+  box-shadow: 0 0 4px var(--cyan-bg);
 }
 .src-other {
-  color: #6b7280;
-  background: rgba(107, 114, 128, 0.1);
-  border: 1px solid rgba(107, 114, 128, 0.15);
+  color: var(--txt2);
+  background: var(--accent-12);
+  border: 1px solid var(--accent-16);
 }
 .src-other .source-dot {
-  background: #6b7280;
+  background: var(--panel2);
 }
 
 /* Device Link */
@@ -423,7 +423,7 @@ function goDevice(alarm: Alarm) {
   transition: color 0.15s;
 }
 .device-link:hover {
-  color: #22e3ff;
+  color: var(--cyan);
 }
 .no-link {
   color: var(--txt3);
@@ -432,13 +432,13 @@ function goDevice(alarm: Alarm) {
 
 /* Row highlighting */
 .row-crit {
-  background: linear-gradient(90deg, rgba(255, 77, 94, 0.06), transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--red) 6%, transparent), transparent);
 }
 .row-warn {
-  background: linear-gradient(90deg, rgba(255, 176, 32, 0.04), transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--amber) 4%, transparent), transparent);
 }
 .row-sel {
-  background: rgba(34, 227, 255, 0.08);
+  background: var(--accent-08);
   box-shadow: inset 2px 0 0 var(--cyan);
 }
 .desc-cell {
@@ -489,38 +489,38 @@ function goDevice(alarm: Alarm) {
   color: var(--cyan);
 }
 .act-btn.ack:hover {
-  background: rgba(34, 227, 255, 0.1);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
 }
 .act-btn.ticket {
-  border-color: #a78bfa;
-  color: #a78bfa;
+  border-color: var(--purple-line);
+  color: var(--purple);
 }
 .act-btn.ticket:hover {
-  background: rgba(167, 139, 250, 0.12);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
 }
 .act-btn.runbook {
-  border-color: #2bd47a;
-  color: #2bd47a;
+  border-color: var(--green);
+  color: var(--green);
 }
 .act-btn.runbook:hover {
-  background: rgba(43, 212, 122, 0.1);
+  background: var(--green-bg);
 }
 .act-btn.fb {
-  border-color: var(--amber, #ffb020);
-  color: var(--amber, #ffb020);
+  border-color: var(--amber);
+  color: var(--amber);
 }
 .act-btn.fb:hover {
-  background: rgba(255, 176, 32, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
 }
 .act-btn.resolve {
   border-color: var(--green);
   color: var(--green);
 }
 .act-btn.resolve:hover {
-  background: rgba(43, 212, 122, 0.1);
+  background: var(--green-bg);
 }
 .act-btn.done {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-12);
   color: var(--txt3);
   cursor: default;
 }

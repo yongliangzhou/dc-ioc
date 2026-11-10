@@ -300,31 +300,31 @@ watch(
 .view-head h1 {
   font-size: 20px;
   margin: 0;
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .layers {
   display: flex;
   gap: 6px;
 }
 .layers button {
-  background: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
+  background: var(--bg2);
+  color: var(--txt);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
   font-size: 13px;
 }
 .layers button.on {
-  background: #0ea5e9;
-  color: #fff;
-  border-color: #0ea5e9;
+  background: var(--blue-bg);
+  color: var(--txt-strong);
+  border-color: var(--blue-line);
 }
 .refresh {
   margin-left: auto;
-  background: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
+  background: var(--bg2);
+  color: var(--txt);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
@@ -334,16 +334,16 @@ watch(
 }
 /* 统一图形编辑入口按钮 */
 .ge-edit {
-  background: #1e293b;
-  color: #22d3ee;
-  border: 1px solid #22d3ee;
+  background: var(--bg2);
+  color: var(--cyan);
+  border: 1px solid var(--cyan-line);
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
   font-size: 13px;
 }
 .ge-edit:hover {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .ctrl {
   display: flex;
@@ -352,10 +352,10 @@ watch(
   margin: 16px 0;
   flex-wrap: wrap;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--txt2);
 }
 .ctrl label b {
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .ctrl input[type='range'] {
   width: 160px;
@@ -372,16 +372,16 @@ watch(
   display: inline-block;
 }
 .s.cold {
-  background: #38bdf8;
+  background: var(--blue);
 }
 .s.ok {
-  background: #22c55e;
+  background: var(--green-bg);
 }
 .s.hot {
-  background: #ef4444;
+  background: var(--red);
 }
 section h2 {
-  color: #cbd5e1;
+  color: var(--txt);
   font-size: 16px;
   margin: 18px 0 10px;
 }
@@ -392,13 +392,13 @@ section h2 {
   align-items: start;
 }
 .side {
-  background: #0f172a;
-  border: 1px solid #1e293b;
+  background: var(--bg2);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 14px;
 }
 .side-title {
-  color: #f59e0b;
+  color: var(--amber);
   font-size: 13px;
   margin-bottom: 10px;
 }
@@ -411,22 +411,22 @@ section h2 {
   cursor: pointer;
 }
 .top-item:hover {
-  background: #1e293b;
+  background: var(--bg2);
 }
 .rank {
-  background: #7f1d1d;
-  color: #fecaca;
+  background: var(--red-bg);
+  color: var(--txt-strong);
   border-radius: 4px;
   padding: 1px 6px;
   font-size: 11px;
 }
 .name {
-  color: #cbd5e1;
+  color: var(--txt);
   font-size: 13px;
   flex: 1;
 }
 .temp {
-  color: #ef4444;
+  color: var(--red);
   font-weight: 600;
 }
 .aisle-bars {
@@ -435,31 +435,31 @@ section h2 {
   margin-bottom: 12px;
 }
 .aisle-card {
-  background: #0f172a;
-  border: 1px solid #1e293b;
+  background: var(--bg2);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 14px 18px;
   min-width: 120px;
 }
 .aisle-card.cold {
-  border-color: #38bdf8;
+  border-color: var(--blue-line);
 }
 .aisle-card.hot {
-  border-color: #ef4444;
+  border-color: var(--red-line);
 }
 .aisle-card .lbl {
   display: block;
-  color: #64748b;
+  color: var(--txt2);
   font-size: 12px;
 }
 .aisle-card .val {
   display: block;
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-size: 24px;
   font-weight: 700;
 }
 .hint {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 12px;
   margin: 0 0 10px;
 }
@@ -478,7 +478,7 @@ section h2 {
   border: none;
   padding: 0;
   font-size: 12px;
-  color: #22e3ff;
+  color: var(--cyan);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;

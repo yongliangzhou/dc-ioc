@@ -9,7 +9,7 @@
           :height="cellH - gap"
           rx="4"
           :fill="color(cell.temp)"
-          :stroke="isHot(cell) ? '#ef4444' : 'transparent'"
+          :stroke="isHot(cell) ? 'var(--red)' : 'transparent'"
           :stroke-width="isHot(cell) ? 2 : 0"
           @click="$emit('cell-click', cell)"
         >
@@ -17,13 +17,10 @@
         </rect>
         <!-- TOP5 热点标注 -->
         <g v-if="cell.top" @click="$emit('cell-click', cell)">
-          <circle
-            :cx="cell.x + cellW - gap - 10"
-            :cy="cell.y + 10"
-            r="8"
-            class="hot-rank"
-          />
-          <text :x="cell.x + cellW - gap - 10" :y="cell.y + 13" class="hot-num">{{ cell.rank }}</text>
+          <circle :cx="cell.x + cellW - gap - 10" :cy="cell.y + 10" r="8" class="hot-rank" />
+          <text :x="cell.x + cellW - gap - 10" :y="cell.y + 13" class="hot-num">
+            {{ cell.rank }}
+          </text>
         </g>
       </g>
     </svg>
@@ -99,10 +96,31 @@ function color(temp: number) {
 </script>
 
 <style scoped>
-.heatmap-svg { width: 100%; height: auto; }
-.heatmap-svg rect { cursor: pointer; transition: opacity 0.15s; }
-.heatmap-svg rect:hover { opacity: 0.85; }
-.hot-rank { fill: #ef4444; stroke: #fff; stroke-width: 1.5; }
-.hot-num { fill: #fff; font-size: 10px; font-weight: 700; text-anchor: middle; }
-.empty { color: #64748b; text-align: center; padding: 40px; }
+.heatmap-svg {
+  width: 100%;
+  height: auto;
+}
+.heatmap-svg rect {
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.heatmap-svg rect:hover {
+  opacity: 0.85;
+}
+.hot-rank {
+  fill: var(--red);
+  stroke: var(--txt-strong);
+  stroke-width: 1.5;
+}
+.hot-num {
+  fill: var(--txt-strong);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.empty {
+  color: var(--txt2);
+  text-align: center;
+  padding: 40px;
+}
 </style>

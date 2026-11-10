@@ -17,7 +17,7 @@
         >
           {{ tl('datacenter.batchDelete') }} ({{ selectedIds.length }})
         </button>
-        <button class="btn-sm primary" @click="openCreate" :disabled="!canAdmin">
+        <button class="btn-sm btn-primary" @click="openCreate" :disabled="!canAdmin">
           {{ tl('datacenter.newDc') }}
         </button>
       </div>
@@ -129,8 +129,8 @@
     </AsyncSection>
 
     <!-- 新建/编辑抽屉 -->
-    <div class="drawer-mask" v-if="drawer" @click.self="drawer = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="drawer" @click.self="drawer = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ editId ? tl('datacenter.edit') : tl('datacenter.newDc') }}</span>
           <button class="x" @click="drawer = false">✕</button>
@@ -191,7 +191,7 @@
         </div>
         <div class="drawer-foot">
           <button class="btn-sm" @click="drawer = false">{{ tl('common.cancel') }}</button>
-          <button class="btn-sm primary" @click="save" :disabled="saving">
+          <button class="btn-sm btn-primary" @click="save" :disabled="saving">
             {{ saving ? tl('common.loading') : tl('thingModel.save') }}
           </button>
         </div>
@@ -199,8 +199,8 @@
     </div>
 
     <!-- 操作日志抽屉 -->
-    <div class="drawer-mask" v-if="opLogOpen" @click.self="opLogOpen = false">
-      <div class="drawer wide">
+    <div class="modal-mask" v-if="opLogOpen" @click.self="opLogOpen = false">
+      <div class="modal as-drawer wide">
         <div class="drawer-head">
           <span>{{ tl('datacenter.opLog') }}</span>
           <button class="x" @click="opLogOpen = false">✕</button>
@@ -230,8 +230,8 @@
     </div>
 
     <!-- 关联服务抽屉 -->
-    <div class="drawer-mask" v-if="svcOpen" @click.self="svcOpen = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="svcOpen" @click.self="svcOpen = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ tl('datacenter.services') }} · {{ svcName }}</span>
           <button class="x" @click="svcOpen = false">✕</button>
@@ -535,7 +535,7 @@ function openServices(d: Idc) {
   margin: 0;
 }
 .view-head .sub {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 12px;
 }
 .head-actions {
@@ -563,7 +563,7 @@ function openServices(d: Idc) {
 }
 .kl {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .toolbar {
   display: flex;
@@ -625,7 +625,7 @@ function openServices(d: Idc) {
 }
 .c-code {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 2px;
 }
 .c-region {
@@ -653,7 +653,7 @@ function openServices(d: Idc) {
 }
 .c-metrics label {
   font-size: 10px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .c-desc {
   font-size: 12px;
@@ -686,14 +686,14 @@ function openServices(d: Idc) {
   cursor: not-allowed;
 }
 .btn-sm.primary {
-  color: #04121a;
+  color: var(--txt3);
   background: var(--cyan);
   border-color: var(--cyan);
   font-weight: 600;
 }
 .btn-sm.danger {
   color: var(--red);
-  border-color: rgba(255, 77, 94, 0.35);
+  border-color: color-mix(in srgb, var(--red) 35%, transparent);
 }
 .btn-xs {
   color: var(--txt2);
@@ -704,10 +704,10 @@ function openServices(d: Idc) {
   font-size: 11px;
   cursor: pointer;
 }
-.drawer-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -715,17 +715,17 @@ function openServices(d: Idc) {
   padding: 6vh 16px;
   z-index: 40;
 }
-.drawer {
+.as-drawer {
   width: 460px;
   max-width: 92vw;
-  background: var(--card-bg);
+  background: var(--panel);
   max-height: 88vh;
   overflow: auto;
   padding: 18px;
   border-radius: 14px;
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+  box-shadow: -8px 0 24px var(--accent-35);
 }
-.drawer.wide {
+.as-drawer.wide {
   width: 640px;
 }
 .drawer-head {
@@ -740,7 +740,7 @@ function openServices(d: Idc) {
 .x {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 16px;
   cursor: pointer;
 }
@@ -777,7 +777,7 @@ label {
 }
 .empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--txt2);
   padding: 30px;
   font-size: 13px;
   grid-column: 1 / -1;
@@ -794,16 +794,16 @@ label {
   border-color: var(--cyan);
 }
 .tag.b {
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--blue);
+  border-color: color-mix(in srgb, var(--blue) 40%, transparent);
 }
 .tag.a {
   color: var(--amber);
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
 }
 .tag.r {
   color: var(--red);
-  border-color: rgba(255, 77, 94, 0.4);
+  border-color: var(--red-line);
 }
 .tag.sm {
   font-size: 10px;
@@ -825,7 +825,7 @@ label {
   align-items: center;
 }
 .log-row.ah {
-  color: var(--muted);
+  color: var(--txt2);
   font-weight: 600;
   border-top: none;
 }
@@ -834,7 +834,7 @@ label {
   font-size: 11px;
 }
 .muted {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .svc-summary {
   display: grid;
@@ -854,7 +854,7 @@ label {
   color: var(--txt-strong);
 }
 .svc-summary label {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .svc-row {
   display: flex;

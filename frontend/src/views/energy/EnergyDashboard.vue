@@ -70,11 +70,7 @@
       <!-- ===== 7 日联动: 选中某一天, 两张 7 日图 + 明细卡同步 ===== -->
       <div class="day-bar">
         <span class="db-label">{{ tl('7 日联动') }}</span>
-        <button
-          class="db-chip"
-          :class="{ on: selectedDay === null }"
-          @click="selectedDay = null"
-        >
+        <button class="db-chip" :class="{ on: selectedDay === null }" @click="selectedDay = null">
           {{ tl('全部') }}
         </button>
         <button
@@ -137,208 +133,232 @@
         />
       </Panel>
 
-    <!-- 未来 24h 负载预测 -->
-    <Panel v-if="loadForecastOption" :title="tl('未来 24 小时负载预测 (kW)')">
-      <template #extra>
-        <DataBadge
-          tone="partial"
-          label="不参与日期联动"
-          tip="该图为未来 24 小时维度，与上方 7 日历史趋势不在同一时间轴上，因此不随日期选择变化"
-        />
-      </template>
-      <BaseChart :option="loadForecastOption" height="280px" />
-    </Panel>
-
-    <!-- 节能概览: PUE 目标 + 效率仪表 + 能耗占比 + AI 节能收益 -->
-    <div class="grid cols-2" v-if="data?.advice">
-      <Panel :title="tl('能效指标')">
-        <div class="eff-wrap" v-if="advice">
-          <BaseChart v-if="pueRingOption" :option="pueRingOption" height="180px" />
-          <div class="eff-list">
-            <div class="eff-item">
-              <span class="k">{{ tl('冷机 COP') }}</span>
-              <span class="v">{{ advice.efficiency.chillerCop }}</span>
-            </div>
-            <div class="eff-item">
-              <span class="k">{{ tl('UPS 效率') }}</span>
-              <span class="v">{{ (advice.efficiency.upsEff * 100).toFixed(1) }}%</span>
-            </div>
-            <div class="eff-item">
-              <span class="k">{{ tl('UPS 平均负载率') }}</span>
-              <span class="v">{{ advice.efficiency.upsAvgLoad }}%</span>
-            </div>
-            <div class="eff-item">
-              <span class="k">{{ tl('冷机供水温度') }}</span>
-              <span class="v">{{ advice.efficiency.chillerSupplyTemp }}℃</span>
-            </div>
-          </div>
-        </div>
+      <!-- 未来 24h 负载预测 -->
+      <Panel v-if="loadForecastOption" :title="tl('未来 24 小时负载预测 (kW)')">
+        <template #extra>
+          <DataBadge
+            tone="partial"
+            label="不参与日期联动"
+            tip="该图为未来 24 小时维度，与上方 7 日历史趋势不在同一时间轴上，因此不随日期选择变化"
+          />
+        </template>
+        <BaseChart :option="loadForecastOption" height="280px" />
       </Panel>
 
-      <Panel :title="tl('能耗占比')">
-        <BaseChart v-if="breakdownPieOption" :option="breakdownPieOption" height="220px" />
-      </Panel>
-    </div>
+      <!-- 节能概览: PUE 目标 + 效率仪表 + 能耗占比 + AI 节能收益 -->
+      <div class="grid cols-2" v-if="data?.advice">
+        <Panel :title="tl('能效指标')">
+          <div class="eff-wrap" v-if="advice">
+            <BaseChart v-if="pueRingOption" :option="pueRingOption" height="180px" />
+            <div class="eff-list">
+              <div class="eff-item">
+                <span class="k">{{ tl('冷机 COP') }}</span>
+                <span class="v">{{ advice.efficiency.chillerCop }}</span>
+              </div>
+              <div class="eff-item">
+                <span class="k">{{ tl('UPS 效率') }}</span>
+                <span class="v">{{ (advice.efficiency.upsEff * 100).toFixed(1) }}%</span>
+              </div>
+              <div class="eff-item">
+                <span class="k">{{ tl('UPS 平均负载率') }}</span>
+                <span class="v">{{ advice.efficiency.upsAvgLoad }}%</span>
+              </div>
+              <div class="eff-item">
+                <span class="k">{{ tl('冷机供水温度') }}</span>
+                <span class="v">{{ advice.efficiency.chillerSupplyTemp }}℃</span>
+              </div>
+            </div>
+          </div>
+        </Panel>
 
-    <!-- AI 节能建议 -->
-    <Panel v-if="advice" :title="tl('AI 节能建议')">
-      <div class="advice-summary" v-if="advice">
-        <div class="sum-item">
-          <span class="num">{{ advice.totalSavingKw.toLocaleString() }}</span>
-          <span class="lbl">{{ tl('可降功率 (kW)') }}</span>
-        </div>
-        <div class="sum-item">
-          <span class="num">{{ advice.totalSavingPct }}%</span>
-          <span class="lbl">{{ tl('综合节能率') }}</span>
-        </div>
-        <div class="sum-item">
-          <span class="num">{{ advice.suggestions.length }}</span>
-          <span class="lbl">{{ tl('建议条数') }}</span>
-        </div>
+        <Panel :title="tl('能耗占比')">
+          <BaseChart v-if="breakdownPieOption" :option="breakdownPieOption" height="220px" />
+        </Panel>
       </div>
 
-      <div class="advice-cards">
-        <div
-          v-for="s in advice.suggestions"
-          :key="s.id"
-          class="advice-card"
-          :class="{ adopted: adoptedIds.has(s.id), ignored: ignoredIds.has(s.id) }"
-        >
-          <div class="ac-head">
-            <span class="ac-title">{{ s.title }}</span>
-            <span class="badge" :class="prioClass(s.priority)">{{ s.priority }}</span>
+      <!-- AI 节能建议 -->
+      <Panel v-if="advice" :title="tl('AI 节能建议')">
+        <div class="advice-summary" v-if="advice">
+          <div class="sum-item">
+            <span class="num">{{ advice.totalSavingKw.toLocaleString() }}</span>
+            <span class="lbl">{{ tl('可降功率 (kW)') }}</span>
           </div>
-          <p class="ac-detail">{{ s.detail }}</p>
-          <div class="ac-meta">
-            <span>{{ tl('估算节能') }} ≈ {{ s.savingKw.toLocaleString() }} kW / {{ s.savingPct }}%</span>
+          <div class="sum-item">
+            <span class="num">{{ advice.totalSavingPct }}%</span>
+            <span class="lbl">{{ tl('综合节能率') }}</span>
           </div>
-          <div class="ac-basis" v-if="s.basis">{{ tl('依据') }}: {{ s.basis }}</div>
-          <div class="ac-actions" v-if="!adoptedIds.has(s.id) && !ignoredIds.has(s.id)">
-            <button class="btn-sm primary" v-bind="authState('write')" @click="adopt(s)">
-              {{ tl('采纳') }}
-            </button>
-            <button class="btn-sm" v-bind="authState('write')" @click="ignore(s)">
-              {{ tl('忽略') }}
-            </button>
-          </div>
-          <div class="ac-state" v-else>
-            <span class="tag" :class="adoptedIds.has(s.id) ? 'ok' : 'no'">
-              {{ adoptedIds.has(s.id) ? tl('已采纳') : tl('已忽略') }}
-            </span>
+          <div class="sum-item">
+            <span class="num">{{ advice.suggestions.length }}</span>
+            <span class="lbl">{{ tl('建议条数') }}</span>
           </div>
         </div>
-      </div>
-    </Panel>
 
-    <!-- 采纳记录 -->
-    <Panel v-if="adviceRecords.length" :title="tl('节能建议采纳记录')">
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th>{{ tl('建议') }}</th>
-            <th>{{ tl('优先级') }}</th>
-            <th>{{ tl('估算节能') }}</th>
-            <th>{{ tl('操作') }}</th>
-            <th>{{ tl('操作人') }}</th>
-            <th>{{ tl('时间') }}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in adviceRecords" :key="r.id">
-            <td>{{ r.title }}</td>
-            <td><span class="badge" :class="prioClass(r.priority)">{{ r.priority }}</span></td>
-            <td>≈ {{ r.savingKw.toLocaleString() }} kW / {{ r.savingPct }}%</td>
-            <td>
-              <span class="tag" :class="r.action === 'adopt' ? 'ok' : 'no'">
-                {{ r.action === 'adopt' ? tl('采纳') : tl('忽略') }}
+        <div class="advice-cards">
+          <div
+            v-for="s in advice.suggestions"
+            :key="s.id"
+            class="advice-card"
+            :class="{ adopted: adoptedIds.has(s.id), ignored: ignoredIds.has(s.id) }"
+          >
+            <div class="ac-head">
+              <span class="ac-title">{{ s.title }}</span>
+              <span class="badge" :class="prioClass(s.priority)">{{ s.priority }}</span>
+            </div>
+            <p class="ac-detail">{{ s.detail }}</p>
+            <div class="ac-meta">
+              <span
+                >{{ tl('估算节能') }} ≈ {{ s.savingKw.toLocaleString() }} kW /
+                {{ s.savingPct }}%</span
+              >
+            </div>
+            <div class="ac-basis" v-if="s.basis">{{ tl('依据') }}: {{ s.basis }}</div>
+            <div class="ac-actions" v-if="!adoptedIds.has(s.id) && !ignoredIds.has(s.id)">
+              <button class="btn-sm btn-primary" v-bind="authState('write')" @click="adopt(s)">
+                {{ tl('采纳') }}
+              </button>
+              <button class="btn-sm" v-bind="authState('write')" @click="ignore(s)">
+                {{ tl('忽略') }}
+              </button>
+            </div>
+            <div class="ac-state" v-else>
+              <span class="tag" :class="adoptedIds.has(s.id) ? 'ok' : 'no'">
+                {{ adoptedIds.has(s.id) ? tl('已采纳') : tl('已忽略') }}
               </span>
-            </td>
-            <td>{{ r.user || '—' }}</td>
-            <td class="muted">{{ r.createdAt }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </Panel>
+            </div>
+          </div>
+        </div>
+      </Panel>
 
-    <!-- 制冷策略优化 (iCooling@AI) · 由制冷 AI 优化模块整合而来 -->
-    <div class="card mb-6">
-      <div class="card-head">
-        <span class="dot ai"></span>
-        <h3>{{ tl('制冷策略优化') }} <em class="ai-tag">iCooling@AI</em></h3>
-        <span class="muted sm">{{ tl('实时分析冷负荷与温场，动态下发制冷设定值优化建议') }}</span>
-      </div>
+      <!-- 采纳记录 -->
+      <Panel v-if="adviceRecords.length" :title="tl('节能建议采纳记录')">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>{{ tl('建议') }}</th>
+              <th>{{ tl('优先级') }}</th>
+              <th>{{ tl('估算节能') }}</th>
+              <th>{{ tl('操作') }}</th>
+              <th>{{ tl('操作人') }}</th>
+              <th>{{ tl('时间') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="r in adviceRecords" :key="r.id">
+              <td>{{ r.title }}</td>
+              <td>
+                <span class="badge" :class="prioClass(r.priority)">{{ r.priority }}</span>
+              </td>
+              <td>≈ {{ r.savingKw.toLocaleString() }} kW / {{ r.savingPct }}%</td>
+              <td>
+                <span class="tag" :class="r.action === 'adopt' ? 'ok' : 'no'">
+                  {{ r.action === 'adopt' ? tl('采纳') : tl('忽略') }}
+                </span>
+              </td>
+              <td>{{ r.user || '—' }}</td>
+              <td class="muted">{{ r.createdAt }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </Panel>
 
-      <!-- 整块为前端静态示例内容，与真实冷机数据无关，必须显式标注 -->
-      <MockDataBanner
-        level="full"
-        :note="`本区块（功能卡 / 验证进度 / 优化建议）为前端写死的静态示例内容，未接入实时冷负荷与温场数据，不可作为制冷设定值调整依据`"
-      />
+      <!-- 制冷策略优化 (iCooling@AI) · 由制冷 AI 优化模块整合而来 -->
+      <div class="card mb-6">
+        <div class="card-head">
+          <span class="dot ai"></span>
+          <h3>{{ tl('制冷策略优化') }} <em class="ai-tag">iCooling@AI</em></h3>
+          <span class="muted sm">{{ tl('实时分析冷负荷与温场，动态下发制冷设定值优化建议') }}</span>
+        </div>
 
-      <div class="feature-grid">
-        <div class="feature" v-for="f in coolingFeatures" :key="f.key">
-          <div class="f-icon">{{ f.icon }}</div>
-          <div class="f-body">
-            <div class="f-name">{{ f.name }}</div>
-            <div class="f-desc">{{ f.desc }}</div>
-            <div class="f-tag" :class="f.state">{{ f.stateLabel }}</div>
+        <!-- 整块为前端静态示例内容，与真实冷机数据无关，必须显式标注 -->
+        <MockDataBanner
+          level="full"
+          :note="`本区块（功能卡 / 验证进度 / 优化建议）为前端写死的静态示例内容，未接入实时冷负荷与温场数据，不可作为制冷设定值调整依据`"
+        />
+
+        <div class="feature-grid">
+          <div class="feature" v-for="f in coolingFeatures" :key="f.key">
+            <div class="f-icon"><component :is="f.icon" :size="18" /></div>
+            <div class="f-body">
+              <div class="f-name">{{ f.name }}</div>
+              <div class="f-desc">{{ f.desc }}</div>
+              <div class="f-tag" :class="f.state">{{ f.stateLabel }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="verify-block">
+          <div class="vb-head">
+            <span>{{ tl('优化建议验证') }}</span>
+            <span class="muted sm">{{ coolingVerify.done }}/{{ coolingVerify.total }}</span>
+          </div>
+          <div class="progress"><i :style="{ width: coolingVerify.pct + '%' }"></i></div>
+          <ul class="verify-list">
+            <li v-for="v in coolingVerify.items" :key="v.id">
+              <span class="v-state" :class="v.state">{{ v.stateLabel }}</span>
+              <span class="v-name">{{ v.name }}</span>
+              <span class="muted sm">{{ v.note }}</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="advice-cards">
+          <div
+            v-for="s in coolingSuggestions"
+            :key="s.id"
+            class="advice-card"
+            :class="{ adopted: adoptedCoolingIds.has(s.id), ignored: ignoredCoolingIds.has(s.id) }"
+          >
+            <div class="ac-head">
+              <span class="ac-title">{{ s.title }}</span>
+              <span class="badge" :class="prioClass(s.priority)">{{ s.priority }}</span>
+            </div>
+            <p class="ac-detail">{{ s.detail }}</p>
+            <div class="ac-meta">
+              <span
+                >{{ tl('估算节能') }} ≈ {{ s.savingKw.toLocaleString() }} kW /
+                {{ s.savingPct }}%</span
+              >
+            </div>
+            <div class="ac-basis" v-if="s.basis">{{ tl('依据') }}: {{ s.basis }}</div>
+            <div
+              class="ac-actions"
+              v-if="!adoptedCoolingIds.has(s.id) && !ignoredCoolingIds.has(s.id)"
+            >
+              <button
+                class="btn-sm btn-primary"
+                v-bind="authState('write')"
+                @click="adoptCooling(s)"
+              >
+                {{ tl('采纳') }}
+              </button>
+              <button class="btn-sm" v-bind="authState('write')" @click="ignoreCooling(s)">
+                {{ tl('忽略') }}
+              </button>
+            </div>
+            <div class="ac-state" v-else>
+              <span class="tag" :class="adoptedCoolingIds.has(s.id) ? 'ok' : 'no'">
+                {{ adoptedCoolingIds.has(s.id) ? tl('已采纳') : tl('已忽略') }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
-
-      <div class="verify-block">
-        <div class="vb-head">
-          <span>{{ tl('优化建议验证') }}</span>
-          <span class="muted sm">{{ coolingVerify.done }}/{{ coolingVerify.total }}</span>
-        </div>
-        <div class="progress"><i :style="{ width: coolingVerify.pct + '%' }"></i></div>
-        <ul class="verify-list">
-          <li v-for="v in coolingVerify.items" :key="v.id">
-            <span class="v-state" :class="v.state">{{ v.stateLabel }}</span>
-            <span class="v-name">{{ v.name }}</span>
-            <span class="muted sm">{{ v.note }}</span>
-          </li>
-        </ul>
-      </div>
-
-      <div class="advice-cards">
-        <div
-          v-for="s in coolingSuggestions"
-          :key="s.id"
-          class="advice-card"
-          :class="{ adopted: adoptedCoolingIds.has(s.id), ignored: ignoredCoolingIds.has(s.id) }"
-        >
-          <div class="ac-head">
-            <span class="ac-title">{{ s.title }}</span>
-            <span class="badge" :class="prioClass(s.priority)">{{ s.priority }}</span>
-          </div>
-          <p class="ac-detail">{{ s.detail }}</p>
-          <div class="ac-meta">
-            <span>{{ tl('估算节能') }} ≈ {{ s.savingKw.toLocaleString() }} kW / {{ s.savingPct }}%</span>
-          </div>
-          <div class="ac-basis" v-if="s.basis">{{ tl('依据') }}: {{ s.basis }}</div>
-          <div class="ac-actions" v-if="!adoptedCoolingIds.has(s.id) && !ignoredCoolingIds.has(s.id)">
-            <button class="btn-sm primary" v-bind="authState('write')" @click="adoptCooling(s)">
-              {{ tl('采纳') }}
-            </button>
-            <button class="btn-sm" v-bind="authState('write')" @click="ignoreCooling(s)">
-              {{ tl('忽略') }}
-            </button>
-          </div>
-          <div class="ac-state" v-else>
-            <span class="tag" :class="adoptedCoolingIds.has(s.id) ? 'ok' : 'no'">
-              {{ adoptedCoolingIds.has(s.id) ? tl('已采纳') : tl('已忽略') }}
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
     </AsyncSection>
   </div>
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, reactive } from 'vue'
-import { RefreshCw, AlertTriangle, Download } from 'lucide-vue-next'
+import {
+  RefreshCw,
+  AlertTriangle,
+  Download,
+  Thermometer,
+  Target,
+  Fan,
+  Snowflake,
+} from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import MetricCard from '@/components/common/MetricCard.vue'
 import BaseChart from '@/components/charts/BaseChart.vue'
@@ -415,7 +435,7 @@ function withDayMarker(opt: EChartsOption): EChartsOption {
     series[0].markLine = {
       silent: true,
       symbol: 'none',
-      lineStyle: { color: '#ffb020', type: 'dashed', width: 1 },
+      lineStyle: { color: cssToken('--amber'), type: 'dashed', width: 1 },
       label: { show: false },
       data: [{ xAxis: row.date.slice(5) }],
     }
@@ -432,7 +452,7 @@ const pueChartOption = computed<EChartsOption | null>(() => {
   return withDayMarker(
     lineOption(
       d.map((t) => t.date.slice(5)),
-      [{ name: 'PUE', data: d.map((t) => t.pue as number), color: '#22e3ff', area: true }],
+      [{ name: 'PUE', data: d.map((t) => t.pue as number), color: cssToken('--cyan'), area: true }],
     ),
   )
 })
@@ -444,12 +464,17 @@ const breakdownChartOption = computed<EChartsOption | null>(() => {
     lineOption(
       d.map((t) => t.date.slice(5)),
       [
-        { name: tl('IT 能耗'), data: d.map((t) => t.itKwh), color: '#3b82f6', area: true },
-        { name: tl('制冷能耗'), data: d.map((t) => t.coolingKwh), color: '#22e3ff', area: true },
+        { name: tl('IT 能耗'), data: d.map((t) => t.itKwh), color: cssToken('--blue'), area: true },
+        {
+          name: tl('制冷能耗'),
+          data: d.map((t) => t.coolingKwh),
+          color: cssToken('--cyan'),
+          area: true,
+        },
         {
           name: tl('其他'),
           data: d.map((t) => t.totalKwh - t.itKwh - t.coolingKwh),
-          color: '#7e93b8',
+          color: cssToken('--txt2'),
           area: false,
           dashed: true,
         },
@@ -467,13 +492,13 @@ const loadForecastOption = computed<EChartsOption | null>(() => {
       {
         name: tl('实际负荷'),
         data: lf.map((t) => t.actual),
-        color: '#3b82f6',
+        color: cssToken('--blue'),
         area: true,
       },
       {
         name: tl('预测负荷'),
         data: lf.map((t) => t.pred),
-        color: '#22e3ff',
+        color: cssToken('--cyan'),
         area: false,
         dashed: true,
       },
@@ -486,7 +511,10 @@ const pueRingOption = computed<EChartsOption | null>(() => {
   const cur = advice.value.pue.current ?? 0
   // 以 2.0 为满量程映射占比
   const pct = Math.min(100, Math.round((cur / 2.0) * 100))
-  return ringOption(pct, cur > 1.6 ? '#ff4d5e' : cur > 1.4 ? '#ffb020' : '#22e3ff')
+  return ringOption(
+    pct,
+    cur > 1.6 ? cssToken('--red') : cur > 1.4 ? cssToken('--amber') : cssToken('--cyan'),
+  )
 })
 
 const breakdownPieOption = computed<EChartsOption | null>(() => {
@@ -585,10 +613,38 @@ const adoptedCoolingIds = reactive(new Set<string>())
 const ignoredCoolingIds = reactive(new Set<string>())
 
 const coolingFeatures = [
-  { key: 'atw', icon: '🌡', name: tl('冷冻水流量自适应'), desc: tl('依据冷负荷预测动态调节板换/水泵流量'), state: 'on', stateLabel: tl('运行中') },
-  { key: 'setpoint', icon: '🎯', name: tl('全局设定值寻优'), desc: tl('以 PUE 最低为目标寻优冷冻水/回风设定值'), state: 'on', stateLabel: tl('运行中') },
-  { key: 'ec', icon: '💨', name: tl('EC 风机群控'), desc: tl('依据温场分布联动调节末端风机转速'), state: 'warn', stateLabel: tl('部分启用') },
-  { key: 'freecool', icon: '❄', name: tl('自然冷源利用'), desc: tl('室外湿球温度达标时优先开板式换热'), state: 'on', stateLabel: tl('运行中') },
+  {
+    key: 'atw',
+    icon: Thermometer,
+    name: tl('冷冻水流量自适应'),
+    desc: tl('依据冷负荷预测动态调节板换/水泵流量'),
+    state: 'on',
+    stateLabel: tl('运行中'),
+  },
+  {
+    key: 'setpoint',
+    icon: Target,
+    name: tl('全局设定值寻优'),
+    desc: tl('以 PUE 最低为目标寻优冷冻水/回风设定值'),
+    state: 'on',
+    stateLabel: tl('运行中'),
+  },
+  {
+    key: 'ec',
+    icon: Fan,
+    name: tl('EC 风机群控'),
+    desc: tl('依据温场分布联动调节末端风机转速'),
+    state: 'warn',
+    stateLabel: tl('部分启用'),
+  },
+  {
+    key: 'freecool',
+    icon: Snowflake,
+    name: tl('自然冷源利用'),
+    desc: tl('室外湿球温度达标时优先开板式换热'),
+    state: 'on',
+    stateLabel: tl('运行中'),
+  },
 ]
 
 const coolingVerify = {
@@ -598,9 +654,27 @@ const coolingVerify = {
     return Math.round((this.done / this.total) * 100)
   },
   items: [
-    { id: 'v1', state: 'done', stateLabel: tl('已验证'), name: tl('提高冷冻水供水温度 1℃'), note: tl('机房平均温度上升 0.6℃，制冷功率下降 4.2%') },
-    { id: 'v2', state: 'done', stateLabel: tl('已验证'), name: tl('关闭冗余冷通道风机'), note: tl('末端风机功率下降 11%') },
-    { id: 'v3', state: 'running', stateLabel: tl('验证中'), name: tl('板换自然冷源投入'), note: tl('预计节省冷机能耗 8%') },
+    {
+      id: 'v1',
+      state: 'done',
+      stateLabel: tl('已验证'),
+      name: tl('提高冷冻水供水温度 1℃'),
+      note: tl('机房平均温度上升 0.6℃，制冷功率下降 4.2%'),
+    },
+    {
+      id: 'v2',
+      state: 'done',
+      stateLabel: tl('已验证'),
+      name: tl('关闭冗余冷通道风机'),
+      note: tl('末端风机功率下降 11%'),
+    },
+    {
+      id: 'v3',
+      state: 'running',
+      stateLabel: tl('验证中'),
+      name: tl('板换自然冷源投入'),
+      note: tl('预计节省冷机能耗 8%'),
+    },
   ],
 }
 
@@ -609,7 +683,9 @@ const coolingSuggestions = [
     id: 'c1',
     title: tl('冷冻水供水温度上调 1.5℃'),
     priority: '高',
-    detail: tl('基于 AI 冷负荷预测，A/B 区服务器进出风温度均在安全阈值内，可上调供水温度以降低冷机压缩功。'),
+    detail: tl(
+      '基于 AI 冷负荷预测，A/B 区服务器进出风温度均在安全阈值内，可上调供水温度以降低冷机压缩功。',
+    ),
     savingKw: 86,
     savingPct: 6.4,
     basis: tl('近 7 日温场与 IT 负载趋势'),
@@ -694,15 +770,15 @@ async function ignoreCooling(s: EnergySuggestion) {
 .eff-item {
   display: flex;
   justify-content: space-between;
-  border-bottom: 1px dashed rgba(126, 147, 184, 0.2);
+  border-bottom: 1px dashed var(--accent-16);
   padding: 4px 0;
   font-size: 13px;
 }
 .eff-item .k {
-  color: var(--muted, #7e93b8);
+  color: var(--txt2);
 }
 .eff-item .v {
-  color: var(--strong, #fff);
+  color: var(--txt-strong);
   font-weight: 600;
 }
 .advice-summary {
@@ -718,11 +794,11 @@ async function ignoreCooling(s: EnergySuggestion) {
 .sum-item .num {
   font-size: 24px;
   font-weight: 800;
-  color: #22e3ff;
+  color: var(--cyan);
 }
 .sum-item .lbl {
   font-size: 12px;
-  color: #7e93b8;
+  color: var(--txt2);
 }
 .advice-cards {
   display: grid;
@@ -730,16 +806,16 @@ async function ignoreCooling(s: EnergySuggestion) {
   gap: 14px;
 }
 .advice-card {
-  border: 1px solid rgba(126, 147, 184, 0.18);
+  border: 1px solid var(--accent-16);
   border-radius: 10px;
   padding: 14px;
-  background: rgba(15, 27, 51, 0.4);
+  background: var(--accent-35);
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 .advice-card.adopted {
-  border-color: rgba(34, 227, 255, 0.5);
+  border-color: var(--accent-50);
 }
 .advice-card.ignored {
   opacity: 0.6;
@@ -751,22 +827,22 @@ async function ignoreCooling(s: EnergySuggestion) {
 }
 .ac-title {
   font-weight: 600;
-  color: #cfe0ff;
+  color: var(--txt);
   font-size: 14px;
 }
 .ac-detail {
   font-size: 12.5px;
-  color: #9fb2d4;
+  color: var(--txt);
   line-height: 1.5;
   margin: 0;
 }
 .ac-meta {
   font-size: 12px;
-  color: #7e93b8;
+  color: var(--txt2);
 }
 .ac-basis {
   font-size: 11px;
-  color: #5a6c88;
+  color: var(--txt2);
   word-break: break-all;
 }
 .ac-actions {
@@ -783,16 +859,16 @@ async function ignoreCooling(s: EnergySuggestion) {
   border-radius: 999px;
 }
 .badge.crit {
-  background: rgba(255, 77, 94, 0.18);
-  color: #ff4d5e;
+  background: color-mix(in srgb, var(--red) 18%, transparent);
+  color: var(--red);
 }
 .badge.warn {
-  background: rgba(255, 176, 32, 0.18);
-  color: #ffb020;
+  background: color-mix(in srgb, var(--amber) 18%, transparent);
+  color: var(--amber);
 }
 .badge.info {
-  background: rgba(34, 227, 255, 0.18);
-  color: #22e3ff;
+  background: color-mix(in srgb, var(--cyan) 18%, transparent);
+  color: var(--cyan);
 }
 .tag {
   font-size: 12px;
@@ -800,12 +876,12 @@ async function ignoreCooling(s: EnergySuggestion) {
   border-radius: 999px;
 }
 .tag.ok {
-  background: rgba(34, 227, 255, 0.18);
-  color: #22e3ff;
+  background: color-mix(in srgb, var(--cyan) 18%, transparent);
+  color: var(--cyan);
 }
 .tag.no {
-  background: rgba(126, 147, 184, 0.18);
-  color: #7e93b8;
+  background: var(--accent-16);
+  color: var(--txt2);
 }
 .tbl {
   width: 100%;
@@ -816,14 +892,14 @@ async function ignoreCooling(s: EnergySuggestion) {
 .tbl td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(126, 147, 184, 0.14);
+  border-bottom: 1px solid var(--accent-12);
 }
 .tbl th {
-  color: #7e93b8;
+  color: var(--txt2);
   font-weight: 500;
 }
 .muted {
-  color: #7e93b8;
+  color: var(--txt2);
 }
 .sm {
   font-size: 12px;
@@ -831,8 +907,8 @@ async function ignoreCooling(s: EnergySuggestion) {
 .ai-tag {
   font-style: normal;
   font-size: 11px;
-  color: #22e3ff;
-  border: 1px solid rgba(34, 227, 255, 0.4);
+  color: var(--cyan);
+  border: 1px solid var(--cyan-line);
   border-radius: 999px;
   padding: 1px 8px;
   margin-left: 6px;
@@ -849,9 +925,9 @@ async function ignoreCooling(s: EnergySuggestion) {
   display: flex;
   gap: 10px;
   padding: 12px;
-  border: 1px solid rgba(126, 147, 184, 0.16);
+  border: 1px solid var(--accent-16);
   border-radius: 10px;
-  background: rgba(126, 147, 184, 0.05);
+  background: var(--accent-08);
 }
 .f-icon {
   font-size: 20px;
@@ -864,12 +940,12 @@ async function ignoreCooling(s: EnergySuggestion) {
   min-width: 0;
 }
 .f-name {
-  color: #fff;
+  color: var(--txt-strong);
   font-weight: 600;
   font-size: 13px;
 }
 .f-desc {
-  color: #7e93b8;
+  color: var(--txt2);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -880,15 +956,15 @@ async function ignoreCooling(s: EnergySuggestion) {
   border-radius: 999px;
 }
 .f-tag.on {
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.14);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
 }
 .f-tag.warn {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.14);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 14%, transparent);
 }
 .verify-block {
-  border: 1px solid rgba(126, 147, 184, 0.16);
+  border: 1px solid var(--accent-16);
   border-radius: 10px;
   padding: 12px;
   margin-bottom: 16px;
@@ -899,19 +975,19 @@ async function ignoreCooling(s: EnergySuggestion) {
   align-items: center;
   margin-bottom: 8px;
   font-size: 13px;
-  color: #fff;
+  color: var(--txt-strong);
 }
 .progress {
   height: 8px;
   border-radius: 999px;
-  background: rgba(126, 147, 184, 0.18);
+  background: var(--accent-16);
   overflow: hidden;
   margin-bottom: 12px;
 }
 .progress > i {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, #22e3ff, #3b82f6);
+  background: linear-gradient(90deg, var(--cyan), var(--blue));
   transition: width 0.4s ease;
 }
 .verify-list {
@@ -927,7 +1003,7 @@ async function ignoreCooling(s: EnergySuggestion) {
   align-items: center;
   gap: 10px;
   font-size: 13px;
-  color: #cdd9ee;
+  color: var(--txt);
 }
 .v-state {
   font-size: 11px;
@@ -936,12 +1012,12 @@ async function ignoreCooling(s: EnergySuggestion) {
   flex-shrink: 0;
 }
 .v-state.done {
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.14);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
 }
 .v-state.running {
-  color: #22e3ff;
-  background: rgba(34, 227, 255, 0.14);
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 
 /* ===== 本轮新增 ===== */
@@ -965,16 +1041,16 @@ async function ignoreCooling(s: EnergySuggestion) {
   border-radius: 8px;
   font-size: 12px;
   cursor: pointer;
-  color: #7e93b8;
+  color: var(--txt2);
   background: transparent;
-  border: 1px solid rgba(126, 147, 184, 0.3);
+  border: 1px solid var(--accent-35);
   transition: all 0.18s;
   white-space: nowrap;
   flex-shrink: 0;
 }
 .ph-btn:hover:not(:disabled) {
-  color: #fff;
-  border-color: #22e3ff;
+  color: var(--txt-strong);
+  border-color: var(--cyan);
 }
 .ph-btn:disabled {
   opacity: 0.55;
@@ -993,7 +1069,7 @@ async function ignoreCooling(s: EnergySuggestion) {
   border: none;
   padding: 0;
   font-size: 12px;
-  color: #22e3ff;
+  color: var(--cyan);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1007,9 +1083,9 @@ async function ignoreCooling(s: EnergySuggestion) {
   padding: 8px 12px;
   border-radius: 8px;
   font-size: 12px;
-  color: #e0844a;
-  background: rgba(224, 132, 74, 0.12);
-  border: 1px solid rgba(224, 132, 74, 0.35);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
 }
 
 /* 7 日联动条 */
@@ -1022,28 +1098,28 @@ async function ignoreCooling(s: EnergySuggestion) {
 .db-label {
   font-size: 12px;
   font-weight: 600;
-  color: #22e3ff;
+  color: var(--cyan);
   margin-right: 2px;
 }
 .db-chip {
   padding: 3px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(126, 147, 184, 0.3);
+  border: 1px solid var(--accent-35);
   background: transparent;
-  color: #9fb2d4;
+  color: var(--txt);
   font-size: 11.5px;
   cursor: pointer;
   transition: all 0.15s;
   font-variant-numeric: tabular-nums;
 }
 .db-chip:hover {
-  color: #fff;
-  border-color: #22e3ff;
+  color: var(--txt-strong);
+  border-color: var(--cyan);
 }
 .db-chip.on {
-  background: rgba(34, 227, 255, 0.16);
-  border-color: #22e3ff;
-  color: #22e3ff;
+  background: var(--accent-16);
+  border-color: var(--cyan);
+  color: var(--cyan);
   font-weight: 600;
 }
 .db-hint {
@@ -1058,8 +1134,8 @@ async function ignoreCooling(s: EnergySuggestion) {
   flex-wrap: wrap;
   padding: 10px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(34, 227, 255, 0.3);
-  background: rgba(34, 227, 255, 0.05);
+  border: 1px solid color-mix(in srgb, var(--cyan) 30%, transparent);
+  background: var(--grid-line);
 }
 .dd-item {
   display: flex;
@@ -1068,12 +1144,12 @@ async function ignoreCooling(s: EnergySuggestion) {
 }
 .dd-k {
   font-size: 11px;
-  color: #7e93b8;
+  color: var(--txt2);
 }
 .dd-v {
   font-size: 15px;
   font-weight: 700;
-  color: #fff;
+  color: var(--txt-strong);
   font-variant-numeric: tabular-nums;
 }
 

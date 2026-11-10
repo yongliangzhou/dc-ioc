@@ -198,7 +198,7 @@
               :key="'hk' + i"
               x="6"
               :y="50 + i * LAYER_GAP - 24"
-              fill="#8595ad"
+              fill="var(--txt2)"
               font-size="10"
             >
               {{ hopText(L.hop) }}
@@ -210,7 +210,9 @@
               :y1="e.y1"
               :x2="e.x2"
               :y2="e.y2"
-              :stroke="e.type === 'it_feed' ? '#f59e0b' : e.critical ? '#dc2626' : '#cbd5e1'"
+              :stroke="
+                e.type === 'it_feed' ? 'var(--amber)' : e.critical ? 'var(--red)' : 'var(--txt)'
+              "
               :stroke-width="e.type === 'it_feed' ? 1.2 : e.critical ? 3 : 1.5"
               :stroke-dasharray="e.type === 'it_feed' ? '4 3' : ''"
             />
@@ -221,15 +223,25 @@
                 :cy="d.y"
                 r="13"
                 :fill="
-                  d.state === 'fault' ? '#dc2626' : d.state === 'affected' ? '#f59e0b' : '#3b82f6'
+                  d.state === 'fault'
+                    ? 'var(--red)'
+                    : d.state === 'affected'
+                      ? 'var(--amber)'
+                      : 'var(--blue)'
                 "
-                :stroke="d.critical ? '#7f1d1d' : '#fff'"
+                :stroke="d.critical ? 'var(--red)' : 'var(--txt-strong)'"
                 :stroke-width="d.critical ? 2.5 : 1"
               />
-              <text :x="d.x" :y="d.y + 4" text-anchor="middle" fill="#fff" font-size="9">
+              <text
+                :x="d.x"
+                :y="d.y + 4"
+                text-anchor="middle"
+                fill="var(--txt-strong)"
+                font-size="9"
+              >
                 {{ d.short }}
               </text>
-              <text :x="d.x" :y="d.y + 28" text-anchor="middle" fill="#9fb3d1" font-size="10">
+              <text :x="d.x" :y="d.y + 28" text-anchor="middle" fill="var(--txt)" font-size="10">
                 {{ d.label }}
               </text>
             </g>
@@ -254,19 +266,19 @@
           <div class="flex gap-4 mt-1 text-xs flex-wrap" style="color: var(--txt2)">
             <span class="flex items-center gap-1"
               ><span
-                style="display: inline-block; width: 18px; border-top: 2px dashed #f59e0b"
+                style="display: inline-block; width: 18px; border-top: 2px dashed var(--amber-line)"
               ></span
               >{{ t.edgeItFeed }}</span
             >
             <span class="flex items-center gap-1"
               ><span
-                style="display: inline-block; width: 18px; border-top: 3px solid #dc2626"
+                style="display: inline-block; width: 18px; border-top: 3px solid var(--red-line)"
               ></span
               >{{ t.edgeCritical }}</span
             >
             <span class="flex items-center gap-1"
               ><span
-                style="display: inline-block; width: 18px; border-top: 1.5px solid #cbd5e1"
+                style="display: inline-block; width: 18px; border-top: 1.5px solid var(--line)"
               ></span
               >{{ t.edgeNormal }}</span
             >
@@ -339,7 +351,7 @@
             style="padding: 12px; border-color: var(--line)"
             :style="
               b.severity === 'critical'
-                ? 'border-color:rgba(255,77,94,.5);background:rgba(255,77,94,.06)'
+                ? 'border-color:color-mix(in srgb, var(--red) 50%, transparent);background:color-mix(in srgb, var(--red) 6%, transparent)'
                 : ''
             "
           >
@@ -379,9 +391,9 @@
             style="padding: 12px; border-color: var(--line)"
             :style="
               m.priority === 'P0'
-                ? 'border-color:rgba(255,77,94,.5);background:rgba(255,77,94,.06)'
+                ? 'border-color:color-mix(in srgb, var(--red) 50%, transparent);background:color-mix(in srgb, var(--red) 6%, transparent)'
                 : m.priority === 'P1'
-                  ? 'border-color:rgba(255,176,32,.5);background:rgba(255,176,32,.06)'
+                  ? 'border-color:color-mix(in srgb, var(--amber) 50%, transparent);background:color-mix(in srgb, var(--amber) 6%, transparent)'
                   : ''
             "
           >

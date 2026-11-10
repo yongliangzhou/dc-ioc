@@ -13,7 +13,7 @@
           @keyup.enter="loadList"
         />
         <button class="btn-sm" @click="loadList">{{ tl('common.detail') }}</button>
-        <button class="btn-sm primary" @click="openCreate" :disabled="!canAdmin">
+        <button class="btn-sm btn-primary" @click="openCreate" :disabled="!canAdmin">
           {{ tl('thingModel.newModel') }}
         </button>
       </div>
@@ -57,7 +57,7 @@
               </button>
               <button
                 v-if="editing"
-                class="btn-sm primary"
+                class="btn-sm btn-primary"
                 @click="save"
                 :disabled="!canAdmin || saving"
               >
@@ -161,6 +161,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFilterQuery } from '@/composables/useFilterQuery'
 import { computed, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
@@ -390,6 +391,9 @@ async function remove() {
 }
 
 loadList()
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useFilterQuery({ kw })
 </script>
 
 <style scoped>
@@ -448,7 +452,7 @@ loadList()
 }
 .li-key {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   margin: 2px 0 6px;
 }
 .form-head {
@@ -485,10 +489,10 @@ label {
 }
 .btn-sm.danger {
   color: var(--red);
-  border-color: rgba(255, 77, 94, 0.35);
+  border-color: color-mix(in srgb, var(--red) 35%, transparent);
 }
 .btn-sm.primary {
-  color: #04121a;
+  color: var(--txt3);
   background: var(--cyan);
   border-color: var(--cyan);
   font-weight: 600;
@@ -496,7 +500,7 @@ label {
 .btn-sm.add {
   margin-top: 8px;
   color: var(--cyan);
-  border-color: rgba(34, 211, 238, 0.35);
+  border-color: color-mix(in srgb, var(--cyan) 35%, transparent);
 }
 .tabs {
   display: flex;
@@ -530,7 +534,7 @@ label {
 }
 .ith {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .itr .ipt.sm {
   font-size: 12px;
@@ -549,8 +553,8 @@ label {
 .issue {
   font-size: 12px;
   color: var(--amber);
-  background: rgba(255, 176, 32, 0.08);
-  border: 1px solid rgba(255, 176, 32, 0.3);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
   padding: 6px 10px;
   border-radius: 8px;
   margin-bottom: 6px;
@@ -567,7 +571,7 @@ label {
 }
 .empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--txt2);
   padding: 30px;
   font-size: 13px;
 }

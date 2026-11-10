@@ -333,7 +333,7 @@ function monthClass(m: string | null): string {
   width: 100%;
   height: 6px;
   border-radius: 4px;
-  background: var(--track, rgba(255, 255, 255, 0.1));
+  background: var(--track);
   outline: none;
   cursor: pointer;
 }
@@ -343,18 +343,18 @@ function monthClass(m: string | null): string {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #22e3ff, #3b82f6);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 8px rgba(34, 227, 255, 0.6);
+  background: linear-gradient(180deg, var(--cyan), var(--blue));
+  border: 2px solid var(--mask);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cyan) 60%, transparent);
   cursor: pointer;
 }
 .wi-params input[type='range']::-moz-range-thumb {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #22e3ff, #3b82f6);
-  border: 2px solid rgba(255, 255, 255, 0.85);
-  box-shadow: 0 0 8px rgba(34, 227, 255, 0.6);
+  background: linear-gradient(180deg, var(--cyan), var(--blue));
+  border: 2px solid var(--mask);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cyan) 60%, transparent);
   cursor: pointer;
 }
 .wi-run {
@@ -389,10 +389,10 @@ function monthClass(m: string | null): string {
   transition: border-color 0.2s;
 }
 .dim-card.bottleneck {
-  border-color: rgba(255, 77, 94, 0.65);
+  border-color: color-mix(in srgb, var(--red) 65%, transparent);
   box-shadow:
-    0 0 0 1px rgba(255, 77, 94, 0.25),
-    0 0 18px rgba(255, 77, 94, 0.12);
+    0 0 0 1px color-mix(in srgb, var(--red) 25%, transparent),
+    0 0 18px var(--red-bg);
 }
 .bn-badge {
   position: absolute;
@@ -401,8 +401,8 @@ function monthClass(m: string | null): string {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: #fff;
-  background: linear-gradient(90deg, #ff4d5e, #ff7a45);
+  color: var(--txt-strong);
+  background: linear-gradient(90deg, var(--red), var(--amber));
   padding: 2px 9px;
   border-radius: 0 11px 0 9px;
 }
@@ -433,13 +433,13 @@ function monthClass(m: string | null): string {
   gap: 4px;
   padding: 6px;
   border-radius: 8px;
-  background: var(--track, rgba(255, 255, 255, 0.05));
+  background: var(--track);
   border: 1px solid var(--line);
 }
 .bar-row {
   height: 8px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--accent-08);
   overflow: hidden;
 }
 .bar-row i {
@@ -449,17 +449,17 @@ function monthClass(m: string | null): string {
   transition: width 0.5s ease;
 }
 .bar-now {
-  background: linear-gradient(90deg, var(--cyan, #22e3ff), var(--blue, #3b82f6));
+  background: linear-gradient(90deg, var(--cyan), var(--blue));
   opacity: 0.75;
 }
 .bar-after.lv-ok {
-  background: linear-gradient(90deg, #22e3ff, #3b82f6);
+  background: linear-gradient(90deg, var(--cyan), var(--blue));
 }
 .bar-after.lv-warn {
-  background: linear-gradient(90deg, #d9a441, #f0b95a);
+  background: linear-gradient(90deg, var(--amber), var(--amber));
 }
 .bar-after.lv-over {
-  background: linear-gradient(90deg, #ff4d5e, #ff7a45);
+  background: linear-gradient(90deg, var(--red), var(--amber));
 }
 .dim-foot {
   display: flex;
@@ -476,13 +476,13 @@ function monthClass(m: string | null): string {
   font-weight: 700;
 }
 .pct.lv-ok {
-  color: var(--cyan, #22e3ff);
+  color: var(--cyan);
 }
 .pct.lv-warn {
-  color: #d9a441;
+  color: var(--amber);
 }
 .pct.lv-over {
-  color: #ff4d5e;
+  color: var(--red);
 }
 .dim-extra {
   font-size: 10.5px;
@@ -523,10 +523,10 @@ function monthClass(m: string | null): string {
   font-weight: 700;
 }
 em.lv-warn {
-  color: #d9a441;
+  color: var(--amber);
 }
 em.lv-over {
-  color: #ff4d5e;
+  color: var(--red);
 }
 em.lv-safe {
   color: var(--txt3);
@@ -557,8 +557,8 @@ em.lv-safe {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #d9a441;
-  box-shadow: 0 0 6px rgba(217, 164, 65, 0.7);
+  background: var(--amber);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--amber) 70%, transparent);
 }
 
 /* 基线来源标注 */
@@ -567,18 +567,18 @@ em.lv-safe {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: #3ddc97;
+  color: var(--green);
   padding: 4px 10px;
-  border: 1px solid rgba(61, 220, 151, 0.35);
+  border: 1px solid color-mix(in srgb, var(--green) 35%, transparent);
   border-radius: 999px;
-  background: rgba(61, 220, 151, 0.1);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
 }
 .baseline-real .dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #3ddc97;
-  box-shadow: 0 0 6px rgba(61, 220, 151, 0.8);
+  background: var(--green);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--green) 80%, transparent);
 }
 .baseline-note {
   font-size: 11px;

@@ -110,15 +110,15 @@ defineProps<{
   margin: 0;
   padding-left: 16px;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .know-col p {
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
   margin: 4px 0;
 }
 .redundancy {
-  color: #3f9fcf;
+  color: var(--blue);
 }
 .logic {
   margin-bottom: 8px;
@@ -127,7 +127,7 @@ defineProps<{
   margin: 4px 0 0;
   padding-left: 18px;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .logic li.ok::marker {
   content: '✓ ';
@@ -139,7 +139,7 @@ defineProps<{
 }
 .fault-tbl th,
 .fault-tbl td {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   padding: 3px 5px;
   text-align: left;
 }
@@ -147,7 +147,7 @@ defineProps<{
   grid-column: 1 / -1;
   margin: 4px 0 0;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 @media (max-width: 1100px) {

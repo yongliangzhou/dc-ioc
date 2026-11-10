@@ -9,7 +9,7 @@
     </div>
 
     <!-- 表未创建: 提示执行迁移, 避免显示为加载失败 -->
-    <div class="muted" v-if="unavailable" style="margin: 10px 0; color: #f59e0b">
+    <div class="muted" v-if="unavailable" style="margin: 10px 0; color: var(--amber)">
       ⓘ {{ tl('行级审计表未创建') }}: {{ unavailableHint || 'alembic upgrade head' }}
     </div>
 
@@ -66,8 +66,9 @@
         <input v-model="filters.start" class="ipt" type="datetime-local" style="width: 190px" />
         <span class="muted">~</span>
         <input v-model="filters.end" class="ipt" type="datetime-local" style="width: 190px" />
-        <button class="btn-sm primary" @click="applyFilters">{{ tl('查询') }}</button>
-        <button class="btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
+        <button class="btn-sm btn-primary" @click="applyFilters">{{ tl('查询') }}</button>
+        <button class="btn-ghost btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
+        <FilterBar compact view-key="row-audit" :capture="captureView" :apply="applySavedView" />
         <span class="muted" style="margin-left: auto; font-size: 11px"
           >{{ tl('共') }} {{ total }} {{ tl('条') }}</span
         >
@@ -154,33 +155,21 @@
     </Panel>
 
     <!-- 分页 -->
-    <div class="flex gap8" style="align-items: center; margin-top: 12px">
-      <button class="btn-sm" :disabled="page <= 1" @click="goPrev">
-        {{ tl('上一页') }}
-      </button>
-      <span class="muted" style="font-size: 12px"
-        >{{ tl('第') }} {{ page }} {{ tl('页') }} / {{ tl('共') }} {{ totalPages }}
-        {{ tl('页') }}</span
-      >
-      <button class="btn-sm" :disabled="page >= totalPages" @click="goNext">
-        {{ tl('下一页') }}
-      </button>
-      <select
-        v-model="pageSize"
-        class="ipt"
-        style="width: 120px; margin-left: auto"
-        @change="onPageSizeChange"
-      >
-        <option :value="20">20 {{ tl('条') }}/{{ tl('页') }}</option>
-        <option :value="50">50 {{ tl('条') }}/{{ tl('页') }}</option>
-        <option :value="100">100 {{ tl('条') }}/{{ tl('页') }}</option>
-        <option :value="200">200 {{ tl('条') }}/{{ tl('页') }}</option>
-      </select>
-    </div>
+    <Pagination
+      :total="total"
+      :page="page"
+      :size="pageSize"
+      @change="onPageChange"
+      @size-change="onSizeChange"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { FilterView } from '@/composables/useViewPreferences'
+import { useReactiveFilterQuery } from '@/composables/useFilterQuery'
+import Pagination from '@/components/Pagination.vue'
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
 import AsyncSection from '@/components/common/AsyncSection.vue'
@@ -194,7 +183,7 @@ const total = ref(0)
 const loading = ref(false)
 const error = ref('')
 const page = ref(1)
-const pageSize = ref(50)
+const pageSize = ref(20)
 const selected = ref<RowAuditItem | null>(null)
 const stats = ref<RowAuditStats | null>(null)
 /** 表未创建 (未执行 alembic upgrade head) 时后端返回 200 + unavailable, 用提示条代替错误态 */
@@ -274,21 +263,8 @@ function applyFilters() {
   reload()
 }
 
-function goPrev() {
-  if (page.value > 1) {
-    page.value--
-    reload()
-  }
-}
-
-function goNext() {
-  if (page.value < totalPages.value) {
-    page.value++
-    reload()
-  }
-}
-
-function onPageSizeChange() {
+function onSizeChange(s: number) {
+  pageSize.value = s
   page.value = 1
   reload()
 }
@@ -316,6 +292,27 @@ onMounted(() => {
   loadStats()
   reload()
 })
+
+function onPageChange(p: number) {
+  page.value = p
+  reload()
+}
+
+// 04 §6.2: 筛选条件与分页写入 URL query
+useReactiveFilterQuery(filters, { page, size: pageSize })
+
+// 04 §6.2: 统一筛选栏的保存视图（compact 模式，查询/重置仍由本页提供）
+function captureView() {
+  return { filters: { ...filters } }
+}
+
+function applySavedView(v: FilterView) {
+  const f = v.filters
+  for (const [k, val] of Object.entries(f)) {
+    if (typeof val === 'string' && k in filters) Object.assign(filters, { [k]: val })
+  }
+  void applyFilters()
+}
 </script>
 
 <style scoped>
@@ -333,7 +330,7 @@ onMounted(() => {
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }

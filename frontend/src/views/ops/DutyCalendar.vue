@@ -7,7 +7,9 @@
         <button class="btn-sm" @click="prevMonth">‹</button>
         <span class="cur">{{ year }} - {{ String(month + 1).padStart(2, '0') }}</span>
         <button class="btn-sm" @click="nextMonth">›</button>
-        <button class="btn-sm primary" v-bind="authState('write')" @click="openCreate()">{{ tl('新建排班') }}</button>
+        <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openCreate()">
+          {{ tl('新建排班') }}
+        </button>
       </div>
     </div>
 
@@ -16,7 +18,13 @@
       <span><i class="dot night" /> {{ tl('夜班') }}</span>
     </div>
 
-    <AsyncSection :loading="loading" :error="error" :empty="false" @retry="() => load()" :min-height="'320px'">
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="false"
+      @retry="() => load()"
+      :min-height="'320px'"
+    >
       <div class="week-head">
         <span v-for="w in weekNames" :key="w">{{ w }}</span>
       </div>
@@ -42,7 +50,7 @@
 
     <!-- 编辑/新建抽屉 -->
     <transition name="slide">
-      <div v-if="editing" class="drawer" @click.self="closeEditor">
+      <div v-if="editing" class="modal as-drawer" @click.self="closeEditor">
         <div class="drawer-card">
           <div class="drawer-head">
             <h3>{{ editing.id ? tl('编辑排班') : tl('新建排班') }} · {{ editing.date }}</h3>
@@ -61,15 +69,28 @@
           </label>
           <label class="fld">
             <span>{{ tl('成员') }}（每行一个，可加|角色）</span>
-            <textarea v-model="membersText" rows="4" placeholder="张三|运维工程师&#10;李四|巡检"></textarea>
+            <textarea
+              v-model="membersText"
+              rows="4"
+              placeholder="张三|运维工程师&#10;李四|巡检"
+            ></textarea>
           </label>
           <label class="fld">
             <span>{{ tl('备注') }}</span>
             <input v-model="editing.note" type="text" />
           </label>
           <div class="drawer-actions">
-            <button class="btn-sm danger" v-if="editing.id" v-bind="authState('write')" @click="remove">{{ tl('删除') }}</button>
-            <button class="btn-sm primary" v-bind="authState('write')" @click="save">{{ tl('保存') }}</button>
+            <button
+              class="btn-sm danger"
+              v-if="editing.id"
+              v-bind="authState('write')"
+              @click="remove"
+            >
+              {{ tl('删除') }}
+            </button>
+            <button class="btn-sm btn-primary" v-bind="authState('write')" @click="save">
+              {{ tl('保存') }}
+            </button>
           </div>
         </div>
       </div>
@@ -80,7 +101,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { getDutyShifts, createDutyShift, updateDutyShift, deleteDutyShift, type ShiftView, type ShiftMember } from '@/api/duty'
+import {
+  getDutyShifts,
+  createDutyShift,
+  updateDutyShift,
+  deleteDutyShift,
+  type ShiftView,
+  type ShiftMember,
+} from '@/api/duty'
 import { usePermission, type PermAction } from '@/hooks/usePermission'
 import { toErrorMessage } from '@/composables/useAsyncPage'
 import AsyncSection from '@/components/common/AsyncSection.vue'
@@ -140,11 +168,17 @@ function iso(d: Date) {
 }
 
 function prevMonth() {
-  if (month.value === 0) { month.value = 11; year.value-- } else month.value--
+  if (month.value === 0) {
+    month.value = 11
+    year.value--
+  } else month.value--
   load()
 }
 function nextMonth() {
-  if (month.value === 11) { month.value = 0; year.value++ } else month.value++
+  if (month.value === 11) {
+    month.value = 0
+    year.value++
+  } else month.value++
   load()
 }
 
@@ -172,7 +206,13 @@ function save() {
       const [name, role] = l.split('|')
       return { name, role: role || undefined }
     })
-  const payload = { date: editing.value.date, shift: editing.value.shift, leader: editing.value.leader, note: editing.value.note, members }
+  const payload = {
+    date: editing.value.date,
+    shift: editing.value.shift,
+    leader: editing.value.leader,
+    note: editing.value.note,
+    members,
+  }
   if (editing.value.id) {
     updateDutyShift(editing.value.id, payload).then(() => load())
   } else {
@@ -206,38 +246,196 @@ onMounted(load)
 </script>
 
 <style scoped>
-.duty-cal { padding: 16px 20px 32px; }
-.view-head { display: flex; align-items: center; gap: 14px; }
-.view-head h1 { font-size: 20px; margin: 0; color: #e2e8f0; }
-.sub { color: #64748b; font-size: 13px; }
-.cal-tools { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.cal-tools .cur { color: #cbd5e1; font-size: 14px; min-width: 70px; text-align: center; }
-.btn-sm { color: #cbd5e1; border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 5px 12px; cursor: pointer; }
-.btn-sm.primary { background: var(--cyan); color: #06121f; border-color: var(--cyan); font-weight: 700; }
-.legend { display: flex; gap: 16px; margin: 14px 0; font-size: 12px; color: #94a3b8; }
-.legend .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; margin-right: 5px; }
-.dot.day { background: #22d3ee; } .dot.night { background: #6366f1; }
-.week-head, .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.week-head { margin-bottom: 6px; }
-.week-head span { text-align: center; color: #64748b; font-size: 12px; padding: 6px 0; }
-.cal-cell { background: #0f172a; border: 1px solid var(--line); border-radius: 10px; min-height: 96px; padding: 6px; cursor: pointer; transition: border-color .15s; }
-.cal-cell:hover { border-color: var(--cyan); }
-.cal-cell.muted { opacity: .4; }
-.d-num { font-size: 13px; color: #94a3b8; margin-bottom: 4px; }
-.shifts { display: flex; flex-direction: column; gap: 4px; }
-.shift-pill { font-size: 11px; padding: 3px 6px; border-radius: 6px; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.shift-pill.day { background: rgba(34,211,238,.15); border-left: 3px solid #22d3ee; }
-.shift-pill.night { background: rgba(99,102,241,.15); border-left: 3px solid #6366f1; }
-.shift-pill b { margin-right: 3px; }
-.shift-pill .cnt { color: #64748b; }
-.drawer { position: fixed; inset: 0; background: rgba(2,6,23,.6); display: flex; justify-content: flex-end; z-index: 50; }
-.drawer-card { width: 380px; max-width: 90vw; height: 100%; background: #0f172a; border-left: 1px solid #1e293b; padding: 22px; overflow-y: auto; }
-.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; }
-.drawer-head h3 { margin: 0 0 4px; color: #e2e8f0; font-size: 15px; }
-.fld { display: flex; flex-direction: column; gap: 6px; margin: 14px 0; font-size: 13px; color: #94a3b8; }
-.fld input, .fld select, .fld textarea { background: #1e293b; border: 1px solid var(--line); color: #e2e8f0; border-radius: 8px; padding: 8px 10px; font-family: inherit; }
-.drawer-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
-.x { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; }
-.slide-enter-active, .slide-leave-active { transition: opacity .2s; }
-.slide-enter-from, .slide-leave-to { opacity: 0; }
+.duty-cal {
+  padding: 16px 20px 32px;
+}
+.view-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.view-head h1 {
+  font-size: 20px;
+  margin: 0;
+  color: var(--txt-strong);
+}
+.sub {
+  color: var(--txt2);
+  font-size: 13px;
+}
+.cal-tools {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-tools .cur {
+  color: var(--txt);
+  font-size: 14px;
+  min-width: 70px;
+  text-align: center;
+}
+.btn-sm {
+  color: var(--txt);
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 8px;
+  padding: 5px 12px;
+  cursor: pointer;
+}
+.btn-sm.primary {
+  background: var(--cyan);
+  color: var(--txt3);
+  border-color: var(--cyan);
+  font-weight: 700;
+}
+.legend {
+  display: flex;
+  gap: 16px;
+  margin: 14px 0;
+  font-size: 12px;
+  color: var(--txt2);
+}
+.legend .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+  margin-right: 5px;
+}
+.dot.day {
+  background: var(--cyan-bg);
+}
+.dot.night {
+  background: var(--blue);
+}
+.week-head,
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.week-head {
+  margin-bottom: 6px;
+}
+.week-head span {
+  text-align: center;
+  color: var(--txt2);
+  font-size: 12px;
+  padding: 6px 0;
+}
+.cal-cell {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  min-height: 96px;
+  padding: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.cal-cell:hover {
+  border-color: var(--cyan);
+}
+.cal-cell.muted {
+  opacity: 0.4;
+}
+.d-num {
+  font-size: 13px;
+  color: var(--txt2);
+  margin-bottom: 4px;
+}
+.shifts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.shift-pill {
+  font-size: 11px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  color: var(--txt-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.shift-pill.day {
+  background: color-mix(in srgb, var(--cyan) 15%, transparent);
+  border-left: 3px solid var(--cyan-line);
+}
+.shift-pill.night {
+  background: color-mix(in srgb, var(--blue) 15%, transparent);
+  border-left: 3px solid var(--blue-line);
+}
+.shift-pill b {
+  margin-right: 3px;
+}
+.shift-pill .cnt {
+  color: var(--txt2);
+}
+.as-drawer {
+  position: fixed;
+  inset: 0;
+  background: var(--accent-50);
+  display: flex;
+  justify-content: flex-end;
+  z-index: 50;
+}
+.drawer-card {
+  width: 380px;
+  max-width: 90vw;
+  height: 100%;
+  background: var(--bg2);
+  border-left: 1px solid var(--line);
+  padding: 22px;
+  overflow-y: auto;
+}
+.drawer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.drawer-head h3 {
+  margin: 0 0 4px;
+  color: var(--txt-strong);
+  font-size: 15px;
+}
+.fld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 14px 0;
+  font-size: 13px;
+  color: var(--txt2);
+}
+.fld input,
+.fld select,
+.fld textarea {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--txt-strong);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: inherit;
+}
+.drawer-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+.x {
+  background: none;
+  border: none;
+  color: var(--txt2);
+  cursor: pointer;
+  font-size: 16px;
+}
+.slide-enter-active,
+.slide-leave-active {
+  transition: opacity 0.2s;
+}
+.slide-enter-from,
+.slide-leave-to {
+  opacity: 0;
+}
 </style>

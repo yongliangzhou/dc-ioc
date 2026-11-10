@@ -8,7 +8,9 @@
     <!-- ===== 通道管理 ===== -->
     <Panel :title="t('notifyCenter.channels')">
       <template #extra>
-        <button class="btn-sm primary" @click="openNew">{{ t('notifyCenter.newChannel') }}</button>
+        <button class="btn-sm btn-primary" @click="openNew">
+          {{ t('notifyCenter.newChannel') }}
+        </button>
       </template>
 
       <AsyncSection
@@ -110,7 +112,18 @@
           <option value="muted">{{ t('notifyCenter.muted') }}</option>
           <option value="dedup">{{ t('notifyCenter.dedup') }}</option>
         </select>
-        <button class="btn-sm primary" @click="applyFilters">{{ t('notifyCenter.filter') }}</button>
+        <button class="btn-sm btn-primary" @click="applyFilters">
+          {{ t('notifyCenter.filter') }}
+        </button>
+        <button class="btn-ghost btn-sm" @click="resetFilters">
+          {{ t('notifyCenter.reset') }}
+        </button>
+        <FilterBar
+          compact
+          view-key="notification-center"
+          :capture="captureView"
+          :apply="applySavedView"
+        />
         <span class="muted" style="margin-left: auto; font-size: 11px"
           >{{ t('notifyCenter.total') }} {{ recTotal }}</span
         >
@@ -174,7 +187,7 @@
     <!-- ===== 通道新增/编辑弹窗 ===== -->
     <transition name="fade">
       <div v-if="formOpen" class="modal-mask" @click.self="formOpen = false">
-        <div class="modal-card">
+        <div class="modal">
           <div class="modal-head">
             <span class="modal-title">{{
               editing ? t('notifyCenter.editChannel') : t('notifyCenter.newChannel')
@@ -218,7 +231,7 @@
           </div>
           <div class="modal-foot">
             <button class="btn-sm" @click="formOpen = false">{{ t('notifyCenter.cancel') }}</button>
-            <button class="btn-sm primary" :disabled="saving" @click="saveChannel">
+            <button class="btn-sm btn-primary" :disabled="saving" @click="saveChannel">
               {{ t('notifyCenter.save') }}
             </button>
           </div>
@@ -229,6 +242,9 @@
 </template>
 
 <script setup lang="ts">
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { FilterView } from '@/composables/useViewPreferences'
+import { useReactiveFilterQuery } from '@/composables/useFilterQuery'
 import { reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
@@ -459,6 +475,29 @@ function fmtTime(s?: string) {
   if (isNaN(d.getTime())) return s
   return d.toLocaleString('zh-CN', { hour12: false })
 }
+
+// 04 §6.2: 筛选条件与分页写入 URL query
+useReactiveFilterQuery(filters, { page: recPage, size: recSize })
+
+function resetFilters() {
+  filters.level = ''
+  filters.channelId = ''
+  filters.status = ''
+  applyFilters()
+}
+
+// 04 §6.2: 统一筛选栏的保存视图（compact 模式，查询/重置仍由本页提供）
+function captureView() {
+  return { filters: { ...filters } }
+}
+
+function applySavedView(v: FilterView) {
+  const f = v.filters
+  for (const [k, val] of Object.entries(f)) {
+    if (typeof val === 'string' && k in filters) Object.assign(filters, { [k]: val })
+  }
+  void applyFilters()
+}
 </script>
 
 <style scoped>
@@ -476,18 +515,18 @@ function fmtTime(s?: string) {
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
 .btn-sm.danger {
-  color: var(--red, #ff6b6b);
+  color: var(--red);
 }
 .scroll-x {
   overflow-x: auto;
 }
 .mono {
-  font-family: var(--mono, monospace);
+  font-family: var(--mono);
 }
 .muted {
   color: var(--txt3);
@@ -516,29 +555,29 @@ function fmtTime(s?: string) {
   line-height: 1.5;
 }
 .ct-dingtalk {
-  color: #4da8ff;
-  border-color: #4da8ff55;
-  background: #4da8ff14;
+  color: var(--blue);
+  border-color: color-mix(in srgb, var(--blue) 33%, transparent);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
 }
 .ct-email {
-  color: #b48cff;
-  border-color: #b48cff55;
-  background: #b48cff14;
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 33%, transparent);
+  background: color-mix(in srgb, var(--purple) 8%, transparent);
 }
 .ct-wechat {
-  color: #3ecf8e;
-  border-color: #3ecf8e55;
-  background: #3ecf8e14;
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 33%, transparent);
+  background: color-mix(in srgb, var(--green) 8%, transparent);
 }
 .ct-sms {
-  color: #ffa94d;
-  border-color: #ffa94d55;
-  background: #ffa94d14;
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 33%, transparent);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
 }
 .ct-custom {
-  color: #8a97a8;
-  border-color: #8a97a855;
-  background: #8a97a814;
+  color: var(--txt2);
+  border-color: var(--accent-35);
+  background: var(--accent-08);
 }
 
 /* 级别/状态徽标 */
@@ -551,14 +590,14 @@ function fmtTime(s?: string) {
   line-height: 1.5;
 }
 .lt-crit {
-  color: #ff6b6b;
-  border-color: #ff6b6b55;
-  background: #ff6b6b14;
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 33%, transparent);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .lt-warn {
-  color: #ffa94d;
-  border-color: #ffa94d55;
-  background: #ffa94d14;
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 33%, transparent);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
 }
 .lt-info {
   color: var(--cyan);
@@ -566,24 +605,24 @@ function fmtTime(s?: string) {
   background: color-mix(in srgb, var(--cyan) 8%, transparent);
 }
 .st-sent {
-  color: #3ecf8e;
-  border-color: #3ecf8e55;
-  background: #3ecf8e14;
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 33%, transparent);
+  background: color-mix(in srgb, var(--green) 8%, transparent);
 }
 .st-failed {
-  color: #ff6b6b;
-  border-color: #ff6b6b55;
-  background: #ff6b6b14;
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 33%, transparent);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .st-muted {
-  color: #8a97a8;
-  border-color: #8a97a855;
-  background: #8a97a814;
+  color: var(--txt2);
+  border-color: var(--accent-35);
+  background: var(--accent-08);
 }
 .st-dedup {
-  color: #4da8ff;
-  border-color: #4da8ff55;
-  background: #4da8ff14;
+  color: var(--blue);
+  border-color: color-mix(in srgb, var(--blue) 33%, transparent);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
 }
 
 /* 启停开关 */
@@ -641,13 +680,13 @@ function fmtTime(s?: string) {
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--accent-50);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 90;
 }
-.modal-card {
+.modal {
   width: min(520px, 92vw);
   background: var(--panel);
   border: 1px solid var(--line);

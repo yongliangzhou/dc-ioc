@@ -78,32 +78,32 @@ watch(
   text-align: center;
   padding: 36px 32px;
   border-radius: 12px;
-  background: var(--panel, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: var(--panel);
+  border: 1px solid var(--line);
 }
 .eb-icon {
   font-size: 40px;
   margin-bottom: 12px;
-  color: #ffb020;
+  color: var(--amber);
 }
 .eb-title {
   font-size: 18px;
   font-weight: 600;
-  color: var(--txt, #e6edf3);
+  color: var(--txt);
   margin-bottom: 8px;
 }
 .eb-desc {
   font-size: 13px;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
   margin-bottom: 14px;
 }
 .eb-detail {
   text-align: left;
   font-size: 11px;
   line-height: 1.5;
-  color: #e57373;
-  background: rgba(229, 57, 53, 0.08);
-  border: 1px solid rgba(229, 57, 53, 0.25);
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 25%, transparent);
   border-radius: 8px;
   padding: 10px 12px;
   margin: 0 0 16px;
@@ -123,20 +123,20 @@ watch(
   font-size: 13px;
   cursor: pointer;
   background: transparent;
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
-  color: var(--txt2, #8892b0);
+  border: 1px solid var(--line);
+  color: var(--txt2);
   transition: all 0.2s;
 }
 .eb-btn:hover {
-  color: var(--txt, #e6edf3);
-  border-color: rgba(255, 255, 255, 0.3);
+  color: var(--txt);
+  border-color: var(--accent-35);
 }
 .eb-btn.primary {
-  background: rgba(66, 165, 245, 0.15);
-  border-color: rgba(66, 165, 245, 0.4);
-  color: #42a5f5;
+  background: color-mix(in srgb, var(--blue) 15%, transparent);
+  border-color: color-mix(in srgb, var(--blue) 40%, transparent);
+  color: var(--blue);
 }
 .eb-btn.primary:hover {
-  background: rgba(66, 165, 245, 0.25);
+  background: color-mix(in srgb, var(--blue) 25%, transparent);
 }
 </style>

@@ -1,5 +1,6 @@
 <template>
   <div class="page">
+    <AsyncSection :page="_page" />
     <header class="page-head">
       <div>
         <h1 class="page-title">{{ t.title }}</h1>
@@ -219,8 +220,8 @@
     </div>
 
     <!-- 编辑/详情抽屉 -->
-    <div v-if="editor || detail" class="mask" @click.self="closeDrawer">
-      <aside class="drawer">
+    <div v-if="editor || detail" class="modal-mask" @click.self="closeDrawer">
+      <aside class="modal as-drawer">
         <header class="drawer-head">
           <h2>
             {{
@@ -425,6 +426,7 @@
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/modules/auth'
@@ -920,7 +922,7 @@ function fmt(d?: string) {
   font-weight: 700;
 }
 .page-sub {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
   margin-top: 4px;
 }
@@ -930,9 +932,9 @@ function fmt(d?: string) {
   align-items: center;
 }
 .inp {
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--text);
+  color: var(--txt);
   border-radius: 8px;
   padding: 7px 10px;
   min-width: 160px;
@@ -961,11 +963,11 @@ function fmt(d?: string) {
   color: var(--cyan);
 }
 .kpi-v.bad {
-  color: #f87171;
+  color: var(--red);
 }
 .kpi-l {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 4px;
 }
 .filters {
@@ -980,9 +982,9 @@ function fmt(d?: string) {
   flex-wrap: wrap;
 }
 .seg-btn {
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--txt2);
   padding: 5px 12px;
   border-radius: 999px;
   cursor: pointer;
@@ -990,7 +992,7 @@ function fmt(d?: string) {
 }
 .seg-btn.active {
   background: var(--cyan);
-  color: #04121a;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -1022,7 +1024,7 @@ function fmt(d?: string) {
 .row-id {
   font-family: monospace;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   min-width: 96px;
 }
 .row-main {
@@ -1034,7 +1036,7 @@ function fmt(d?: string) {
 }
 .row-sub {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 3px;
   display: flex;
   align-items: center;
@@ -1050,13 +1052,13 @@ function fmt(d?: string) {
   background: var(--cyan);
 }
 .dot.amber {
-  background: #fbbf24;
+  background: var(--amber);
 }
 .dot.blue {
-  background: #38bdf8;
+  background: var(--blue);
 }
 .dot.red {
-  background: #f87171;
+  background: var(--red);
 }
 .dot.gray {
   background: var(--line);
@@ -1069,13 +1071,13 @@ function fmt(d?: string) {
 }
 .sla {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .sla.bad {
-  color: #f87171;
+  color: var(--red);
 }
 .sla.good {
-  color: #4ade80;
+  color: var(--green);
 }
 .badge {
   font-size: 11px;
@@ -1083,28 +1085,28 @@ function fmt(d?: string) {
   border-radius: 999px;
 }
 .badge.green {
-  background: rgba(34, 197, 94, 0.16);
-  color: #4ade80;
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green);
 }
 .badge.amber {
-  background: rgba(245, 158, 11, 0.16);
-  color: #fbbf24;
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  color: var(--amber);
 }
 .badge.red {
-  background: rgba(239, 68, 68, 0.16);
-  color: #f87171;
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red);
 }
 .badge.blue {
-  background: rgba(56, 189, 248, 0.16);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--blue) 16%, transparent);
+  color: var(--blue);
 }
 .badge.gray {
-  background: var(--panel-2);
-  color: var(--muted);
+  background: var(--panel2);
+  color: var(--txt2);
 }
 .empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--txt2);
   padding: 40px;
 }
 .side {
@@ -1130,12 +1132,12 @@ function fmt(d?: string) {
   margin-bottom: 10px;
 }
 .panel-t {
-  color: var(--text);
+  color: var(--txt);
 }
 .panel-meta {
   font-size: 11px;
   font-weight: 400;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .bar-line {
   display: flex;
@@ -1151,11 +1153,11 @@ function fmt(d?: string) {
   transition: background 0.15s;
 }
 .bar-line.clickable:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--accent-08);
 }
 .bl-label {
   width: 62px;
-  color: var(--muted);
+  color: var(--txt2);
   display: flex;
   align-items: center;
   gap: 5px;
@@ -1165,30 +1167,30 @@ function fmt(d?: string) {
   height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
-  background: var(--muted);
+  background: var(--txt2);
 }
 .bl-dot.cyan {
   background: var(--cyan);
 }
 .bl-dot.amber {
-  background: #fbbf24;
+  background: var(--amber);
 }
 .bl-dot.blue {
-  background: #38bdf8;
+  background: var(--blue);
 }
 .bl-dot.red {
-  background: #f87171;
+  background: var(--red);
 }
 .bl-dot.green {
   background: var(--green);
 }
 .bl-dot.gray {
-  background: var(--muted);
+  background: var(--txt2);
 }
 .bl-track {
   flex: 1;
   height: 8px;
-  background: var(--panel-2);
+  background: var(--panel2);
   border-radius: 6px;
   overflow: hidden;
 }
@@ -1198,19 +1200,19 @@ function fmt(d?: string) {
   background: var(--cyan);
 }
 .bl-fill.gray {
-  background: var(--muted);
+  background: var(--txt2);
 }
 .bl-fill.cyan {
   background: var(--cyan);
 }
 .bl-fill.amber {
-  background: #fbbf24;
+  background: var(--amber);
 }
 .bl-fill.blue {
-  background: #38bdf8;
+  background: var(--blue);
 }
 .bl-fill.red {
-  background: #f87171;
+  background: var(--red);
 }
 .bl-fill.green {
   background: var(--green);
@@ -1223,7 +1225,7 @@ function fmt(d?: string) {
 .bl-pct {
   width: 34px;
   text-align: right;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 11px;
 }
 
@@ -1237,7 +1239,7 @@ function fmt(d?: string) {
   height: 120px;
   width: 26px;
   font-size: 10px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .trend-y span {
   position: absolute;
@@ -1258,7 +1260,7 @@ function fmt(d?: string) {
   height: 14px;
   margin-top: 2px;
   font-size: 10px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .trend-x span {
   position: absolute;
@@ -1270,7 +1272,7 @@ function fmt(d?: string) {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 6px;
 }
 .lg {
@@ -1289,7 +1291,7 @@ function fmt(d?: string) {
 .trend-sum {
   margin-top: 6px;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .trend-sum b.cyan {
   color: var(--cyan);
@@ -1300,18 +1302,18 @@ function fmt(d?: string) {
 .trend-empty {
   margin-top: 4px;
   font-size: 10px;
-  color: var(--muted);
+  color: var(--txt2);
   font-style: italic;
 }
-.mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--accent-50);
   display: flex;
   justify-content: flex-end;
   z-index: 50;
 }
-.drawer {
+.as-drawer {
   width: 480px;
   max-width: 94vw;
   background: var(--panel);
@@ -1331,23 +1333,23 @@ function fmt(d?: string) {
 .x {
   background: transparent;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 18px;
   cursor: pointer;
 }
 .row {
   font-size: 13px;
   margin: 6px 0;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .row b {
-  color: var(--text);
+  color: var(--txt);
 }
 .content {
   font-size: 13px;
   line-height: 1.7;
   white-space: pre-wrap;
-  background: var(--panel-2);
+  background: var(--panel2);
   border-radius: 10px;
   padding: 12px;
   margin: 10px 0;
@@ -1372,7 +1374,7 @@ function fmt(d?: string) {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .fld.wide {
   grid-column: 1/-1;
@@ -1380,9 +1382,9 @@ function fmt(d?: string) {
 .area {
   width: 100%;
   min-height: 80px;
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--text);
+  color: var(--txt);
   border-radius: 8px;
   padding: 10px;
   resize: vertical;
@@ -1400,7 +1402,7 @@ function fmt(d?: string) {
 }
 .link-chip {
   font-size: 12px;
-  background: var(--panel-2);
+  background: var(--panel2);
   border-radius: 8px;
   padding: 4px 8px;
   display: flex;
@@ -1410,7 +1412,7 @@ function fmt(d?: string) {
 .mini {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   cursor: pointer;
 }
 .node {
@@ -1422,7 +1424,7 @@ function fmt(d?: string) {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--panel-2);
+  background: var(--panel2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1449,12 +1451,12 @@ function fmt(d?: string) {
 }
 .log {
   font-size: 12px;
-  background: var(--panel-2);
+  background: var(--panel2);
   border-radius: 8px;
   padding: 6px 8px;
 }
 .muted {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .small {
   font-size: 11px;
@@ -1467,8 +1469,8 @@ function fmt(d?: string) {
 }
 .btn {
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
+  background: var(--panel2);
+  color: var(--txt);
   border-radius: 8px;
   padding: 7px 12px;
   cursor: pointer;
@@ -1482,29 +1484,29 @@ function fmt(d?: string) {
   background: transparent;
 }
 .btn.soft {
-  background: rgba(34, 211, 238, 0.12);
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
   color: var(--cyan);
   border-color: transparent;
 }
 .btn.green {
   background: var(--green);
-  color: #04121a;
+  color: var(--txt3);
   border-color: var(--green);
   font-weight: 600;
 }
 .btn.red {
-  background: rgba(239, 68, 68, 0.16);
-  color: #f87171;
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red);
   border-color: transparent;
 }
 .bad {
-  color: #f87171;
+  color: var(--red);
 }
 .warn {
-  color: #fbbf24;
+  color: var(--amber);
 }
 .good {
-  color: #4ade80;
+  color: var(--green);
 }
 @media (max-width: 980px) {
   .layout {

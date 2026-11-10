@@ -49,7 +49,12 @@
             <text :x="floor.x + 12" :y="floor.y + floor.h - 10" class="floor-tag cool">
               {{ tl('冷通道') }}
             </text>
-            <text :x="floor.x + floor.w - 12" :y="floor.y + floor.h - 10" class="floor-tag power" text-anchor="end">
+            <text
+              :x="floor.x + floor.w - 12"
+              :y="floor.y + floor.h - 10"
+              class="floor-tag power"
+              text-anchor="end"
+            >
               {{ tl('电通道') }}
             </text>
             <!-- 机柜行列网格 + 热力气泡 -->
@@ -77,11 +82,7 @@
                 :fill="rack.color"
                 class="rack-pulse"
               />
-              <text
-                :x="rack.x + rack.w / 2"
-                :y="rack.y + rack.h / 2 + 3"
-                class="rack-label"
-              >
+              <text :x="rack.x + rack.w / 2" :y="rack.y + rack.h / 2 + 3" class="rack-label">
                 {{ rack.load }}°
               </text>
             </g>
@@ -98,19 +99,19 @@
               />
               <!-- [增强] 能流粒子密度随负载变化: 负载越高粒子越多 -->
               <template v-for="k in e.particles" :key="'p' + k">
-              <circle
-                v-if="!dimEdge(e)"
-                r="3.2"
-                :class="['flow-dot', e.type, { fault: e.affected }]"
-              >
-                <animateMotion
-                  :dur="e.dur"
-                  :begin="(-(e.durMs / e.particles) * k).toFixed(2) + 's'"
-                  repeatCount="indefinite"
+                <circle
+                  v-if="!dimEdge(e)"
+                  r="3.2"
+                  :class="['flow-dot', e.type, { fault: e.affected }]"
                 >
-                  <mpath :href="'#' + e.id" />
-                </animateMotion>
-              </circle>
+                  <animateMotion
+                    :dur="e.dur"
+                    :begin="(-(e.durMs / e.particles) * k).toFixed(2) + 's'"
+                    repeatCount="indefinite"
+                  >
+                    <mpath :href="'#' + e.id" />
+                  </animateMotion>
+                </circle>
               </template>
             </template>
           </g>
@@ -647,7 +648,7 @@ const layout = computed(() => {
     const dx = tx - sx
     const d = `M ${sx} ${sy} C ${sx + dx * 0.5} ${sy}, ${tx - dx * 0.5} ${ty}, ${tx} ${ty}`
     const avgLoad = (effById.get(e.source)! + effById.get(e.target)!) / 2
-    const durMs = Math.max(900, Math.min(3000, Math.round(2600 - avgLoad / 45 * 1700)))
+    const durMs = Math.max(900, Math.min(3000, Math.round(2600 - (avgLoad / 45) * 1700)))
     // [增强] 粒子数随负载升高: 负载 20%→2 颗, 100%→6 颗
     const particles = Math.max(2, Math.min(6, Math.round(2 + avgLoad / 20)))
     const dur = (durMs / 1000).toFixed(2) + 's'
@@ -762,35 +763,35 @@ const layout = computed(() => {
   display: inline-block;
 }
 .dot.flow-power {
-  background: #fbbf24;
-  box-shadow: 0 0 6px #fbbf24;
+  background: var(--amber);
+  box-shadow: 0 0 6px var(--amber);
 }
 .dot.flow-cool {
-  background: #22d3ee;
-  box-shadow: 0 0 6px #22d3ee;
+  background: var(--cyan-bg);
+  box-shadow: 0 0 6px var(--cyan-bg);
 }
 .dot.fault {
-  background: #ff4d4f;
-  box-shadow: 0 0 6px #ff4d4f;
+  background: var(--red);
+  box-shadow: 0 0 6px var(--red);
 }
 .dot.heat {
-  background: linear-gradient(90deg, #22d3ee, #fbbf24, #ff4d4f);
-  box-shadow: 0 0 6px rgba(251, 191, 36, 0.6);
+  background: linear-gradient(90deg, var(--cyan-bg), var(--amber), var(--red));
+  box-shadow: 0 0 6px color-mix(in srgb, var(--amber) 60%, transparent);
 }
 
 /* [增强] 机房平面 + 机柜热力层 */
 .floor-board {
-  fill: rgba(12, 20, 34, 0.55);
-  stroke: rgba(34, 211, 238, 0.22);
+  fill: var(--accent-50);
+  stroke: color-mix(in srgb, var(--cyan) 22%, transparent);
   stroke-width: 1.2;
   stroke-dasharray: 3 5;
 }
 .floor-strip {
-  fill: rgba(34, 211, 238, 0.08);
+  fill: color-mix(in srgb, var(--cyan) 8%, transparent);
   stroke: none;
 }
 .floor-title {
-  fill: rgba(125, 211, 252, 0.85);
+  fill: color-mix(in srgb, var(--blue) 85%, transparent);
   font-size: 11px;
   font-weight: 700;
 }
@@ -800,13 +801,13 @@ const layout = computed(() => {
   opacity: 0.8;
 }
 .floor-tag.cool {
-  fill: #22d3ee;
+  fill: var(--cyan);
 }
 .floor-tag.power {
-  fill: #fbbf24;
+  fill: var(--amber);
 }
 .rack-cell {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: var(--accent-08);
   stroke-width: 0.8;
   transition: opacity 0.2s ease;
 }
@@ -832,7 +833,7 @@ const layout = computed(() => {
   }
 }
 .rack-label {
-  fill: rgba(8, 12, 20, 0.85);
+  fill: var(--mask);
   font-size: 9px;
   font-weight: 700;
   text-anchor: middle;
@@ -847,8 +848,17 @@ const layout = computed(() => {
   max-height: 520px;
   overflow: auto;
   background:
-    radial-gradient(circle at 20% 10%, rgba(34, 211, 238, 0.05), transparent 40%),
-    radial-gradient(circle at 80% 90%, rgba(251, 191, 36, 0.05), transparent 40%), var(--bg);
+    radial-gradient(
+      circle at 20% 10%,
+      color-mix(in srgb, var(--cyan) 5%, transparent),
+      transparent 40%
+    ),
+    radial-gradient(
+      circle at 80% 90%,
+      color-mix(in srgb, var(--amber) 5%, transparent),
+      transparent 40%
+    ),
+    var(--bg);
   border-radius: 12px;
   border: 1px solid var(--line);
 }
@@ -865,13 +875,13 @@ const layout = computed(() => {
     stroke-width 0.15s ease;
 }
 .edge.power {
-  stroke: #fbbf24;
+  stroke: var(--amber);
 }
 .edge.cool {
-  stroke: #22d3ee;
+  stroke: var(--cyan);
 }
 .edge.fault {
-  stroke: #ff4d4f;
+  stroke: var(--red);
   stroke-width: 2.4;
   opacity: 1;
   stroke-dasharray: 6 4;
@@ -891,16 +901,16 @@ const layout = computed(() => {
 }
 
 .flow-dot {
-  fill: #fbbf24;
-  filter: drop-shadow(0 0 3px #fbbf24);
+  fill: var(--amber);
+  filter: drop-shadow(0 0 3px var(--amber));
 }
 .flow-dot.cool {
-  fill: #22d3ee;
-  filter: drop-shadow(0 0 3px #22d3ee);
+  fill: var(--cyan);
+  filter: drop-shadow(0 0 3px var(--cyan));
 }
 .flow-dot.fault {
-  fill: #ff4d4f;
-  filter: drop-shadow(0 0 4px #ff4d4f);
+  fill: var(--red);
+  filter: drop-shadow(0 0 4px var(--red));
 }
 .flow-dot.dim {
   opacity: 0.1;
@@ -920,13 +930,13 @@ const layout = computed(() => {
   transition: opacity 0.15s ease;
 }
 .tf-node.power .tf-rect {
-  stroke: rgba(251, 191, 36, 0.5);
+  stroke: color-mix(in srgb, var(--amber) 50%, transparent);
 }
 .tf-node.cool .tf-rect {
-  stroke: rgba(34, 211, 238, 0.5);
+  stroke: color-mix(in srgb, var(--cyan) 50%, transparent);
 }
 .tf-node.aux .tf-rect {
-  stroke: rgba(148, 163, 184, 0.5);
+  stroke: var(--accent-50);
 }
 .tf-kind {
   fill: var(--txt);
@@ -940,36 +950,36 @@ const layout = computed(() => {
   text-anchor: middle;
 }
 .tf-temp {
-  fill: #22d3ee;
+  fill: var(--cyan);
   font-size: 9px;
   text-anchor: middle;
   font-weight: 600;
 }
 .tf-node.power .tf-temp {
-  fill: #fbbf24;
+  fill: var(--amber);
 }
 .tf-loadbar {
-  fill: rgba(34, 197, 94, 0.55);
+  fill: color-mix(in srgb, var(--green) 55%, transparent);
 }
 .tf-node.affected .tf-rect {
-  stroke: #ff4d4f;
+  stroke: var(--red);
   stroke-width: 2.4;
-  fill: rgba(255, 77, 79, 0.16);
+  fill: color-mix(in srgb, var(--red) 16%, transparent);
   animation: pulse 1.1s ease-in-out infinite;
 }
 .tf-node.affected .tf-kind {
-  fill: #ffd7d7;
+  fill: var(--txt-strong);
 }
 .tf-node.downstream .tf-rect {
-  stroke: rgba(255, 77, 79, 0.6);
+  stroke: color-mix(in srgb, var(--red) 60%, transparent);
 }
 .tf-node.dim {
   opacity: 0.22;
 }
 .tf-node.focus .tf-rect {
-  stroke: #22e3ff;
+  stroke: var(--cyan);
   stroke-width: 2.8;
-  fill: rgba(34, 227, 255, 0.12);
+  fill: var(--accent-12);
 }
 @keyframes pulse {
   0%,
@@ -981,7 +991,7 @@ const layout = computed(() => {
   }
 }
 .tf-badge {
-  fill: #ff4d4f;
+  fill: var(--red);
 }
 
 /* 缩略图 */
@@ -990,12 +1000,12 @@ const layout = computed(() => {
   top: 10px;
   right: 10px;
   width: 184px;
-  background: rgba(10, 15, 25, 0.8);
+  background: var(--mask);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 6px 7px 8px;
   backdrop-filter: blur(4px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 6px 18px var(--accent-35);
   z-index: 5;
 }
 .mm-title {
@@ -1016,38 +1026,38 @@ const layout = computed(() => {
   height: auto;
   max-height: 150px;
   cursor: crosshair;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--accent-35);
   border-radius: 6px;
 }
 .mm-edge {
-  stroke: rgba(148, 163, 184, 0.3);
+  stroke: var(--accent-35);
   stroke-width: 1;
 }
 .mm-edge.mm-fault {
-  stroke: rgba(255, 77, 79, 0.7);
+  stroke: color-mix(in srgb, var(--red) 70%, transparent);
 }
 .mm-view {
-  fill: rgba(34, 227, 255, 0.14);
-  stroke: rgba(34, 227, 255, 0.65);
+  fill: color-mix(in srgb, var(--cyan) 14%, transparent);
+  stroke: color-mix(in srgb, var(--cyan) 65%, transparent);
   stroke-width: 1.2;
 }
 .mm-node {
   cursor: pointer;
 }
 .mm-node.power {
-  fill: #fbbf24;
+  fill: var(--amber);
 }
 .mm-node.cool {
-  fill: #22d3ee;
+  fill: var(--cyan);
 }
 .mm-node.aux {
-  fill: #94a3b8;
+  fill: var(--txt2);
 }
 .mm-node.affected {
-  fill: #ff4d4f;
+  fill: var(--red);
 }
 .mm-node.focus {
-  stroke: #fff;
+  stroke: var(--txt-strong);
   stroke-width: 1.6;
 }
 
@@ -1057,12 +1067,12 @@ const layout = computed(() => {
   left: 10px;
   bottom: 10px;
   width: 232px;
-  background: rgba(12, 18, 30, 0.93);
-  border: 1px solid rgba(34, 227, 255, 0.35);
+  background: var(--mask);
+  border: 1px solid var(--accent-35);
   border-radius: 10px;
   padding: 10px 12px;
   z-index: 6;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 8px 22px var(--accent-50);
   backdrop-filter: blur(4px);
 }
 .ff-head {
@@ -1079,16 +1089,16 @@ const layout = computed(() => {
   color: var(--txt2);
 }
 .ff-kind.lane-power {
-  color: #fbbf24;
-  background: rgba(251, 191, 36, 0.14);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 14%, transparent);
 }
 .ff-kind.lane-cool {
-  color: #22d3ee;
-  background: rgba(34, 211, 238, 0.14);
+  color: var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .ff-kind.lane-aux {
-  color: #94a3b8;
-  background: rgba(148, 163, 184, 0.14);
+  color: var(--txt2);
+  background: var(--accent-12);
 }
 .ff-name {
   font-size: 13px;
@@ -1110,11 +1120,11 @@ const layout = computed(() => {
 }
 .ff-x:hover {
   color: var(--txt);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--accent-08);
 }
 .ff-room {
   font-size: 11px;
-  color: #7dd3fc;
+  color: var(--blue);
   margin: 3px 0 6px;
 }
 .ff-rows {

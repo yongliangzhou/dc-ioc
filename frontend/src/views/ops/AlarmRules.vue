@@ -7,7 +7,7 @@
         <b>{{ engine.total }}</b> {{ tl('条') }}
         <button class="btn-sm" :disabled="pageBusy" @click="page.reload">{{ tl('刷新') }}</button>
       </div>
-      <button class="btn-sm primary" v-bind="authState('write')" @click="openCreate">
+      <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openCreate">
         {{ tl('新建规则') }}
       </button>
     </div>
@@ -71,8 +71,8 @@
       </div>
     </AsyncSection>
 
-    <div v-if="editing" class="drawer-mask" @click.self="editing = false">
-      <div class="drawer">
+    <div v-if="editing" class="modal-mask" @click.self="editing = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ form.id ? tl('编辑规则') : tl('新建规则') }}</span>
           <button class="x" @click="editing = false">✕</button>
@@ -113,7 +113,7 @@
           <div v-if="err" class="err">{{ err }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="editing = false">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="saving" @click="save">
+            <button class="btn-sm btn-primary" :disabled="saving" @click="save">
               {{ saving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -366,13 +366,13 @@ onMounted(() => page.reload())
   color: var(--txt2);
 }
 .pill.g {
-  background: rgba(43, 212, 122, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   border-color: var(--green);
   color: var(--green);
 }
 .pill.a {
-  background: rgba(255, 176, 32, 0.08);
-  border-color: rgba(255, 176, 32, 0.3);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 30%, transparent);
   color: var(--amber);
 }
 .ops {
@@ -401,7 +401,7 @@ onMounted(() => page.reload())
 }
 .btn-sm.primary {
   background: var(--cyan);
-  color: #04121a;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -410,10 +410,10 @@ onMounted(() => page.reload())
   cursor: default;
 }
 
-.drawer-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -421,14 +421,14 @@ onMounted(() => page.reload())
   padding: 6vh 16px;
   z-index: 40;
 }
-.drawer {
+.as-drawer {
   width: 420px;
   max-width: 92vw;
   background: var(--panel);
   height: 100%;
   padding: 18px;
   overflow: auto;
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+  box-shadow: -8px 0 24px var(--accent-35);
 }
 .drawer-head {
   display: flex;

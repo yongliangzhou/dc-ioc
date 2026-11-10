@@ -58,7 +58,7 @@
         <Panel>
           <div class="panel-head">
             <h5 class="section-title">{{ tl('巡检路线') }}</h5>
-            <button class="btn-sm primary" v-bind="authState('write')" @click="openRouteCreate">
+            <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openRouteCreate">
               {{ tl('新建') }}
             </button>
           </div>
@@ -97,7 +97,11 @@
         <Panel>
           <div class="panel-head">
             <h5 class="section-title">{{ selectedRouteName || tl('巡检记录') }}</h5>
-            <button class="btn-sm primary" v-bind="authState('write')" @click="openFindingCreate">
+            <button
+              class="btn-sm btn-primary"
+              v-bind="authState('write')"
+              @click="openFindingCreate"
+            >
               {{ tl('新建发现') }}
             </button>
           </div>
@@ -125,8 +129,8 @@
     </AsyncSection>
 
     <!-- 路线管理抽屉 -->
-    <div class="drawer-mask" v-if="routeDrawer" @click.self="closeRouteDrawer">
-      <div class="drawer">
+    <div class="modal-mask" v-if="routeDrawer" @click.self="closeRouteDrawer">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ routeForm.id ? tl('编辑巡检路线') : tl('新建巡检路线') }}</span>
           <button class="x" @click="closeRouteDrawer">✕</button>
@@ -164,7 +168,7 @@
           <div v-if="routeErr" class="err">{{ routeErr }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="closeRouteDrawer">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="routeSaving" @click="saveRoute">
+            <button class="btn-sm btn-primary" :disabled="routeSaving" @click="saveRoute">
               {{ routeSaving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -173,8 +177,8 @@
     </div>
 
     <!-- 巡检发现抽屉 -->
-    <div class="drawer-mask" v-if="findingDrawer" @click.self="closeFindingDrawer">
-      <div class="drawer">
+    <div class="modal-mask" v-if="findingDrawer" @click.self="closeFindingDrawer">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ findingForm.id ? tl('编辑巡检发现') : tl('新建巡检发现') }}</span>
           <button class="x" @click="closeFindingDrawer">✕</button>
@@ -233,7 +237,7 @@
             </button>
             <span class="spacer"></span>
             <button class="btn-sm" @click="closeFindingDrawer">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="findingSaving" @click="saveFinding">
+            <button class="btn-sm btn-primary" :disabled="findingSaving" @click="saveFinding">
               {{ findingSaving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -543,14 +547,14 @@ onMounted(() => page.reload())
   padding: 10px 8px;
   cursor: pointer;
   border-radius: 6px;
-  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--line);
   font-size: 13px;
 }
 .route-row:hover {
   background: var(--bg2);
 }
 .route-row.active {
-  background: rgba(64, 150, 255, 0.08);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
   border-left: 3px solid var(--blue);
 }
 .r-main {
@@ -572,7 +576,7 @@ onMounted(() => page.reload())
   font-weight: 500;
 }
 .r-code {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 11px;
 }
 .pill-tag {
@@ -583,24 +587,24 @@ onMounted(() => page.reload())
   white-space: nowrap;
 }
 .pill-tag.g {
-  background: rgba(82, 196, 26, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .pill-tag.a {
-  background: rgba(250, 173, 20, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
   color: var(--amber);
 }
 .pill-tag.r {
-  background: rgba(255, 77, 79, 0.12);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
   color: var(--red);
 }
 .pill-tag.b {
-  background: rgba(64, 150, 255, 0.12);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
   color: var(--blue);
 }
 .pill-tag.m {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--muted);
+  background: var(--accent-08);
+  color: var(--txt2);
 }
 
 .tbl-head,
@@ -612,15 +616,15 @@ onMounted(() => page.reload())
 }
 .tbl-head {
   font-weight: 600;
-  color: var(--muted);
-  border-bottom: 2px solid var(--border);
+  color: var(--txt2);
+  border-bottom: 2px solid var(--line);
   font-size: 12px;
   position: sticky;
   top: 0;
   background: var(--panel);
 }
 .tbl-row {
-  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--line);
   cursor: pointer;
 }
 .tbl-row:hover {
@@ -652,21 +656,21 @@ onMounted(() => page.reload())
 .empty {
   text-align: center;
   padding: 32px;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
 }
 .btn-sm {
   padding: 5px 12px;
   border-radius: 7px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--bg2);
-  color: var(--text2);
+  color: var(--txt2);
   cursor: pointer;
   font-size: 12px;
 }
 .btn-sm.primary {
   background: var(--blue);
-  color: #fff;
+  color: var(--txt-strong);
   border-color: var(--blue);
   font-weight: 600;
 }
@@ -690,10 +694,10 @@ onMounted(() => page.reload())
 .link.danger {
   color: var(--red);
 }
-.drawer-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -701,14 +705,14 @@ onMounted(() => page.reload())
   padding: 6vh 16px;
   z-index: 40;
 }
-.drawer {
+.as-drawer {
   width: 440px;
   max-width: 92vw;
-  background: var(--card-bg);
+  background: var(--panel);
   padding: 18px;
   border-radius: 12px;
   overflow: auto;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px var(--accent-35);
 }
 .drawer-head {
   display: flex;
@@ -721,7 +725,7 @@ onMounted(() => page.reload())
 .x {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 16px;
   cursor: pointer;
 }
@@ -735,7 +739,7 @@ onMounted(() => page.reload())
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--text2);
+  color: var(--txt2);
 }
 .form .row {
   display: flex;
@@ -746,10 +750,10 @@ onMounted(() => page.reload())
 }
 .ipt {
   background: var(--bg2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 7px;
   padding: 7px 9px;
-  color: var(--text);
+  color: var(--txt);
   font-size: 13px;
   font-family: inherit;
 }

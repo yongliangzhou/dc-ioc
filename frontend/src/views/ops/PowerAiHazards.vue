@@ -100,7 +100,7 @@
         <div
           v-if="r.aiNote"
           class="mt-2 p-2 rounded text-xs"
-          style="background: rgba(59, 130, 246, 0.12); color: var(--blue)"
+          style="background: color-mix(in srgb, var(--blue) 12%, transparent); color: var(--blue)"
         >
           <b>{{ t.aiTag }}</b> {{ r.aiNote }}
         </div>

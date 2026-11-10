@@ -30,14 +30,14 @@
         :value="cracData.total"
         unit="台"
         :detail="`在线 ${cracData.online} · 待机 ${cracData.standby}`"
-        dot="#06b6d4"
+        dot="var(--cyan)"
       />
       <KpiCard
         title="运行/待机/故障"
         :value="`${cracData.online}/${cracData.standby}/${cracData.fault}`"
         valueClass="gk-cv-cyan"
         detail="在线/待机/故障"
-        dot="#22c55e"
+        dot="var(--green)"
       />
       <KpiCard
         title="漏水告警"
@@ -45,9 +45,9 @@
         unit="处"
         :subtitle="`共 ${cracData.leakTotal} 个监测点`"
         :status="cracData.leakAlarm > 0 ? 'danger' : 'normal'"
-        dot="#ef4444"
+        dot="var(--red)"
       />
-      <KpiCard title="室外参照温度" :value="cracData.outdoorRef" unit="℃" dot="#f97316" />
+      <KpiCard title="室外参照温度" :value="cracData.outdoorRef" unit="℃" dot="var(--amber)" />
     </div>
 
     <!-- ========== KPI Row 2 ========== -->
@@ -57,35 +57,32 @@
         :value="cracData.avgSupplyT"
         unit="℃"
         :decimals="1"
-        dot="#06b6d4"
+        dot="var(--cyan)"
       />
       <KpiCard
         title="平均回风温度"
         :value="cracData.avgReturnT"
         unit="℃"
         :decimals="1"
-        dot="#f97316"
+        dot="var(--amber)"
       />
       <KpiCard
         title="平均供水温度"
         :value="cracData.avgSupplyWaterT"
         unit="℃"
         :decimals="1"
-        dot="#3b82f6"
+        dot="var(--blue)"
       />
       <KpiCard
         title="平均室内外压差"
         :value="cracData.avgInOutDiff"
         unit="Pa"
         :decimals="1"
-        dot="#8b5cf6"
+        dot="var(--purple)"
       />
     </div>
 
-    <!-- Loading -->
-    <div class="skel-row" v-if="loading && !cracData">
-      <SkeletonCard v-for="i in 4" :key="i" size="sm" />
-    </div>
+    <AsyncSection :loading="loading" :empty="!cracData" @retry="refresh" />
 
     <!-- ========== 设备全景列表 ========== -->
     <div class="section" v-if="cracData">
@@ -205,14 +202,14 @@
               :value="rg.envSensors.hotAisleRh"
               unit="%"
               size="sm"
-              dot="var(--orange)"
+              dot="var(--amber)"
             />
             <KpiCard
               title="冷通道湿度"
               :value="rg.envSensors.coldAisleRh"
               unit="%"
               size="sm"
-              dot="var(--teal)"
+              dot="var(--cyan)"
             />
             <KpiCard
               title="露点温度"
@@ -324,7 +321,7 @@
     <!-- ========== 趋势诊断 ========== -->
     <div class="section" v-if="trends">
       <h3 class="section-title">
-        <span class="section-dot" style="background: var(--yellow)"></span>
+        <span class="section-dot" style="background: var(--amber)"></span>
         趋势诊断分析
         <span class="section-sum">7 项指标</span>
       </h3>
@@ -450,6 +447,8 @@
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { getCrac, getCracTrends, mapCracRoomGroups } from '@/api/hvac'
 import { getActiveAlarms } from '@/api'
@@ -472,7 +471,6 @@ import TrendChart from '@/components/monitor/TrendChart.vue'
 import DeviceTable from '@/components/monitor/DeviceTable.vue'
 import HeatmapView from '@/components/monitor/HeatmapView.vue'
 import QuickControl from '@/components/monitor/QuickControl.vue'
-import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import { useAsyncPageAll } from '@/composables/useAsyncPage'
 import { numVal, formatVal, formatTime } from '@/utils/format'
@@ -619,7 +617,13 @@ const filteredDeviceRows = computed(() => {
 })
 
 // ===== Heatmap =====
-const heatColors = ['#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444']
+const heatColors = [
+  cssToken('--cyan'),
+  cssToken('--green'),
+  cssToken('--amber'),
+  cssToken('--amber'),
+  cssToken('--red'),
+]
 const heatXLabels = ['平均温度', '热通道', '冷通道', '露点']
 const heatYLabels = computed(() => roomGroups.value.map((r) => r.roomName))
 
@@ -907,11 +911,11 @@ function onRoomTempChange(roomId: string, value: number) {
   font-weight: 600;
 }
 .ph-badge.ok {
-  background: rgba(34, 197, 94, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .ph-badge.loading {
-  background: rgba(148, 163, 184, 0.1);
+  background: var(--accent-12);
   color: var(--txt3);
 }
 .ph-time {
@@ -1121,8 +1125,8 @@ function onRoomTempChange(roomId: string, value: number) {
   padding: 6px 10px;
   border-radius: 5px;
   font-size: 11px;
-  background: rgba(239, 68, 68, 0.04);
-  border: 1px solid rgba(239, 68, 68, 0.1);
+  background: color-mix(in srgb, var(--red) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 10%, transparent);
 }
 .alarm-msg {
   color: var(--txt);
@@ -1170,8 +1174,8 @@ function onRoomTempChange(roomId: string, value: number) {
   gap: 8px;
   font-size: 11px;
   color: var(--txt2);
-  background: rgba(34, 227, 255, 0.08);
-  border: 1px solid rgba(34, 227, 255, 0.35);
+  background: var(--accent-08);
+  border: 1px solid var(--accent-35);
   border-radius: 12px;
   padding: 3px 10px;
 }
@@ -1210,12 +1214,12 @@ function onRoomTempChange(roomId: string, value: number) {
   right: 0;
   top: calc(100% + 6px);
   z-index: 50;
-  background: var(--panel, var(--bg));
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px;
   min-width: 168px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 24px var(--accent-35);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1254,7 +1258,7 @@ function onRoomTempChange(roomId: string, value: number) {
   color: var(--cyan);
 }
 .room-filter-btn.active {
-  background: rgba(34, 227, 255, 0.12);
+  background: var(--accent-12);
   border-color: var(--cyan);
   color: var(--cyan);
 }

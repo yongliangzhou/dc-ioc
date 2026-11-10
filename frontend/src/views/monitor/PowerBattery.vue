@@ -16,34 +16,9 @@
 
     <MockDataBanner :level="mockLevel" :reason="mockReason" />
 
-    <!-- 加载态 -->
-    <Panel v-if="loading && !s" class="center-box">
-      <span class="muted">{{ tl('加载中...') }}</span>
-    </Panel>
+    <AsyncSection :loading="loading" :error="error" :empty="!s || !hasData" @retry="load" />
 
-    <!-- 错误态（必须可重试） -->
-    <ErrorRetry
-      v-else-if="error && !s"
-      :title="tl('加载失败')"
-      :message="error"
-      :retrying="loading"
-      min-height="200px"
-      @retry="load"
-    />
-
-    <!-- 空态 -->
-    <EmptyStateCard
-      v-else-if="s && !hasData"
-      title="暂无电池组数据"
-      desc="后端已连接但未返回任何电池组，请确认电池采集器已接入"
-      min-height="200px"
-    >
-      <template #actions>
-        <button class="btn-refresh" :disabled="loading" @click="load">{{ tl('刷新') }}</button>
-      </template>
-    </EmptyStateCard>
-
-    <template v-else-if="s">
+    <template v-if="s">
       <!-- ============ 3.5.1 电池组概况 KPI ============ -->
       <div class="section-title"><span class="bar"></span>{{ tl('电池组概况') }}</div>
       <div class="kpi-row">
@@ -52,14 +27,14 @@
           :value="sysVoltage"
           unit="V"
           :decimals="1"
-          :status="sysVoltage < 200 ? 'danger' : 'normal'"
+          :status="severityOf('power.battery.voltage', sysVoltage)"
         />
         <KpiCard
           :title="tl('系统总电流')"
           :value="sysCurrent"
           unit="A"
           :decimals="1"
-          :status="Math.abs(sysCurrent) > 200 ? 'warning' : 'normal'"
+          :status="severityOf('power.battery.current', Math.abs(sysCurrent))"
           :detail="sysCurrent >= 0 ? tl('放电') : tl('充电')"
         />
         <KpiCard
@@ -69,7 +44,7 @@
           :decimals="1"
           :bar-value="avgSoc"
           :bar-color="socColor"
-          :status="avgSoc < 80 ? 'warning' : 'normal'"
+          :status="severityOf('power.battery.soc', avgSoc)"
         />
         <KpiCard
           :title="tl('平均 SOH')"
@@ -78,7 +53,7 @@
           :decimals="1"
           :bar-value="avgSoh"
           :bar-color="sohColor"
-          :status="avgSoh < 90 ? 'warning' : 'normal'"
+          :status="severityOf('power.battery.soh', avgSoh)"
         />
       </div>
 
@@ -97,7 +72,7 @@
               :max="100"
               unit="%"
               :label="tl('平均 SOC')"
-              :status="avgSoc < 80 ? 'warning' : 'normal'"
+              :status="severityOf('power.battery.soc', avgSoc)"
             />
             <span class="gauge-sub">{{ tl('设计要求') }} ≥ 80%</span>
           </div>
@@ -107,7 +82,7 @@
               :max="100"
               unit="%"
               :label="tl('平均 SOH')"
-              :status="avgSoh < 90 ? 'warning' : 'normal'"
+              :status="severityOf('power.battery.soh', avgSoh)"
             />
             <span class="gauge-sub">{{ tl('健康度') }} = 容量/初始容量</span>
           </div>
@@ -117,8 +92,12 @@
               :max="30"
               unit="min"
               :label="tl('后备时间')"
-              :status="backupMin < 10 ? 'danger' : backupMin < 15 ? 'warning' : 'normal'"
-              :color="backupMin < 10 ? 'var(--red)' : 'var(--cyan)'"
+              :status="severityOf('power.battery.backupMinutes', backupMin)"
+              :color="
+                severityOf('power.battery.backupMinutes', backupMin) === 'danger'
+                  ? 'var(--red)'
+                  : 'var(--cyan)'
+              "
             />
             <span class="gauge-sub">{{ tl('上次核容') }} {{ s.lastDischarge || '-' }}</span>
           </div>
@@ -128,7 +107,7 @@
               :max="100"
               unit="%"
               :label="tl('最差组 SOH')"
-              :status="worstSohGroup < 90 ? 'warning' : 'normal'"
+              :status="severityOf('power.battery.soh', worstSohGroup)"
             />
             <span class="gauge-sub">{{ worstGroupName || '-' }}</span>
           </div>
@@ -150,11 +129,11 @@
           <svg viewBox="0 0 920 320" class="topo-svg" preserveAspectRatio="xMidYMid meet">
             <defs>
               <linearGradient id="busGrad" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stop-color="#22e3ff" />
-                <stop offset="100%" stop-color="#3b82f6" />
+                <stop offset="0%" stop-color="var(--cyan)" />
+                <stop offset="100%" stop-color="var(--blue)" />
               </linearGradient>
               <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                <path d="M0,0 L6,3 L0,6 Z" fill="#5f6b7a" />
+                <path d="M0,0 L6,3 L0,6 Z" fill="var(--txt3)" />
               </marker>
             </defs>
 
@@ -170,7 +149,7 @@
               y1="60"
               x2="120"
               y2="160"
-              stroke="#5f6b7a"
+              stroke="var(--txt3)"
               stroke-width="2"
               stroke-dasharray="4 4"
               marker-end="url(#arrow)"
@@ -180,7 +159,7 @@
               y1="60"
               x2="800"
               y2="160"
-              stroke="#5f6b7a"
+              stroke="var(--txt3)"
               stroke-width="2"
               stroke-dasharray="4 4"
               marker-end="url(#arrow)"
@@ -337,7 +316,12 @@
                   >{{ g.state }}</span
                 >
               </td>
-              <td class="mono" :class="g.soc < 80 ? 'a-text' : 'g-text'">{{ g.soc }}%</td>
+              <td
+                class="mono"
+                :class="severityOf('power.battery.soc', g.soc) !== 'normal' ? 'a-text' : 'g-text'"
+              >
+                {{ g.soc }}%
+              </td>
               <td class="mono">{{ fmt(g.u, 1) }}</td>
               <td class="mono">{{ fmt(g.i, 2) }}</td>
               <td>
@@ -547,9 +531,10 @@
 </template>
 
 <script setup lang="ts">
+import { severityOf } from '@/config/metricsCatalog'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
-import ErrorRetry from '@/components/common/ErrorRetry.vue'
-import EmptyStateCard from '@/components/common/EmptyStateCard.vue'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -716,15 +701,13 @@ const sysVoltage = computed(() => round(sum(groups.value.map((g) => g.u)), 1))
 const sysCurrent = computed(() => round(sum(groups.value.map((g) => g.i)), 1))
 const avgSoc = computed(() => round(avg(groups.value.map((g) => g.soc)), 1))
 const avgSoh = computed(() => round(avg(groups.value.map((g) => sohOf(g))), 1))
+const warnGradient = () => `linear-gradient(90deg,${cssToken('--amber')},${cssToken('--red')})`
+const normalGradient = () => `linear-gradient(90deg,${cssToken('--cyan')},${cssToken('--blue')})`
 const socColor = computed(() =>
-  avgSoc.value < 80
-    ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
-    : 'linear-gradient(90deg,#22e3ff,#3b82f6)',
+  severityOf('power.battery.soc', avgSoc.value) !== 'normal' ? warnGradient() : normalGradient(),
 )
 const sohColor = computed(() =>
-  avgSoh.value < 90
-    ? 'linear-gradient(90deg,#f59e0b,#ef4444)'
-    : 'linear-gradient(90deg,#22e3ff,#3b82f6)',
+  severityOf('power.battery.soh', avgSoh.value) !== 'normal' ? warnGradient() : normalGradient(),
 )
 const backupMin = computed(() => s.value?.backupMin ?? 0)
 const totalCells = computed(() => groups.value.reduce((sum, g) => sum + (g.cells?.length ?? 0), 0))
@@ -762,13 +745,13 @@ function groupAlarmCount(g: BatteryGroupView): number {
 
 function groupStatusClass(g: BatteryGroupView): string {
   if (groupAlarmCount(g) > 0) return 'node-fault'
-  if (g.soc < 80) return 'node-warn'
+  if (severityOf('power.battery.soc', g.soc) !== 'normal') return 'node-warn'
   return 'node-ok'
 }
 function groupFill(g: BatteryGroupView): string {
-  if (groupAlarmCount(g) > 0) return 'rgba(255,77,94,0.10)'
-  if (g.soc < 80) return 'rgba(255,176,32,0.10)'
-  return 'rgba(34,227,255,0.08)'
+  if (groupAlarmCount(g) > 0) return cssToken('--accent-12')
+  if (g.soc < 80) return cssToken('--amber-bg')
+  return cssToken('--accent-08')
 }
 function groupStroke(g: BatteryGroupView): string {
   if (groupAlarmCount(g) > 0) return 'var(--red)'
@@ -776,9 +759,9 @@ function groupStroke(g: BatteryGroupView): string {
   return 'var(--cyan)'
 }
 function socBarColor(soc: number): string {
-  if (soc < 60) return '#ef4444'
-  if (soc < 80) return '#f59e0b'
-  return '#22e3ff'
+  if (soc < 60) return cssToken('--red')
+  if (soc < 80) return cssToken('--amber')
+  return cssToken('--cyan')
 }
 function socTextColor(soc: number): string {
   if (soc < 60) return 'var(--red)'
@@ -819,12 +802,12 @@ const cellChartOption = computed<EChartsOption>(() => {
   const xData = cells.map((c) => c.no)
   let seriesData: number[] = []
   let unit = 'V'
-  let color = '#22e3ff'
+  let color = cssToken('--cyan')
   let markLine: MarkLineComponentOption | undefined = undefined
   if (cellMetric.value === 'u') {
     seriesData = cells.map((c) => round(c.u, 3))
     unit = 'V'
-    color = '#22e3ff'
+    color = cssToken('--cyan')
     // 标注最高/最低
     const vals = seriesData
     const hi = Math.max(...vals),
@@ -835,13 +818,13 @@ const cellChartOption = computed<EChartsOption>(() => {
         {
           yAxis: hi,
           name: tl('最高'),
-          lineStyle: { color: '#ef4444', type: 'dashed' },
+          lineStyle: { color: cssToken('--red'), type: 'dashed' },
           label: { formatter: tl('最高') },
         },
         {
           yAxis: lo,
           name: tl('最低'),
-          lineStyle: { color: '#f59e0b', type: 'dashed' },
+          lineStyle: { color: cssToken('--amber'), type: 'dashed' },
           label: { formatter: tl('最低') },
         },
       ],
@@ -849,18 +832,18 @@ const cellChartOption = computed<EChartsOption>(() => {
   } else if (cellMetric.value === 'ir') {
     seriesData = cells.map((c) => round(c.ir, 2))
     unit = 'Ω'
-    color = '#a78bfa'
+    color = cssToken('--purple')
   } else {
     seriesData = cells.map((c) => round(c.t, 1))
     unit = '°C'
-    color = '#34d399'
+    color = cssToken('--green')
     markLine = {
       symbol: 'none',
       data: [
         {
           yAxis: 35,
           name: tl('告警'),
-          lineStyle: { color: '#ef4444', type: 'dashed' },
+          lineStyle: { color: cssToken('--red'), type: 'dashed' },
           label: { formatter: tl('告警') + '35' },
         },
       ],
@@ -872,15 +855,19 @@ const cellChartOption = computed<EChartsOption>(() => {
     xAxis: {
       type: 'category',
       data: xData,
-      axisLabel: { color: '#8a94a6', fontSize: 10, interval: Math.ceil(cells.length / 20) },
-      axisLine: { lineStyle: { color: '#2a3342' } },
+      axisLabel: {
+        color: cssToken('--txt2'),
+        fontSize: 10,
+        interval: Math.ceil(cells.length / 20),
+      },
+      axisLine: { lineStyle: { color: cssToken('--txt3') } },
     },
     yAxis: {
       type: 'value',
       name: unit,
-      nameTextStyle: { color: '#8a94a6' },
-      axisLabel: { color: '#8a94a6' },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      nameTextStyle: { color: cssToken('--txt2') },
+      axisLabel: { color: cssToken('--txt2') },
+      splitLine: { lineStyle: { color: cssToken('--accent-08') } },
     },
     series: [
       {
@@ -890,9 +877,9 @@ const cellChartOption = computed<EChartsOption>(() => {
           itemStyle: {
             color:
               cellCls(cells[idx].level) === 'cell-r'
-                ? '#ef4444'
+                ? cssToken('--red')
                 : cellCls(cells[idx].level) === 'cell-a'
-                  ? '#f59e0b'
+                  ? cssToken('--amber')
                   : color,
             borderRadius: [2, 2, 0, 0],
           },
@@ -926,29 +913,29 @@ const irDistOption = computed<EChartsOption>(() => {
     xAxis: {
       type: 'category',
       data: groups.value.map((g) => g.id),
-      axisLabel: { color: '#8a94a6' },
-      axisLine: { lineStyle: { color: '#2a3342' } },
+      axisLabel: { color: cssToken('--txt2') },
+      axisLine: { lineStyle: { color: cssToken('--txt3') } },
     },
     yAxis: {
       type: 'value',
       name: 'Ω',
-      nameTextStyle: { color: '#8a94a6' },
-      axisLabel: { color: '#8a94a6' },
-      splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+      nameTextStyle: { color: cssToken('--txt2') },
+      axisLabel: { color: cssToken('--txt2') },
+      splitLine: { lineStyle: { color: cssToken('--accent-08') } },
     },
     series: [
       {
         name: tl('内阻区间'),
         type: 'boxplot',
         data: boxData,
-        itemStyle: { color: 'rgba(167,139,250,0.25)', borderColor: '#a78bfa' },
+        itemStyle: { color: cssToken('--accent-35'), borderColor: cssToken('--purple') },
       },
       {
         name: tl('单体散点'),
         type: 'scatter',
         data: scatterData,
         symbolSize: 5,
-        itemStyle: { color: '#22e3ff', opacity: 0.6 },
+        itemStyle: { color: cssToken('--cyan'), opacity: 0.6 },
       },
     ],
   }
@@ -973,12 +960,12 @@ const historyOption = computed<EChartsOption>(() => {
   return {
     grid: { left: 48, right: 48, top: 36, bottom: 40 },
     tooltip: { trigger: 'axis' },
-    legend: { data: [tl('SOC'), tl('温度')], textStyle: { color: '#8a94a6' }, top: 4 },
+    legend: { data: [tl('SOC'), tl('温度')], textStyle: { color: cssToken('--txt2') }, top: 4 },
     xAxis: {
       type: 'category',
       data: x,
-      axisLabel: { color: '#8a94a6', fontSize: 10, interval: Math.ceil(n / 12) },
-      axisLine: { lineStyle: { color: '#2a3342' } },
+      axisLabel: { color: cssToken('--txt2'), fontSize: 10, interval: Math.ceil(n / 12) },
+      axisLine: { lineStyle: { color: cssToken('--txt3') } },
     },
     yAxis: [
       {
@@ -986,15 +973,15 @@ const historyOption = computed<EChartsOption>(() => {
         name: 'SOC%',
         min: 0,
         max: 100,
-        nameTextStyle: { color: '#8a94a6' },
-        axisLabel: { color: '#8a94a6' },
-        splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } },
+        nameTextStyle: { color: cssToken('--txt2') },
+        axisLabel: { color: cssToken('--txt2') },
+        splitLine: { lineStyle: { color: cssToken('--accent-08') } },
       },
       {
         type: 'value',
         name: '°C',
-        nameTextStyle: { color: '#8a94a6' },
-        axisLabel: { color: '#8a94a6' },
+        nameTextStyle: { color: cssToken('--txt2') },
+        axisLabel: { color: cssToken('--txt2') },
         splitLine: { show: false },
       },
     ],
@@ -1004,8 +991,8 @@ const historyOption = computed<EChartsOption>(() => {
         type: 'line',
         smooth: true,
         data: socArr,
-        itemStyle: { color: '#22e3ff' },
-        areaStyle: { color: 'rgba(34,227,255,0.12)' },
+        itemStyle: { color: cssToken('--cyan') },
+        areaStyle: { color: cssToken('--accent-12') },
         yAxisIndex: 0,
       },
       {
@@ -1013,7 +1000,7 @@ const historyOption = computed<EChartsOption>(() => {
         type: 'line',
         smooth: true,
         data: tempArr,
-        itemStyle: { color: '#34d399' },
+        itemStyle: { color: cssToken('--green') },
         lineStyle: { width: 1.5 },
         yAxisIndex: 1,
       },
@@ -1339,7 +1326,7 @@ onUnmounted(() => {
   font-size: 9px;
 }
 .topo-badge {
-  fill: #fff;
+  fill: var(--txt-strong);
   font-size: 11px;
   font-weight: 700;
 }
@@ -1352,7 +1339,7 @@ onUnmounted(() => {
   padding: 8px 12px;
   border: 1px solid var(--cyan);
   border-radius: 8px;
-  background: rgba(34, 227, 255, 0.06);
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
 }
 .topo-detail .kv {
   display: flex;
@@ -1385,7 +1372,7 @@ th {
   font-size: 10.5px;
   letter-spacing: 0.5px;
   padding: 7px 8px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 td {
@@ -1398,7 +1385,7 @@ tbody tr:hover {
   background: var(--row-hover);
 }
 tbody .row-warn {
-  background: rgba(250, 173, 20, 0.06);
+  background: color-mix(in srgb, var(--amber) 6%, transparent);
 }
 .d-name {
   font-weight: 500;
@@ -1422,23 +1409,23 @@ tbody .row-warn {
 
 .tag.g {
   color: var(--green);
-  border-color: rgba(43, 212, 122, 0.4);
-  background: rgba(43, 212, 122, 0.08);
+  border-color: var(--green-line);
+  background: color-mix(in srgb, var(--green) 8%, transparent);
 }
 .tag.a {
   color: var(--amber);
-  border-color: rgba(255, 176, 32, 0.4);
-  background: rgba(255, 176, 32, 0.08);
+  border-color: var(--amber-line);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
 }
 .tag.r {
   color: var(--red);
-  border-color: rgba(255, 77, 94, 0.4);
-  background: rgba(255, 77, 94, 0.09);
+  border-color: var(--red-line);
+  background: color-mix(in srgb, var(--red) 9%, transparent);
 }
 .tag.b {
   color: var(--blue);
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.08);
+  border-color: var(--blue-line);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
 }
 
 /* cell grid + switch */
@@ -1459,7 +1446,7 @@ tbody .row-warn {
 .sw-btn.active {
   border-color: var(--cyan);
   color: var(--cyan);
-  background: rgba(34, 227, 255, 0.08);
+  background: var(--accent-08);
 }
 .cell-grid {
   display: grid;
@@ -1485,7 +1472,7 @@ tbody .row-warn {
 }
 .cell-box:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 2px 8px var(--accent-35);
 }
 .cell-no {
   font-size: 9px;
@@ -1497,19 +1484,19 @@ tbody .row-warn {
   font-variant-numeric: tabular-nums;
 }
 .cell-g {
-  background: rgba(43, 212, 122, 0.18);
+  background: color-mix(in srgb, var(--green) 18%, transparent);
   color: var(--green);
-  border-color: rgba(43, 212, 122, 0.3);
+  border-color: color-mix(in srgb, var(--green) 30%, transparent);
 }
 .cell-a {
-  background: rgba(255, 176, 32, 0.22);
+  background: color-mix(in srgb, var(--amber) 22%, transparent);
   color: var(--amber);
-  border-color: rgba(255, 176, 32, 0.45);
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
 }
 .cell-r {
-  background: rgba(255, 77, 94, 0.22);
+  background: color-mix(in srgb, var(--red) 22%, transparent);
   color: var(--red);
-  border-color: rgba(255, 77, 94, 0.5);
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
 }
 .cell-chart {
   margin-top: 4px;
@@ -1521,7 +1508,7 @@ tbody .row-warn {
   border: 1px solid var(--cyan);
   border-radius: 8px;
   padding: 10px 14px;
-  background: rgba(34, 227, 255, 0.06);
+  background: color-mix(in srgb, var(--cyan) 6%, transparent);
 }
 .cell-detail-head {
   display: flex;
@@ -1584,12 +1571,12 @@ tbody .row-warn {
   background: var(--bg2);
 }
 .alert-row.lv-critical {
-  border-color: rgba(255, 77, 94, 0.4);
-  background: rgba(255, 77, 94, 0.06);
+  border-color: var(--red-line);
+  background: color-mix(in srgb, var(--red) 6%, transparent);
 }
 .alert-row.lv-warning {
-  border-color: rgba(255, 176, 32, 0.4);
-  background: rgba(255, 176, 32, 0.05);
+  border-color: var(--amber-line);
+  background: color-mix(in srgb, var(--amber) 5%, transparent);
 }
 .a-lv {
   font-size: 10px;
@@ -1600,11 +1587,11 @@ tbody .row-warn {
 }
 .a-lv.lv-critical {
   color: var(--red);
-  background: rgba(255, 77, 94, 0.15);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
 }
 .a-lv.lv-warning {
   color: var(--amber);
-  background: rgba(255, 176, 32, 0.15);
+  background: color-mix(in srgb, var(--amber) 15%, transparent);
 }
 .a-target {
   font-weight: 600;

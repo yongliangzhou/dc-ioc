@@ -9,21 +9,44 @@
     @mouseup="onUp"
     @mouseleave="onUp"
   >
-    <svg :viewBox="`0 0 ${width} ${height}`" class="linkage-svg" preserveAspectRatio="xMidYMid meet">
+    <svg
+      :viewBox="`0 0 ${width} ${height}`"
+      class="linkage-svg"
+      preserveAspectRatio="xMidYMid meet"
+    >
       <defs>
-        <marker id="flow-arrow" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#34d399" />
+        <marker
+          id="flow-arrow"
+          markerWidth="9"
+          markerHeight="9"
+          refX="6"
+          refY="3"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--green)" />
         </marker>
-        <marker id="flow-arrow-off" markerWidth="9" markerHeight="9" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
-          <path d="M0,0 L6,3 L0,6 Z" fill="#64748b" />
+        <marker
+          id="flow-arrow-off"
+          markerWidth="9"
+          markerHeight="9"
+          refX="6"
+          refY="3"
+          orient="auto"
+          markerUnits="strokeWidth"
+        >
+          <path d="M0,0 L6,3 L0,6 Z" fill="var(--txt2)" />
         </marker>
         <linearGradient id="flowGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stop-color="#34d399" stop-opacity="0.1" />
-          <stop offset="100%" stop-color="#34d399" stop-opacity="0.9" />
+          <stop offset="0%" stop-color="var(--green)" stop-opacity="0.1" />
+          <stop offset="100%" stop-color="var(--green)" stop-opacity="0.9" />
         </linearGradient>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="4" result="b" />
-          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
       </defs>
 
@@ -31,31 +54,50 @@
         <!-- 分组背景框（自动按层生成） -->
         <g v-for="grp in autoGroups" :key="'g' + grp.key">
           <rect
-            :x="grp.x" :y="grp.y" :width="grp.w" :height="grp.h" rx="14"
+            :x="grp.x"
+            :y="grp.y"
+            :width="grp.w"
+            :height="grp.h"
+            rx="14"
             class="group-box"
             :style="grp.color ? { stroke: grp.color, fill: grp.color + '12' } : undefined"
           />
           <text
-            :x="grp.x + 14" :y="grp.y + 22" class="group-title"
+            :x="grp.x + 14"
+            :y="grp.y + 22"
+            class="group-title"
             :style="grp.color ? { fill: grp.color } : undefined"
-          >{{ grp.title }}</text>
+          >
+            {{ grp.title }}
+          </text>
         </g>
 
         <!-- 连线条（带流动动画 + 链路高亮） -->
         <g class="links">
           <g v-for="(lk, idx) in links" :key="'l' + idx">
             <line
-              :x1="coord(lk.from).x" :y1="coord(lk.from).y" :x2="coord(lk.to).x" :y2="coord(lk.to).y"
+              :x1="coord(lk.from).x"
+              :y1="coord(lk.from).y"
+              :x2="coord(lk.to).x"
+              :y2="coord(lk.to).y"
               :class="['link-base', { 'link-off': lk.off, 'link-hi': isLinked(lk) }]"
             />
             <line
               v-if="!lk.off && !lk.backup"
-              :x1="coord(lk.from).x" :y1="coord(lk.from).y" :x2="coord(lk.to).x" :y2="coord(lk.to).y"
-              class="link-flow" :class="{ 'link-hi': isLinked(lk) }" marker-end="url(#flow-arrow)"
+              :x1="coord(lk.from).x"
+              :y1="coord(lk.from).y"
+              :x2="coord(lk.to).x"
+              :y2="coord(lk.to).y"
+              class="link-flow"
+              :class="{ 'link-hi': isLinked(lk) }"
+              marker-end="url(#flow-arrow)"
             />
             <line
               v-if="lk.backup"
-              :x1="coord(lk.from).x" :y1="coord(lk.from).y" :x2="coord(lk.to).x" :y2="coord(lk.to).y"
+              :x1="coord(lk.from).x"
+              :y1="coord(lk.from).y"
+              :x2="coord(lk.to).x"
+              :y2="coord(lk.to).y"
               class="link-backup"
             />
           </g>
@@ -63,15 +105,29 @@
 
         <!-- 节点 -->
         <g
-          v-for="node in flatNodes" :key="node.id" class="node-group"
+          v-for="node in flatNodes"
+          :key="node.id"
+          class="node-group"
           :transform="`translate(${coord(node.id).x},${coord(node.id).y})`"
-          :class="{ selected: node.id === selectedId, ['st-' + node.status]: true, hi: isLinkedTo(node.id) }"
+          :class="{
+            selected: node.id === selectedId,
+            ['st-' + node.status]: true,
+            hi: isLinkedTo(node.id),
+          }"
           @click.stop="onClick(node)"
           @mousedown.stop="onNodeDown(node, $event)"
         >
-          <circle v-if="node.status !== 'off'" :r="boxH / 2 + 6" :class="['halo', 'halo-' + node.status]" />
+          <circle
+            v-if="node.status !== 'off'"
+            :r="boxH / 2 + 6"
+            :class="['halo', 'halo-' + node.status]"
+          />
           <rect
-            :x="-boxW / 2" :y="-boxH / 2" :width="boxW" :height="boxH" rx="10"
+            :x="-boxW / 2"
+            :y="-boxH / 2"
+            :width="boxW"
+            :height="boxH"
+            rx="10"
             :class="['node-box', 'st-' + node.status, { 'has-alarm': (node.alarmCount ?? 0) > 0 }]"
           />
           <text :y="-boxH / 2 + 16" class="node-ico">{{ node.icon }}</text>
@@ -80,9 +136,14 @@
           <text v-if="node.kpi" :y="34" class="node-kpi">{{ node.kpi }}</text>
           <circle
             v-if="(node.alarmCount ?? 0) > 0"
-            :cx="boxW / 2 - 12" :cy="-boxH / 2 + 12" r="7" class="alarm-dot"
+            :cx="boxW / 2 - 12"
+            :cy="-boxH / 2 + 12"
+            r="7"
+            class="alarm-dot"
           />
-          <text v-if="node.isBattery" :x="0" :y="boxH / 2 + 14" class="backup-tag">{{ tl('备用电源') }}</text>
+          <text v-if="node.isBattery" :x="0" :y="boxH / 2 + 14" class="backup-tag">
+            {{ tl('备用电源') }}
+          </text>
         </g>
       </g>
     </svg>
@@ -212,7 +273,9 @@ function layout() {
   })
   // 兼容模式：保留父页面传入的坐标
   if (!nLayers && props.nodes) {
-    props.nodes.forEach((n) => { if (n.x != null && n.y != null) coordMap[n.id] = { x: n.x, y: n.y } })
+    props.nodes.forEach((n) => {
+      if (n.x != null && n.y != null) coordMap[n.id] = { x: n.x, y: n.y }
+    })
   }
 }
 layout()
@@ -252,9 +315,17 @@ function isLinked(lk: LinkEdge) {
   return !!a && (lk.from === a || lk.to === a)
 }
 
-function onClick(node: LinkNode) { emit('node-click', node) }
-function zoomBtn(f: number) { scale.value = clamp(scale.value * f, 0.4, 3) }
-function resetView() { scale.value = 1; pan.x = 0; pan.y = 0 }
+function onClick(node: LinkNode) {
+  emit('node-click', node)
+}
+function zoomBtn(f: number) {
+  scale.value = clamp(scale.value * f, 0.4, 3)
+}
+function resetView() {
+  scale.value = 1
+  pan.x = 0
+  pan.y = 0
+}
 function fitView() {
   const ids = flatNodes.value.map((n) => n.id)
   if (!ids.length) return
@@ -270,7 +341,9 @@ function fitView() {
   pan.x = (width - cw * scale.value) / 2 - minX * scale.value
   pan.y = (height - ch * scale.value) / 2 - minY * scale.value
 }
-function onWheel(e: WheelEvent) { scale.value = clamp(scale.value * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.4, 3) }
+function onWheel(e: WheelEvent) {
+  scale.value = clamp(scale.value * (e.deltaY < 0 ? 1.1 : 1 / 1.1), 0.4, 3)
+}
 
 let dragMode: 'none' | 'bg' | 'node' = 'none'
 let dragId = ''
@@ -285,10 +358,14 @@ function toSvg(cx: number, cy: number) {
   return { x: (vbX - pan.x) / scale.value, y: (vbY - pan.y) / scale.value }
 }
 function onBgDown(e: MouseEvent) {
-  dragMode = 'bg'; dragging.value = true; start = { x: e.clientX, y: e.clientY }; origin = { x: pan.x, y: pan.y }
+  dragMode = 'bg'
+  dragging.value = true
+  start = { x: e.clientX, y: e.clientY }
+  origin = { x: pan.x, y: pan.y }
 }
 function onNodeDown(node: LinkNode, e: MouseEvent) {
-  dragMode = 'node'; dragId = node.id
+  dragMode = 'node'
+  dragId = node.id
   const p = toSvg(e.clientX, e.clientY)
   start = { x: e.clientX, y: e.clientY }
   origin = { x: coord(node.id).x - p.x, y: coord(node.id).y - p.y }
@@ -305,8 +382,13 @@ function onMove(e: MouseEvent) {
     emit('node-move', dragId, coordMap[dragId].x, coordMap[dragId].y)
   }
 }
-function onUp() { dragMode = 'none'; dragging.value = false }
-function clamp(v: number, lo: number, hi: number) { return Math.min(hi, Math.max(lo, v)) }
+function onUp() {
+  dragMode = 'none'
+  dragging.value = false
+}
+function clamp(v: number, lo: number, hi: number) {
+  return Math.min(hi, Math.max(lo, v))
+}
 
 onMounted(() => fitView())
 defineExpose({ fitView, resetView })
@@ -321,72 +403,215 @@ defineExpose({ fitView, resetView })
   cursor: grab;
   user-select: none;
 }
-.linkage-diagram.dragging { cursor: grabbing; }
+.linkage-diagram.dragging {
+  cursor: grabbing;
+}
 .linkage-svg {
   width: 100%;
   height: 100%;
   background:
-    radial-gradient(900px 420px at 20% -10%, rgba(16, 185, 129, 0.08), transparent 60%),
-    radial-gradient(900px 420px at 80% 110%, rgba(56, 189, 248, 0.08), transparent 60%),
-    linear-gradient(160deg, #0a1322 0%, #0b1626 100%);
+    radial-gradient(
+      900px 420px at 20% -10%,
+      color-mix(in srgb, var(--cyan) 8%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 420px at 80% 110%,
+      color-mix(in srgb, var(--blue) 8%, transparent),
+      transparent 60%
+    ),
+    linear-gradient(160deg, var(--map-bg) 0%, var(--bg) 100%);
   border-radius: 12px;
 }
 .group-box {
-  fill: rgba(148, 163, 184, 0.04);
-  stroke: rgba(148, 163, 184, 0.18);
+  fill: var(--accent-02);
+  stroke: var(--accent-16);
   stroke-width: 1;
   stroke-dasharray: 4 5;
 }
 .group-title {
-  fill: #64748b;
+  fill: var(--txt2);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 1px;
 }
-.link-base { stroke: #475569; stroke-width: 3.5; opacity: 0.7; }
-.link-off { stroke: #475569; opacity: 0.4; stroke-dasharray: 5 5; }
-.link-hi { stroke: #38bdf8 !important; opacity: 1; stroke-width: 4.5; filter: drop-shadow(0 0 5px rgba(56,189,248,0.8)); }
+.link-base {
+  stroke: var(--txt3);
+  stroke-width: 3.5;
+  opacity: 0.7;
+}
+.link-off {
+  stroke: var(--txt3);
+  opacity: 0.4;
+  stroke-dasharray: 5 5;
+}
+.link-hi {
+  stroke: var(--blue) !important;
+  opacity: 1;
+  stroke-width: 4.5;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--blue) 80%, transparent));
+}
 .link-flow {
   stroke: url(#flowGrad);
   stroke-width: 3.5;
   stroke-dasharray: 10 8;
   animation: flow 1.1s linear infinite;
-  filter: drop-shadow(0 0 4px rgba(52, 211, 153, 0.6));
+  filter: drop-shadow(0 0 4px color-mix(in srgb, var(--green) 60%, transparent));
 }
-.link-backup { stroke: #f59e0b; stroke-width: 2.5; stroke-dasharray: 7 6; opacity: 0.9; }
-@keyframes flow { to { stroke-dashoffset: -18; } }
-.node-group { cursor: pointer; }
-.halo { fill: none; opacity: 0.35; }
-.halo-normal { stroke: #22c55e; stroke-width: 2; filter: drop-shadow(0 0 6px #22c55e); }
-.halo-warning { stroke: #f59e0b; stroke-width: 2; filter: drop-shadow(0 0 6px #f59e0b); }
-.halo-fault { stroke: #ef4444; stroke-width: 2; filter: drop-shadow(0 0 6px #ef4444); }
-.node-box { fill: #16233a; stroke: #334155; stroke-width: 1.5; transition: stroke 0.2s, fill 0.2s; }
-.node-group:hover .node-box { stroke: #38bdf8; fill: #1b2b47; }
-.node-group.selected .node-box { stroke: #38bdf8; stroke-width: 2.5; filter: url(#glow); }
-.node-group.hi .node-box { stroke: #38bdf8; fill: #1b2b47; }
-.st-normal .node-box { stroke: #22c55e; }
-.st-warning .node-box { stroke: #f59e0b; }
-.st-fault .node-box { stroke: #ef4444; }
-.st-off .node-box { stroke: #64748b; fill: #111b2c; }
-.node-ico { fill: #e2e8f0; font-size: 16px; text-anchor: middle; }
-.node-title { fill: #e2e8f0; font-size: 13px; font-weight: 700; text-anchor: middle; }
-.node-sub { fill: #94a3b8; font-size: 11px; text-anchor: middle; }
-.node-kpi { fill: #7dd3fc; font-size: 10px; text-anchor: middle; }
-.backup-tag { fill: #f59e0b; font-size: 10px; text-anchor: middle; }
-.alarm-dot { fill: #ef4444; stroke: #fff; stroke-width: 1.5; animation: pulse 1.4s infinite; }
-@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.link-backup {
+  stroke: var(--amber);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 6;
+  opacity: 0.9;
+}
+@keyframes flow {
+  to {
+    stroke-dashoffset: -18;
+  }
+}
+.node-group {
+  cursor: pointer;
+}
+.halo {
+  fill: none;
+  opacity: 0.35;
+}
+.halo-normal {
+  stroke: var(--green);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--green));
+}
+.halo-warning {
+  stroke: var(--amber);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--amber));
+}
+.halo-fault {
+  stroke: var(--red);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 6px var(--red));
+}
+.node-box {
+  fill: var(--txt3);
+  stroke: var(--txt3);
+  stroke-width: 1.5;
+  transition:
+    stroke 0.2s,
+    fill 0.2s;
+}
+.node-group:hover .node-box {
+  stroke: var(--blue);
+  fill: var(--txt3);
+}
+.node-group.selected .node-box {
+  stroke: var(--blue);
+  stroke-width: 2.5;
+  filter: url(#glow);
+}
+.node-group.hi .node-box {
+  stroke: var(--blue);
+  fill: var(--txt3);
+}
+.st-normal .node-box {
+  stroke: var(--green);
+}
+.st-warning .node-box {
+  stroke: var(--amber);
+}
+.st-fault .node-box {
+  stroke: var(--red);
+}
+.st-off .node-box {
+  stroke: var(--txt2);
+  fill: var(--txt3);
+}
+.node-ico {
+  fill: var(--txt-strong);
+  font-size: 16px;
+  text-anchor: middle;
+}
+.node-title {
+  fill: var(--txt-strong);
+  font-size: 13px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.node-sub {
+  fill: var(--txt2);
+  font-size: 11px;
+  text-anchor: middle;
+}
+.node-kpi {
+  fill: var(--blue);
+  font-size: 10px;
+  text-anchor: middle;
+}
+.backup-tag {
+  fill: var(--amber);
+  font-size: 10px;
+  text-anchor: middle;
+}
+.alarm-dot {
+  fill: var(--red);
+  stroke: var(--txt-strong);
+  stroke-width: 1.5;
+  animation: pulse 1.4s infinite;
+}
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
 
 .zoom-ctrl {
-  position: absolute; right: 12px; bottom: 12px;
-  display: flex; align-items: center; gap: 6px;
-  background: rgba(15, 23, 42, 0.85); border: 1px solid #334155; border-radius: 10px; padding: 6px 8px;
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--mask);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 6px 8px;
 }
 .zoom-ctrl button {
-  background: #1e293b; color: #cbd5e1; border: 1px solid #334155; border-radius: 6px;
-  height: 28px; min-width: 28px; padding: 0 8px; cursor: pointer; font-size: 13px;
+  background: var(--bg2);
+  color: var(--txt);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 8px;
+  cursor: pointer;
+  font-size: 13px;
 }
-.zoom-ctrl button:hover { background: #273449; }
-.zoom-val { color: #94a3b8; font-size: 12px; min-width: 44px; text-align: center; }
-.hint { position: absolute; right: 12px; top: 12px; color: #475569; font-size: 11px; }
-.empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #64748b; }
+.zoom-ctrl button:hover {
+  background: var(--bg2);
+}
+.zoom-val {
+  color: var(--txt2);
+  font-size: 12px;
+  min-width: 44px;
+  text-align: center;
+}
+.hint {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  color: var(--txt3);
+  font-size: 11px;
+}
+.empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--txt2);
+}
 </style>

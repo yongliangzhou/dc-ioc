@@ -29,7 +29,9 @@
     <div v-if="feedbackItem" class="an-mask" @click.self="feedbackItem = null">
       <div class="an-feedback">
         <div class="an-fb-head">处理反馈 · 沉淀经验</div>
-        <div class="an-fb-subj">{{ feedbackItem.alarm.system }} — {{ feedbackItem.alarm.message }}</div>
+        <div class="an-fb-subj">
+          {{ feedbackItem.alarm.system }} — {{ feedbackItem.alarm.message }}
+        </div>
         <div class="an-fb-row">
           <span class="an-fb-label">处理结果</span>
           <div class="an-fb-tags">
@@ -141,7 +143,7 @@ defineExpose({ gotoKb })
 .an-mask {
   position: fixed;
   inset: 0;
-  background: rgba(4, 9, 18, 0.55);
+  background: var(--accent-50);
   backdrop-filter: blur(3px);
   z-index: 9999; /* 全局最高层级，不被任何窗口遮挡 */
   display: flex;
@@ -203,7 +205,7 @@ defineExpose({ gotoKb })
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 70px var(--accent-50);
   padding: 16px;
 }
 .an-fb-head {
@@ -248,7 +250,7 @@ defineExpose({ gotoKb })
 }
 .an-fb-tag.on {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
@@ -280,7 +282,7 @@ defineExpose({ gotoKb })
 }
 .an-btn.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }

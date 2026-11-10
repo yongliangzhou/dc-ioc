@@ -86,13 +86,13 @@
           :y1="pos(e.source).y"
           :x2="pos(e.target).x"
           :y2="pos(e.target).y"
-          stroke="#22e3ff"
+          stroke="var(--cyan)"
           stroke-opacity="0.45"
           stroke-width="1.5"
         />
         <g v-for="n in graph.nodes" :key="n.id">
-          <circle :cx="pos(n.id).x" :cy="pos(n.id).y" r="6" fill="#22e3ff" />
-          <text :x="pos(n.id).x + 10" :y="pos(n.id).y + 4" fill="#c8d4f0" font-size="11">
+          <circle :cx="pos(n.id).x" :cy="pos(n.id).y" r="6" fill="var(--cyan)" />
+          <text :x="pos(n.id).x + 10" :y="pos(n.id).y + 4" fill="var(--txt)" font-size="11">
             {{ n.name }}
           </text>
         </g>
@@ -143,6 +143,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFilterQuery } from '@/composables/useFilterQuery'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -315,12 +316,15 @@ onMounted(async () => {
   await reload()
   await loadAux()
 })
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useFilterQuery({ keyword, filterType })
 </script>
 
 <style scoped>
 .ci-page {
   padding: 20px 24px 40px;
-  color: #dce6ff;
+  color: var(--txt-strong);
 }
 .view-head {
   display: flex;
@@ -330,17 +334,17 @@ onMounted(async () => {
 }
 .view-head h1 {
   font-size: 20px;
-  color: #22e3ff;
+  color: var(--cyan);
   margin: 0;
 }
 .sub {
   font-size: 12px;
-  color: #8892b0;
+  color: var(--txt2);
 }
 .notice {
-  border: 1px solid rgba(250, 204, 21, 0.4);
-  background: rgba(250, 204, 21, 0.08);
-  color: #facc15;
+  border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  color: var(--amber);
   padding: 8px 12px;
   border-radius: 6px;
   font-size: 12px;
@@ -351,28 +355,28 @@ onMounted(async () => {
   gap: 16px;
 }
 .card {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--accent-02);
+  border: 1px solid var(--accent-08);
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 16px;
 }
 .card h2 {
   font-size: 14px;
-  color: #9fb4e8;
+  color: var(--blue);
   margin: 0 0 14px;
 }
 label {
   display: block;
   font-size: 12px;
-  color: #8892b0;
+  color: var(--txt2);
   margin: 10px 0 4px;
 }
 .ipt {
   width: 100%;
-  background: rgba(8, 14, 34, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #dce6ff;
+  background: var(--mask);
+  border: 1px solid var(--accent-12);
+  color: var(--txt-strong);
   border-radius: 6px;
   padding: 7px 9px;
   font-size: 12px;
@@ -381,9 +385,9 @@ label {
 .btn,
 .btn-sm {
   margin-top: 14px;
-  background: rgba(34, 227, 255, 0.12);
-  border: 1px solid rgba(34, 227, 255, 0.35);
-  color: #8ff0ff;
+  background: var(--accent-12);
+  border: 1px solid var(--accent-35);
+  color: var(--cyan);
   border-radius: 6px;
   padding: 7px 14px;
   font-size: 12px;
@@ -391,7 +395,7 @@ label {
 }
 .btn.primary {
   width: 100%;
-  background: rgba(34, 227, 255, 0.2);
+  background: color-mix(in srgb, var(--cyan) 20%, transparent);
 }
 .btn:disabled {
   opacity: 0.45;
@@ -402,9 +406,9 @@ label {
   padding: 4px 10px;
 }
 .btn-sm.danger {
-  border-color: rgba(248, 113, 113, 0.4);
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.08);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .filters {
   display: flex;
@@ -424,10 +428,10 @@ label {
 .tbl td {
   text-align: left;
   padding: 8px 10px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--accent-08);
 }
 .tbl th {
-  color: #8892b0;
+  color: var(--txt2);
   font-weight: 500;
 }
 .mono {
@@ -439,22 +443,22 @@ label {
   border-radius: 10px;
   font-size: 11px;
   margin: 10px 8px 0 0;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--accent-16);
 }
 .tag.real {
-  color: #4ade80;
-  border-color: rgba(74, 222, 128, 0.4);
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
 }
 .tag.fallback {
-  color: #facc15;
-  border-color: rgba(250, 204, 21, 0.4);
+  color: var(--amber);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
 }
 .impact-summary {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   font-size: 12px;
-  color: #8892b0;
+  color: var(--txt2);
 }
 .graph {
   width: 100%;
@@ -463,10 +467,10 @@ label {
 .empty,
 .err {
   font-size: 12px;
-  color: #8892b0;
+  color: var(--txt2);
   padding: 12px 0;
 }
 .err {
-  color: #f87171;
+  color: var(--red);
 }
 </style>

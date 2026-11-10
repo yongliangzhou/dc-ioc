@@ -598,6 +598,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFilterQuery } from '@/composables/useFilterQuery'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -1224,6 +1225,9 @@ onMounted(() => {
   void loadTicketMap()
 })
 onBeforeUnmount(() => clearInterval(timer))
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useFilterQuery({ keyword })
 </script>
 
 <style scoped>
@@ -1279,7 +1283,7 @@ onBeforeUnmount(() => clearInterval(timer))
   white-space: nowrap;
 }
 .ph-btn:hover:not(:disabled) {
-  color: #fff;
+  color: var(--txt-strong);
   border-color: var(--cyan);
 }
 .ph-btn:disabled {
@@ -1295,7 +1299,7 @@ onBeforeUnmount(() => clearInterval(timer))
   }
 }
 
-/* ===== KPI: 主 + 次 ===== */
+/* ===== KPI:主 + 次 ===== */
 .kpi-band {
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -1305,8 +1309,8 @@ onBeforeUnmount(() => clearInterval(timer))
 .alarm-primary {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #16273a, #0f1923);
-  border: 1px solid #24405a;
+  background: linear-gradient(180deg, var(--bg2), var(--bg));
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
   position: relative;
@@ -1317,7 +1321,12 @@ onBeforeUnmount(() => clearInterval(timer))
   position: absolute;
   inset: 0 0 auto 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.6), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--red) 60%, transparent),
+    transparent
+  );
 }
 .ap-head {
   display: flex;
@@ -1327,18 +1336,18 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .ap-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--txt2);
   letter-spacing: 0.5px;
 }
 .ap-value {
   font-size: 40px;
   font-weight: 800;
   line-height: 1;
-  color: #e6edf3;
+  color: var(--txt-strong);
   font-variant-numeric: tabular-nums;
 }
 .ap-value.is-crit {
-  color: #ef4444;
+  color: var(--red);
 }
 .ap-break {
   display: flex;
@@ -1352,13 +1361,13 @@ onBeforeUnmount(() => clearInterval(timer))
   font-variant-numeric: tabular-nums;
 }
 .ap-lv.crit {
-  color: #ef4444;
+  color: var(--red);
 }
 .ap-lv.warn {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .ap-lv.info {
-  color: #8892b0;
+  color: var(--txt2);
 }
 .kpi-side {
   display: flex;
@@ -1380,10 +1389,10 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .tv-btn:hover {
   border-color: var(--cyan);
-  color: #fff;
+  color: var(--txt-strong);
 }
 .tv-btn.on {
-  background: rgba(34, 227, 255, 0.12);
+  background: var(--accent-12);
   border-color: var(--cyan);
   color: var(--cyan);
   font-weight: 600;
@@ -1395,9 +1404,13 @@ onBeforeUnmount(() => clearInterval(timer))
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border: 1px solid rgba(34, 227, 255, 0.5);
+  border: 1px solid var(--accent-50);
   border-radius: 8px;
-  background: linear-gradient(90deg, rgba(34, 227, 255, 0.18), rgba(34, 227, 255, 0.06));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cyan) 18%, transparent),
+    color-mix(in srgb, var(--cyan) 6%, transparent)
+  );
   color: var(--cyan);
   font-size: 12px;
   font-weight: 600;
@@ -1406,9 +1419,13 @@ onBeforeUnmount(() => clearInterval(timer))
   white-space: nowrap;
 }
 .go-rule-btn:hover {
-  background: linear-gradient(90deg, rgba(34, 227, 255, 0.32), rgba(34, 227, 255, 0.12));
-  box-shadow: 0 0 12px rgba(34, 227, 255, 0.25);
-  color: #fff;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cyan) 32%, transparent),
+    var(--accent-12)
+  );
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cyan) 25%, transparent);
+  color: var(--txt-strong);
 }
 .go-rule-btn svg {
   flex-shrink: 0;
@@ -1457,10 +1474,10 @@ onBeforeUnmount(() => clearInterval(timer))
   border-left: 1px solid var(--line);
 }
 .seg-btn:hover {
-  color: #fff;
+  color: var(--txt-strong);
 }
 .seg-btn.on {
-  background: rgba(34, 227, 255, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
   color: var(--cyan);
   font-weight: 600;
 }
@@ -1492,7 +1509,7 @@ onBeforeUnmount(() => clearInterval(timer))
   cursor: pointer;
 }
 .tb-clear:hover {
-  color: #fff;
+  color: var(--txt-strong);
   border-color: var(--cyan);
 }
 .tb-btn {
@@ -1506,7 +1523,7 @@ onBeforeUnmount(() => clearInterval(timer))
   transition: all 0.15s;
 }
 .tb-btn:hover:not(:disabled) {
-  color: #fff;
+  color: var(--txt-strong);
   border-color: var(--cyan);
 }
 .tb-btn:disabled {
@@ -1518,14 +1535,14 @@ onBeforeUnmount(() => clearInterval(timer))
   color: var(--cyan);
 }
 .tb-btn.ack:hover:not(:disabled) {
-  background: rgba(34, 227, 255, 0.12);
+  background: var(--accent-12);
 }
 .tb-btn.resolve {
   border-color: var(--green);
   color: var(--green);
 }
 .tb-btn.resolve:hover:not(:disabled) {
-  background: rgba(43, 212, 122, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
 }
 
 /* ===== 规则卡片 ===== */
@@ -1563,7 +1580,7 @@ onBeforeUnmount(() => clearInterval(timer))
   justify-content: space-between;
   gap: 8px;
   padding: 8px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--accent-02);
 }
 .rule-row:last-child {
   border-bottom: none;
@@ -1605,13 +1622,13 @@ onBeforeUnmount(() => clearInterval(timer))
   transition: all 0.15s;
 }
 .rule-btn.on {
-  background: rgba(43, 212, 122, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   border-color: var(--green);
   color: var(--green);
 }
 .rule-btn.off {
-  background: rgba(255, 176, 32, 0.08);
-  border-color: rgba(255, 176, 32, 0.3);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 30%, transparent);
   color: var(--amber);
 }
 .rule-btn:hover {
@@ -1631,10 +1648,10 @@ onBeforeUnmount(() => clearInterval(timer))
 
 /* 表格行高亮 */
 .row-crit {
-  background: linear-gradient(90deg, rgba(255, 77, 94, 0.06), transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--red) 6%, transparent), transparent);
 }
 .row-warn {
-  background: linear-gradient(90deg, rgba(255, 176, 32, 0.04), transparent);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--amber) 4%, transparent), transparent);
 }
 .desc-cell {
   max-width: 280px;
@@ -1660,11 +1677,11 @@ onBeforeUnmount(() => clearInterval(timer))
   font-weight: 500;
   padding: 8px 10px;
 }
-.hist-virtual :deep(.vl-row) {
+.hist-virtual:deep(.vl-row) {
   border-bottom: 1px solid var(--td-line);
 }
-.hist-virtual :deep(.vl-row:hover) {
-  background: rgba(34, 227, 255, 0.03);
+.hist-virtual:deep(.vl-row:hover) {
+  background: color-mix(in srgb, var(--cyan) 3%, transparent);
 }
 .hist-row .hc {
   font-size: 12px;
@@ -1699,25 +1716,25 @@ onBeforeUnmount(() => clearInterval(timer))
   color: var(--cyan);
 }
 .act-btn.ticket {
-  border-color: var(--purple, #a78bfa);
-  color: var(--purple, #a78bfa);
+  border-color: var(--purple);
+  color: var(--purple);
 }
 .act-btn.ticket:hover {
-  background: rgba(167, 139, 250, 0.12);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
 }
 .act-btn.runbook {
-  border-color: var(--green, #2bd47a);
-  color: var(--green, #2bd47a);
+  border-color: var(--green);
+  color: var(--green);
 }
 .act-btn.runbook:hover {
-  background: rgba(43, 212, 122, 0.1);
+  background: var(--green-bg);
 }
 
 /* ===== 弹窗 ===== */
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: var(--accent-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1757,7 +1774,7 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .rel-sum {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin: 6px 0;
 }
 .rel-steps {
@@ -1786,7 +1803,7 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .btn.primary {
   background: var(--cyan);
-  color: #04222b;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -1830,9 +1847,9 @@ onBeforeUnmount(() => clearInterval(timer))
   color: var(--txt2);
 }
 .fb-scn-tabs button.on {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
   color: var(--cyan);
-  border-color: rgba(34, 211, 238, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
 }
 .fb-scn-body {
   font-size: 12px;
@@ -1886,7 +1903,7 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .fb-tag.on {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
@@ -1921,7 +1938,7 @@ onBeforeUnmount(() => clearInterval(timer))
 .fb-rec-tag {
   padding: 2px 8px;
   border-radius: 5px;
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
   color: var(--cyan);
   flex: none;
 }
@@ -1939,17 +1956,17 @@ onBeforeUnmount(() => clearInterval(timer))
   font-variant-numeric: tabular-nums;
 }
 .act-btn.ack:hover {
-  background: rgba(34, 227, 255, 0.1);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
 }
 .act-btn.resolve {
   border-color: var(--green);
   color: var(--green);
 }
 .act-btn.resolve:hover {
-  background: rgba(43, 212, 122, 0.1);
+  background: var(--green-bg);
 }
 .act-btn.done {
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-12);
   color: var(--txt3);
   cursor: default;
 }
@@ -1960,14 +1977,14 @@ onBeforeUnmount(() => clearInterval(timer))
   bottom: 24px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(34, 227, 255, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
   border: 1px solid var(--cyan);
   color: var(--cyan);
   padding: 10px 20px;
   border-radius: 10px;
   font-size: 13px;
   z-index: 999;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 30px var(--accent-35);
   backdrop-filter: blur(6px);
 }
 .fade-enter-active,

@@ -49,7 +49,9 @@
         style="width: 220px"
         @keyup.enter="onFilter"
       />
-      <button class="btn-sm primary" @click="onFilter">{{ tl('查询') }}</button>
+      <button class="btn-sm btn-primary" @click="onFilter">{{ tl('查询') }}</button>
+      <button class="btn-ghost btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
+      <FilterBar compact view-key="alarm-history" :capture="captureView" :apply="applySavedView" />
       <span class="muted" style="margin-left: auto; font-size: 11px"
         >{{ tl('共') }} {{ data?.total ?? 0 }} {{ tl('条') }} {{ tl('·') }} {{ tl('当前页') }}
         {{ data?.items.length ?? 0 }} {{ tl('条') }}</span
@@ -100,7 +102,7 @@
                 {{ tl('确认') }}
               </button>
               <button
-                class="btn-sm primary"
+                class="btn-sm btn-primary"
                 v-if="e.status === 'active' || e.status === 'acknowledged'"
                 style="margin-left: 4px"
                 @click="resolve(e)"
@@ -244,6 +246,9 @@
 </template>
 
 <script setup lang="ts">
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { FilterView } from '@/composables/useViewPreferences'
+import { useFilterQuery } from '@/composables/useFilterQuery'
 import { useI18n } from 'vue-i18n'
 import { fmtDateTime } from '@/utils/format'
 const { t: tl } = useI18n()
@@ -262,7 +267,7 @@ const fSys = ref('')
 const fLv = ref('')
 const fState = ref('')
 const page = ref(1)
-const size = ref(50)
+const size = ref(20)
 const kw = ref('')
 const operator = '值班员'
 
@@ -451,6 +456,32 @@ onMounted(() => {
   timer = window.setInterval(reload, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 5000))
 })
 onBeforeUnmount(() => clearInterval(timer))
+
+// 04 §6.2: 筛选条件与分页写入 URL query
+useFilterQuery({ fSys, fLv, fState, kw, page, size })
+
+function resetFilters() {
+  fSys.value = ''
+  fLv.value = ''
+  fState.value = ''
+  kw.value = ''
+  onFilter()
+}
+
+// 04 §6.2: 统一筛选栏的保存视图（compact 模式，查询/重置仍由本页提供）
+function captureView() {
+  return { filters: { fSys: fSys.value, fLv: fLv.value, fState: fState.value, kw: kw.value } }
+}
+
+function applySavedView(v: FilterView) {
+  const f = v.filters
+  const refs: Record<string, { value: string }> = { fSys, fLv, fState, kw }
+  for (const [k, val] of Object.entries(f)) {
+    const slot = refs[k]
+    if (slot && typeof val === 'string') slot.value = val
+  }
+  void onFilter()
+}
 </script>
 
 <style scoped>
@@ -488,12 +519,12 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
 .row-crit {
-  background: rgba(242, 63, 63, 0.05);
+  background: color-mix(in srgb, var(--red) 5%, transparent);
 }
 .channels {
   margin-top: 20px;
@@ -510,7 +541,7 @@ onBeforeUnmount(() => clearInterval(timer))
   margin: 0;
 }
 .view-sub .sub {
-  color: var(--muted, #7e93b8);
+  color: var(--txt2);
   font-size: 12px;
 }
 .ch-grid {
@@ -548,12 +579,12 @@ onBeforeUnmount(() => clearInterval(timer))
   border-radius: 999px;
 }
 .ch-status.on {
-  color: #34d399;
-  background: rgba(52, 211, 153, 0.14);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
 }
 .ch-status.off {
-  color: #7e93b8;
-  background: rgba(126, 147, 184, 0.14);
+  color: var(--txt2);
+  background: var(--accent-12);
 }
 .ch-meta {
   display: flex;

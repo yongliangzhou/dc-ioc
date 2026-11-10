@@ -37,15 +37,23 @@
               class="dt-td"
               :style="{ textAlign: col.align || 'left' }"
             >
-              <StatusBadge v-if="col.render === 'status'" :status="(item[col.key] as string) ?? ''" />
-              <AlarmBadge v-else-if="col.render === 'alarm'" :level="(item[col.key] as string) ?? 'info'" />
+              <StatusBadge
+                v-if="col.render === 'status'"
+                :status="(item[col.key] as string) ?? ''"
+              />
+              <AlarmBadge
+                v-else-if="col.render === 'alarm'"
+                :level="(item[col.key] as string) ?? 'info'"
+              />
               <slot
                 v-else-if="col.render === 'custom'"
                 :name="'col-' + col.key"
                 :row="item"
                 :value="item[col.key]"
               />
-              <span v-else :class="(item._rowClass as string) ?? ''">{{ item[col.key] ?? '-' }}</span>
+              <span v-else :class="(item._rowClass as string) ?? ''">{{
+                item[col.key] ?? '-'
+              }}</span>
             </div>
           </div>
         </template>
@@ -66,7 +74,10 @@
           :style="{ textAlign: col.align || 'left' }"
         >
           <StatusBadge v-if="col.render === 'status'" :status="(row[col.key] as string) ?? ''" />
-          <AlarmBadge v-else-if="col.render === 'alarm'" :level="(row[col.key] as string) ?? 'info'" />
+          <AlarmBadge
+            v-else-if="col.render === 'alarm'"
+            :level="(row[col.key] as string) ?? 'info'"
+          />
           <slot
             v-else-if="col.render === 'custom'"
             :name="'col-' + col.key"
@@ -199,13 +210,13 @@ function getRowClass(row: Record<string, unknown>): string {
   transition: background 0.12s;
 }
 .dt-row:hover {
-  background: rgba(34, 227, 255, 0.03);
+  background: color-mix(in srgb, var(--cyan) 3%, transparent);
 }
 .dt-row.row-danger {
-  background: rgba(239, 68, 68, 0.06);
+  background: color-mix(in srgb, var(--red) 6%, transparent);
 }
 .dt-row.row-warning {
-  background: rgba(255, 176, 32, 0.04);
+  background: color-mix(in srgb, var(--amber) 4%, transparent);
 }
 .dt-td {
   padding: 8px 10px;

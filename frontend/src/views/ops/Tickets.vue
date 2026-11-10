@@ -285,8 +285,8 @@
 
     <!-- 详情 / 生命周期弹窗 -->
     <teleport to="body">
-      <div v-if="detail" class="tf-mask" @click.self="detail = null">
-        <div class="tf-modal">
+      <div v-if="detail" class="modal-mask" @click.self="detail = null">
+        <div class="modal">
           <div class="tf-head">
             <h3>工单详情 · 生命周期</h3>
             <button class="tf-x" @click="detail = null">✕</button>
@@ -380,8 +380,8 @@
 
     <!-- 删除确认 -->
     <teleport to="body">
-      <div v-if="toDelete.length" class="tf-mask" @click.self="toDelete = []">
-        <div class="tf-modal" style="width: 440px">
+      <div v-if="toDelete.length" class="modal-mask" @click.self="toDelete = []">
+        <div class="modal" style="width: 440px">
           <div class="tf-head">
             <h3>确认删除工单（{{ toDelete.length }} 张）</h3>
             <button class="tf-x" @click="toDelete = []">✕</button>
@@ -400,7 +400,7 @@
             <button class="tf-btn ghost" @click="toDelete = []">取消</button>
             <button
               class="tf-btn primary"
-              style="background: var(--red, #ff4d5e)"
+              style="background: var(--red)"
               :disabled="deleting"
               @click="doDelete"
             >
@@ -421,6 +421,7 @@
 </template>
 
 <script setup lang="ts">
+import { useFilterQuery } from '@/composables/useFilterQuery'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, ref } from 'vue'
@@ -519,7 +520,7 @@ const colColor = (s: TicketStatus) =>
     : s === 'doing'
       ? 'var(--cyan)'
       : s === 'pending'
-        ? 'var(--purple, #a78bfa)'
+        ? 'var(--purple)'
         : 'var(--green)'
 
 /* ---- 过滤 ---- */
@@ -743,6 +744,9 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
     return `${statusLabel(l.from)} → ${statusLabel(l.to)}`
   return l.action
 }
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useFilterQuery({ kw, fStatus, fLv })
 </script>
 
 <style scoped>
@@ -751,8 +755,8 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   padding: 6px 14px;
   border-radius: 7px;
   cursor: pointer;
-  background: linear-gradient(135deg, #1a73e8, #22e3ff);
-  color: #fff;
+  background: linear-gradient(135deg, var(--blue-bg), var(--cyan));
+  color: var(--txt-strong);
   border: none;
   font-size: 12px;
   font-weight: 600;
@@ -797,7 +801,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   cursor: pointer;
 }
 .seg button.on {
-  background: rgba(34, 227, 255, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
   color: var(--cyan);
   font-weight: 600;
 }
@@ -839,7 +843,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   transition: border-color 0.15s;
 }
 .kcard-i:hover {
-  border-color: rgba(34, 227, 255, 0.35);
+  border-color: var(--accent-35);
 }
 .kcard-i .km {
   font-size: 10.5px;
@@ -859,7 +863,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   padding: 3px 8px;
   border-radius: 5px;
   border: 1px solid var(--line);
-  background: rgba(34, 227, 255, 0.1);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
   color: var(--cyan);
   cursor: pointer;
 }
@@ -868,9 +872,9 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   color: var(--txt2);
 }
 .kbtn.danger {
-  background: rgba(255, 77, 94, 0.1);
-  color: var(--red, #ff4d5e);
-  border-color: rgba(255, 77, 94, 0.25);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 25%, transparent);
 }
 .kempty {
   text-align: center;
@@ -885,7 +889,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   border: 1px solid var(--line);
   font-size: 10px;
   cursor: pointer;
-  background: rgba(34, 227, 255, 0.1);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
   color: var(--cyan);
 }
 
@@ -900,9 +904,9 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   color: var(--txt2);
 }
 .act-btn.danger {
-  background: rgba(255, 77, 94, 0.1);
-  color: var(--red, #ff4d5e);
-  border-color: rgba(255, 77, 94, 0.25);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 25%, transparent);
 }
 
 /* 详情 */
@@ -911,7 +915,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   gap: 10px;
   font-size: 12.5px;
   padding: 5px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--accent-02);
 }
 .dv-k {
   color: var(--txt3);
@@ -1002,7 +1006,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   margin-left: 0;
 }
 .hdr-btn.ghost:hover:not(:disabled) {
-  color: #fff;
+  color: var(--txt-strong);
   border-color: var(--cyan);
 }
 .hdr-btn:disabled {
@@ -1022,7 +1026,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   border: none;
   padding: 0;
   font-size: 12px;
-  color: var(--cyan, #22e3ff);
+  color: var(--cyan);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
@@ -1036,12 +1040,12 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   flex-wrap: wrap;
   padding: 8px 12px;
   margin-bottom: 10px;
-  border-color: rgba(34, 227, 255, 0.35);
+  border-color: var(--accent-35);
 }
 .bb-count {
   font-size: 12px;
   font-weight: 600;
-  color: var(--cyan, #22e3ff);
+  color: var(--cyan);
 }
 .bb-btn,
 .tb-btn {
@@ -1056,8 +1060,8 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
 }
 .bb-btn:hover:not(:disabled),
 .tb-btn:hover:not(:disabled) {
-  color: #fff;
-  border-color: var(--cyan, #22e3ff);
+  color: var(--txt-strong);
+  border-color: var(--cyan);
 }
 .bb-btn:disabled,
 .tb-btn:disabled {
@@ -1065,18 +1069,18 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   cursor: not-allowed;
 }
 .bb-btn.primary {
-  border-color: var(--cyan, #22e3ff);
-  color: var(--cyan, #22e3ff);
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 .bb-btn.primary:hover:not(:disabled) {
-  background: rgba(34, 227, 255, 0.12);
+  background: var(--accent-12);
 }
 .bb-btn.danger {
-  border-color: rgba(255, 77, 94, 0.45);
-  color: var(--red, #ff4d5e);
+  border-color: color-mix(in srgb, var(--red) 45%, transparent);
+  color: var(--red);
 }
 .bb-btn.danger:hover:not(:disabled) {
-  background: rgba(255, 77, 94, 0.12);
+  background: var(--red-bg);
 }
 
 /* 复选框 */
@@ -1084,7 +1088,7 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
   width: 14px;
   height: 14px;
   cursor: pointer;
-  accent-color: var(--cyan, #22e3ff);
+  accent-color: var(--cyan);
   vertical-align: middle;
 }
 .ck-wrap {
@@ -1103,12 +1107,12 @@ function logText(l: { action: string; from?: TicketStatus; to?: TicketStatus }) 
 
 /* 选中态 */
 .row-sel {
-  background: rgba(34, 227, 255, 0.08);
-  box-shadow: inset 2px 0 0 var(--cyan, #22e3ff);
+  background: var(--accent-08);
+  box-shadow: inset 2px 0 0 var(--cyan);
 }
 .kcard-i.is-sel {
-  border-color: var(--cyan, #22e3ff);
-  box-shadow: 0 0 0 1px rgba(34, 227, 255, 0.35);
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 1px var(--accent-35);
 }
 
 /* 表格内空态（筛选无结果，区别于整页空态） */

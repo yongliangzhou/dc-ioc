@@ -57,9 +57,7 @@
                 /><FieldError
                   :message="singleTouched.device_id ? singleErrors.device_id : ''"
                 /><span class="hint"
-                  >{{ tl('字母') }}/{{ tl('数字开头') }}，2-64{{ tl('字符') }}，{{
-                    tl('允许')
-                  }}
+                  >{{ tl('字母') }}/{{ tl('数字开头') }}，2-64{{ tl('字符') }}，{{ tl('允许') }}
                   ._:-
                 </span>
               </div>
@@ -332,7 +330,7 @@
           </span>
           <div class="flex gap8">
             <button class="btn-sm" @click="$emit('close')">取消</button>
-            <button class="btn-sm primary" :disabled="submitting" @click="onSubmit">
+            <button class="btn-sm btn-primary" :disabled="submitting" @click="onSubmit">
               {{ submitting ? '提交中…' : mode === 'edit' ? '保存修改' : '提交注册' }}
             </button>
           </div>
@@ -349,7 +347,14 @@ import { computed, reactive, ref, watch } from 'vue'
 import { THING_MODELS } from '@/constants/thingModels'
 import type { ExternalDevice, ExternalDeviceView, ThingModelDef } from '@/types'
 import FieldError from '@/components/common/FieldError.vue'
-import { useFormValidation, required, maxLen, isIpOrHost, rangeLen, pattern } from '@/composables/useFormValidation'
+import {
+  useFormValidation,
+  required,
+  maxLen,
+  isIpOrHost,
+  rangeLen,
+  pattern,
+} from '@/composables/useFormValidation'
 
 const props = defineProps<{
   open: boolean
@@ -408,14 +413,23 @@ const editForm = reactive({
 const ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]*$/
 const singleFV = useFormValidation({
   rules: {
-    device_id: [required('请输入设备 ID'), rangeLen(2, 64), pattern(ID_RE, '须以字母/数字开头，仅允许字母/数字/._:-')],
+    device_id: [
+      required('请输入设备 ID'),
+      rangeLen(2, 64),
+      pattern(ID_RE, '须以字母/数字开头，仅允许字母/数字/._:-'),
+    ],
     name: [maxLen(128)],
     ip: [required('请输入 IP'), isIpOrHost],
     sn: [required('请输入序列号'), maxLen(128)],
     model: [required('请输入型号'), maxLen(128)],
   },
 })
-const { errors: singleErrors, touched: singleTouched, validate: singleValidate, validateAll: singleValid } = singleFV
+const {
+  errors: singleErrors,
+  touched: singleTouched,
+  validate: singleValidate,
+  validateAll: singleValid,
+} = singleFV
 
 const batchFV = useFormValidation({
   rules: {
@@ -424,7 +438,12 @@ const batchFV = useFormValidation({
     ipPrefix: [required('请输入 IP 网段前缀'), isIpOrHost],
   },
 })
-const { errors: batchErrors, touched: batchTouched, validate: batchValidate, validateAll: batchValid } = batchFV
+const {
+  errors: batchErrors,
+  touched: batchTouched,
+  validate: batchValidate,
+  validateAll: batchValid,
+} = batchFV
 
 const editFV = useFormValidation({
   rules: {
@@ -433,7 +452,12 @@ const editFV = useFormValidation({
     model: [required('请输入型号'), maxLen(128)],
   },
 })
-const { errors: editErrors, touched: editTouched, validate: editValidate, validateAll: editValid } = editFV
+const {
+  errors: editErrors,
+  touched: editTouched,
+  validate: editValidate,
+  validateAll: editValid,
+} = editFV
 
 const currentModel = computed(() => THING_MODELS.find((m) => m.key === form.modelKey) || null)
 const editThingModel = computed<ThingModelDef | null>(() => {
@@ -607,7 +631,7 @@ function onSubmit() {
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -624,7 +648,7 @@ function onSubmit() {
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
   overflow: hidden;
 }
 .modal-head {
@@ -661,7 +685,7 @@ function onSubmit() {
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
@@ -686,7 +710,7 @@ function onSubmit() {
 .tab.on {
   color: var(--txt);
   border-color: var(--cyan);
-  background: rgba(34, 227, 255, 0.08);
+  background: var(--accent-08);
 }
 .grid2 {
   display: grid;
@@ -716,8 +740,8 @@ select.ipt {
   cursor: pointer;
 }
 .ipt.invalid {
-  border-color: #ff6b6b !important;
-  background: rgba(255, 107, 107, 0.08);
+  border-color: var(--red-line) !important;
+  background: color-mix(in srgb, var(--red) 8%, transparent);
 }
 .preview {
   max-height: 220px;
@@ -734,14 +758,14 @@ select.ipt {
   font-size: 12px;
 }
 .result.ok {
-  background: rgba(43, 212, 122, 0.1);
+  background: var(--green-bg);
   color: var(--green);
-  border: 1px solid rgba(43, 212, 122, 0.3);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
 }
 .result.warn {
-  background: rgba(255, 176, 32, 0.1);
+  background: var(--amber-bg);
   color: var(--amber);
-  border: 1px solid rgba(255, 176, 32, 0.3);
+  border: 1px solid color-mix(in srgb, var(--amber) 30%, transparent);
 }
 .thing-model-info {
   margin-top: 8px;

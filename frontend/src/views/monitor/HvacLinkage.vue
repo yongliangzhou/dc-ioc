@@ -312,16 +312,16 @@ onMounted(load)
 .view-head h1 {
   font-size: 20px;
   margin: 0;
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .sub {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 13px;
 }
 .refresh {
-  background: #1e293b;
-  color: #cbd5e1;
-  border: 1px solid #334155;
+  background: var(--bg2);
+  color: var(--txt);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
@@ -332,16 +332,16 @@ onMounted(load)
 }
 /* 统一图形编辑入口按钮 */
 .ge-edit {
-  background: #1e293b;
-  color: #22d3ee;
-  border: 1px solid #22d3ee;
+  background: var(--bg2);
+  color: var(--cyan);
+  border: 1px solid var(--cyan-line);
   border-radius: 8px;
   padding: 6px 12px;
   cursor: pointer;
   font-size: 13px;
 }
 .ge-edit:hover {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .legend {
   display: flex;
@@ -349,7 +349,7 @@ onMounted(load)
   align-items: center;
   margin: 14px 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--txt2);
   flex-wrap: wrap;
 }
 .legend .dot {
@@ -361,16 +361,16 @@ onMounted(load)
   vertical-align: middle;
 }
 .dot.normal {
-  background: #22c55e;
+  background: var(--green-bg);
 }
 .dot.warning {
-  background: #f59e0b;
+  background: var(--amber-bg);
 }
 .dot.fault {
-  background: #ef4444;
+  background: var(--red);
 }
 .dot.off {
-  background: #64748b;
+  background: var(--panel2);
 }
 .pipe-key .line {
   display: inline-block;
@@ -381,18 +381,18 @@ onMounted(load)
   vertical-align: middle;
 }
 .line.cw {
-  background: #38bdf8;
+  background: var(--blue);
 }
 .line.chw {
-  background: #2dd4bf;
+  background: var(--cyan-bg);
 }
 .muted {
-  color: #64748b;
+  color: var(--txt2);
 }
 .drawer {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.6);
+  background: var(--accent-50);
   display: flex;
   justify-content: flex-end;
   z-index: 50;
@@ -401,8 +401,8 @@ onMounted(load)
   width: 380px;
   max-width: 90vw;
   height: 100%;
-  background: #0f172a;
-  border-left: 1px solid #1e293b;
+  background: var(--bg2);
+  border-left: 1px solid var(--line);
   padding: 22px;
   overflow-y: auto;
 }
@@ -413,7 +413,7 @@ onMounted(load)
 }
 .drawer-head h3 {
   margin: 0 0 4px;
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .drawer-metrics {
   display: grid;
@@ -422,25 +422,25 @@ onMounted(load)
   margin: 18px 0;
 }
 .metric {
-  background: #1e293b;
+  background: var(--bg2);
   border-radius: 8px;
   padding: 10px 12px;
 }
 .mk {
   display: block;
-  color: #64748b;
+  color: var(--txt2);
   font-size: 12px;
 }
 .mv {
   display: block;
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-size: 16px;
   font-weight: 600;
 }
 .goto {
   width: 100%;
-  background: #0ea5e9;
-  color: #fff;
+  background: var(--blue-bg);
+  color: var(--txt-strong);
   border: none;
   border-radius: 8px;
   padding: 10px;
@@ -448,7 +448,7 @@ onMounted(load)
   font-size: 14px;
 }
 .goto:hover {
-  background: #0284c7;
+  background: var(--blue-bg);
 }
 .slide-enter-active,
 .slide-leave-active {

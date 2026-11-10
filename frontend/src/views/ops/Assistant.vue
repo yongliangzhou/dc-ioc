@@ -51,11 +51,7 @@
           <div class="ai-diag-row ai-diag-sep">
             <span>Dify 检索层</span>
             <b :class="diag.dify.configured ? (diag.dify.reachable ? 'ok' : 'warn') : 'off'">{{
-              !diag.dify.configured
-                ? '未启用'
-                : diag.dify.reachable
-                  ? '已连接'
-                  : '未连接'
+              !diag.dify.configured ? '未启用' : diag.dify.reachable ? '已连接' : '未连接'
             }}</b>
           </div>
           <template v-if="diag.dify.configured">
@@ -64,8 +60,8 @@
               <span>召回探测</span
               ><b :class="diag.dify.reachable ? 'ok' : 'bad'">{{
                 diag.dify.reachable ? '可用' : '失败'
-              }}</b></div
-            >
+              }}</b>
+            </div>
             <div class="ai-diag-detail">{{ diag.dify.detail }}</div>
           </template>
           <template v-else>
@@ -135,10 +131,18 @@
                   </button>
                 </div>
                 <div class="ai-fb" v-if="m.role === 'ai' && !m.loading">
-                  <button class="ai-fb-btn" :class="{ on: m.feedback === 'up' }" @click="feedback(m, 'up')">
+                  <button
+                    class="ai-fb-btn"
+                    :class="{ on: m.feedback === 'up' }"
+                    @click="feedback(m, 'up')"
+                  >
                     👍 {{ tl('有用') }}
                   </button>
-                  <button class="ai-fb-btn" :class="{ on: m.feedback === 'down' }" @click="feedback(m, 'down')">
+                  <button
+                    class="ai-fb-btn"
+                    :class="{ on: m.feedback === 'down' }"
+                    @click="feedback(m, 'down')"
+                  >
                     👎 {{ tl('无用') }}
                   </button>
                   <button class="ai-fb-btn" @click="openCorrect(m)">{{ tl('纠错') }}</button>
@@ -199,14 +203,19 @@
 
     <!-- 纠错弹窗 -->
     <transition name="fade">
-      <div v-if="correctMsg" class="ai-corrmask" @click.self="correctMsg = null">
-        <div class="ai-corrmodal">
+      <div v-if="correctMsg" class="modal-mask" @click.self="correctMsg = null">
+        <div class="modal">
           <div class="kb-modal-head">
             <h2>{{ tl('纠错 / 补充正确答案') }}</h2>
             <button class="kb-modal-close" @click="correctMsg = null">✕</button>
           </div>
           <p class="ai-corrtip">{{ tl('请描述正确处置方式，反馈将用于优化知识库与检索') }}：</p>
-          <textarea v-model="correctText" class="ai-corrta" rows="5" :placeholder="tl('如：正确做法应为…')" />
+          <textarea
+            v-model="correctText"
+            class="ai-corrta"
+            rows="5"
+            :placeholder="tl('如：正确做法应为…')"
+          />
           <div class="kb-modal-foot">
             <button class="kb-act-btn" @click="correctMsg = null">{{ tl('取消') }}</button>
             <button class="kb-act-btn primary" @click="submitCorrect">{{ tl('提交') }}</button>
@@ -223,10 +232,24 @@ const { t: tl } = useI18n()
 import { ref, reactive, nextTick } from 'vue'
 import { toErrorMessage } from '@/composables/useAsyncPage'
 import { useRouter } from 'vue-router'
-import { askAssistant, submitAssistantFeedback, getAssistantModels, selectAssistantModel, assistantModelStatus } from '@/api'
+import {
+  askAssistant,
+  submitAssistantFeedback,
+  getAssistantModels,
+  selectAssistantModel,
+  assistantModelStatus,
+} from '@/api'
 import type { AssistantAskResp, AssistantRef, AssistantStatusResp, AssistantModel } from '@/types'
 import { useToast } from '@/hooks/useToast'
-import { BookOpen, Sparkles, FileText, Server, Database, Wrench, AlertTriangle } from 'lucide-vue-next'
+import {
+  BookOpen,
+  Sparkles,
+  FileText,
+  Server,
+  Database,
+  Wrench,
+  AlertTriangle,
+} from 'lucide-vue-next'
 
 // 知识来源类型 → 图标 (dify 为向量召回来源)
 const REF_ICONS: Record<string, any> = {
@@ -468,7 +491,7 @@ async function runDiag() {
 }
 .ai-sub {
   margin: 4px 0 0;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
   max-width: 720px;
 }
@@ -524,7 +547,7 @@ async function runDiag() {
   cursor: pointer;
 }
 .ai-diag:hover {
-  background: rgba(34, 211, 238, 0.12);
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
 }
 .ai-diag:disabled {
   opacity: 0.5;
@@ -541,7 +564,7 @@ async function runDiag() {
   color: var(--txt);
 }
 .ai-diag-panel.err {
-  border-color: #f59e0b;
+  border-color: var(--amber-line);
 }
 .ai-diag-title {
   font-weight: 600;
@@ -556,19 +579,19 @@ async function runDiag() {
 .ai-diag-row > span {
   flex: none;
   width: 64px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .ai-diag-row .ok {
-  color: #22c55e;
+  color: var(--green);
 }
 .ai-diag-row .bad {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .ai-diag-detail {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px dashed var(--line);
-  color: var(--muted);
+  color: var(--txt2);
   line-height: 1.6;
 }
 .ai-diag-sep {
@@ -577,25 +600,25 @@ async function runDiag() {
   border-top: 1px solid var(--line);
 }
 .ai-diag-detail b.ok {
-  color: #22c55e;
+  color: var(--green);
 }
 .ai-diag-detail b.bad {
-  color: #ef4444;
+  color: var(--red);
 }
 .ai-diag-detail b.warn {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .ai-diag-detail b.off {
-  color: var(--muted);
+  color: var(--txt2);
 }
 
 .ai-warn {
   margin-bottom: 8px;
   padding: 8px 10px;
-  border: 1px solid #f59e0b;
+  border: 1px solid var(--amber-line);
   border-radius: 8px;
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  color: var(--amber);
   font-size: 12px;
   line-height: 1.6;
 }
@@ -626,7 +649,7 @@ async function runDiag() {
   gap: 14px;
 }
 .ai-empty {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
 }
 .ai-chips {
@@ -667,7 +690,7 @@ async function runDiag() {
   line-height: 1.7;
 }
 .ai-row.user .ai-bubble {
-  background: #0e2a33;
+  background: var(--bg2);
   border-color: var(--cyan);
   color: var(--txt);
 }
@@ -697,7 +720,7 @@ async function runDiag() {
   align-items: center;
 }
 .ai-refs-label {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 12px;
 }
 .ai-ref {
@@ -714,9 +737,9 @@ async function runDiag() {
 }
 /* Dify 召回来源标识 */
 .ai-ref.dify-ref {
-  color: #c084fc;
-  border-color: rgba(192, 132, 252, 0.45);
-  background: rgba(192, 132, 252, 0.08);
+  color: var(--purple);
+  border-color: color-mix(in srgb, var(--purple) 45%, transparent);
+  background: color-mix(in srgb, var(--purple) 8%, transparent);
 }
 .ai-ref .ico {
   width: 12px;
@@ -726,7 +749,7 @@ async function runDiag() {
 }
 .dify-score {
   margin-left: 4px;
-  color: #c084fc;
+  color: var(--purple);
   font-weight: 700;
 }
 .ai-refs-badge {
@@ -743,18 +766,18 @@ async function runDiag() {
   height: 12px;
 }
 .ai-refs-badge.ok {
-  color: #c084fc;
-  background: rgba(192, 132, 252, 0.12);
-  border: 1px solid rgba(192, 132, 252, 0.4);
+  color: var(--purple);
+  background: color-mix(in srgb, var(--purple) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--purple) 40%, transparent);
 }
 .ai-refs-badge.warn {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent);
 }
 
 .ai-typing {
-  color: var(--muted);
+  color: var(--txt2);
   display: flex;
   align-items: center;
   gap: 4px;
@@ -811,7 +834,7 @@ async function runDiag() {
   border: none;
   border-radius: 8px;
   background: var(--cyan);
-  color: #04181d;
+  color: var(--txt3);
   font-weight: 600;
   cursor: pointer;
 }
@@ -840,7 +863,7 @@ async function runDiag() {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .ai-field select,
 .ai-field input {
@@ -859,7 +882,7 @@ async function runDiag() {
 }
 .ai-tip {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   line-height: 1.6;
   margin: 0;
 }
@@ -873,7 +896,7 @@ async function runDiag() {
 .ai-fb-btn {
   background: var(--bg);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--txt2);
   border-radius: 999px;
   padding: 3px 12px;
   font-size: 12px;
@@ -884,21 +907,21 @@ async function runDiag() {
   color: var(--txt);
 }
 .ai-fb-btn.on {
-  background: rgba(34, 211, 238, 0.12);
+  background: color-mix(in srgb, var(--cyan) 12%, transparent);
   border-color: var(--cyan);
   color: var(--cyan);
 }
 
-.ai-corrmask {
+.modal-mask {
   position: fixed;
   inset: 0;
   z-index: 100;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--accent-50);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.ai-corrmodal {
+.modal {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -907,7 +930,7 @@ async function runDiag() {
 }
 .ai-corrtip {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin: 4px 0 10px;
 }
 .ai-corrta {

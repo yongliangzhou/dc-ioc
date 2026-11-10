@@ -23,12 +23,12 @@ defineProps<{ message?: string }>()
   margin-top: 5px;
   font-size: 12px;
   line-height: 1.4;
-  color: #ff6b6b;
+  color: var(--red);
   animation: fe-in 0.18s ease;
 }
 .fe-icon {
   flex: none;
-  color: #ff6b6b;
+  color: var(--red);
 }
 .fe-text {
   word-break: break-word;
@@ -45,7 +45,9 @@ defineProps<{ message?: string }>()
 }
 .fe-enter-active,
 .fe-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
 }
 .fe-enter-from,
 .fe-leave-to {

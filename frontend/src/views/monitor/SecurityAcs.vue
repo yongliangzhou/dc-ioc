@@ -1,5 +1,6 @@
 <template>
   <div class="page">
+    <AsyncSection :loading="loading" :empty="!s.total" @retry="refresh" />
     <div class="page-head">
       <div>
         <h2 class="page-title">门禁系统</h2>
@@ -206,6 +207,7 @@
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { DoorOpen, Activity, LogIn, ShieldAlert } from 'lucide-vue-next'
 import { KpiCard } from '@dc-ioc/ui'
@@ -573,7 +575,7 @@ void ShieldAlert
 }
 .page-sub {
   margin: 2px 0 0;
-  color: var(--text-2);
+  color: var(--txt2);
   font-size: 12px;
 }
 .head-actions {
@@ -583,20 +585,20 @@ void ShieldAlert
 }
 .btn {
   padding: 6px 14px;
-  border: 1px solid var(--border);
-  background: var(--bg-1);
-  color: var(--text-1);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt);
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
 }
 .btn:hover {
-  border-color: var(--brand);
-  color: var(--brand);
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 .mock-flag-sm {
   font-size: 12px;
-  color: #d06a3a;
+  color: var(--amber);
 }
 
 .kpi-row {
@@ -622,7 +624,7 @@ void ShieldAlert
   display: flex;
   gap: 12px;
   font-size: 11px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .lg {
   display: inline-flex;
@@ -636,16 +638,16 @@ void ShieldAlert
   display: inline-block;
 }
 .lg-dot.g {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .lg-dot.b {
-  background: #3f8fbf;
+  background: var(--blue-bg);
 }
 .lg-dot.y {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .lg-dot.r {
-  background: #d23b3b;
+  background: var(--red-bg);
 }
 .plan-wrap {
   display: flex;
@@ -654,67 +656,67 @@ void ShieldAlert
 }
 .plan-svg {
   width: 100%;
-  background: var(--bg-2);
+  background: var(--bg2);
   border-radius: 8px;
 }
 .floor {
-  fill: #0d141d;
-  stroke: #243240;
+  fill: var(--txt3);
+  stroke: var(--txt3);
   stroke-width: 1.5;
 }
 .floor-label {
-  fill: #7d93a8;
+  fill: var(--txt2);
   font-size: 13px;
   font-weight: 600;
 }
 .corridor {
-  fill: #14202c;
-  stroke: #243240;
+  fill: var(--txt3);
+  stroke: var(--txt3);
 }
 .corr-label {
-  fill: #5f7488;
+  fill: var(--txt2);
   font-size: 12px;
 }
 .zone {
-  fill: #12202c;
-  stroke: #2a3d4d;
+  fill: var(--txt3);
+  stroke: var(--txt3);
   stroke-dasharray: 3 3;
 }
 .zone-label {
-  fill: #8aa2b5;
+  fill: var(--txt2);
   font-size: 11px;
 }
 .pt {
   cursor: pointer;
 }
 .pt-dot {
-  stroke: #0a0e14;
+  stroke: var(--txt3);
   stroke-width: 1.5;
 }
 .pt-dot.normal {
-  fill: #2fae6b;
+  fill: var(--green);
 }
 .pt-dot.open {
-  fill: #3f8fbf;
+  fill: var(--blue);
 }
 .pt-dot.abnormal {
-  fill: #d06a3a;
+  fill: var(--amber);
 }
 .pt-dot.intrude {
-  fill: #d23b3b;
+  fill: var(--red);
 }
 .pt-name {
-  fill: #9fb3c5;
+  fill: var(--txt);
   font-size: 9px;
   text-anchor: middle;
 }
 .pt.sel .pt-dot {
-  stroke: #fff;
+  stroke: var(--txt-strong);
   stroke-width: 2;
 }
 .pt-pulse {
   fill: none;
-  stroke: #3f8fbf;
+  stroke: var(--blue);
   stroke-width: 1.5;
   animation: pulse 1.4s ease-out infinite;
 }
@@ -729,23 +731,23 @@ void ShieldAlert
   }
 }
 .pt-info {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
-  background: var(--bg-2);
+  background: var(--bg2);
 }
 /* 统一图形编辑入口按钮 */
 .plan-edit {
-  background: var(--bg-1);
-  border: 1px solid var(--brand);
-  color: var(--brand);
+  background: var(--bg2);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
   border-radius: 6px;
   padding: 3px 10px;
   font-size: 11px;
   cursor: pointer;
 }
 .plan-edit:hover {
-  background: rgba(63, 159, 191, 0.14);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
 }
 .pt-info-h {
   display: flex;
@@ -760,7 +762,7 @@ void ShieldAlert
   flex-wrap: wrap;
   gap: 4px 16px;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 /* 侧栏 */
@@ -771,12 +773,12 @@ void ShieldAlert
 }
 .ctrl-tip {
   font-size: 11px;
-  color: var(--text-2);
+  color: var(--txt2);
   margin-top: 8px;
 }
 .ctrl-sel {
   margin-top: 10px;
-  border-top: 1px dashed var(--border);
+  border-top: 1px dashed var(--line);
   padding-top: 8px;
   display: flex;
   flex-direction: column;
@@ -791,42 +793,42 @@ void ShieldAlert
   gap: 8px;
 }
 .qc-btn {
-  border: 1px solid var(--border);
-  background: var(--bg-1);
-  color: var(--text-1);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt);
   font-size: 12px;
   padding: 5px 12px;
   border-radius: 5px;
   cursor: pointer;
 }
 .qc-btn.open {
-  border-color: #2f8fbf;
-  color: #3f9fcf;
+  border-color: var(--blue-line);
+  color: var(--blue);
 }
 .qc-btn.open:hover {
-  background: rgba(47, 143, 191, 0.12);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
 .qc-btn.lock {
-  border-color: #b4451f;
-  color: #d06a3a;
+  border-color: var(--amber-line);
+  color: var(--amber);
 }
 .qc-btn.lock:hover {
-  background: rgba(180, 69, 31, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
 }
 .ctrl-state {
   font-size: 11px;
 }
 .ctrl-state.open {
-  color: #3f9fcf;
+  color: var(--blue);
 }
 .ctrl-state.abnormal {
-  color: #d06a3a;
+  color: var(--amber);
 }
 .ctrl-state.intrude {
-  color: #d23b3b;
+  color: var(--red);
 }
 .ctrl-state.normal {
-  color: #2fae6b;
+  color: var(--green);
 }
 
 /* 告警 */
@@ -847,13 +849,13 @@ void ShieldAlert
   align-items: center;
   font-size: 12px;
   padding: 4px 0;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .a-door {
-  color: var(--brand);
+  color: var(--cyan);
 }
 .a-desc {
-  color: var(--text-1);
+  color: var(--txt);
 }
 
 /* 事件流 */
@@ -873,44 +875,44 @@ void ShieldAlert
   gap: 10px;
   padding: 5px 0;
   font-size: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .evt-time {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .evt-door {
-  color: var(--brand);
+  color: var(--cyan);
   font-weight: 500;
   min-width: 90px;
 }
 .evt-person {
-  color: var(--text-1);
+  color: var(--txt);
   min-width: 90px;
 }
 .evt-act {
   flex: 1;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 .tag.g {
-  color: #2fae6b;
-  border-color: rgba(43, 212, 122, 0.4);
-  background: rgba(43, 212, 122, 0.08);
+  color: var(--green);
+  border-color: var(--green-line);
+  background: color-mix(in srgb, var(--green) 8%, transparent);
 }
 .tag.a {
-  color: #d06a3a;
-  border-color: rgba(255, 176, 32, 0.4);
-  background: rgba(255, 176, 32, 0.08);
+  color: var(--amber);
+  border-color: var(--amber-line);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
 }
 .tag.r {
-  color: #d23b3b;
-  border-color: rgba(255, 77, 94, 0.4);
-  background: rgba(255, 77, 94, 0.09);
+  color: var(--red);
+  border-color: var(--red-line);
+  background: color-mix(in srgb, var(--red) 9%, transparent);
 }
 .tag.b {
-  color: #3f9fcf;
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.08);
+  color: var(--blue);
+  border-color: var(--blue-line);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
 }
 
 /* 授权分级 */
@@ -920,10 +922,10 @@ void ShieldAlert
   gap: 10px;
 }
 .area-block {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
-  background: var(--bg-2);
+  background: var(--bg2);
 }
 .area-head {
   display: flex;
@@ -938,7 +940,7 @@ void ShieldAlert
 .auth-val {
   font-size: 12px;
   font-weight: 600;
-  color: #3f9fcf;
+  color: var(--blue);
 }
 .muted {
   font-size: 11px;

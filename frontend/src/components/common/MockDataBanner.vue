@@ -63,20 +63,20 @@ withDefaults(
 }
 /* 全量模拟: 琥珀 */
 .mb-full {
-  color: #d9a441;
-  background: rgba(217, 164, 65, 0.1);
-  border: 1px solid rgba(217, 164, 65, 0.35);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
 }
 .mb-full b {
-  color: #f0b27a;
+  color: var(--amber);
 }
 /* 真假混排: 橙红, 比 full 更醒目——因为更不容易被发现 */
 .mb-partial {
-  color: #e0844a;
-  background: rgba(224, 132, 74, 0.12);
-  border: 1px solid rgba(224, 132, 74, 0.4);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 40%, transparent);
 }
 .mb-partial b {
-  color: #f5a97a;
+  color: var(--amber);
 }
 </style>

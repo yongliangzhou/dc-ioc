@@ -22,7 +22,9 @@
         style="width: 200px"
         @keyup.enter="applyFilters"
       />
-      <button class="btn-sm primary" @click="applyFilters">{{ tl('查询') }}</button>
+      <button class="btn-sm btn-primary" @click="applyFilters">{{ tl('查询') }}</button>
+      <button class="btn-ghost btn-sm" @click="resetFilters">{{ tl('重置') }}</button>
+      <FilterBar compact view-key="cabinets" :capture="captureView" :apply="applySavedView" />
       <span class="muted" style="margin-left: auto; font-size: 11px"
         >{{ tl('第') }} {{ page }}/{{ pages }} {{ tl('页') }} {{ tl('·') }} {{ total }}
         {{ tl('台') }}</span
@@ -94,20 +96,18 @@
     </AsyncSection>
 
     <!-- 分页 -->
-    <div v-if="pages > 1" class="flex center gap8" style="margin: 10px 0">
-      <button class="btn-sm" :disabled="page <= 1" @click="goPrev">
-        {{ tl('上一页') }}
-      </button>
-      <span class="muted" style="font-size: 11px">{{ page }} / {{ pages }}</span>
-      <button class="btn-sm" :disabled="page >= pages" @click="goNext">
-        {{ tl('下一页') }}
-      </button>
-    </div>
+    <Pagination
+      :total="total"
+      :page="page"
+      :size="pageSize"
+      @change="onPageChange"
+      @size-change="onSizeChange"
+    />
 
     <!-- 机柜遥测弹窗 -->
     <teleport to="body">
-      <div class="tf-mask" v-if="sel" @click.self="sel = null">
-        <div class="tf-modal" style="width: min(760px, 96vw)">
+      <div class="modal-mask" v-if="sel" @click.self="sel = null">
+        <div class="modal" style="width: min(760px, 96vw)">
           <div class="tf-head">
             <div>
               <h3>{{ tl('机柜遥测') }} {{ tl('·') }} {{ sel.code }}</h3>
@@ -151,6 +151,10 @@
 </template>
 
 <script setup lang="ts">
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { FilterView } from '@/composables/useViewPreferences'
+import { useFilterQuery } from '@/composables/useFilterQuery'
+import Pagination from '@/components/Pagination.vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -167,7 +171,7 @@ const page = ref(1)
 const pages = ref(1)
 const room = ref('')
 const kw = ref('')
-const pageSize = 20
+const pageSize = ref(20)
 const rooms = Array.from({ length: 12 }, (_, i) => `R${String(i + 1).padStart(2, '0')}`)
 
 const uPct = (c: Cabinet) => Math.round((c.u_used / c.u_total) * 100)
@@ -188,12 +192,12 @@ async function fetchList(showLoading: boolean) {
   try {
     const res: Paginated<Cabinet> = await getCabinets({
       page: page.value,
-      size: pageSize,
+      size: pageSize.value,
       room: room.value || undefined,
     })
     items.value = res.items
     total.value = res.total
-    pages.value = Math.max(1, Math.ceil(res.total / pageSize))
+    pages.value = Math.max(1, Math.ceil(res.total / pageSize.value))
   } catch (e) {
     // 轮询失败静默（保留上一次成功数据，避免每轮闪烁错误态）；
     // 仅显式刷新/首屏才把错误暴露给 AsyncSection 的「重试」状态
@@ -212,19 +216,6 @@ function applyFilters() {
   return refresh()
 }
 
-function goPrev() {
-  if (page.value > 1) {
-    page.value--
-    void refresh()
-  }
-}
-
-function goNext() {
-  if (page.value < pages.value) {
-    page.value++
-    void refresh()
-  }
-}
 /** 后台轮询：静默更新列表 */
 async function poll() {
   await fetchList(false)
@@ -281,6 +272,40 @@ onMounted(() => {
   timer = window.setInterval(poll, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 15000))
 })
 onBeforeUnmount(() => clearInterval(timer))
+
+function onPageChange(p: number) {
+  page.value = p
+  void refresh()
+}
+function onSizeChange(s: number) {
+  pageSize.value = s
+  page.value = 1
+  void refresh()
+}
+
+// 04 §6.2: 筛选条件与分页写入 URL query
+useFilterQuery({ room, kw, page, pageSize })
+
+function resetFilters() {
+  room.value = ''
+  kw.value = ''
+  applyFilters()
+}
+
+// 04 §6.2: 统一筛选栏的保存视图（compact 模式，查询/重置仍由本页提供）
+function captureView() {
+  return { filters: { room: room.value, kw: kw.value } }
+}
+
+function applySavedView(v: FilterView) {
+  const f = v.filters
+  const refs: Record<string, { value: string }> = { room, kw }
+  for (const [k, val] of Object.entries(f)) {
+    const slot = refs[k]
+    if (slot && typeof val === 'string') slot.value = val
+  }
+  void applyFilters()
+}
 </script>
 
 <style scoped>
@@ -318,7 +343,7 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
@@ -338,7 +363,7 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .progress {
   height: 6px;
-  background: #13233f;
+  background: var(--panel2);
   border-radius: 4px;
   overflow: hidden;
 }

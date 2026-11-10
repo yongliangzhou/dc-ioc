@@ -6,6 +6,7 @@
     </div>
 
     <!-- KPI -->
+    <AsyncSection :loading="loading" :error="err" :empty="!data" @retry="load" />
     <div class="grid cols-4" v-if="data">
       <MetricCard
         metricName="avgHealth"
@@ -42,17 +43,6 @@
         :severity="data.criticalCount > 0 ? 'crit' : 'normal'"
       />
     </div>
-    <Panel v-else-if="loading"
-      ><div class="flex center">
-        <span class="muted">{{ tl('加载中...') }}</span>
-      </div></Panel
-    >
-    <Panel v-else-if="err"
-      ><div class="flex center">
-        <span class="muted">{{ err }}</span>
-      </div></Panel
-    >
-
     <!-- 健康分环形图 + 柱状图 -->
     <div class="grid cols-2" v-if="data">
       <Panel :title="tl('健康分分布')">
@@ -102,6 +92,7 @@
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import { toErrorMessage } from '@/composables/useAsyncPage'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -146,7 +137,9 @@ const barChartOption = computed<EChartsOption | null>(() => {
   )
 })
 
-onMounted(async () => {
+async function load() {
+  loading.value = true
+  err.value = ''
   try {
     data.value = await getHealthOverview()
   } catch (e: unknown) {
@@ -154,7 +147,8 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+onMounted(load)
 </script>
 
 <style scoped>
@@ -195,15 +189,15 @@ onMounted(async () => {
   font-size: 13px;
 }
 .score-badge.ok {
-  background: rgba(43, 212, 122, 0.15);
+  background: color-mix(in srgb, var(--green) 15%, transparent);
   color: var(--green);
 }
 .score-badge.warn {
-  background: rgba(255, 176, 32, 0.15);
+  background: color-mix(in srgb, var(--amber) 15%, transparent);
   color: var(--amber);
 }
 .score-badge.crit {
-  background: rgba(255, 77, 94, 0.15);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
   color: var(--red);
 }
 .trend {

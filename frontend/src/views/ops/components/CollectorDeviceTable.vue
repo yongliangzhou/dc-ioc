@@ -2,11 +2,30 @@
   <Panel class="scroll-x">
     <table>
       <caption class="sr-only">
-        {{ tl('外部注册设备列表') }}（{{ tl('状态') }}、{{ tl('设备') }} ID、{{ tl('名称') }}、{{
+        {{
+          tl('外部注册设备列表')
+        }}（{{
+          tl('状态')
+        }}、{{
+          tl('设备')
+        }}
+        ID、{{
+          tl('名称')
+        }}、{{
           tl('型号')
-        }}、IP、{{ tl('协议') }}、{{ tl('业务域') }}、{{ tl('厂商') }}、{{ tl('最近上报') }}、{{
+        }}、IP、{{
+          tl('协议')
+        }}、{{
+          tl('业务域')
+        }}、{{
+          tl('厂商')
+        }}、{{
+          tl('最近上报')
+        }}、{{
           tl('测点数')
-        }}、{{ tl('操作') }}）
+        }}、{{
+          tl('操作')
+        }}）
       </caption>
       <thead>
         <tr>
@@ -90,17 +109,17 @@ defineEmits<{
 
 <style scoped>
 :deep(tr.sel td) {
-  background: rgba(34, 227, 255, 0.08);
+  background: var(--accent-08);
 }
 :deep(tbody tr) {
   cursor: pointer;
 }
 .btn-sm.danger {
-  background: rgba(242, 63, 63, 0.15);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
   color: var(--red);
-  border-color: rgba(242, 63, 63, 0.4);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
 }
 .btn-sm.danger:hover {
-  background: rgba(242, 63, 63, 0.3);
+  background: color-mix(in srgb, var(--red) 30%, transparent);
 }
 </style>

@@ -96,7 +96,7 @@ defineExpose({ open, close, setLoading, setError })
 .cf-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -109,11 +109,11 @@ defineExpose({ open, close, setLoading, setError })
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
   overflow: hidden;
 }
 .cf-modal.danger {
-  border-color: rgba(242, 63, 63, 0.5);
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
 }
 .cf-head {
   padding: 14px 16px;
@@ -160,17 +160,17 @@ defineExpose({ open, close, setLoading, setError })
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
 .btn-sm.danger {
-  background: rgba(242, 63, 63, 0.15);
+  background: color-mix(in srgb, var(--red) 15%, transparent);
   color: var(--red);
-  border-color: rgba(242, 63, 63, 0.4);
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
 }
 .btn-sm.danger:hover:not(:disabled) {
-  background: rgba(242, 63, 63, 0.3);
+  background: color-mix(in srgb, var(--red) 30%, transparent);
 }
 .btn-sm:disabled {
   opacity: 0.6;

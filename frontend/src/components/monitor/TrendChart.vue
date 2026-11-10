@@ -28,6 +28,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import echarts, {
   type EChartsOption,
@@ -136,10 +137,13 @@ const containerHeight = computed(() => (props.height ? `${props.height}px` : '20
 const isEmpty = computed(() => {
   if (props.option) return false
   const seriesData = props.series ?? []
-  return seriesData.length === 0 || seriesData.every((s) => {
-    const d = (s as TrendSeries).data
-    return !Array.isArray(d) || d.length === 0
-  })
+  return (
+    seriesData.length === 0 ||
+    seriesData.every((s) => {
+      const d = (s as TrendSeries).data
+      return !Array.isArray(d) || d.length === 0
+    })
+  )
 })
 
 // 从 xAxisData + series 构建 ECharts option
@@ -162,13 +166,13 @@ const builtOption = computed<EChartsOption>(() => {
 
   const colors = [
     CHART_BASE.labelColor,
-    '#22c55e',
-    '#f97316',
-    '#8b5cf6',
-    '#ef4444',
-    '#eab308',
-    '#3b82f6',
-    '#ec4899',
+    cssToken('--green'),
+    cssToken('--amber'),
+    cssToken('--purple'),
+    cssToken('--red'),
+    cssToken('--amber'),
+    cssToken('--blue'),
+    cssToken('--red'),
   ]
 
   const echartsSeries: SeriesOption[] = s.map((serRaw, i) => {
@@ -192,7 +196,7 @@ const builtOption = computed<EChartsOption>(() => {
         borderRadius: [4, 4, 0, 0],
         color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
           { offset: 0, color: c },
-          { offset: 1, color: 'rgba(0,0,0,0.05)' },
+          { offset: 1, color: cssToken('--accent-08') },
         ]),
       }
       base.smooth = false
@@ -212,7 +216,7 @@ const builtOption = computed<EChartsOption>(() => {
           ? {
               color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
                 { offset: 0, color: c },
-                { offset: 1, color: 'rgba(0,0,0,0)' },
+                { offset: 1, color: cssToken('--accent-02') },
               ]),
             }
           : (ser.areaStyle as LineSeriesOption['areaStyle'])

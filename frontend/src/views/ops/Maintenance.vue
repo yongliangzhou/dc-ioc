@@ -53,7 +53,7 @@
         <Panel>
           <div class="panel-head">
             <h5 class="section-title">{{ tl('维保计划') }}</h5>
-            <button class="btn-sm primary" v-bind="authState('write')" @click="openPlanCreate">
+            <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openPlanCreate">
               {{ tl('新建计划') }}
             </button>
           </div>
@@ -103,7 +103,7 @@
         <Panel>
           <div class="panel-head">
             <h5 class="section-title">{{ selectedPlanName || tl('执行记录') }}</h5>
-            <button class="btn-sm primary" v-bind="authState('write')" @click="openRecCreate">
+            <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openRecCreate">
               {{ tl('录入记录') }}
             </button>
           </div>
@@ -146,8 +146,8 @@
     </AsyncSection>
 
     <!-- 执行记录抽屉 -->
-    <div class="drawer-mask" v-if="recDrawer" @click.self="recDrawer = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="recDrawer" @click.self="recDrawer = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ recForm.id ? tl('编辑维保记录') : tl('录入维保记录') }}</span>
           <button class="x" @click="recDrawer = false">✕</button>
@@ -189,7 +189,7 @@
           <div v-if="recErr" class="err">{{ recErr }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="recDrawer = false">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="recSaving" @click="saveRec">
+            <button class="btn-sm btn-primary" :disabled="recSaving" @click="saveRec">
               {{ recSaving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -198,8 +198,8 @@
     </div>
 
     <!-- 计划抽屉 -->
-    <div class="drawer-mask" v-if="planDrawer" @click.self="planDrawer = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="planDrawer" @click.self="planDrawer = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ planForm.id ? tl('编辑维保计划') : tl('新建维保计划') }}</span>
           <button class="x" @click="planDrawer = false">✕</button>
@@ -264,7 +264,7 @@
           <div v-if="planErr" class="err">{{ planErr }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="planDrawer = false">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="planSaving" @click="savePlan">
+            <button class="btn-sm btn-primary" :disabled="planSaving" @click="savePlan">
               {{ planSaving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -565,13 +565,13 @@ const page = useAsyncPage<PlanView[]>(
   padding: 10px 8px;
   cursor: pointer;
   border-radius: 6px;
-  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--line);
 }
 .plan-row:hover {
   background: var(--bg2);
 }
 .plan-row.sel {
-  background: rgba(64, 150, 255, 0.08);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
   border-left: 3px solid var(--blue);
 }
 .p-name {
@@ -588,7 +588,7 @@ const page = useAsyncPage<PlanView[]>(
   gap: 8px;
 }
 .p-code {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 11px;
   margin-left: 8px;
 }
@@ -609,19 +609,19 @@ const page = useAsyncPage<PlanView[]>(
   background: var(--bg2);
 }
 .pill-tag.g {
-  background: rgba(82, 196, 26, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .pill-tag.a {
-  background: rgba(250, 173, 20, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
   color: var(--amber);
 }
 .pill-tag.r {
-  background: rgba(255, 77, 79, 0.12);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
   color: var(--red);
 }
 .pill-tag.b {
-  background: rgba(64, 150, 255, 0.12);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
   color: var(--blue);
 }
 .tbl {
@@ -637,12 +637,12 @@ const page = useAsyncPage<PlanView[]>(
 }
 .tbl-head {
   font-weight: 600;
-  color: var(--muted);
-  border-bottom: 2px solid var(--border);
+  color: var(--txt2);
+  border-bottom: 2px solid var(--line);
   font-size: 12px;
 }
 .tbl-row {
-  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--line);
 }
 .col {
   flex-shrink: 0;
@@ -668,15 +668,15 @@ const page = useAsyncPage<PlanView[]>(
 .btn-sm {
   padding: 5px 12px;
   border-radius: 7px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--bg2);
-  color: var(--text2);
+  color: var(--txt2);
   cursor: pointer;
   font-size: 12px;
 }
 .btn-sm.primary {
   background: var(--blue);
-  color: #fff;
+  color: var(--txt-strong);
   border-color: var(--blue);
   font-weight: 600;
 }
@@ -695,10 +695,10 @@ const page = useAsyncPage<PlanView[]>(
 .link.danger {
   color: var(--red);
 }
-.drawer-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -706,14 +706,14 @@ const page = useAsyncPage<PlanView[]>(
   padding: 6vh 16px;
   z-index: 40;
 }
-.drawer {
+.as-drawer {
   width: 420px;
   max-width: 92vw;
-  background: var(--card-bg);
+  background: var(--panel);
   height: 100%;
   padding: 18px;
   overflow: auto;
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+  box-shadow: -8px 0 24px var(--accent-35);
 }
 .drawer-head {
   display: flex;
@@ -726,7 +726,7 @@ const page = useAsyncPage<PlanView[]>(
 .x {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 16px;
   cursor: pointer;
 }
@@ -740,14 +740,14 @@ const page = useAsyncPage<PlanView[]>(
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--text2);
+  color: var(--txt2);
 }
 .ipt {
   background: var(--bg2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 7px;
   padding: 7px 9px;
-  color: var(--text);
+  color: var(--txt);
   font-size: 13px;
   font-family: inherit;
 }
@@ -764,7 +764,7 @@ const page = useAsyncPage<PlanView[]>(
 .empty {
   text-align: center;
   padding: 32px;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
 }
 </style>

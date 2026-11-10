@@ -9,19 +9,15 @@
       <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="grid cols-4">
-      <SkeletonCard v-for="i in 6" :key="i" />
-    </div>
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="!s && !loading && !error"
+      :retrying="loading"
+      @retry="loadData"
+    />
 
-    <!-- Error -->
-    <Panel v-else-if="error" class="err-card">
-      <div class="err-title">{{ tl('加载失败') }}</div>
-      <div class="err-detail">{{ error }}</div>
-      <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </Panel>
-
-    <template v-else-if="s">
+    <template v-if="s">
       <!-- ======== 3.2.1 低压一次系统图 SVG + 备自投/柴发开关监视 ======== -->
       <Panel>
         <template #ct>{{ tl('低压一次系统图') }}</template>
@@ -212,7 +208,7 @@
           unit="kW"
           :decimals="0"
           :bar-value="Math.min(100, (totalPower / ratedP) * 100)"
-          bar-color="var(--violet)"
+          bar-color="var(--purple)"
           size="sm"
           :status="totalPower > ratedP * 0.85 ? 'warning' : 'normal'"
         />
@@ -611,13 +607,14 @@
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt, breakerCls, pfCls, loadCls, tempCls, thduCls, genHours } from '@/utils/format'
 import { KpiCard } from '@dc-ioc/ui'
-import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import { AlarmBadge } from '@dc-ioc/ui'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import { getPowerLvDetailed, type LvSummary, type LvBranchView } from '@/api/power'
@@ -939,9 +936,24 @@ function genCurrent(n: number, base: number, peak: number): number[] {
 const phaseTrend = reactive({
   labels: genHours(24),
   series: [
-    { name: 'Ia', type: 'line' as const, data: genCurrent(24, 120, 420), color: '#22d3ee' },
-    { name: 'Ib', type: 'line' as const, data: genCurrent(24, 115, 405), color: '#22c55e' },
-    { name: 'Ic', type: 'line' as const, data: genCurrent(24, 118, 412), color: '#f59e0b' },
+    {
+      name: 'Ia',
+      type: 'line' as const,
+      data: genCurrent(24, 120, 420),
+      color: cssToken('--cyan'),
+    },
+    {
+      name: 'Ib',
+      type: 'line' as const,
+      data: genCurrent(24, 115, 405),
+      color: cssToken('--green'),
+    },
+    {
+      name: 'Ic',
+      type: 'line' as const,
+      data: genCurrent(24, 118, 412),
+      color: cssToken('--amber'),
+    },
   ],
 })
 
@@ -972,7 +984,7 @@ const loadSeries = computed(() => [
     name: tl('负载率 (%)'),
     type: 'bar' as const,
     data: branches.value.slice(0, 12).map((d) => d.loadPct),
-    color: '#3b82f6',
+    color: cssToken('--blue'),
     barWidth: '55%',
   },
 ])
@@ -1343,12 +1355,12 @@ onMounted(loadData)
 .view-head h1 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   margin: 0;
 }
 .view-head .sub {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-top: 2px;
   display: block;
 }
@@ -1371,7 +1383,7 @@ onMounted(loadData)
 
 /* ── SVG 一次图 ── */
 .schematic-wrap {
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--accent-50);
   border-radius: 8px;
   padding: 8px;
 }
@@ -1381,35 +1393,35 @@ onMounted(loadData)
   display: block;
 }
 .bus {
-  fill: #22d3ee;
+  fill: var(--cyan);
   opacity: 0.85;
 }
 .bus-label {
-  fill: var(--text-muted, #94a3b8);
+  fill: var(--txt3);
   font-size: 11px;
   text-anchor: middle;
 }
 .feeder-line line {
-  stroke: #475569;
+  stroke: var(--txt3);
   stroke-width: 2;
 }
 .tx-box {
-  fill: #1e3a5f;
-  stroke: #22d3ee;
+  fill: var(--blue);
+  stroke: var(--cyan);
   stroke-width: 1;
 }
 .tx-text {
-  fill: #cbd5e1;
+  fill: var(--txt);
   font-size: 11px;
   text-anchor: middle;
 }
 .dg-box {
-  fill: #3b2f1e;
-  stroke: #f59e0b;
+  fill: var(--txt3);
+  stroke: var(--amber);
   stroke-width: 1;
 }
 .dg-text {
-  fill: #fcd34d;
+  fill: var(--amber);
   font-size: 11px;
   text-anchor: middle;
 }
@@ -1421,38 +1433,38 @@ onMounted(loadData)
   transition: filter 0.2s;
 }
 .breaker-node:hover .breaker-rect {
-  filter: drop-shadow(0 0 6px rgba(34, 211, 255, 0.7));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cyan) 70%, transparent));
 }
 .breaker-rect.g {
-  fill: rgba(34, 197, 94, 0.25);
-  stroke: #22c55e;
+  fill: color-mix(in srgb, var(--green) 25%, transparent);
+  stroke: var(--green);
 }
 .breaker-rect.r {
-  fill: rgba(239, 68, 68, 0.25);
-  stroke: #ef4444;
+  fill: color-mix(in srgb, var(--red) 25%, transparent);
+  stroke: var(--red);
 }
 .breaker-rect.b {
-  fill: rgba(59, 130, 246, 0.2);
-  stroke: #3b82f6;
+  fill: color-mix(in srgb, var(--blue) 20%, transparent);
+  stroke: var(--blue);
 }
 .breaker-rect.a {
-  fill: rgba(245, 158, 11, 0.2);
-  stroke: #f59e0b;
+  fill: color-mix(in srgb, var(--amber) 20%, transparent);
+  stroke: var(--amber);
 }
 .breaker-text {
-  fill: #e5e7eb;
+  fill: var(--txt-strong);
   font-size: 11px;
   text-anchor: middle;
   font-weight: 600;
   pointer-events: none;
 }
 .bus-tie-label {
-  fill: #f59e0b;
+  fill: var(--amber);
   font-size: 9px;
   text-anchor: middle;
 }
 .feeder-load {
-  fill: var(--text-muted, #94a3b8);
+  fill: var(--txt3);
   font-size: 9px;
   text-anchor: middle;
 }
@@ -1464,22 +1476,22 @@ onMounted(loadData)
 }
 /* 统一图形编辑入口按钮 */
 .lv-edit {
-  background: var(--bg2, #0f172a);
-  border: 1px solid var(--cyan, #22d3ee);
-  color: var(--cyan, #22d3ee);
+  background: var(--bg2);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
   border-radius: 6px;
   padding: 3px 10px;
   font-size: 11px;
   cursor: pointer;
 }
 .lv-edit:hover {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .lg {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .lg .dot {
   width: 10px;
@@ -1488,22 +1500,22 @@ onMounted(loadData)
   display: inline-block;
 }
 .dot.g {
-  background: #22c55e;
+  background: var(--green-bg);
 }
 .dot.r {
-  background: #ef4444;
+  background: var(--red);
 }
 .dot.b {
-  background: #3b82f6;
+  background: var(--blue);
 }
 
 /* 节点详情 */
 .node-detail {
   margin-top: 12px;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--accent-50);
 }
 .nd-head {
   display: flex;
@@ -1519,31 +1531,31 @@ onMounted(loadData)
   border-radius: 5px;
 }
 .nd-code.g {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.12);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
 }
 .nd-code.r {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.12);
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
 }
 .nd-code.b {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.12);
+  color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
 .nd-code.a {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
 }
 .nd-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
 }
 .nd-close {
   margin-left: auto;
   background: none;
   border: none;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
   font-size: 18px;
   cursor: pointer;
   line-height: 1;
@@ -1558,15 +1570,15 @@ onMounted(loadData)
   justify-content: space-between;
   gap: 8px;
   padding: 4px 0;
-  border-bottom: 1px dotted rgba(51, 65, 85, 0.5);
+  border-bottom: 1px dotted var(--accent-50);
 }
 .nd-k {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .nd-v {
   font-size: 12px;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   font-weight: 500;
 }
 .fade-enter-active,
@@ -1591,13 +1603,13 @@ onMounted(loadData)
   gap: 8px;
   font-size: 12px;
   padding: 3px 0;
-  border-bottom: 1px dashed rgba(51, 65, 85, 0.5);
+  border-bottom: 1px dashed var(--accent-50);
 }
 .ats-row .k {
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .ats-row .v {
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   font-weight: 500;
 }
 .flow-bar {
@@ -1606,7 +1618,7 @@ onMounted(loadData)
   justify-content: center;
   gap: 8px;
   padding: 8px;
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--accent-50);
   border-radius: 6px;
   font-size: 11px;
 }
@@ -1614,23 +1626,23 @@ onMounted(loadData)
 .flow-load {
   padding: 3px 10px;
   border-radius: 5px;
-  border: 1px solid var(--border, #334155);
-  color: var(--text-muted, #94a3b8);
+  border: 1px solid var(--line);
+  color: var(--txt3);
 }
 .flow-src.on,
 .flow-load.on {
-  color: #22c55e;
-  border-color: rgba(34, 197, 94, 0.4);
-  background: rgba(34, 197, 94, 0.08);
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
+  background: color-mix(in srgb, var(--green) 8%, transparent);
 }
 .flow-bus {
   padding: 3px 10px;
   border-radius: 5px;
-  background: rgba(34, 211, 255, 0.1);
-  color: #22d3ee;
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
+  color: var(--cyan);
 }
 .flow-arrow {
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
 }
 
 /* ── table ── */
@@ -1641,26 +1653,26 @@ table {
 }
 th {
   text-align: left;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   font-weight: 600;
   font-size: 10px;
   letter-spacing: 0.4px;
   padding: 7px 8px;
-  border-bottom: 1px solid var(--border, #334155);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 td {
   padding: 6px 8px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-  color: var(--text-secondary, #94a3b8);
+  border-bottom: 1px solid var(--accent-50);
+  color: var(--txt2);
   white-space: nowrap;
 }
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--accent-02);
 }
 .d-name {
   font-weight: 500;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
 }
 .mono {
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -1673,42 +1685,42 @@ tbody tr:hover {
 }
 .report-tbl .total-row td {
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
-  border-top: 1px solid var(--border, #334155);
+  color: var(--txt-strong);
+  border-top: 1px solid var(--line);
 }
 
 /* tag */
 
 .tag.g {
-  color: #22c55e;
-  border-color: rgba(43, 212, 122, 0.4);
-  background: rgba(43, 212, 122, 0.08);
+  color: var(--green);
+  border-color: var(--green-line);
+  background: color-mix(in srgb, var(--green) 8%, transparent);
 }
 .tag.a {
-  color: #f59e0b;
-  border-color: rgba(255, 176, 32, 0.4);
-  background: rgba(255, 176, 32, 0.08);
+  color: var(--amber);
+  border-color: var(--amber-line);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
 }
 .tag.r {
-  color: #ef4444;
-  border-color: rgba(255, 77, 94, 0.4);
-  background: rgba(255, 77, 94, 0.09);
+  color: var(--red);
+  border-color: var(--red-line);
+  background: color-mix(in srgb, var(--red) 9%, transparent);
 }
 .tag.b {
-  color: #3b82f6;
-  border-color: rgba(59, 130, 246, 0.4);
-  background: rgba(59, 130, 246, 0.08);
+  color: var(--blue);
+  border-color: var(--blue-line);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
 }
 
 /* text color */
 .g-text {
-  color: #22c55e;
+  color: var(--green);
 }
 .a-text {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .r-text {
-  color: #ef4444;
+  color: var(--red);
 }
 
 /* ── 告警列表 ── */
@@ -1723,36 +1735,36 @@ tbody tr:hover {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 6px;
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--accent-50);
   border-left: 3px solid transparent;
 }
 .alarm-row.major {
-  border-left-color: #f59e0b;
+  border-left-color: var(--amber-line);
 }
 .alarm-row.critical {
-  border-left-color: #ef4444;
+  border-left-color: var(--red-line);
 }
 .alarm-row.warning {
-  border-left-color: #eab308;
+  border-left-color: var(--amber-line);
 }
 .a-ts {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .a-src {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   min-width: 80px;
 }
 .a-msg {
   font-size: 12px;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   flex: 1;
 }
 .a-val {
   font-size: 11px;
-  color: #f59e0b;
+  color: var(--amber);
 }
 
 /* ── error/empty ── */
@@ -1763,12 +1775,12 @@ tbody tr:hover {
 .err-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #ef4444;
+  color: var(--red);
   margin-bottom: 8px;
 }
 .err-detail {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-bottom: 14px;
 }
 .btn {
@@ -1777,14 +1789,14 @@ tbody tr:hover {
   gap: 6px;
   padding: 6px 18px;
   border-radius: 6px;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--line);
   background: transparent;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   font-size: 0.75rem;
   cursor: pointer;
 }
 .btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--accent-08);
 }
 .empty-tip {
   text-align: center;

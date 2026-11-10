@@ -116,7 +116,7 @@ function onSubmit() {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(4, 8, 20, 0.66);
+  background: var(--mask);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -127,27 +127,27 @@ function onSubmit() {
   max-width: 92vw;
   max-height: 88vh;
   overflow: auto;
-  background: var(--panel, #131a30);
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
 }
 .tf-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 16px 18px;
-  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--line);
 }
 .tf-head h3 {
   margin: 0;
   font-size: 15px;
-  color: var(--cyan, #22e3ff);
+  color: var(--cyan);
 }
 .tf-x {
   background: none;
   border: none;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
   font-size: 15px;
   cursor: pointer;
 }
@@ -169,17 +169,17 @@ function onSubmit() {
 }
 .tf-body label {
   font-size: 11.5px;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
   margin-top: 6px;
 }
 .req {
-  color: var(--red, #ff4d5e);
+  color: var(--red);
 }
 .tf-input {
-  background: var(--bg2, #0e1426);
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.12));
+  background: var(--bg2);
+  border: 1px solid var(--line);
   border-radius: 7px;
-  color: var(--txt, #e6f1ff);
+  color: var(--txt);
   padding: 8px 10px;
   font-size: 13px;
   outline: none;
@@ -187,7 +187,7 @@ function onSubmit() {
   box-sizing: border-box;
 }
 .tf-input:focus {
-  border-color: var(--cyan, #22e3ff);
+  border-color: var(--cyan);
 }
 .tf-area {
   resize: vertical;
@@ -201,7 +201,7 @@ function onSubmit() {
   justify-content: flex-end;
   gap: 10px;
   padding: 14px 18px;
-  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-top: 1px solid var(--line);
 }
 .tf-btn {
   padding: 8px 18px;
@@ -212,12 +212,12 @@ function onSubmit() {
 }
 .tf-btn.ghost {
   background: transparent;
-  border-color: var(--line, rgba(255, 255, 255, 0.15));
-  color: var(--txt2, #8892b0);
+  border-color: var(--line);
+  color: var(--txt2);
 }
 .tf-btn.primary {
-  background: linear-gradient(135deg, #1a73e8, #22e3ff);
-  color: #fff;
+  background: linear-gradient(135deg, var(--blue-bg), var(--cyan));
+  color: var(--txt-strong);
   font-weight: 600;
 }
 .tf-btn.primary:disabled {

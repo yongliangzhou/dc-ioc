@@ -3,9 +3,9 @@
     <div class="pp-header">
       <span class="pp-title">{{ title }}</span>
       <div class="pp-legend">
-        <span class="pp-lg"><i class="pp-dot" style="background: #22c55e"></i> UP</span>
-        <span class="pp-lg"><i class="pp-dot" style="background: #f59e0b"></i> 告警</span>
-        <span class="pp-lg"><i class="pp-dot" style="background: #374151"></i> DOWN</span>
+        <span class="pp-lg"><i class="pp-dot" style="background: var(--green-bg)"></i> UP</span>
+        <span class="pp-lg"><i class="pp-dot" style="background: var(--amber-bg)"></i> 告警</span>
+        <span class="pp-lg"><i class="pp-dot" style="background: var(--panel2)"></i> DOWN</span>
       </div>
     </div>
     <div class="pp-grid" v-if="ports.length">
@@ -140,10 +140,10 @@ function portTooltip(p: SwitchPortView): string {
 
 <style scoped>
 .port-panel {
-  border: 1px solid var(--border, #2a2e3a);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 14px;
-  background: var(--bg2, #161822);
+  background: var(--bg2);
 }
 .pp-header {
   display: flex;
@@ -189,8 +189,8 @@ function portTooltip(p: SwitchPortView): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #1e2030;
-  border: 1px solid #2a2d3a;
+  background: var(--bg2);
+  border: 1px solid var(--line);
   transition: all 0.15s;
   position: relative;
 }
@@ -199,28 +199,28 @@ function portTooltip(p: SwitchPortView): string {
   z-index: 2;
 }
 .pp-port.pp-up {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: rgba(34, 197, 94, 0.4);
+  background: color-mix(in srgb, var(--green) 15%, transparent);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
 }
 .pp-port.pp-down {
   opacity: 0.5;
 }
 .pp-port.pp-alarm {
-  background: rgba(245, 158, 11, 0.18);
-  border-color: rgba(245, 158, 11, 0.5);
+  background: color-mix(in srgb, var(--amber) 18%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 50%, transparent);
   animation: pp-pulse 1.5s ease-in-out infinite;
 }
 @keyframes pp-pulse {
   0%,
   100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--amber) 30%, transparent);
   }
   50% {
-    box-shadow: 0 0 6px 2px rgba(245, 158, 11, 0.15);
+    box-shadow: 0 0 6px 2px color-mix(in srgb, var(--amber) 15%, transparent);
   }
 }
 .pp-port.pp-selected {
-  box-shadow: 0 0 0 2px var(--cyan, #22e3ff);
+  box-shadow: 0 0 0 2px var(--cyan);
   z-index: 3;
 }
 .pp-port.pp-empty {
@@ -241,17 +241,17 @@ function portTooltip(p: SwitchPortView): string {
   margin-top: 1px;
 }
 .pp-speed-indicator.spd-25g {
-  background: #22e3ff;
+  background: var(--cyan);
 }
 .pp-speed-indicator.spd-10g {
-  background: #a78bfa;
+  background: var(--purple);
 }
 .pp-detail {
   margin-top: 10px;
   padding: 10px 12px;
-  background: var(--bg1, #0f1017);
+  background: var(--bg2);
   border-radius: 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
 }
 .pp-detail-head {
   display: flex;
@@ -270,16 +270,16 @@ function portTooltip(p: SwitchPortView): string {
   font-weight: 600;
 }
 .pp-detail-status.pp-up {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.12);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
 }
 .pp-detail-status.pp-down {
-  color: #6b7280;
-  background: rgba(107, 114, 128, 0.12);
+  color: var(--txt2);
+  background: var(--accent-12);
 }
 .pp-detail-status.pp-alarm {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
 }
 .pp-close {
   margin-left: auto;
@@ -314,9 +314,9 @@ function portTooltip(p: SwitchPortView): string {
   font-family: 'SF Mono', Consolas, monospace;
 }
 .g-text {
-  color: var(--green, #22c55e);
+  color: var(--green);
 }
 .a-text {
-  color: var(--amber, #f59e0b);
+  color: var(--amber);
 }
 </style>

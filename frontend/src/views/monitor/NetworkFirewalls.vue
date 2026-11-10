@@ -7,17 +7,13 @@
       <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="grid cols-4">
-      <SkeletonCard v-for="i in 8" :key="i" />
-    </div>
-
-    <!-- Error -->
-    <Panel v-else-if="error" class="err-card">
-      <div class="err-title">{{ tl('加载失败') }}</div>
-      <div class="err-detail">{{ error }}</div>
-      <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </Panel>
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="!s && !loading && !error"
+      :retrying="loading"
+      @retry="loadData"
+    />
 
     <!-- 2.3.1 安全仪表盘：攻击类型分布饼图 + 阻断次数趋势图 -->
     <div v-if="s && s.firewalls.length" class="grid cols-2">
@@ -49,7 +45,11 @@
         unit=""
         :bar-value="Math.min(100, (s.totalConcurrent / Math.max(1, s.maxConcurrent)) * 100)"
         bar-color="var(--cyan)"
-        :status="s.totalConcurrent / Math.max(1, s.maxConcurrent) > 0.85 ? 'warning' : 'normal'"
+        :status="
+          s.totalConcurrent / Math.max(1, s.maxConcurrent) > CAPACITY_THRESHOLDS.warn / 100
+            ? 'warning'
+            : 'normal'
+        "
         size="sm"
       />
       <KpiCard
@@ -64,7 +64,7 @@
         :title="tl('安全策略')"
         :value="s.totalPolicy"
         unit="条"
-        dot="var(--violet)"
+        dot="var(--purple)"
         size="sm"
       />
       <KpiCard :title="tl('VPN 隧道')" :value="s.totalVpn" unit="条" dot="var(--green)" size="sm" />
@@ -229,13 +229,15 @@
 </template>
 
 <script setup lang="ts">
+import { CAPACITY_THRESHOLDS } from '@/config/metricsCatalog'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, reactive, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtNum, fmtBps, genHours } from '@/utils/format'
 import { KpiCard } from '@dc-ioc/ui'
-import SkeletonCard from '@/components/monitor/SkeletonCard.vue'
 import { StatusBadge } from '@dc-ioc/ui'
 import TrendChart from '@/components/monitor/TrendChart.vue'
 import BaseChart from '@/components/charts/BaseChart.vue'
@@ -320,7 +322,7 @@ const firewallCards = computed(() => s.firewalls ?? [])
 // Helpers
 // ──────────────────────────────────────────
 function barCls(v: number): string {
-  if (v >= 85) return 'res-danger'
+  if (v >= CAPACITY_THRESHOLDS.warn) return 'res-danger'
   if (v >= 60) return 'res-warning'
   return 'res-normal'
 }
@@ -351,7 +353,7 @@ const attackPieOption = reactive<EChartsOption>({
     orient: 'vertical',
     right: '4%',
     top: 'center',
-    textStyle: { color: '#94a3b8', fontSize: 11 },
+    textStyle: { color: cssToken('--txt2'), fontSize: 11 },
     itemWidth: 10,
     itemHeight: 10,
   },
@@ -362,14 +364,14 @@ const attackPieOption = reactive<EChartsOption>({
       radius: ['45%', '70%'],
       center: ['38%', '50%'],
       avoidLabelOverlap: false,
-      itemStyle: { borderColor: '#0f172a', borderWidth: 2, borderRadius: 4 },
+      itemStyle: { borderColor: cssToken('--txt3'), borderWidth: 2, borderRadius: 4 },
       label: { show: false },
       emphasis: {
         label: {
           show: true,
           fontSize: 12,
           fontWeight: 'bold',
-          color: '#e2e8f0',
+          color: cssToken('--txt-strong'),
           formatter: '{b}\n{d}%',
         },
       },
@@ -476,12 +478,12 @@ function mockData() {
 
   // ── Attack type distribution (aggregated) ──
   const attackDist = [
-    { name: tl('SSH 暴力破解'), value: 412000, color: '#ef4444' },
-    { name: tl('端口扫描'), value: 312000, color: '#f97316' },
-    { name: tl('恶意软件 C2'), value: 198000, color: '#eab308' },
-    { name: tl('Web 攻击'), value: 156000, color: '#8b5cf6' },
-    { name: tl('SQL 注入'), value: 98000, color: '#06b6d4' },
-    { name: tl('DDoS'), value: 64000, color: '#ec4899' },
+    { name: tl('SSH 暴力破解'), value: 412000, color: cssToken('--red') },
+    { name: tl('端口扫描'), value: 312000, color: cssToken('--amber') },
+    { name: tl('恶意软件 C2'), value: 198000, color: cssToken('--amber') },
+    { name: tl('Web 攻击'), value: 156000, color: cssToken('--purple') },
+    { name: tl('SQL 注入'), value: 98000, color: cssToken('--cyan') },
+    { name: tl('DDoS'), value: 64000, color: cssToken('--red') },
   ]
 
   // ── Block trend (sum of all firewalls) ──
@@ -490,7 +492,7 @@ function mockData() {
     {
       name: tl('阻断次数'),
       data: genTimeData(N, 18000, 8000, 4000),
-      color: '#22d3ee',
+      color: cssToken('--cyan'),
     },
   ]
 
@@ -641,12 +643,12 @@ onMounted(() => {
 .view-head h1 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   margin: 0;
 }
 .view-head .sub {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-top: 2px;
   display: block;
 }
@@ -678,8 +680,8 @@ onMounted(() => {
   gap: 12px;
 }
 .res-card {
-  background: rgba(30, 41, 59, 0.6);
-  border: 1px solid var(--border, #334155);
+  background: var(--accent-50);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
 }
@@ -692,7 +694,7 @@ onMounted(() => {
 .res-name {
   font-size: 0.8125rem;
   font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
 }
 .res-bar-row {
   display: flex;
@@ -702,7 +704,7 @@ onMounted(() => {
 }
 .res-label {
   font-size: 0.6875rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   width: 32px;
   flex-shrink: 0;
 }
@@ -710,7 +712,7 @@ onMounted(() => {
   flex: 1;
   height: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--accent-08);
   overflow: hidden;
 }
 .res-fill {
@@ -719,17 +721,17 @@ onMounted(() => {
   transition: width 0.4s ease;
 }
 .res-normal {
-  background: linear-gradient(90deg, #22c55e, #4ade80);
+  background: linear-gradient(90deg, var(--green-bg), var(--green));
 }
 .res-warning {
-  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  background: linear-gradient(90deg, var(--amber-bg), var(--amber));
 }
 .res-danger {
-  background: linear-gradient(90deg, #ef4444, #f87171);
+  background: linear-gradient(90deg, var(--red), var(--red));
 }
 .res-val {
   font-size: 0.6875rem;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   width: 36px;
   text-align: right;
   flex-shrink: 0;
@@ -751,23 +753,23 @@ onMounted(() => {
 .port-table th {
   position: sticky;
   top: 0;
-  background: #1e293b;
+  background: var(--bg2);
   z-index: 2;
   text-align: left;
   padding: 8px 10px;
   font-weight: 600;
-  color: var(--text-muted, #6b7280);
-  border-bottom: 1px solid var(--border, #334155);
+  color: var(--txt3);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 .port-table td {
   padding: 7px 10px;
-  color: var(--text-secondary, #94a3b8);
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+  color: var(--txt2);
+  border-bottom: 1px solid var(--accent-50);
   white-space: nowrap;
 }
 .port-table .row-alt td {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--accent-02);
 }
 .hit-cell {
   width: 120px;
@@ -775,13 +777,17 @@ onMounted(() => {
 .hit-track {
   height: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--accent-08);
   overflow: hidden;
 }
 .hit-fill {
   height: 100%;
   border-radius: 4px;
-  background: linear-gradient(90deg, rgba(34, 211, 255, 0.4), rgba(34, 211, 255, 0.85));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--cyan) 40%, transparent),
+    color-mix(in srgb, var(--cyan) 85%, transparent)
+  );
 }
 
 /* ── device meta grid ── */
@@ -795,22 +801,22 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 5px 0;
-  border-bottom: 1px dotted rgba(51, 65, 85, 0.5);
+  border-bottom: 1px dotted var(--accent-50);
 }
 .rt-k {
   font-size: 0.6875rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
 }
 .rt-v {
   font-size: 0.7875rem;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   font-weight: 500;
 }
 
 /* ── policy hit list (per device) ── */
 .sub-title {
   font-size: 0.6875rem;
-  color: var(--cyan, #22d3ee);
+  color: var(--cyan);
   font-weight: 600;
   margin: 12px 0 6px;
 }
@@ -827,12 +833,12 @@ onMounted(() => {
 }
 .hit-rank {
   width: 18px;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   text-align: center;
 }
 .hit-name {
   width: 220px;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -840,21 +846,25 @@ onMounted(() => {
 .hit-bar {
   flex: 1;
   height: 10px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--accent-08);
   border-radius: 3px;
   overflow: hidden;
 }
 .hit-fill {
   display: block;
   height: 100%;
-  background: linear-gradient(90deg, rgba(34, 227, 255, 0.4), rgba(34, 227, 255, 0.8));
+  background: linear-gradient(
+    90deg,
+    var(--cyan-line),
+    color-mix(in srgb, var(--cyan) 80%, transparent)
+  );
   border-radius: 3px;
 }
 .hit-val {
   width: 60px;
   text-align: right;
   font-weight: 600;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
 }
 
 /* ── Utility ── */
@@ -872,10 +882,10 @@ onMounted(() => {
 }
 
 .a-text {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .g-text {
-  color: #22c55e;
+  color: var(--green);
 }
 
 /* ── Error / Empty ── */
@@ -886,12 +896,12 @@ onMounted(() => {
 .err-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #ef4444;
+  color: var(--red);
   margin-bottom: 8px;
 }
 .err-detail {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-bottom: 14px;
 }
 .btn {
@@ -900,15 +910,15 @@ onMounted(() => {
   gap: 6px;
   padding: 6px 18px;
   border-radius: 6px;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--line);
   background: transparent;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   font-size: 0.75rem;
   cursor: pointer;
   transition: background 0.2s;
 }
 .btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--accent-08);
 }
 .empty-card {
   text-align: center;

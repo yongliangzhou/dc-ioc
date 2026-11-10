@@ -44,7 +44,7 @@ function blockWidth(n: number) {
   align-items: center;
   justify-content: center;
   gap: 14px;
-  padding: var(--space-5, 24px);
+  padding: var(--space-5);
   color: var(--txt2);
 }
 .ls-text {

@@ -27,7 +27,7 @@
             <path
               d="M10 65 A50 50 0 0 1 110 65"
               fill="none"
-              stroke="rgba(255,255,255,.08)"
+              stroke="var(--accent-08)"
               stroke-width="10"
               stroke-linecap="round"
             />
@@ -61,6 +61,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
@@ -88,13 +89,13 @@ const accent = computed(
 )
 function SKIN_COLOR(skin: string) {
   const map: Record<string, string> = {
-    cyan: '#22e3ff',
-    blue: '#3b82f6',
-    green: '#2bd47a',
-    purple: '#a855f7',
-    orange: '#fb923c',
+    cyan: cssToken('--cyan'),
+    blue: cssToken('--blue'),
+    green: cssToken('--green'),
+    purple: cssToken('--purple'),
+    orange: cssToken('--amber'),
   }
-  return map[skin] || '#22e3ff'
+  return map[skin] || cssToken('--cyan')
 }
 
 interface Widget extends DataSourceTemplate {
@@ -173,14 +174,11 @@ onBeforeUnmount(() => {
 <style scoped>
 .bigscreen {
   min-height: 100vh;
-  background: #060b16;
-  color: #e2e8f0;
+  background: var(--bg);
+  color: var(--txt-strong);
   padding: 18px 22px;
 }
-.bigscreen.light {
-  background: #eef2f7;
-  color: #0f172a;
-}
+/* 阶段 3: 删除自建 .bigscreen.light 分支，主题色统一由 :root[data-theme] token 提供 */
 .bs-head {
   display: flex;
   justify-content: space-between;
@@ -191,28 +189,28 @@ onBeforeUnmount(() => {
   font-size: 22px;
   font-weight: 800;
   letter-spacing: 2px;
-  color: var(--cyan, #22e3ff);
-  text-shadow: 0 0 12px rgba(34, 227, 255, 0.4);
+  color: var(--cyan);
+  text-shadow: 0 0 12px var(--cyan-line);
 }
 .bs-meta {
   display: flex;
   align-items: center;
   gap: 14px;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--txt2);
 }
 .live {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  color: #2bd47a;
+  color: var(--green);
 }
 .live i {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #2bd47a;
-  box-shadow: 0 0 8px #2bd47a;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
   animation: blink 1.4s infinite;
 }
 @keyframes blink {
@@ -225,8 +223,8 @@ onBeforeUnmount(() => {
   }
 }
 .edit {
-  color: var(--cyan, #22e3ff);
-  border: 1px solid rgba(34, 227, 255, 0.4);
+  color: var(--cyan);
+  border: 1px solid var(--cyan-line);
   border-radius: 8px;
   padding: 4px 12px;
   text-decoration: none;
@@ -237,21 +235,17 @@ onBeforeUnmount(() => {
   gap: 16px;
 }
 .bs-card {
-  background: linear-gradient(160deg, rgba(15, 30, 50, 0.9), rgba(10, 18, 32, 0.9));
-  border: 1px solid rgba(34, 227, 255, 0.18);
+  background: linear-gradient(160deg, var(--mask), var(--mask));
+  border: 1px solid color-mix(in srgb, var(--cyan) 18%, transparent);
   border-radius: 14px;
   padding: 18px;
   min-height: 150px;
   display: flex;
   flex-direction: column;
 }
-.bigscreen.light .bs-card {
-  background: #fff;
-  border-color: rgba(8, 145, 178, 0.2);
-}
 .bs-card-label {
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--txt2);
   margin-bottom: 10px;
 }
 .bs-kpi {
@@ -263,11 +257,11 @@ onBeforeUnmount(() => {
 .bs-kpi .val {
   font-size: 38px;
   font-weight: 800;
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .bs-kpi .unit {
   font-size: 14px;
-  color: #64748b;
+  color: var(--txt2);
 }
 .bs-gauge {
   position: relative;
@@ -285,11 +279,11 @@ onBeforeUnmount(() => {
   bottom: 4px;
   font-size: 22px;
   font-weight: 700;
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .bs-gauge-val small {
   font-size: 12px;
-  color: #64748b;
+  color: var(--txt2);
   margin-left: 2px;
 }
 .bs-chart .bars {

@@ -84,20 +84,20 @@ const toneIcon = computed(() => ICONS[props.tone] ?? AlertTriangle)
 /* 示例 / 模拟: 琥珀色 —— 醒但不刺眼, 区别于红色告警 */
 .db-sample,
 .db-mock {
-  color: #d9a441;
-  background: rgba(217, 164, 65, 0.12);
-  border-color: rgba(217, 164, 65, 0.35);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 35%, transparent);
 }
 /* 陈旧: 灰蓝 */
 .db-stale {
-  color: #8892b0;
-  background: rgba(136, 146, 176, 0.12);
-  border-color: rgba(136, 146, 176, 0.3);
+  color: var(--txt2);
+  background: var(--accent-12);
+  border-color: var(--accent-35);
 }
 /* 部分降级: 橙红 */
 .db-partial {
-  color: #e0844a;
-  background: rgba(224, 132, 74, 0.12);
-  border-color: rgba(224, 132, 74, 0.35);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 35%, transparent);
 }
 </style>

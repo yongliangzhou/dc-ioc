@@ -4,7 +4,8 @@
       <h1>{{ t('customField.title') }}</h1>
       <span class="sub">{{ t('customField.subtitle') }}</span>
     </div>
-    <p v-if="notice" class="p3-notice">{{ notice }}</p>
+    <MockDataBanner :level="notice ? 'full' : 'none'" :note="notice" />
+    <AsyncSection :loading="loading" :empty="false" @retry="reload" />
 
     <div class="p3-grid">
       <section class="p3-card">
@@ -77,6 +78,8 @@
 </template>
 
 <script setup lang="ts">
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import CustomFieldInputs from '@/components/common/CustomFieldInputs.vue'
@@ -89,6 +92,7 @@ const equipmentId = ref(1)
 const optionsText = ref('')
 const notice = ref('')
 const error = ref('')
+const loading = ref(false)
 const form = reactive({
   key: '',
   label_zh: '',
@@ -119,11 +123,14 @@ function fallback(err: unknown) {
 }
 
 async function reload() {
+  loading.value = true
   try {
     fields.value = await p3Api.customFields()
     notice.value = ''
   } catch (err) {
     fallback(err)
+  } finally {
+    loading.value = false
   }
 }
 

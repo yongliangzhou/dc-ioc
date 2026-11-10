@@ -4,7 +4,8 @@
       <h1>{{ t('ipam.title') }}</h1>
       <span class="sub">{{ t('ipam.subtitle') }}</span>
     </div>
-    <p v-if="notice" class="p3-notice">{{ notice }}</p>
+    <MockDataBanner :level="notice ? 'full' : 'none'" :note="notice" />
+    <AsyncSection :loading="loading" :empty="false" @retry="reload" />
 
     <div class="p3-tabs">
       <button
@@ -146,6 +147,8 @@
 </template>
 
 <script setup lang="ts">
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { p3Api, type P3Row, type SubnetRow } from '@/api/p3'
@@ -158,6 +161,7 @@ const subnets = ref<SubnetRow[]>([])
 const addresses = ref<P3Row[]>([])
 const notice = ref('')
 const error = ref('')
+const loading = ref(false)
 const vlan = reactive({ vlan_id: 100, name: '', site: '' })
 const subnet = reactive({ cidr: '192.168.10.0/24', vlan_id: 100, gateway: '' })
 const address = reactive({ address: '', device_ci: '' })
@@ -182,6 +186,7 @@ function fallback(err: unknown) {
 }
 
 async function reload() {
+  loading.value = true
   try {
     ;[vlans.value, subnets.value, addresses.value] = await Promise.all([
       p3Api.vlans(),
@@ -191,6 +196,8 @@ async function reload() {
     notice.value = ''
   } catch (err) {
     fallback(err)
+  } finally {
+    loading.value = false
   }
 }
 

@@ -601,7 +601,7 @@ void AlertTriangle
 }
 .page-sub {
   margin: 2px 0 0;
-  color: var(--text-2);
+  color: var(--txt2);
   font-size: 12px;
 }
 .head-actions {
@@ -615,29 +615,29 @@ void AlertTriangle
   border-radius: 20px;
 }
 .arm-badge.g {
-  background: rgba(47, 174, 107, 0.12);
-  color: #2fae6b;
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  color: var(--green);
 }
 .arm-badge.a {
-  background: rgba(208, 106, 58, 0.12);
-  color: #d06a3a;
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  color: var(--amber);
 }
 .btn {
   padding: 6px 14px;
-  border: 1px solid var(--border);
-  background: var(--bg-1);
-  color: var(--text-1);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt);
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
 }
 .btn:hover {
-  border-color: var(--brand);
-  color: var(--brand);
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 .mock-flag-sm {
   font-size: 12px;
-  color: #d06a3a;
+  color: var(--amber);
 }
 
 .kpi-row {
@@ -663,7 +663,7 @@ void AlertTriangle
   display: flex;
   gap: 12px;
   font-size: 11px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .lg {
   display: inline-flex;
@@ -677,13 +677,13 @@ void AlertTriangle
   display: inline-block;
 }
 .lg-dot.g {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .lg-dot.r {
-  background: #d23b3b;
+  background: var(--red-bg);
 }
 .lg-dot.y {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .plan-wrap {
   display: flex;
@@ -692,62 +692,62 @@ void AlertTriangle
 }
 .plan-svg {
   width: 100%;
-  background: var(--bg-2);
+  background: var(--bg2);
   border-radius: 8px;
 }
 .site {
-  fill: #0d141d;
-  stroke: #243240;
+  fill: var(--txt3);
+  stroke: var(--txt3);
   stroke-width: 1.5;
 }
 .building {
-  fill: #14202c;
-  stroke: #2a3d4d;
+  fill: var(--txt3);
+  stroke: var(--txt3);
 }
 .s-label {
-  fill: #7d93a8;
+  fill: var(--txt2);
   font-size: 12px;
   font-weight: 600;
 }
 .b-label {
-  fill: #8aa2b5;
+  fill: var(--txt2);
   font-size: 11px;
 }
 .fence {
   stroke-width: 2;
 }
 .fence.armed {
-  stroke: #2fae6b;
+  stroke: var(--green);
 }
 .fence.alarm {
-  stroke: #d23b3b;
+  stroke: var(--red);
   stroke-dasharray: 4 3;
 }
 .fence.disarm {
-  stroke: #d06a3a;
+  stroke: var(--amber);
   stroke-dasharray: 2 4;
 }
 .z-dot {
-  stroke: #0a0e14;
+  stroke: var(--txt3);
   stroke-width: 1.5;
 }
 .z-dot.armed {
-  fill: #2fae6b;
+  fill: var(--green);
 }
 .z-dot.alarm {
-  fill: #d23b3b;
+  fill: var(--red);
 }
 .z-dot.disarm {
-  fill: #d06a3a;
+  fill: var(--amber);
 }
 .z-name {
-  fill: #9fb3c5;
+  fill: var(--txt);
   font-size: 8px;
   text-anchor: middle;
 }
 .z-pulse {
   fill: none;
-  stroke: #d23b3b;
+  stroke: var(--red);
   stroke-width: 1.5;
   animation: zpulse 1.4s ease-out infinite;
 }
@@ -762,41 +762,41 @@ void AlertTriangle
   }
 }
 .pop-bg {
-  fill: #14202c;
-  stroke: #3f9fcf;
+  fill: var(--txt3);
+  stroke: var(--blue);
   stroke-width: 1.5;
 }
 .pop-t {
-  fill: #3f9fcf;
+  fill: var(--blue);
   font-size: 11px;
   font-weight: 600;
 }
 .pop-feed {
-  fill: #0a0e14;
-  stroke: #243240;
+  fill: var(--txt3);
+  stroke: var(--txt3);
 }
 .pop-d {
-  fill: #7d93a8;
+  fill: var(--txt2);
   font-size: 9px;
 }
 .z-info {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 10px;
-  background: var(--bg-2);
+  background: var(--bg2);
 }
 /* 统一图形编辑入口按钮 */
 .plan-edit {
-  background: var(--bg-1);
-  border: 1px solid var(--brand);
-  color: var(--brand);
+  background: var(--bg2);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
   border-radius: 6px;
   padding: 3px 10px;
   font-size: 11px;
   cursor: pointer;
 }
 .plan-edit:hover {
-  background: rgba(63, 159, 191, 0.14);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
 }
 .z-info-h {
   display: flex;
@@ -811,7 +811,7 @@ void AlertTriangle
   flex-wrap: wrap;
   gap: 4px 16px;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 /* 探测器面板 */
@@ -828,16 +828,16 @@ void AlertTriangle
 .det-tab {
   font-size: 12px;
   padding: 3px 10px;
-  border: 1px solid var(--border);
-  background: var(--bg-1);
-  color: var(--text-2);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt2);
   border-radius: 14px;
   cursor: pointer;
 }
 .det-tab.active {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
+  background: var(--cyan);
+  color: var(--txt-strong);
+  border-color: var(--cyan);
 }
 .det-list {
   overflow-y: auto;
@@ -856,10 +856,10 @@ void AlertTriangle
   font-size: 12px;
 }
 .det-row:hover {
-  background: var(--bg-2);
+  background: var(--bg2);
 }
 .det-row.alarm {
-  background: rgba(210, 59, 59, 0.1);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
 }
 .d-dot {
   width: 8px;
@@ -867,31 +867,31 @@ void AlertTriangle
   border-radius: 50%;
 }
 .d-dot.online {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .d-dot.alarm {
-  background: #d23b3b;
+  background: var(--red-bg);
 }
 .d-dot.offline {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .d-name {
   font-weight: 500;
 }
 .d-zone {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .d-st {
   font-size: 11px;
 }
 .d-st.online {
-  color: #2fae6b;
+  color: var(--green);
 }
 .d-st.alarm {
-  color: #d23b3b;
+  color: var(--red);
 }
 .d-st.offline {
-  color: #d06a3a;
+  color: var(--amber);
 }
 
 /* 告警列表 */
@@ -908,19 +908,19 @@ void AlertTriangle
   gap: 8px;
   padding: 5px 0;
   font-size: 12px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
 }
 .evt-ts {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .evt-zone {
-  color: var(--brand);
+  color: var(--cyan);
   font-weight: 500;
   min-width: 84px;
 }
 .evt-desc {
   flex: 1;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 /* 时间线 */
@@ -944,28 +944,28 @@ void AlertTriangle
   border-radius: 50%;
 }
 .tl-dot.g {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .tl-dot.y {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .tl-ts {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .tl-act {
   font-weight: 600;
 }
 .tl-act.g {
-  color: #2fae6b;
+  color: var(--green);
 }
 .tl-act.y {
-  color: #d06a3a;
+  color: var(--amber);
 }
 .tl-zone {
-  color: var(--text-1);
+  color: var(--txt);
 }
 .tl-by {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 /* 联动策略 */
@@ -974,8 +974,8 @@ void AlertTriangle
   gap: 8px;
   align-items: flex-start;
   font-size: 13px;
-  color: var(--text-1);
-  background: var(--bg-2);
+  color: var(--txt);
+  background: var(--bg2);
   border-radius: 8px;
   padding: 10px;
   line-height: 1.6;
@@ -994,7 +994,7 @@ void AlertTriangle
   margin: 0;
   padding-left: 16px;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 
 @media (max-width: 1100px) {

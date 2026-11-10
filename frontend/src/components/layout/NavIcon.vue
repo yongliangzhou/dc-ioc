@@ -106,7 +106,7 @@ const svgContent = computed(() => ICONS[props.name] ?? FALLBACK)
   flex-shrink: 0;
   line-height: 1;
 }
-.nav-icon :deep(svg) {
+.nav-icon:deep(svg) {
   display: block;
 }
 </style>

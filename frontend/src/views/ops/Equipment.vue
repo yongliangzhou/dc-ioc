@@ -9,8 +9,17 @@
       <span class="pill">{{ tl('共') }} {{ total }} {{ tl('台') }}</span>
     </div>
 
-    <!-- 筛选 -->
-    <Panel class="toolbar">
+    <!-- 筛选：04 §6.2 统一 FilterBar（查询 / 重置 / 保存视图 / 列配置） -->
+    <FilterBar
+      class="toolbar"
+      view-key="equipment"
+      :capture="captureView"
+      :apply="applySavedView"
+      :seeds="columnSeeds"
+      v-model:columns="colCfg"
+      @query="refresh()"
+      @reset="resetFilters"
+    >
       <select v-model="domain" class="ipt" style="width: 150px" @change="refresh()">
         <option value="">{{ tl('全部业务域') }}</option>
         <option v-for="d in domainOptions" :key="d" :value="d">{{ d }}</option>
@@ -34,14 +43,13 @@
         style="width: 220px"
         @keyup.enter="refresh()"
       />
-      <button class="btn-sm primary" @click="refresh()">{{ tl('查询') }}</button>
       <span
         v-if="metaError"
         class="muted"
         style="margin-left: auto; font-size: 11px; color: var(--amber)"
         >{{ metaError }}</span
       >
-    </Panel>
+    </FilterBar>
 
     <!-- 列表 -->
     <AsyncSection
@@ -56,27 +64,29 @@
         <table>
           <thead>
             <tr>
-              <th scope="col">{{ tl('设备编码') }}</th>
-              <th scope="col">{{ tl('名称') }}</th>
-              <th scope="col">{{ tl('业务域') }}</th>
-              <th scope="col">{{ tl('类别') }}</th>
-              <th scope="col">{{ tl('厂商') }} / {{ tl('型号') }}</th>
-              <th scope="col">{{ tl('状态') }}</th>
-              <th scope="col">{{ tl('负载率') }}</th>
-              <th scope="col">{{ tl('运行小时') }}</th>
-              <th scope="col">{{ tl('操作') }}</th>
+              <th v-if="colVisible('code')" scope="col">{{ tl('设备编码') }}</th>
+              <th v-if="colVisible('name')" scope="col">{{ tl('名称') }}</th>
+              <th v-if="colVisible('domain')" scope="col">{{ tl('业务域') }}</th>
+              <th v-if="colVisible('category')" scope="col">{{ tl('类别') }}</th>
+              <th v-if="colVisible('vendor')" scope="col">{{ tl('厂商') }} / {{ tl('型号') }}</th>
+              <th v-if="colVisible('status')" scope="col">{{ tl('状态') }}</th>
+              <th v-if="colVisible('load')" scope="col">{{ tl('负载率') }}</th>
+              <th v-if="colVisible('hours')" scope="col">{{ tl('运行小时') }}</th>
+              <th v-if="colVisible('actions')" scope="col">{{ tl('操作') }}</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="e in items" :key="e.id" @click="openEq(e)" style="cursor: pointer">
-              <td class="mono">{{ e.code }}</td>
-              <td>{{ e.name }}</td>
-              <td>{{ e.domain }}</td>
-              <td>
+              <td v-if="colVisible('code')" class="mono">{{ e.code }}</td>
+              <td v-if="colVisible('name')">{{ e.name }}</td>
+              <td v-if="colVisible('domain')">{{ e.domain }}</td>
+              <td v-if="colVisible('category')">
                 <span class="tag b">{{ e.category }}</span>
               </td>
-              <td class="mono" style="font-size: 11px">{{ e.vendor }} / {{ e.model }}</td>
-              <td>
+              <td v-if="colVisible('vendor')" class="mono" style="font-size: 11px">
+                {{ e.vendor }} / {{ e.model }}
+              </td>
+              <td v-if="colVisible('status')">
                 <span
                   class="tag"
                   :class="
@@ -93,9 +103,11 @@
                   >{{ e.status }}</span
                 >
               </td>
-              <td class="mono">{{ e.load_pct }}%</td>
-              <td class="mono muted">{{ Number(e.run_hours ?? 0).toLocaleString() }}</td>
-              <td>
+              <td v-if="colVisible('load')" class="mono">{{ e.load_pct }}%</td>
+              <td v-if="colVisible('hours')" class="mono muted">
+                {{ Number(e.run_hours ?? 0).toLocaleString() }}
+              </td>
+              <td v-if="colVisible('actions')">
                 <button class="btn-sm" @click.stop="openEq(e)">{{ tl('遥测') }}</button>
               </td>
             </tr>
@@ -106,8 +118,8 @@
 
     <!-- 设备遥测弹窗 -->
     <teleport to="body">
-      <div class="tf-mask" v-if="sel" @click.self="sel = null">
-        <div class="tf-modal" style="width: min(760px, 96vw)">
+      <div class="modal-mask" v-if="sel" @click.self="sel = null">
+        <div class="modal" ref="modalRoot" tabindex="-1" style="width: min(760px, 96vw)">
           <div class="tf-head">
             <div>
               <h3>{{ tl('设备遥测') }} {{ tl('·') }} {{ sel.name }}</h3>
@@ -166,31 +178,29 @@
     </div>
 
     <!-- 分页 -->
-    <div class="pager">
-      <span class="muted"
-        >{{ tl('共') }} {{ total }} {{ tl('台') }} {{ tl('·') }} {{ tl('第') }} {{ page }} /
-        {{ totalPages }} {{ tl('页') }}</span
-      >
-      <select v-model.number="pageSize" class="ipt" style="width: 96px" @change="onPageSizeChange">
-        <option :value="20">20 / {{ tl('页') }}</option>
-        <option :value="50">50 / {{ tl('页') }}</option>
-        <option :value="100">100 / {{ tl('页') }}</option>
-      </select>
-      <button class="btn-sm" :disabled="page <= 1" @click="goPage(1)">« {{ tl('首页') }}</button>
-      <button class="btn-sm" :disabled="page <= 1" @click="goPage(page - 1)">
-        {{ tl('上一页') }}
-      </button>
-      <button class="btn-sm" :disabled="page >= totalPages" @click="goPage(page + 1)">
-        {{ tl('下一页') }}
-      </button>
-      <button class="btn-sm" :disabled="page >= totalPages" @click="goPage(totalPages)">
-        {{ tl('末页') }} »
-      </button>
-    </div>
+    <Pagination
+      :total="total"
+      :page="page"
+      :size="pageSize"
+      @change="goPage"
+      @size-change="onSizeChange"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
+import FilterBar from '@/components/common/FilterBar.vue'
+import type { FilterView } from '@/composables/useViewPreferences'
+import { useModalA11y } from '@/composables/useModalA11y'
+import {
+  defaultColumns,
+  normalizeColumns,
+  visibleKeys,
+  type ColumnDef,
+  type ColumnSeed,
+} from '@/composables/useColumnConfig'
+import { useFilterQuery } from '@/composables/useFilterQuery'
+import Pagination from '@/components/Pagination.vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
@@ -211,7 +221,7 @@ const kw = ref('')
 
 /* 分页状态 */
 const page = ref(1)
-const pageSize = ref(50)
+const pageSize = ref(20)
 const total = ref(0)
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
 
@@ -271,7 +281,8 @@ async function poll() {
   await fetchList(false)
 }
 
-function onPageSizeChange() {
+function onSizeChange(s: number) {
+  pageSize.value = s
   refresh(true)
 }
 function goPage(p: number) {
@@ -290,6 +301,15 @@ const METRIC_LABELS: Record<string, { label: string; unit: string }> = {
 }
 
 const sel = ref<Equipment | null>(null)
+// 04 §6.2: Esc 关闭 + Tab 焦点陷阱 + 关闭后焦点归还
+const modalRoot = ref<HTMLElement | null>(null)
+useModalA11y(
+  computed(() => !!sel.value),
+  () => {
+    sel.value = null
+  },
+  modalRoot,
+)
 const eq = ref<EquipmentMetrics | null>(null)
 const eqLoading = ref(false)
 const eqActive = ref('inlet_temp')
@@ -351,6 +371,63 @@ onMounted(() => {
   timer = window.setInterval(() => poll(), Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 15000))
 })
 onBeforeUnmount(() => clearInterval(timer))
+
+// 04 §6.2: 筛选条件与分页写入 URL query
+useFilterQuery({ domain, category, status, kw, page, pageSize })
+
+/** FilterBar: 保存当前筛选 + 分页快照 */
+function captureView() {
+  return {
+    filters: {
+      domain: domain.value,
+      category: category.value,
+      status: status.value,
+      kw: kw.value,
+    },
+    page: page.value,
+    size: pageSize.value,
+    columns: colCfg.value,
+  }
+}
+
+/** FilterBar: 恢复视图后直接加载，不重置 page（否则视图里的页码会失效） */
+function applySavedView(v: FilterView) {
+  const f = v.filters
+  if (typeof f.domain === 'string') domain.value = f.domain
+  if (typeof f.category === 'string') category.value = f.category
+  if (typeof f.status === 'string') status.value = f.status
+  if (typeof f.kw === 'string') kw.value = f.kw
+  if (v.page) page.value = v.page
+  if (v.size) pageSize.value = v.size
+  if (v.columns?.length) colCfg.value = normalizeColumns(v.columns, columnSeeds)
+  void fetchList(true)
+}
+
+function resetFilters() {
+  domain.value = ''
+  category.value = ''
+  status.value = ''
+  kw.value = ''
+  refresh()
+}
+
+// 04 §6.2: 表格列元数据（抽自原硬编码 <th>），供列配置与视图持久化复用
+const columnSeeds: ColumnSeed[] = [
+  { key: 'code', label: tl('设备编码'), locked: true },
+  { key: 'name', label: tl('名称') },
+  { key: 'domain', label: tl('业务域') },
+  { key: 'category', label: tl('类别') },
+  { key: 'vendor', label: `${tl('厂商')} / ${tl('型号')}` },
+  { key: 'status', label: tl('状态') },
+  { key: 'load', label: tl('负载率') },
+  { key: 'hours', label: tl('运行小时') },
+  { key: 'actions', label: tl('操作'), locked: true },
+]
+const colCfg = ref<ColumnDef[]>(defaultColumns(columnSeeds))
+const visibleCols = computed(() => new Set(visibleKeys(colCfg.value)))
+function colVisible(key: string): boolean {
+  return visibleCols.value.has(key)
+}
 </script>
 
 <style scoped>
@@ -388,7 +465,7 @@ onBeforeUnmount(() => clearInterval(timer))
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }

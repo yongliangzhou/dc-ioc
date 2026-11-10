@@ -9,19 +9,15 @@
       <MockDataBanner :level="mockLevel" :reason="mockReason" />
     </div>
 
-    <!-- Loading -->
-    <div v-if="loading" class="grid cols-6">
-      <SkeletonCard v-for="i in 6" :key="i" />
-    </div>
+    <AsyncSection
+      :loading="loading"
+      :error="error"
+      :empty="!s && !loading && !error"
+      :retrying="loading"
+      @retry="loadData"
+    />
 
-    <!-- Error -->
-    <Panel v-else-if="error" class="err-card">
-      <div class="err-title">{{ tl('加载失败') }}</div>
-      <div class="err-detail">{{ error }}</div>
-      <button class="btn" @click="loadData()">{{ tl('重试') }}</button>
-    </Panel>
-
-    <template v-else-if="s">
+    <template v-if="s">
       <!-- ======== KPI 总览 ======== -->
       <div class="grid cols-6">
         <KpiCard
@@ -52,7 +48,7 @@
           :decimals="1"
           size="sm"
           :bar-value="avgDayLevel"
-          bar-color="var(--violet)"
+          bar-color="var(--purple)"
           :status="
             avgDayLevel < LOW_LEVEL ? 'danger' : avgDayLevel < WARN_LEVEL ? 'warning' : 'normal'
           "
@@ -71,7 +67,7 @@
           unit="MPa"
           :decimals="2"
           size="sm"
-          :status="(s.pipeline?.pressure ?? 0) > 0.5 ? 'warning' : 'normal'"
+          :status="severityOf('power.fuel.pressure', s.pipeline?.pressure ?? 0)"
           :detail="s.pipeline?.state || '-'"
         />
         <KpiCard
@@ -106,16 +102,16 @@
             <defs>
               <!-- 液面波浪渐变 -->
               <linearGradient id="oilG" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#22c55e" stop-opacity="0.95" />
-                <stop offset="100%" stop-color="#15803d" stop-opacity="0.75" />
+                <stop offset="0%" stop-color="var(--green)" stop-opacity="0.95" />
+                <stop offset="100%" stop-color="var(--green)" stop-opacity="0.75" />
               </linearGradient>
               <linearGradient id="oilA" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.95" />
-                <stop offset="100%" stop-color="#b45309" stop-opacity="0.75" />
+                <stop offset="0%" stop-color="var(--amber)" stop-opacity="0.95" />
+                <stop offset="100%" stop-color="var(--amber)" stop-opacity="0.75" />
               </linearGradient>
               <linearGradient id="oilR" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.95" />
-                <stop offset="100%" stop-color="#991b1b" stop-opacity="0.75" />
+                <stop offset="0%" stop-color="var(--red)" stop-opacity="0.95" />
+                <stop offset="100%" stop-color="var(--red)" stop-opacity="0.75" />
               </linearGradient>
               <clipPath v-for="(t, ti) in mainTanksView" :key="'cp' + t.id" :id="'clip-main-' + ti">
                 <rect :x="t.x" :y="TANK_Y" :width="TANK_W" :height="TANK_H" rx="10" />
@@ -399,7 +395,13 @@
         <!-- 续航时间预测 -->
         <Panel title="续航时间预测">
           <template #extra>
-            <span class="pill" :class="enduranceHours >= 12 ? 'g' : 'a'"
+            <span
+              class="pill"
+              :class="
+                enduranceHours >= metricsCatalog['power.fuel.fullLoadHours'].thresholds!.warn!
+                  ? 'g'
+                  : 'a'
+              "
               >{{ tl('设计要求') }} ≥ 12h</span
             >
           </template>
@@ -411,9 +413,15 @@
                 size="lg"
                 :label="tl('满载续航')"
                 unit="h"
-                :status="enduranceHours < 8 ? 'danger' : enduranceHours < 12 ? 'warning' : 'normal'"
+                :status="severityOf('power.fuel.fullLoadHours', enduranceHours)"
               />
-              <span class="gauge-num mono" :class="enduranceHours < 12 ? 'a-text' : 'g-text'"
+              <span
+                class="gauge-num mono"
+                :class="
+                  severityOf('power.fuel.fullLoadHours', enduranceHours) !== 'normal'
+                    ? 'a-text'
+                    : 'g-text'
+                "
                 >{{ fmt(enduranceHours, 1) }} h</span
               >
               <span class="gauge-cap muted">{{ tl('满载') }} {{ fmtInt(FULL_LOAD_RATE) }} L/h</span>
@@ -425,7 +433,7 @@
                 size="lg"
                 :label="tl('半载续航')"
                 unit="h"
-                :status="enduranceHalf < 24 ? 'warning' : 'normal'"
+                :status="severityOf('power.fuel.halfLoadHours', enduranceHalf)"
               />
               <span class="gauge-num mono g-text">{{ fmt(enduranceHalf, 1) }} h</span>
               <span class="gauge-cap muted"
@@ -439,9 +447,15 @@
                 size="lg"
                 :label="tl('日用箱续航')"
                 unit="%"
-                :status="dayTankHours < 4 ? 'danger' : dayTankHours < 8 ? 'warning' : 'normal'"
+                :status="severityOf('power.fuel.dayTankHours', dayTankHours)"
               />
-              <span class="gauge-num mono" :class="dayTankHours < 8 ? 'a-text' : 'g-text'"
+              <span
+                class="gauge-num mono"
+                :class="
+                  severityOf('power.fuel.dayTankHours', dayTankHours) !== 'normal'
+                    ? 'a-text'
+                    : 'g-text'
+                "
                 >{{ fmt(dayTankHours, 1) }} h</span
               >
               <span class="gauge-cap muted">{{ tl('日用油箱独立供油') }}</span>
@@ -732,12 +746,15 @@
 </template>
 
 <script setup lang="ts">
+import { severityOf, metricsCatalog } from '@/config/metricsCatalog'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 import { ref, computed, reactive, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmt, fmtInt } from '@/utils/format'
-import { SkeletonCard, TrendChart, ProgressGauge } from '@/components/monitor'
+import { TrendChart, ProgressGauge } from '@/components/monitor'
 import { KpiCard, StatusBadge, AlarmBadge } from '@dc-ioc/ui'
 import {
   getPowerFuelDetailed,
@@ -1096,8 +1113,14 @@ function rebuildTrend() {
 
   consumeTrend.labels = labels
   consumeTrend.series = [
-    { name: tl('燃油消耗'), type: 'bar' as const, data: consume, color: '#f59e0b' },
-    { name: tl('库存油量'), type: 'line' as const, data: stock, color: '#22d3ee', smooth: true },
+    { name: tl('燃油消耗'), type: 'bar' as const, data: consume, color: cssToken('--amber') },
+    {
+      name: tl('库存油量'),
+      type: 'line' as const,
+      data: stock,
+      color: cssToken('--cyan'),
+      smooth: true,
+    },
   ]
 }
 
@@ -1527,9 +1550,9 @@ function levelNodeCls(level: number): string {
   return 'g'
 }
 function barColorOf(level: number): string {
-  if (level < LOW_LEVEL || level > HIGH_LEVEL) return '#ef4444'
-  if (level < WARN_LEVEL) return '#f59e0b'
-  return '#22c55e'
+  if (level < LOW_LEVEL || level > HIGH_LEVEL) return cssToken('--red')
+  if (level < WARN_LEVEL) return cssToken('--amber')
+  return cssToken('--green')
 }
 function sigCls(level: string): string {
   if (level === 'g') return 'g-text'
@@ -1783,12 +1806,12 @@ onUnmounted(() => {
 .view-head h1 {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   margin: 0;
 }
 .view-head .sub {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-top: 2px;
   display: block;
 }
@@ -1827,30 +1850,30 @@ onUnmounted(() => {
   font-size: 11px;
 }
 .hs .k {
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .hs .v {
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   font-weight: 600;
 }
 
 /* ── 图形编辑入口 / 加油记录操作 ── */
 .fuel-edit {
-  background: var(--bg2, #0f172a);
-  border: 1px solid var(--cyan, #22d3ee);
-  color: var(--cyan, #22d3ee);
+  background: var(--bg2);
+  border: 1px solid var(--cyan);
+  color: var(--cyan);
   border-radius: 6px;
   padding: 3px 10px;
   font-size: 11px;
   cursor: pointer;
 }
 .fuel-edit:hover {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
 }
 .row-btn {
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--line);
   background: transparent;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   border-radius: 4px;
   padding: 2px 8px;
   font-size: 11px;
@@ -1858,12 +1881,12 @@ onUnmounted(() => {
   margin-right: 4px;
 }
 .row-btn:hover {
-  color: #22d3ee;
-  border-color: rgba(34, 211, 238, 0.5);
+  color: var(--cyan);
+  border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
 }
 .row-btn.danger:hover {
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.5);
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
 }
 .refuel-hint {
   padding: 8px 10px;
@@ -1874,7 +1897,7 @@ onUnmounted(() => {
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.6);
+  background: var(--accent-50);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1884,8 +1907,8 @@ onUnmounted(() => {
   width: min(640px, 92vw);
   max-height: 86vh;
   overflow-y: auto;
-  background: #0f172a;
-  border: 1px solid var(--border, #334155);
+  background: var(--bg2);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 16px 18px;
 }
@@ -1897,7 +1920,7 @@ onUnmounted(() => {
 .modal-title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
 }
 .modal-head .nd-close {
   margin-left: auto;
@@ -1914,21 +1937,21 @@ onUnmounted(() => {
 }
 .field label {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .field input,
 .field select {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid var(--border, #334155);
+  background: var(--mask);
+  border: 1px solid var(--line);
   border-radius: 6px;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   font-size: 12px;
   padding: 6px 8px;
   outline: none;
 }
 .field input:focus,
 .field select:focus {
-  border-color: rgba(34, 211, 238, 0.6);
+  border-color: color-mix(in srgb, var(--cyan) 60%, transparent);
 }
 .modal-foot {
   display: flex;
@@ -1937,9 +1960,9 @@ onUnmounted(() => {
   margin-top: 14px;
 }
 .btn.primary {
-  background: rgba(34, 211, 238, 0.16);
-  border-color: rgba(34, 211, 238, 0.5);
-  color: #22d3ee;
+  background: color-mix(in srgb, var(--cyan) 16%, transparent);
+  border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
+  color: var(--cyan);
 }
 .btn.primary:disabled {
   opacity: 0.5;
@@ -1953,7 +1976,7 @@ onUnmounted(() => {
 
 /* ── SVG 油罐 ── */
 .schematic-wrap {
-  background: rgba(15, 23, 42, 0.5);
+  background: var(--accent-50);
   border-radius: 8px;
   padding: 8px;
   overflow-x: auto;
@@ -1968,14 +1991,14 @@ onUnmounted(() => {
   cursor: pointer;
 }
 .tank-shell {
-  fill: rgba(30, 41, 59, 0.65);
-  stroke: #475569;
+  fill: var(--mask);
+  stroke: var(--txt3);
   stroke-width: 2;
   transition: filter 0.2s;
 }
 .tank-node:hover .tank-shell {
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.6));
-  stroke: #22d3ee;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cyan) 60%, transparent));
+  stroke: var(--cyan);
 }
 .oil-body {
   transition:
@@ -1997,12 +2020,12 @@ onUnmounted(() => {
   }
 }
 .tick-line {
-  stroke: rgba(148, 163, 184, 0.25);
+  stroke: var(--accent-35);
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
 .tick-text {
-  fill: #64748b;
+  fill: var(--txt2);
   font-size: 9px;
 }
 .tank-pct {
@@ -2010,19 +2033,19 @@ onUnmounted(() => {
   font-weight: 800;
   text-anchor: middle;
   paint-order: stroke;
-  stroke: rgba(15, 23, 42, 0.85);
+  stroke: var(--mask);
   stroke-width: 3px;
 }
 .tank-vol {
-  fill: #cbd5e1;
+  fill: var(--txt);
   font-size: 11px;
   text-anchor: middle;
   paint-order: stroke;
-  stroke: rgba(15, 23, 42, 0.7);
+  stroke: var(--mask);
   stroke-width: 3px;
 }
 .tank-id {
-  fill: #e5e7eb;
+  fill: var(--txt-strong);
   font-size: 13px;
   font-weight: 700;
   text-anchor: middle;
@@ -2032,26 +2055,26 @@ onUnmounted(() => {
   font-weight: 700;
   text-anchor: middle;
   paint-order: stroke;
-  stroke: rgba(15, 23, 42, 0.85);
+  stroke: var(--mask);
   stroke-width: 3px;
 }
 .day-id {
-  fill: #cbd5e1;
+  fill: var(--txt);
   font-size: 11px;
   text-anchor: middle;
 }
 .day-load {
-  fill: #64748b;
+  fill: var(--txt2);
   font-size: 10px;
   text-anchor: middle;
 }
 .pipe {
-  stroke: #475569;
+  stroke: var(--txt3);
   stroke-width: 3;
   stroke-linecap: round;
 }
 .pipe.active {
-  stroke: #22d3ee;
+  stroke: var(--cyan);
   stroke-dasharray: 8 6;
   animation: flow 1.2s linear infinite;
 }
@@ -2061,21 +2084,21 @@ onUnmounted(() => {
   }
 }
 .pipe-label {
-  fill: #22d3ee;
+  fill: var(--cyan);
   font-size: 11px;
   text-anchor: middle;
 }
 .pump-box {
-  fill: rgba(34, 211, 238, 0.14);
-  stroke: #22d3ee;
+  fill: color-mix(in srgb, var(--cyan) 14%, transparent);
+  stroke: var(--cyan);
   stroke-width: 1.5;
   cursor: pointer;
 }
 .pump-box:hover {
-  filter: drop-shadow(0 0 8px rgba(34, 211, 238, 0.7));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cyan) 70%, transparent));
 }
 .pump-text {
-  fill: #e5e7eb;
+  fill: var(--txt-strong);
   font-size: 11px;
   font-weight: 600;
   text-anchor: middle;
@@ -2084,16 +2107,16 @@ onUnmounted(() => {
 
 /* SVG 文本颜色 (fill 覆盖) */
 .g-text {
-  color: #22c55e;
-  fill: #22c55e;
+  color: var(--green);
+  fill: var(--green);
 }
 .a-text {
-  color: #f59e0b;
-  fill: #f59e0b;
+  color: var(--amber);
+  fill: var(--amber);
 }
 .r-text {
-  color: #ef4444;
-  fill: #ef4444;
+  color: var(--red);
+  fill: var(--red);
 }
 
 /* legend */
@@ -2108,7 +2131,7 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .dot {
   width: 10px;
@@ -2117,25 +2140,25 @@ onUnmounted(() => {
   display: inline-block;
 }
 .dot.g {
-  background: #22c55e;
+  background: var(--green-bg);
 }
 .dot.a {
-  background: #f59e0b;
+  background: var(--amber-bg);
 }
 .dot.r {
-  background: #ef4444;
+  background: var(--red);
 }
 .dot.b {
-  background: #3b82f6;
+  background: var(--blue);
 }
 
 /* 节点详情 */
 .node-detail {
   margin-top: 12px;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px 14px;
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--accent-50);
 }
 .nd-head {
   display: flex;
@@ -2151,27 +2174,27 @@ onUnmounted(() => {
   border-radius: 5px;
 }
 .nd-code.g {
-  color: #22c55e;
-  background: rgba(34, 197, 94, 0.12);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
 }
 .nd-code.r {
-  color: #ef4444;
-  background: rgba(239, 68, 68, 0.12);
+  color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
 }
 .nd-code.a {
-  color: #f59e0b;
-  background: rgba(245, 158, 11, 0.12);
+  color: var(--amber);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
 }
 .nd-title {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
 }
 .nd-close {
   margin-left: auto;
   background: none;
   border: none;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
   font-size: 18px;
   cursor: pointer;
   line-height: 1;
@@ -2186,15 +2209,15 @@ onUnmounted(() => {
   justify-content: space-between;
   gap: 8px;
   padding: 4px 0;
-  border-bottom: 1px dotted rgba(51, 65, 85, 0.5);
+  border-bottom: 1px dotted var(--accent-50);
 }
 .nd-k {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .nd-v {
   font-size: 12px;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   font-weight: 500;
 }
 .fade-enter-active,
@@ -2210,27 +2233,27 @@ onUnmounted(() => {
 .range-tabs {
   display: inline-flex;
   gap: 4px;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--accent-50);
   padding: 3px;
   border-radius: 8px;
 }
 .rt-btn {
   border: none;
   background: transparent;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
   font-size: 11px;
   padding: 4px 12px;
   border-radius: 6px;
   cursor: pointer;
 }
 .rt-btn.on {
-  background: rgba(34, 211, 238, 0.16);
-  color: #22d3ee;
+  background: color-mix(in srgb, var(--cyan) 16%, transparent);
+  color: var(--cyan);
   font-weight: 600;
 }
 .stat-box {
-  background: rgba(15, 23, 42, 0.45);
-  border: 1px solid var(--border, #334155);
+  background: var(--accent-50);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 14px;
   display: flex;
@@ -2239,17 +2262,17 @@ onUnmounted(() => {
 }
 .sb-k {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .sb-v {
   font-size: 18px;
   font-weight: 700;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
 }
 .sb-v small {
   font-size: 11px;
   font-weight: 400;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
   margin-left: 2px;
 }
 
@@ -2265,14 +2288,14 @@ onUnmounted(() => {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 6px;
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--accent-50);
   border-left: 3px solid transparent;
 }
 .warn-row.critical {
-  border-left-color: #ef4444;
+  border-left-color: var(--red-line);
 }
 .warn-row.warning {
-  border-left-color: #f59e0b;
+  border-left-color: var(--amber-line);
 }
 .w-dot {
   width: 8px;
@@ -2281,12 +2304,12 @@ onUnmounted(() => {
   flex: 0 0 auto;
 }
 .w-dot.critical {
-  background: #ef4444;
-  box-shadow: 0 0 6px rgba(239, 68, 68, 0.8);
+  background: var(--red);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--red) 80%, transparent);
   animation: pulse 1.4s infinite;
 }
 .w-dot.warning {
-  background: #f59e0b;
+  background: var(--amber-bg);
 }
 @keyframes pulse {
   0%,
@@ -2300,14 +2323,14 @@ onUnmounted(() => {
 .w-id {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   min-width: 64px;
 }
 .w-bar {
   flex: 0 0 110px;
   height: 6px;
   border-radius: 3px;
-  background: rgba(51, 65, 85, 0.7);
+  background: var(--mask);
   overflow: hidden;
 }
 .w-bar i {
@@ -2325,7 +2348,7 @@ onUnmounted(() => {
 .w-msg {
   flex: 1;
   font-size: 12px;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
 }
 .w-th {
   font-size: 11px;
@@ -2336,14 +2359,14 @@ onUnmounted(() => {
   gap: 14px;
   margin-top: 12px;
   padding-top: 10px;
-  border-top: 1px solid var(--border, #334155);
+  border-top: 1px solid var(--line);
 }
 .thr {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 
 /* ── 续航预测 ── */
@@ -2369,7 +2392,7 @@ onUnmounted(() => {
 .pred-list {
   margin-top: 14px;
   padding-top: 10px;
-  border-top: 1px solid var(--border, #334155);
+  border-top: 1px solid var(--line);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2380,13 +2403,13 @@ onUnmounted(() => {
   gap: 10px;
   font-size: 12px;
   padding: 4px 0;
-  border-bottom: 1px dashed rgba(51, 65, 85, 0.5);
+  border-bottom: 1px dashed var(--accent-50);
 }
 .pred-row .k {
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .pred-row .v {
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   font-weight: 500;
 }
 
@@ -2397,10 +2420,10 @@ onUnmounted(() => {
   gap: 10px;
 }
 .pump-block {
-  border: 1px solid rgba(51, 65, 85, 0.7);
+  border: 1px solid var(--mask);
   border-radius: 8px;
   padding: 10px 12px;
-  background: rgba(15, 23, 42, 0.4);
+  background: var(--accent-35);
 }
 .pump-head {
   display: flex;
@@ -2418,16 +2441,16 @@ onUnmounted(() => {
   font-size: 9px;
 }
 .d-status.g {
-  color: #22c55e;
+  color: var(--green);
 }
 .d-status.r {
-  color: #ef4444;
+  color: var(--red);
 }
 .d-status.a {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .d-status.b {
-  color: #3b82f6;
+  color: var(--blue);
 }
 .sig-list {
   display: flex;
@@ -2442,11 +2465,11 @@ onUnmounted(() => {
   font-size: 10.5px;
   padding: 2px 7px;
   border-radius: 4px;
-  background: rgba(30, 41, 59, 0.7);
-  border: 1px solid rgba(51, 65, 85, 0.7);
+  background: var(--mask);
+  border: 1px solid var(--mask);
 }
 .sig-k {
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .sig-v {
   font-weight: 600;
@@ -2463,29 +2486,29 @@ table {
 }
 th {
   text-align: left;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   font-weight: 600;
   font-size: 10px;
   letter-spacing: 0.4px;
   padding: 7px 8px;
-  border-bottom: 1px solid var(--border, #334155);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 td {
   padding: 6px 8px;
-  border-bottom: 1px solid rgba(51, 65, 85, 0.5);
-  color: var(--text-secondary, #94a3b8);
+  border-bottom: 1px solid var(--accent-50);
+  color: var(--txt2);
   white-space: nowrap;
 }
 tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--accent-02);
 }
 .tank-row {
   cursor: pointer;
 }
 .d-name {
   font-weight: 500;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
 }
 .mono {
   font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -2509,36 +2532,36 @@ tbody tr:hover {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 6px;
-  background: rgba(30, 41, 59, 0.5);
+  background: var(--accent-50);
   border-left: 3px solid transparent;
 }
 .alarm-row.critical {
-  border-left-color: #ef4444;
+  border-left-color: var(--red-line);
 }
 .alarm-row.warning {
-  border-left-color: #f59e0b;
+  border-left-color: var(--amber-line);
 }
 .alarm-row.info {
-  border-left-color: #3b82f6;
+  border-left-color: var(--blue);
 }
 .a-ts {
   font-size: 11px;
-  color: var(--text-muted, #94a3b8);
+  color: var(--txt3);
 }
 .a-src {
   font-size: 12px;
   font-weight: 600;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   min-width: 110px;
 }
 .a-msg {
   font-size: 12px;
-  color: var(--text-secondary, #94a3b8);
+  color: var(--txt2);
   flex: 1;
 }
 .a-val {
   font-size: 11px;
-  color: #f59e0b;
+  color: var(--amber);
 }
 
 /* ── error/empty ── */
@@ -2549,12 +2572,12 @@ tbody tr:hover {
 .err-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #ef4444;
+  color: var(--red);
   margin-bottom: 8px;
 }
 .err-detail {
   font-size: 0.75rem;
-  color: var(--text-muted, #6b7280);
+  color: var(--txt3);
   margin-bottom: 14px;
 }
 .btn {
@@ -2563,14 +2586,14 @@ tbody tr:hover {
   gap: 6px;
   padding: 6px 16px;
   border-radius: 6px;
-  border: 1px solid var(--border, #334155);
+  border: 1px solid var(--line);
   background: transparent;
-  color: var(--text-primary, #e5e7eb);
+  color: var(--txt-strong);
   font-size: 0.75rem;
   cursor: pointer;
 }
 .btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--accent-08);
 }
 .empty-tip {
   text-align: center;

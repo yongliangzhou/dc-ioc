@@ -49,12 +49,12 @@ defineEmits<{ retry: [] }>()
   padding: 10px 14px;
   margin-bottom: 12px;
   border-radius: 10px;
-  background: rgba(224, 132, 74, 0.1);
-  border: 1px solid rgba(224, 132, 74, 0.35);
-  color: #e6edf3;
+  background: color-mix(in srgb, var(--amber) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+  color: var(--txt-strong);
 }
 .eb-icon {
-  color: #e0844a;
+  color: var(--amber);
   flex-shrink: 0;
 }
 .eb-body {
@@ -67,15 +67,15 @@ defineEmits<{ retry: [] }>()
 .eb-title {
   font-size: 13px;
   font-weight: 600;
-  color: #f0b27a;
+  color: var(--amber);
 }
 .eb-labels {
   font-weight: 400;
-  color: #c99a6e;
+  color: var(--amber);
 }
 .eb-desc {
   font-size: 11px;
-  color: #9db0c6;
+  color: var(--txt);
   line-height: 1.5;
 }
 .eb-actions {
@@ -92,14 +92,14 @@ defineEmits<{ retry: [] }>()
   font-size: 12px;
   cursor: pointer;
   border: 1px solid transparent;
-  background: rgba(224, 132, 74, 0.18);
-  border-color: rgba(224, 132, 74, 0.45);
-  color: #f0b27a;
+  background: color-mix(in srgb, var(--amber) 18%, transparent);
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+  color: var(--amber);
   transition: all 0.18s;
   white-space: nowrap;
 }
 .eb-btn:hover:not(:disabled) {
-  background: rgba(224, 132, 74, 0.3);
+  background: color-mix(in srgb, var(--amber) 30%, transparent);
 }
 .eb-btn:disabled {
   opacity: 0.6;
@@ -109,8 +109,8 @@ defineEmits<{ retry: [] }>()
   width: 11px;
   height: 11px;
   border-radius: 50%;
-  border: 2px solid rgba(240, 178, 122, 0.3);
-  border-top-color: #f0b27a;
+  border: 2px solid color-mix(in srgb, var(--amber) 30%, transparent);
+  border-top-color: var(--amber-line);
   animation: eb-rotate 0.6s linear infinite;
 }
 @keyframes eb-rotate {

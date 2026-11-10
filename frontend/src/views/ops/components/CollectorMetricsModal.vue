@@ -89,7 +89,7 @@ const qTag = (q: string) => (q === 'good' ? 'g' : q === 'uncertain' ? 'a' : 'r')
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -106,7 +106,7 @@ const qTag = (q: string) => (q === 'good' ? 'g' : q === 'uncertain' ? 'a' : 'r')
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
   overflow: hidden;
 }
 .modal-head {

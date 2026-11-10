@@ -48,7 +48,7 @@ const toast = useToast()
   color: var(--txt);
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 32px var(--accent-50);
   backdrop-filter: blur(4px);
 }
 .toast .dot {
@@ -59,28 +59,28 @@ const toast = useToast()
   box-shadow: 0 0 8px currentColor;
 }
 .toast.success {
-  border-color: rgba(43, 212, 122, 0.5);
+  border-color: color-mix(in srgb, var(--green) 50%, transparent);
 }
 .toast.success .dot {
   background: var(--green);
   color: var(--green);
 }
 .toast.error {
-  border-color: rgba(242, 63, 63, 0.5);
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
 }
 .toast.error .dot {
   background: var(--red);
   color: var(--red);
 }
 .toast.warning {
-  border-color: rgba(255, 176, 32, 0.5);
+  border-color: color-mix(in srgb, var(--amber) 50%, transparent);
 }
 .toast.warning .dot {
   background: var(--amber);
   color: var(--amber);
 }
 .toast.info {
-  border-color: rgba(34, 211, 238, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
 }
 .toast.info .dot {
   background: var(--cyan);

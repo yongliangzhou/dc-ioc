@@ -9,7 +9,7 @@
               {{ tl('维护该设备挂载的测点定义') }} ({{ tl('新增 / 编辑 / 删除') }})
             </div>
           </div>
-          <button class="btn-sm primary" v-bind="authState('write')" @click="openCreate">
+          <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openCreate">
             ＋ {{ tl('新增测点') }}
           </button>
         </div>
@@ -40,8 +40,12 @@
                 </td>
                 <td class="muted">{{ d.description || '—' }}</td>
                 <td class="p-ops">
-                  <button class="link" v-bind="authState('write')" @click="openEdit(d)">{{ tl('编辑') }}</button>
-                  <button class="link danger" v-bind="authState('write')" @click="remove(d)">{{ tl('删除') }}</button>
+                  <button class="link" v-bind="authState('write')" @click="openEdit(d)">
+                    {{ tl('编辑') }}
+                  </button>
+                  <button class="link danger" v-bind="authState('write')" @click="remove(d)">
+                    {{ tl('删除') }}
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -52,27 +56,41 @@
         </div>
 
         <div class="modal-foot">
-          <span class="muted" style="font-size: 11px">{{ tl('测点定义独立于实时上报数据流') }}</span>
+          <span class="muted" style="font-size: 11px">{{
+            tl('测点定义独立于实时上报数据流')
+          }}</span>
           <button class="btn-sm" @click="$emit('close')">{{ tl('关闭') }}</button>
         </div>
 
         <!-- 编辑抽屉 -->
-        <div class="drawer-mask" v-if="formOpen" @click.self="formOpen = false">
-          <div class="drawer">
+        <div class="modal-mask" v-if="formOpen" @click.self="formOpen = false">
+          <div class="modal as-drawer">
             <div class="drawer-head">
               <span>{{ editingId ? tl('编辑测点') : tl('新增测点') }}</span>
               <button class="x" @click="formOpen = false">✕</button>
             </div>
             <div class="form">
-              <label>{{ tl('测点名') }} (metric_name)
-                <input v-model.trim="form.metricName" class="ipt" :disabled="!!editingId" :placeholder="'supply_temp'" />
+              <label
+                >{{ tl('测点名') }} (metric_name)
+                <input
+                  v-model.trim="form.metricName"
+                  class="ipt"
+                  :disabled="!!editingId"
+                  :placeholder="'supply_temp'"
+                />
               </label>
               <div class="row">
-                <label>{{ tl('中文名') }}<input v-model.trim="form.label" class="ipt" :placeholder="tl('送风温度')" /></label>
-                <label>{{ tl('单位') }}<input v-model.trim="form.unit" class="ipt" :placeholder="'℃'" /></label>
+                <label
+                  >{{ tl('中文名')
+                  }}<input v-model.trim="form.label" class="ipt" :placeholder="tl('送风温度')"
+                /></label>
+                <label
+                  >{{ tl('单位') }}<input v-model.trim="form.unit" class="ipt" :placeholder="'℃'"
+                /></label>
               </div>
               <div class="row">
-                <label>{{ tl('数据类型') }}
+                <label
+                  >{{ tl('数据类型') }}
                   <select v-model="form.dataType" class="ipt">
                     <option value="float">float</option>
                     <option value="int">int</option>
@@ -80,18 +98,24 @@
                     <option value="string">string</option>
                   </select>
                 </label>
-                <label>{{ tl('状态') }}
+                <label
+                  >{{ tl('状态') }}
                   <select v-model="form.enabled" class="ipt">
                     <option :value="true">{{ tl('启用') }}</option>
                     <option :value="false">{{ tl('停用') }}</option>
                   </select>
                 </label>
               </div>
-              <label>{{ tl('说明') }}<textarea v-model.trim="form.description" class="ipt" rows="2"></textarea></label>
+              <label
+                >{{ tl('说明')
+                }}<textarea v-model.trim="form.description" class="ipt" rows="2"></textarea>
+              </label>
               <div v-if="err" class="err">{{ err }}</div>
               <div class="drawer-foot">
                 <button class="btn-sm" @click="formOpen = false">{{ tl('取消') }}</button>
-                <button class="btn-sm primary" :disabled="saving" @click="save">{{ saving ? tl('保存中…') : tl('保存') }}</button>
+                <button class="btn-sm btn-primary" :disabled="saving" @click="save">
+                  {{ saving ? tl('保存中…') : tl('保存') }}
+                </button>
               </div>
             </div>
           </div>
@@ -137,7 +161,12 @@ const saving = ref(false)
 const err = ref('')
 const editingId = ref<number | null>(null)
 const form = ref<Partial<MetricDef>>({
-  metricName: '', label: '', unit: '', dataType: 'float', enabled: true, description: '',
+  metricName: '',
+  label: '',
+  unit: '',
+  dataType: 'float',
+  enabled: true,
+  description: '',
 })
 
 async function loadDefs() {
@@ -154,7 +183,14 @@ async function loadDefs() {
 
 function openCreate() {
   editingId.value = null
-  form.value = { metricName: '', label: '', unit: '', dataType: 'float', enabled: true, description: '' }
+  form.value = {
+    metricName: '',
+    label: '',
+    unit: '',
+    dataType: 'float',
+    enabled: true,
+    description: '',
+  }
   err.value = ''
   formOpen.value = true
 }
@@ -181,7 +217,8 @@ async function save() {
       enabled: form.value.enabled,
       description: form.value.description,
     }
-    if (editingId.value != null) await updateMetricDef(props.device.device_id, editingId.value, payload)
+    if (editingId.value != null)
+      await updateMetricDef(props.device.device_id, editingId.value, payload)
     else await createMetricDef(props.device.device_id, payload)
     formOpen.value = false
     await loadDefs()
@@ -217,7 +254,7 @@ onMounted(loadDefs)
 .modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -233,7 +270,7 @@ onMounted(loadDefs)
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
   overflow: hidden;
 }
 .modal-head {
@@ -265,7 +302,8 @@ table {
   border-collapse: collapse;
   font-size: 13px;
 }
-th, td {
+th,
+td {
   padding: 9px 10px;
   text-align: left;
   border-bottom: 1px solid var(--line);
@@ -279,7 +317,7 @@ th {
   font-family: ui-monospace, Menlo, Consolas, monospace;
 }
 .muted {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .tag {
   font-size: 11px;
@@ -287,11 +325,11 @@ th {
   border-radius: 9px;
 }
 .tag.g {
-  background: rgba(43, 212, 122, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .tag.r {
-  background: rgba(255, 77, 94, 0.12);
+  background: var(--red-bg);
   color: var(--red);
 }
 .p-ops {
@@ -320,7 +358,7 @@ th {
 }
 .btn-sm.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
@@ -328,10 +366,10 @@ th {
   opacity: 0.6;
   cursor: default;
 }
-.drawer-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -339,14 +377,14 @@ th {
   padding: 6vh 16px;
   z-index: 1100;
 }
-.drawer {
+.as-drawer {
   width: 440px;
   max-width: 94vw;
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 18px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
 }
 .drawer-head {
   display: flex;
@@ -359,7 +397,7 @@ th {
 .x {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 16px;
   cursor: pointer;
 }

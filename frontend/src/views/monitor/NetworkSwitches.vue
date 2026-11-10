@@ -16,7 +16,7 @@
         unit="%"
         :bar-value="s.avgCpu"
         bar-color="var(--cyan)"
-        :status="s.avgCpu > 80 ? 'danger' : s.avgCpu > 60 ? 'warning' : 'normal'"
+        :status="severityOf('network.switch.cpu', s.avgCpu)"
         size="sm"
       />
       <KpiCard
@@ -24,8 +24,8 @@
         :value="s.avgMem || 0"
         unit="%"
         :bar-value="s.avgMem || 0"
-        bar-color="var(--violet)"
-        :status="(s.avgMem || 0) > 80 ? 'danger' : (s.avgMem || 0) > 60 ? 'warning' : 'normal'"
+        bar-color="var(--purple)"
+        :status="severityOf('network.switch.memory', s.avgMem || 0)"
         size="sm"
       />
       <KpiCard
@@ -51,9 +51,9 @@
     <Panel v-if="s && s.switches.length" title="Spine-Leaf 网络拓扑">
       <template #extra>
         <div class="topo-legend">
-          <span><i class="tl-dot" style="background: #22c55e"></i> {{ tl('正常') }}</span>
-          <span><i class="tl-dot" style="background: #f59e0b"></i> {{ tl('高负载') }}</span>
-          <span><i class="tl-dot" style="background: #ef4444"></i> {{ tl('拥塞/告警') }}</span>
+          <span><i class="tl-dot" style="background: var(--green-bg)"></i> {{ tl('正常') }}</span>
+          <span><i class="tl-dot" style="background: var(--amber-bg)"></i> {{ tl('高负载') }}</span>
+          <span><i class="tl-dot" style="background: var(--red)"></i> {{ tl('拥塞/告警') }}</span>
         </div>
       </template>
       <svg class="topo-svg" :viewBox="`0 0 ${svgW} ${svgH}`">
@@ -65,8 +65,12 @@
             :width="sp.w"
             :height="sp.h"
             rx="6"
-            :fill="sp.status === 'online' ? 'rgba(34,227,255,0.10)' : 'rgba(107,114,128,0.08)'"
-            :stroke="sp.status === 'online' ? 'rgba(34,227,255,0.5)' : 'rgba(107,114,128,0.3)'"
+            :fill="
+              sp.status === 'online'
+                ? 'color-mix(in srgb, var(--cyan) 10%, transparent)'
+                : 'var(--accent-08)'
+            "
+            :stroke="sp.status === 'online' ? 'var(--accent-50)' : 'var(--accent-35)'"
             stroke-width="1.5"
           />
           <text
@@ -92,7 +96,9 @@
             :x="sp.x + sp.w / 2"
             :y="sp.y + 54"
             text-anchor="middle"
-            :fill="sp.cpu_pct > 80 ? '#ef4444' : sp.cpu_pct > 60 ? '#f59e0b' : '#22c55e'"
+            :fill="
+              sp.cpu_pct > 80 ? 'var(--red)' : sp.cpu_pct > 60 ? 'var(--amber)' : 'var(--green)'
+            "
             font-size="10"
             font-weight="600"
           >
@@ -108,8 +114,16 @@
             :width="lf.w"
             :height="lf.h"
             rx="6"
-            :fill="lf.status === 'online' ? 'rgba(168,85,247,0.08)' : 'rgba(107,114,128,0.06)'"
-            :stroke="lf.status === 'online' ? 'rgba(168,85,247,0.4)' : 'rgba(107,114,128,0.25)'"
+            :fill="
+              lf.status === 'online'
+                ? 'color-mix(in srgb, var(--purple) 8%, transparent)'
+                : 'var(--accent-08)'
+            "
+            :stroke="
+              lf.status === 'online'
+                ? 'color-mix(in srgb, var(--purple) 40%, transparent)'
+                : 'var(--accent-35)'
+            "
             stroke-width="1.5"
           />
           <text
@@ -137,7 +151,7 @@
             text-anchor="middle"
             font-size="9"
             font-weight="600"
-            :fill="lf.status === 'online' ? '#22c55e' : '#6b7280'"
+            :fill="lf.status === 'online' ? 'var(--green)' : 'var(--txt2)'"
           >
             {{ lf.up_ports }}/{{ lf.total_ports }} UP
           </text>
@@ -355,17 +369,14 @@
       </div>
     </Panel>
 
-    <!-- 负载状态 -->
-    <div class="flex center" style="padding: 40px" v-if="!s && !error">
-      <span class="muted">{{ tl('加载中...') }}</span>
-    </div>
-    <div class="flex center" style="padding: 40px" v-if="error">
-      <span class="muted a-text">{{ tl('加载失败') }}: {{ error }}</span>
-    </div>
+    <AsyncSection :loading="!s && !error" :error="error" :empty="false" @retry="load" />
   </div>
 </template>
 
 <script setup lang="ts">
+import { severityOf } from '@/config/metricsCatalog'
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { fmtBps, utilCls } from '@/utils/format'
@@ -468,7 +479,8 @@ const topoLinks = computed<TopoLink[]>(() => {
         (Math.abs(sp.name.charCodeAt(sp.name.length - 1) * lf.name.charCodeAt(lf.name.length - 1)) %
           60)
       const sw = 1 + (util / 100) * 4
-      const color = util > 85 ? '#ef4444' : util > 55 ? '#f59e0b' : '#22c55e'
+      const color =
+        util > 85 ? cssToken('--red') : util > 55 ? cssToken('--amber') : cssToken('--green')
       const op = sp.status === 'online' && lf.status === 'online' ? 0.7 : 0.2
       links.push({ x1: sx, y1: sy, x2: ex, y2: ey, sw, color, op })
     }
@@ -764,8 +776,8 @@ onMounted(load)
   color: var(--txt2);
 }
 .card {
-  background: var(--bg1);
-  border: 1px solid var(--border);
+  background: var(--bg2);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 16px;
   margin-bottom: 14px;
@@ -883,7 +895,7 @@ th {
   font-weight: 600;
   font-size: 10px;
   padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 td {
@@ -899,7 +911,7 @@ tbody tr:hover {
   opacity: 0.7;
 }
 .row-alarm {
-  background: rgba(245, 158, 11, 0.04);
+  background: color-mix(in srgb, var(--amber) 4%, transparent);
 }
 
 /* trunk grid */
@@ -909,17 +921,17 @@ tbody tr:hover {
   gap: 10px;
 }
 .trunk-card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px 12px;
 }
 .trunk-card.trunk-ok {
-  border-color: rgba(34, 197, 94, 0.2);
-  background: rgba(34, 197, 94, 0.03);
+  border-color: color-mix(in srgb, var(--green) 20%, transparent);
+  background: color-mix(in srgb, var(--green) 3%, transparent);
 }
 .trunk-card.trunk-warn {
-  border-color: rgba(245, 158, 11, 0.25);
-  background: rgba(245, 158, 11, 0.03);
+  border-color: color-mix(in srgb, var(--amber) 25%, transparent);
+  background: color-mix(in srgb, var(--amber) 3%, transparent);
 }
 .trunk-bar-head {
   display: flex;
@@ -957,13 +969,25 @@ tbody tr:hover {
   border-radius: 3px;
 }
 .bar-g {
-  background: linear-gradient(90deg, rgba(34, 197, 94, 0.5), rgba(34, 197, 94, 0.85));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--green) 50%, transparent),
+    color-mix(in srgb, var(--green) 85%, transparent)
+  );
 }
 .bar-a {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.5), rgba(245, 158, 11, 0.85));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--amber) 50%, transparent),
+    color-mix(in srgb, var(--amber) 85%, transparent)
+  );
 }
 .bar-r {
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.5), rgba(239, 68, 68, 0.85));
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--red) 50%, transparent),
+    color-mix(in srgb, var(--red) 85%, transparent)
+  );
 }
 
 /* ping grid */

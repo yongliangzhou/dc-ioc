@@ -30,10 +30,7 @@
       </div>
     </div>
     <div class="tools">
-      <div
-        class="linkage"
-        :title="linkageTitle"
-      >
+      <div class="linkage" :title="linkageTitle">
         <span class="dot" :class="linkageLoading ? 'y' : linkageError ? 'r' : 'g'" />
         <span class="lt">{{ linkageText }}</span>
       </div>

@@ -23,6 +23,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import echarts, { type EChartsOption, type EChartsType } from '@/utils/echarts'
 import SkeletonCard from './SkeletonCard.vue'
@@ -45,7 +46,13 @@ const props = withDefaults(
     emptyText?: string
   }>(),
   {
-    colors: () => ['#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444'],
+    colors: () => [
+      cssToken('--cyan'),
+      cssToken('--green'),
+      cssToken('--amber'),
+      cssToken('--amber'),
+      cssToken('--red'),
+    ],
     unit: '℃',
     loading: false,
     emptyText: '暂无数据',
@@ -58,7 +65,8 @@ let ro: ResizeObserver | null = null
 let pendingRender = false
 
 const gradientCSS = computed(
-  () => `linear-gradient(90deg, ${(props.colors ?? ['#06b6d4', '#ef4444']).join(',')})`,
+  () =>
+    `linear-gradient(90deg, ${(props.colors ?? [cssToken('--cyan'), cssToken('--red')]).join(',')})`,
 )
 
 const valueRangeLabelLow = computed(() => (props.valueRange ? String(props.valueRange[0]) : '低'))
@@ -117,15 +125,15 @@ function buildOption(): EChartsOption {
     xAxis: {
       type: 'category' as const,
       data: xLabels,
-      axisLabel: { color: '#64748b', fontSize: 10 },
-      axisLine: { lineStyle: { color: '#334155' } },
+      axisLabel: { color: cssToken('--txt2'), fontSize: 10 },
+      axisLine: { lineStyle: { color: cssToken('--txt3') } },
       position: 'top' as const,
     },
     yAxis: {
       type: 'category' as const,
       data: yLabels,
-      axisLabel: { color: '#94a3b8', fontSize: 11 },
-      axisLine: { lineStyle: { color: '#334155' } },
+      axisLabel: { color: cssToken('--txt2'), fontSize: 11 },
+      axisLine: { lineStyle: { color: cssToken('--txt3') } },
     },
     visualMap: {
       min: vMin,
@@ -136,7 +144,7 @@ function buildOption(): EChartsOption {
       top: 'center',
       inRange: { color: props.colors },
       text: [String(vMax), String(vMin)],
-      textStyle: { color: '#94a3b8', fontSize: 10 },
+      textStyle: { color: cssToken('--txt2'), fontSize: 10 },
     },
     series: [
       {
@@ -144,7 +152,7 @@ function buildOption(): EChartsOption {
         type: 'heatmap',
         data: heatData,
         label: { show: false },
-        emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.5)' } },
+        emphasis: { itemStyle: { shadowBlur: 10, shadowColor: cssToken('--accent-50') } },
       },
     ],
   }

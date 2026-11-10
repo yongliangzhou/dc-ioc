@@ -73,6 +73,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { computed, ref, onBeforeUnmount, type Component } from 'vue'
 import {
   TrendingUp,
@@ -171,10 +172,10 @@ const valueColor = computed(() => {
 })
 
 const sparkColor = computed(() => {
-  if (!props.online) return '#3a4a66'
-  if (props.severity === 'crit' || props.quality === 'bad') return '#ff4d5e'
-  if (props.severity === 'warn' || props.quality === 'uncertain') return '#ffb020'
-  return '#22e3ff'
+  if (!props.online) return cssToken('--txt3')
+  if (props.severity === 'crit' || props.quality === 'bad') return cssToken('--red')
+  if (props.severity === 'warn' || props.quality === 'uncertain') return cssToken('--amber')
+  return cssToken('--cyan')
 })
 
 /* ---- Sparkline SVG math ---- */
@@ -226,24 +227,24 @@ const trendPct = computed(() => {
   flex-direction: column;
 }
 .metric-card:hover {
-  border-color: rgba(34, 227, 255, 0.4);
+  border-color: var(--cyan-line);
   box-shadow: var(--glow);
   transform: translateY(-1px);
 }
 .metric-card.alert {
-  border-color: rgba(255, 77, 94, 0.3);
-  background: linear-gradient(180deg, rgba(255, 77, 94, 0.06), var(--bg2));
+  border-color: color-mix(in srgb, var(--red) 30%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--red) 6%, transparent), var(--bg2));
 }
 .metric-card.warn {
-  border-color: rgba(255, 176, 32, 0.3);
-  background: linear-gradient(180deg, rgba(255, 176, 32, 0.06), var(--bg2));
+  border-color: color-mix(in srgb, var(--amber) 30%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--amber) 6%, transparent), var(--bg2));
 }
 .metric-card.stale {
   opacity: 0.55;
 }
 .metric-card.pstale {
-  border-color: rgba(255, 176, 32, 0.45);
-  background: linear-gradient(180deg, rgba(255, 176, 32, 0.05), var(--bg2));
+  border-color: color-mix(in srgb, var(--amber) 45%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--amber) 5%, transparent), var(--bg2));
 }
 .mc-stale-icon {
   color: var(--amber);

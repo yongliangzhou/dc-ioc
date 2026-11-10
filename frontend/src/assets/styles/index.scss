@@ -59,10 +59,9 @@ $bp-l: 1440px;
   --space-1:4px; --space-2:8px; --space-3:12px; --space-4:16px; --space-5:24px;
   --radius-sm:8px; --radius-md:12px; --radius-lg:14px;
 
-  /* 兼容别名: 部分页面 scoped 样式引用了 --text / --muted / --panel-2,
-     它们并非主题正式变量(正式为 --txt / --txt2 / --panel2)。阶段 3 逐页改为正式
-     token 后删除此映射。禁止在别名以外的地方使用 var(--未定义, fallback)。 */
-  --text:var(--txt); --muted:var(--txt2); --panel-2:var(--panel2);
+  /* 阶段 3: 兼容别名 --text / --muted / --panel-2 已全库清零并删除。
+     禁止在页面写 var(--未定义, fallback)，颜色只能引用本文件的正式 token。 */
+  --mono:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color-scheme:dark;
 }
 :root[data-theme="light"]{
@@ -98,7 +97,6 @@ $bp-l: 1440px;
   --heat-ink:#0b1524;
   --shadow-modal:0 20px 60px rgba(30,42,60,.18);
 
-  --text:var(--txt); --muted:var(--txt2); --panel-2:var(--panel2);
   color-scheme:light;
 }
 
@@ -111,7 +109,8 @@ body{
   color:var(--txt); font-size:13px; line-height:1.5; overflow:hidden;
 }
 #app{height:100%}
-.app{display:grid; grid-template-rows:auto 1fr; height:100vh}
+/* 显式列约束: 隐式 auto 列会被顶栏 min-content 撑宽，导致窄视口横向滚动 */
+.app{display:grid; grid-template-rows:auto 1fr; grid-template-columns:minmax(0,1fr); height:100vh; min-width:0}
 a{text-decoration:none; color:inherit}
 :where(a,button,input,select,textarea,[tabindex]):focus-visible{
   outline:2px solid var(--cyan); outline-offset:2px;
@@ -148,7 +147,7 @@ a{text-decoration:none; color:inherit}
 .linkage .dot.y{background:var(--amber); box-shadow:0 0 6px var(--amber); animation:blink 1s infinite}
 
 /* ---------- 4. 布局 ---------- */
-.body{display:grid; grid-template-columns:236px 1fr; min-height:0}
+.body{display:grid; grid-template-columns:236px minmax(0,1fr); min-height:0; min-width:0}
 .side{background:linear-gradient(180deg,var(--side1),var(--side2)); border-right:1px solid var(--line);
   overflow-y:auto; padding:10px var(--space-2)}
 .nav-group{margin-bottom:6px}

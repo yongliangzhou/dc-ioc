@@ -78,8 +78,8 @@
       <div v-if="!filtered.length" class="empty">{{ t.empty }}</div>
     </div>
 
-    <div v-if="editor" class="mask" @click.self="editor = false">
-      <aside class="drawer">
+    <div v-if="editor" class="modal-mask" @click.self="editor = false">
+      <aside class="modal as-drawer">
         <header class="drawer-head">
           <h2>+ {{ t.newEntry }}</h2>
           <button
@@ -154,8 +154,8 @@
       </aside>
     </div>
 
-    <div v-if="showDel" class="confirm-mask" @click.self="showDel = false">
-      <div class="confirm-box">
+    <div v-if="showDel" class="modal-mask" @click.self="showDel = false">
+      <div class="modal">
         <h3>{{ t.confirmDeleteTitle }}</h3>
         <p>{{ t.confirmDelete }}</p>
         <div class="confirm-actions">
@@ -389,7 +389,7 @@ onMounted(() => {})
   font-weight: 700;
 }
 .page-sub {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
   margin-top: 4px;
 }
@@ -399,9 +399,9 @@ onMounted(() => {})
   align-items: center;
 }
 .inp {
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--text);
+  color: var(--txt);
   border-radius: 8px;
   padding: 7px 10px;
   width: 100%;
@@ -428,7 +428,7 @@ onMounted(() => {})
 }
 .kpi-l {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 4px;
 }
 .seg {
@@ -438,9 +438,9 @@ onMounted(() => {})
   margin-bottom: 14px;
 }
 .seg-btn {
-  background: var(--panel-2);
+  background: var(--panel2);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--txt2);
   padding: 5px 12px;
   border-radius: 999px;
   cursor: pointer;
@@ -448,7 +448,7 @@ onMounted(() => {})
 }
 .seg-btn.active {
   background: var(--cyan);
-  color: #04121a;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -467,7 +467,7 @@ onMounted(() => {})
   gap: 12px;
 }
 .row-card.inside {
-  border-color: rgba(34, 197, 94, 0.4);
+  border-color: color-mix(in srgb, var(--green) 40%, transparent);
 }
 .row-main {
   flex: 1;
@@ -481,7 +481,7 @@ onMounted(() => {})
 }
 .row-sub {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-top: 3px;
   display: flex;
   gap: 6px;
@@ -503,37 +503,37 @@ onMounted(() => {})
   border-radius: 999px;
 }
 .badge.green {
-  background: rgba(34, 197, 94, 0.16);
-  color: #4ade80;
+  background: color-mix(in srgb, var(--green) 16%, transparent);
+  color: var(--green);
 }
 .badge.blue {
-  background: rgba(56, 189, 248, 0.16);
-  color: #38bdf8;
+  background: color-mix(in srgb, var(--blue) 16%, transparent);
+  color: var(--blue);
 }
 .badge.amber {
-  background: rgba(245, 158, 11, 0.16);
-  color: #fbbf24;
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
+  color: var(--amber);
 }
 .muted {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .small {
   font-size: 11px;
 }
 .empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--txt2);
   padding: 40px;
 }
-.mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--accent-50);
   display: flex;
   justify-content: flex-end;
   z-index: 50;
 }
-.drawer {
+.as-drawer {
   width: 420px;
   max-width: 92vw;
   background: var(--panel);
@@ -553,7 +553,7 @@ onMounted(() => {})
 .x {
   background: transparent;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 18px;
   cursor: pointer;
 }
@@ -562,11 +562,11 @@ onMounted(() => {})
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-bottom: 10px;
 }
 .err {
-  color: #f87171;
+  color: var(--red);
   font-size: 12px;
 }
 .drawer-actions {
@@ -576,8 +576,8 @@ onMounted(() => {})
 }
 .btn {
   border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--text);
+  background: var(--panel2);
+  color: var(--txt);
   border-radius: 8px;
   padding: 7px 12px;
   cursor: pointer;
@@ -592,7 +592,7 @@ onMounted(() => {})
 }
 .btn.green {
   background: var(--green);
-  color: #04121a;
+  color: var(--txt3);
   border-color: var(--green);
   font-weight: 600;
 }
@@ -600,24 +600,24 @@ onMounted(() => {})
   opacity: 0.6;
 }
 .btn.danger {
-  background: #ef4444;
-  color: #fff;
-  border-color: #ef4444;
+  background: var(--red);
+  color: var(--txt-strong);
+  border-color: var(--red-line);
   font-weight: 600;
 }
 .inp.invalid {
-  border-color: #f87171;
+  border-color: var(--red-line);
 }
-.confirm-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--accent-50);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 60;
 }
-.confirm-box {
+.modal {
   background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -625,13 +625,13 @@ onMounted(() => {})
   width: 320px;
   max-width: 90vw;
 }
-.confirm-box h3 {
+.modal h3 {
   margin: 0 0 8px;
   font-size: 15px;
-  color: var(--text);
+  color: var(--txt);
 }
-.confirm-box p {
-  color: var(--muted);
+.modal p {
+  color: var(--txt2);
   font-size: 13px;
   margin: 0 0 14px;
 }

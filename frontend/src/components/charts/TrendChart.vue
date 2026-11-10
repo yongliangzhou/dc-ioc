@@ -242,10 +242,10 @@ function switchRange(key: string): void {
 }
 .tc-btn:hover {
   border-color: var(--cyan);
-  color: #fff;
+  color: var(--txt-strong);
 }
 .tc-btn.active {
-  background: rgba(34, 227, 255, 0.12);
+  background: var(--accent-12);
   border-color: var(--cyan);
   color: var(--cyan);
   font-weight: 600;
@@ -265,7 +265,7 @@ function switchRange(key: string): void {
   min-width: 220px;
   max-height: 260px;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 8px 24px var(--accent-50);
   padding: 4px;
 }
 .tc-opt {
@@ -279,10 +279,10 @@ function switchRange(key: string): void {
   color: var(--txt);
 }
 .tc-opt:hover {
-  background: rgba(34, 227, 255, 0.08);
+  background: var(--accent-08);
 }
 .tc-opt.active {
-  background: rgba(34, 227, 255, 0.12);
+  background: var(--accent-12);
   color: var(--cyan);
   font-weight: 600;
 }

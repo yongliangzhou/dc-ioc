@@ -31,7 +31,8 @@ const emit = defineEmits<{
   (e: 'size-change', size: number): void
 }>()
 
-const sizes = computed(() => props.sizes ?? [10, 20, 50, 100])
+// 04 §6.2: 默认 20 条，可选 20/50；审计页可通过 :sizes 覆盖
+const sizes = computed(() => props.sizes ?? [20, 50])
 const totalPages = computed(() => Math.max(1, Math.ceil(props.total / props.size)))
 const start = computed(() => (props.total === 0 ? 0 : (props.page - 1) * props.size + 1))
 const end = computed(() => Math.min(props.total, props.page * props.size))
@@ -70,7 +71,7 @@ function onSize(e: Event) {
 }
 .pg-info {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .pg-ctrl {
   display: flex;
@@ -96,7 +97,7 @@ function onSize(e: Event) {
 }
 .pg-btn.active {
   background: var(--cyan);
-  color: #04222b;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 600;
 }
@@ -105,7 +106,7 @@ function onSize(e: Event) {
   cursor: default;
 }
 .pg-gap {
-  color: var(--muted);
+  color: var(--txt2);
   padding: 0 2px;
 }
 .pg-size {

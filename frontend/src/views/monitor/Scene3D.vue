@@ -67,14 +67,13 @@
     </div>
 
     <div class="canvas-host" ref="host"></div>
-    <div class="loading" v-if="loading && !error">{{ tl('common.loading') }}</div>
-    <div class="loaderr" v-if="error">
-      <ErrorBanner :count="1" :labels="['3D 设备']" @retry="load" />
-    </div>
+    <AsyncSection :loading="loading" :error="error" :empty="!devices.length" @retry="load" />
   </div>
 </template>
 
 <script setup lang="ts">
+import AsyncSection from '@/components/common/AsyncSection.vue'
+import { cssToken } from '@/assets/echarts-theme'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import * as THREE from 'three'
@@ -82,7 +81,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { fetchTwinDevices, type TwinDevice } from '@/api/twin'
 import { useDatacenterStore } from '@/stores/datacenter'
 import { toErrorMessage, useMockFlag } from '@/composables/useAsyncPage'
-import ErrorBanner from '@/components/common/ErrorBanner.vue'
 import MockDataBanner from '@/components/common/MockDataBanner.vue'
 
 const { t: tl } = useI18n()
@@ -107,10 +105,10 @@ const selectedRoom = ref<string>('')
 const selected = ref<TwinDevice | null>(null)
 const devices = ref<TwinDevice[]>([])
 
-const COL_ONLINE = new THREE.Color('#22d3ee')
-const COL_OFFLINE = new THREE.Color('#475569')
-const COL_HOT = new THREE.Color('#ef4444')
-const COL_COLD = new THREE.Color('#3b82f6')
+const COL_ONLINE = new THREE.Color(cssToken('--cyan'))
+const COL_OFFLINE = new THREE.Color(cssToken('--txt3'))
+const COL_HOT = new THREE.Color(cssToken('--red'))
+const COL_COLD = new THREE.Color(cssToken('--blue'))
 
 // three 资源
 let renderer: THREE.WebGLRenderer | null = null
@@ -442,8 +440,8 @@ onMounted(() => {
   const w = host.value.clientWidth
   const h = host.value.clientHeight
   scene = new THREE.Scene()
-  scene.background = new THREE.Color('#0a0f1c')
-  scene.fog = new THREE.Fog('#0a0f1c', 80, 220)
+  scene.background = new THREE.Color(cssToken('--txt3'))
+  scene.fog = new THREE.Fog(cssToken('--txt3'), 80, 220)
   camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 2000)
   renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(w, h)
@@ -491,7 +489,7 @@ onBeforeUnmount(() => {
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: #0a0f1c;
+  background: var(--bg);
 }
 .canvas-host {
   position: absolute;
@@ -507,9 +505,9 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 8px 12px;
   border-radius: 12px;
-  background: rgba(17, 24, 39, 0.72);
+  background: var(--mask);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(34, 211, 238, 0.2);
+  border: 1px solid color-mix(in srgb, var(--cyan) 20%, transparent);
   flex-wrap: wrap;
 }
 .cb-title {
@@ -533,8 +531,8 @@ onBeforeUnmount(() => {
 }
 .lv-btn.on {
   color: var(--cyan);
-  border-color: rgba(34, 211, 238, 0.5);
-  background: rgba(34, 211, 238, 0.1);
+  border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
+  background: color-mix(in srgb, var(--cyan) 10%, transparent);
 }
 .seg {
   display: flex;
@@ -551,13 +549,13 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .seg button.on {
-  color: #06121f;
+  color: var(--txt3);
   background: var(--cyan);
   font-weight: 700;
 }
 .btn-sm {
   color: var(--cyan);
-  border: 1px solid rgba(34, 211, 238, 0.3);
+  border: 1px solid color-mix(in srgb, var(--cyan) 30%, transparent);
   background: transparent;
   border-radius: 8px;
   padding: 4px 10px;
@@ -575,7 +573,7 @@ onBeforeUnmount(() => {
   color: var(--txt2);
   padding: 6px 12px;
   border-radius: 10px;
-  background: rgba(17, 24, 39, 0.72);
+  background: var(--mask);
   backdrop-filter: blur(8px);
   border: 1px solid var(--line);
 }
@@ -595,7 +593,7 @@ onBeforeUnmount(() => {
   gap: 14px;
   padding: 8px 12px;
   border-radius: 10px;
-  background: rgba(17, 24, 39, 0.72);
+  background: var(--mask);
   backdrop-filter: blur(8px);
   border: 1px solid var(--line);
 }
@@ -613,15 +611,15 @@ onBeforeUnmount(() => {
   display: inline-block;
 }
 .dot.online {
-  background: #22d3ee;
-  box-shadow: 0 0 8px #22d3ee;
+  background: var(--cyan-bg);
+  box-shadow: 0 0 8px var(--cyan-bg);
 }
 .dot.off {
-  background: #475569;
+  background: var(--panel2);
 }
 .dot.hot {
-  background: #ef4444;
-  box-shadow: 0 0 8px #ef4444;
+  background: var(--red);
+  box-shadow: 0 0 8px var(--red);
 }
 .info-card {
   position: absolute;
@@ -631,9 +629,9 @@ onBeforeUnmount(() => {
   width: 220px;
   padding: 14px;
   border-radius: 12px;
-  background: rgba(17, 24, 39, 0.88);
+  background: var(--mask);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(34, 211, 238, 0.25);
+  border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent);
   color: var(--txt);
 }
 .ic-name {
@@ -650,10 +648,10 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--line);
 }
 .ic-row b.on {
-  color: #22c55e;
+  color: var(--green);
 }
 .ic-row b.off {
-  color: #94a3b8;
+  color: var(--txt2);
 }
 .x {
   position: absolute;
@@ -661,7 +659,7 @@ onBeforeUnmount(() => {
   right: 10px;
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   cursor: pointer;
   font-size: 14px;
 }
@@ -671,7 +669,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 14px;
 }
 .loaderr {

@@ -5,7 +5,9 @@
       <div class="d-actions">
         <button class="btn ghost" @click="reset">{{ tl('恢复默认') }}</button>
         <button class="btn primary" @click="save">{{ tl('保存配置') }}</button>
-        <router-link to="/monitor/visual/bigscreen" class="btn preview">{{ tl('预览大屏') }} →</router-link>
+        <router-link to="/monitor/visual/bigscreen" class="btn preview"
+          >{{ tl('预览大屏') }} →</router-link
+        >
       </div>
     </div>
 
@@ -29,8 +31,12 @@
         <div class="fld">
           <span>{{ tl('主题') }}</span>
           <div class="seg">
-            <button :class="{ on: cfg.theme === 'dark' }" @click="cfg.theme = 'dark'">{{ tl('深色') }}</button>
-            <button :class="{ on: cfg.theme === 'light' }" @click="cfg.theme = 'light'">{{ tl('浅色') }}</button>
+            <button :class="{ on: cfg.theme === 'dark' }" @click="cfg.theme = 'dark'">
+              {{ tl('深色') }}
+            </button>
+            <button :class="{ on: cfg.theme === 'light' }" @click="cfg.theme = 'light'">
+              {{ tl('浅色') }}
+            </button>
           </div>
         </div>
         <div class="fld">
@@ -45,7 +51,11 @@
               :title="s.label"
               @click="selectSkin(s.id)"
             />
-            <label class="skin custom" :style="{ background: cfg.customColor || '#fff' }" title="自定义">
+            <label
+              class="skin custom"
+              :style="{ background: cfg.customColor || 'var(--txt-strong)' }"
+              title="自定义"
+            >
               <input type="color" v-model="cfg.customColor" @input="cfg.skin = ''" />
             </label>
           </div>
@@ -111,33 +121,173 @@ function save() {
 </script>
 
 <style scoped>
-.designer { padding: 16px 20px 40px; }
-.d-head { display: flex; justify-content: space-between; align-items: center; }
-.d-head h1 { font-size: 20px; margin: 0; color: #e2e8f0; }
-.d-actions { display: flex; gap: 10px; }
-.btn { border-radius: 8px; padding: 7px 14px; font-size: 13px; cursor: pointer; text-decoration: none; border: 1px solid var(--line); }
-.btn.ghost { color: #cbd5e1; background: transparent; }
-.btn.primary { background: var(--cyan); color: #06121f; border-color: var(--cyan); font-weight: 700; }
-.btn.preview { color: var(--cyan); border-color: rgba(34,227,255,.4); }
-.d-body { display: grid; grid-template-columns: 300px 1fr; gap: 16px; margin-top: 18px; align-items: start; }
-.panel { background: #0f172a; border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
-.panel.grow { min-height: 360px; }
-.panel h3 { margin: 0 0 14px; color: #cbd5e1; font-size: 14px; }
-.fld { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; font-size: 13px; color: #94a3b8; }
-.fld input[type='text'], .fld select { background: #1e293b; border: 1px solid var(--line); color: #e2e8f0; border-radius: 8px; padding: 8px 10px; }
-.seg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; width: fit-content; }
-.seg button { color: #94a3b8; background: transparent; border: none; padding: 6px 16px; font-size: 13px; cursor: pointer; }
-.seg button.on { background: var(--cyan); color: #06121f; font-weight: 700; }
-.skins { display: flex; gap: 10px; align-items: center; }
-.skin { width: 30px; height: 30px; border-radius: 8px; border: 2px solid transparent; cursor: pointer; }
-.skin.on { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.3); }
-.skin.custom { position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
-.skin.custom input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-.hint { color: #64748b; font-size: 12px; margin: -6px 0 12px; }
-.src-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.src { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; background: #1e293b; border: 1px solid var(--line); cursor: pointer; font-size: 13px; }
-.src.on { border-color: var(--cyan); background: rgba(34,227,255,.08); }
-.src-name { color: #e2e8f0; flex: 1; }
-.src-type { color: #64748b; font-size: 11px; }
-.saved { position: fixed; bottom: 24px; right: 24px; background: #22c55e; color: #04210f; padding: 10px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+.designer {
+  padding: 16px 20px 40px;
+}
+.d-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.d-head h1 {
+  font-size: 20px;
+  margin: 0;
+  color: var(--txt-strong);
+}
+.d-actions {
+  display: flex;
+  gap: 10px;
+}
+.btn {
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: none;
+  border: 1px solid var(--line);
+}
+.btn.ghost {
+  color: var(--txt);
+  background: transparent;
+}
+.btn.primary {
+  background: var(--cyan);
+  color: var(--txt3);
+  border-color: var(--cyan);
+  font-weight: 700;
+}
+.btn.preview {
+  color: var(--cyan);
+  border-color: var(--cyan-line);
+}
+.d-body {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 16px;
+  margin-top: 18px;
+  align-items: start;
+}
+.panel {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+}
+.panel.grow {
+  min-height: 360px;
+}
+.panel h3 {
+  margin: 0 0 14px;
+  color: var(--txt);
+  font-size: 14px;
+}
+.fld {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--txt2);
+}
+.fld input[type='text'],
+.fld select {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--txt-strong);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.seg {
+  display: flex;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  width: fit-content;
+}
+.seg button {
+  color: var(--txt2);
+  background: transparent;
+  border: none;
+  padding: 6px 16px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.seg button.on {
+  background: var(--cyan);
+  color: var(--txt3);
+  font-weight: 700;
+}
+.skins {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.skin {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.skin.on {
+  border-color: var(--txt-strong);
+  box-shadow: 0 0 0 2px var(--accent-35);
+}
+.skin.custom {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.skin.custom input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.hint {
+  color: var(--txt2);
+  font-size: 12px;
+  margin: -6px 0 12px;
+}
+.src-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+}
+.src {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  cursor: pointer;
+  font-size: 13px;
+}
+.src.on {
+  border-color: var(--cyan);
+  background: var(--accent-08);
+}
+.src-name {
+  color: var(--txt-strong);
+  flex: 1;
+}
+.src-type {
+  color: var(--txt2);
+  font-size: 11px;
+}
+.saved {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: var(--green-bg);
+  color: var(--txt3);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
 </style>

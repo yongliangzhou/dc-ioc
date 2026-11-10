@@ -159,6 +159,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Panel from '@/components/common/Panel.vue'
@@ -316,14 +317,14 @@ const metricOrder = [
 ]
 
 const palette = [
-  '#22d3ee',
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#a855f7',
-  '#ec4899',
-  '#14b8a6',
+  cssToken('--cyan'),
+  cssToken('--blue'),
+  cssToken('--cyan'),
+  cssToken('--amber'),
+  cssToken('--red'),
+  cssToken('--purple'),
+  cssToken('--red'),
+  cssToken('--cyan'),
 ]
 function colorOf(id: number) {
   const i = cmp.value.centers.findIndex((c) => c.id === id)
@@ -335,14 +336,14 @@ const barOption = computed(() => {
   const cats = metricDefs.value.filter((m) => m.on)
   return {
     tooltip: { trigger: 'axis' },
-    legend: { data: centers.map((c) => c.name), textStyle: { color: '#9fb3c8' } },
+    legend: { data: centers.map((c) => c.name), textStyle: { color: cssToken('--txt') } },
     grid: { left: 80, right: 24, bottom: 40, top: 40 },
     xAxis: {
       type: 'category',
       data: cats.map((m) => m.label),
-      axisLabel: { color: '#9fb3c8', interval: 0, rotate: 20 },
+      axisLabel: { color: cssToken('--txt'), interval: 0, rotate: 20 },
     },
-    yAxis: { type: 'value', axisLabel: { color: '#9fb3c8' } },
+    yAxis: { type: 'value', axisLabel: { color: cssToken('--txt') } },
     series: centers.map((c) => ({
       name: c.name,
       type: 'bar',
@@ -361,8 +362,8 @@ const radarOption = computed(() => {
   }))
   return {
     tooltip: {},
-    legend: { data: centers.map((c) => c.name), textStyle: { color: '#9fb3c8' }, top: 0 },
-    radar: { indicator: indicators, axisName: { color: '#9fb3c8' }, radius: '65%' },
+    legend: { data: centers.map((c) => c.name), textStyle: { color: cssToken('--txt') }, top: 0 },
+    radar: { indicator: indicators, axisName: { color: cssToken('--txt') }, radius: '65%' },
     series: [
       {
         type: 'radar',
@@ -442,7 +443,7 @@ onMounted(() => {
   margin: 0;
 }
 .view-head .sub {
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 12px;
 }
 .head-actions {
@@ -491,7 +492,7 @@ onMounted(() => {
 }
 .sub2 {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   font-weight: 400;
   margin-left: 8px;
 }
@@ -540,7 +541,7 @@ onMounted(() => {
 }
 .opt label {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .cols {
   margin-top: 12px;
@@ -549,7 +550,7 @@ onMounted(() => {
 }
 .cols-head {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   margin-bottom: 8px;
 }
 .col-list {
@@ -570,7 +571,7 @@ onMounted(() => {
   cursor: grab;
 }
 .grip {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .chk {
   display: inline-flex;
@@ -582,7 +583,7 @@ onMounted(() => {
 }
 .order {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
 }
 .table {
   overflow: auto;
@@ -609,7 +610,7 @@ onMounted(() => {
 }
 .metric-col {
   text-align: left !important;
-  color: var(--muted) !important;
+  color: var(--txt2) !important;
 }
 .cmp-table td.crit {
   color: var(--red);
@@ -639,7 +640,7 @@ onMounted(() => {
   color: var(--txt2);
 }
 .a-row.ah {
-  color: var(--muted);
+  color: var(--txt2);
   font-weight: 600;
   border-top: none;
 }
@@ -651,20 +652,20 @@ onMounted(() => {
   color: var(--txt2);
 }
 .tag.b {
-  color: #38bdf8;
-  border-color: rgba(56, 189, 248, 0.4);
+  color: var(--blue);
+  border-color: color-mix(in srgb, var(--blue) 40%, transparent);
 }
 .tag.a {
   color: var(--amber);
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: color-mix(in srgb, var(--amber) 40%, transparent);
 }
 .tag.r {
   color: var(--red);
-  border-color: rgba(255, 77, 94, 0.4);
+  border-color: var(--red-line);
 }
 .empty {
   text-align: center;
-  color: var(--muted);
+  color: var(--txt2);
   padding: 24px;
   font-size: 13px;
 }

@@ -10,7 +10,7 @@
       <section class="panel">
         <div class="panel-head">
           <h3>{{ tl('巡检模板') }}</h3>
-          <button class="btn-sm primary" v-bind="authState('write')" @click="openTpl()">
+          <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openTpl()">
             {{ tl('新建模板') }}
           </button>
         </div>
@@ -79,7 +79,7 @@
               </button>
             </div>
             <div class="task-ops" v-else-if="t.status === 'doing'">
-              <button class="btn-sm primary" v-bind="authState('write')" @click="finish(t)">
+              <button class="btn-sm btn-primary" v-bind="authState('write')" @click="finish(t)">
                 {{ tl('完成') }}
               </button>
             </div>
@@ -91,7 +91,7 @@
 
     <!-- 模板编辑抽屉 -->
     <transition name="slide">
-      <div v-if="editing" class="drawer" @click.self="editing = null">
+      <div v-if="editing" class="modal as-drawer" @click.self="editing = null">
         <div class="drawer-card">
           <div class="drawer-head">
             <h3>{{ editing.id ? tl('编辑模板') : tl('新建模板') }}</h3>
@@ -133,7 +133,7 @@
             >
               {{ tl('删除') }}
             </button>
-            <button class="btn-sm primary" v-bind="authState('write')" @click="saveTpl">
+            <button class="btn-sm btn-primary" v-bind="authState('write')" @click="saveTpl">
               {{ tl('保存') }}
             </button>
           </div>
@@ -295,10 +295,10 @@ onMounted(() => {
 .view-head h1 {
   font-size: 20px;
   margin: 0;
-  color: #e2e8f0;
+  color: var(--txt-strong);
 }
 .sub {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 13px;
 }
 .cols {
@@ -309,7 +309,7 @@ onMounted(() => {
   align-items: start;
 }
 .panel {
-  background: #0f172a;
+  background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 16px;
@@ -322,11 +322,11 @@ onMounted(() => {
 }
 .panel-head h3 {
   margin: 0;
-  color: #cbd5e1;
+  color: var(--txt);
   font-size: 15px;
 }
 .btn-sm {
-  color: #cbd5e1;
+  color: var(--txt);
   border: 1px solid var(--line);
   background: transparent;
   border-radius: 8px;
@@ -335,7 +335,7 @@ onMounted(() => {
 }
 .btn-sm.primary {
   background: var(--cyan);
-  color: #06121f;
+  color: var(--txt3);
   border-color: var(--cyan);
   font-weight: 700;
 }
@@ -346,7 +346,7 @@ onMounted(() => {
   overflow: hidden;
 }
 .seg button {
-  color: #94a3b8;
+  color: var(--txt2);
   background: transparent;
   border: none;
   padding: 5px 12px;
@@ -355,7 +355,7 @@ onMounted(() => {
 }
 .seg button.on {
   background: var(--cyan);
-  color: #06121f;
+  color: var(--txt3);
   font-weight: 700;
 }
 .tpl-list,
@@ -365,7 +365,7 @@ onMounted(() => {
   gap: 10px;
 }
 .tpl-item {
-  background: #1e293b;
+  background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px;
@@ -376,7 +376,7 @@ onMounted(() => {
   gap: 8px;
 }
 .tpl-name {
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-weight: 600;
   flex: 1;
 }
@@ -386,15 +386,15 @@ onMounted(() => {
   border-radius: 20px;
 }
 .pill.g {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
+  background: color-mix(in srgb, var(--green) 15%, transparent);
+  color: var(--green);
 }
 .pill.a {
-  background: rgba(148, 163, 184, 0.15);
-  color: #94a3b8;
+  background: var(--accent-16);
+  color: var(--txt2);
 }
 .tpl-desc {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 12px;
   margin: 6px 0;
 }
@@ -411,23 +411,23 @@ onMounted(() => {
   padding: 0;
 }
 .link.danger {
-  color: #f87171;
+  color: var(--red);
 }
 .task-item {
-  background: #1e293b;
+  background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px;
-  border-left: 3px solid #64748b;
+  border-left: 3px solid var(--line);
 }
 .task-item.todo {
-  border-left-color: #f59e0b;
+  border-left-color: var(--amber-line);
 }
 .task-item.doing {
-  border-left-color: #38bdf8;
+  border-left-color: var(--blue-line);
 }
 .task-item.done {
-  border-left-color: #22c55e;
+  border-left-color: var(--green-line);
 }
 .task-row {
   display: flex;
@@ -435,23 +435,23 @@ onMounted(() => {
   align-items: center;
 }
 .task-name {
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-weight: 600;
 }
 .task-status {
   font-size: 12px;
 }
 .task-status.todo {
-  color: #f59e0b;
+  color: var(--amber);
 }
 .task-status.doing {
-  color: #38bdf8;
+  color: var(--blue);
 }
 .task-status.done {
-  color: #22c55e;
+  color: var(--green);
 }
 .task-meta {
-  color: #64748b;
+  color: var(--txt2);
   font-size: 12px;
   margin: 6px 0;
 }
@@ -459,15 +459,15 @@ onMounted(() => {
   margin-top: 8px;
 }
 .empty {
-  color: #64748b;
+  color: var(--txt2);
   text-align: center;
   padding: 24px;
   font-size: 13px;
 }
-.drawer {
+.as-drawer {
   position: fixed;
   inset: 0;
-  background: rgba(2, 6, 23, 0.6);
+  background: var(--accent-50);
   display: flex;
   justify-content: flex-end;
   z-index: 50;
@@ -476,8 +476,8 @@ onMounted(() => {
   width: 400px;
   max-width: 90vw;
   height: 100%;
-  background: #0f172a;
-  border-left: 1px solid #1e293b;
+  background: var(--bg2);
+  border-left: 1px solid var(--line);
   padding: 22px;
   overflow-y: auto;
 }
@@ -489,7 +489,7 @@ onMounted(() => {
 }
 .drawer-head h3 {
   margin: 0;
-  color: #e2e8f0;
+  color: var(--txt-strong);
   font-size: 15px;
 }
 .fld {
@@ -498,14 +498,14 @@ onMounted(() => {
   gap: 6px;
   margin: 12px 0;
   font-size: 13px;
-  color: #94a3b8;
+  color: var(--txt2);
 }
 .fld input,
 .fld select,
 .fld textarea {
-  background: #1e293b;
+  background: var(--bg2);
   border: 1px solid var(--line);
-  color: #e2e8f0;
+  color: var(--txt-strong);
   border-radius: 8px;
   padding: 8px 10px;
   font-family: inherit;
@@ -519,7 +519,7 @@ onMounted(() => {
 .x {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   cursor: pointer;
   font-size: 16px;
 }

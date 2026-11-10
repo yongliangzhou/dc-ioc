@@ -160,7 +160,7 @@ defineProps<{ knowledge?: PowerKnowledge | null }>()
   height: 22px;
   border-radius: 50%;
   background: var(--cyan);
-  color: #04121f;
+  color: var(--txt3);
   font-size: 12px;
   display: flex;
   align-items: center;
@@ -177,11 +177,11 @@ defineProps<{ knowledge?: PowerKnowledge | null }>()
   border-radius: 999px;
 }
 .ok-y {
-  background: rgba(43, 212, 122, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .ok-n {
-  background: rgba(255, 77, 94, 0.12);
+  background: var(--red-bg);
   color: var(--red);
 }
 .fault-table {

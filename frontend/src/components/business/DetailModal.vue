@@ -50,7 +50,7 @@ function close() {
   position: fixed;
   inset: 0;
   z-index: 1000;
-  background: rgba(4, 8, 20, 0.66);
+  background: var(--mask);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -61,27 +61,27 @@ function close() {
   max-width: 92vw;
   max-height: 86vh;
   overflow: auto;
-  background: var(--panel, #131a30);
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  background: var(--panel);
+  border: 1px solid var(--line);
   border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 60px var(--accent-50);
 }
 .dm-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 14px 18px;
-  border-bottom: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--line);
 }
 .dm-head h3 {
   margin: 0;
   font-size: 14.5px;
-  color: var(--cyan, #22e3ff);
+  color: var(--cyan);
 }
 .dm-x {
   background: none;
   border: none;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
   font-size: 15px;
   cursor: pointer;
 }
@@ -93,34 +93,34 @@ function close() {
   gap: 10px;
   font-size: 12.5px;
   padding: 5px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--accent-02);
 }
 .dm-k {
-  color: var(--txt3, #5a6380);
+  color: var(--txt3);
   width: 92px;
   flex-shrink: 0;
 }
 .dm-v {
-  color: var(--txt, #e6f1ff);
+  color: var(--txt);
   word-break: break-all;
 }
 .dm-extra {
   margin-top: 12px;
   font-size: 12.5px;
-  color: var(--txt2, #8892b0);
+  color: var(--txt2);
 }
 .dm-extra p {
   margin: 4px 0 0;
   white-space: pre-wrap;
   line-height: 1.5;
-  color: var(--txt, #e6f1ff);
+  color: var(--txt);
 }
 .dm-foot {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   padding: 12px 18px;
-  border-top: 1px solid var(--line, rgba(255, 255, 255, 0.1));
+  border-top: 1px solid var(--line);
 }
 .dm-btn {
   padding: 7px 16px;
@@ -128,7 +128,7 @@ function close() {
   font-size: 13px;
   cursor: pointer;
   background: transparent;
-  border: 1px solid var(--line, rgba(255, 255, 255, 0.15));
-  color: var(--txt2, #8892b0);
+  border: 1px solid var(--line);
+  color: var(--txt2);
 }
 </style>

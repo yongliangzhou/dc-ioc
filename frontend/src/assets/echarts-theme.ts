@@ -120,6 +120,16 @@ export function baseLegend(
   return { bottom: 0, textStyle: { color: chartVars().axisLabel, fontSize: 11 }, ...overrides }
 }
 
+/**
+ * 读取 :root 上指定 token 在当前主题下的计算值。
+ * 供页面脚本 / 图表配置复用，避免在 .vue 里写死颜色字面量（阶段 3 C1 收口）。
+ * 无 DOM 环境（单测 / SSR）返回空串，调用方按 falsy 兜底即可。
+ */
+export function cssToken(token: string): string {
+  if (typeof document === 'undefined') return ''
+  return getComputedStyle(document.documentElement).getPropertyValue(token).trim() || ''
+}
+
 // ---- 柱状图渐变填充 ----
 export function barGradient(color: string) {
   return new echarts.graphic.LinearGradient(0, 0, 0, 1, [

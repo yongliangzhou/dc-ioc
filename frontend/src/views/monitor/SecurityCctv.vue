@@ -1,5 +1,6 @@
 <template>
   <div class="page">
+    <AsyncSection :loading="loading" :empty="!summary.total" @retry="load" />
     <div class="page-head">
       <div>
         <h2 class="page-title">视频监控</h2>
@@ -203,11 +204,13 @@
       />
     </Panel>
 
-    <p v-if="usingMock" class="mock-flag">⚠ 当前为本地模拟数据（后端未返回或未运行）</p>
+    <MockDataBanner :level="usingMock ? 'full' : 'none'" />
   </div>
 </template>
 
 <script setup lang="ts">
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Camera, Activity, Database, Bell, Cpu, Cctv, VideoOff, Play, Pause } from 'lucide-vue-next'
 import { KpiCard } from '@dc-ioc/ui'
@@ -514,7 +517,7 @@ void Bell
 }
 .page-sub {
   margin: 2px 0 0;
-  color: var(--text-2);
+  color: var(--txt2);
   font-size: 12px;
 }
 .head-actions {
@@ -527,27 +530,27 @@ void Bell
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  border: 1px solid var(--border);
-  background: var(--bg-1);
-  color: var(--text-1);
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: var(--txt);
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
 }
 .btn.active {
-  background: var(--brand);
-  color: #fff;
-  border-color: var(--brand);
+  background: var(--cyan);
+  color: var(--txt-strong);
+  border-color: var(--cyan);
 }
 .divider {
   width: 1px;
   height: 20px;
-  background: var(--border);
+  background: var(--line);
   margin: 0 4px;
 }
 .patrol-tip {
   font-size: 12px;
-  color: var(--brand);
+  color: var(--cyan);
 }
 .kpi-row {
   display: grid;
@@ -587,8 +590,8 @@ void Bell
 .pv-cell {
   position: relative;
   aspect-ratio: 16/9;
-  background: #0a0e14;
-  border: 1px solid #1c2530;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 6px;
   overflow: hidden;
   cursor: pointer;
@@ -596,12 +599,12 @@ void Bell
   align-items: flex-end;
 }
 .pv-cell.off {
-  background: #15110f;
-  border-color: #3a2418;
+  background: var(--bg);
+  border-color: var(--line);
 }
 .pv-cell.alarm {
-  border-color: #b4451f;
-  box-shadow: 0 0 0 1px #b4451f inset;
+  border-color: var(--amber-line);
+  box-shadow: 0 0 0 1px var(--amber-bg) inset;
 }
 .pv-feedsim {
   position: absolute;
@@ -611,18 +614,18 @@ void Bell
   justify-content: center;
 }
 .sim-ico {
-  color: #2f6f4f;
+  color: var(--green);
   opacity: 0.8;
 }
 .sim-ico.off {
-  color: #6b3a2a;
+  color: var(--red);
 }
 .sim-grid {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(#15202c 1px, transparent 1px),
-    linear-gradient(90deg, #15202c 1px, transparent 1px);
+    linear-gradient(var(--bg2) 1px, transparent 1px),
+    linear-gradient(90deg, var(--bg2) 1px, transparent 1px);
   background-size: 28px 28px;
   opacity: 0.5;
 }
@@ -631,7 +634,7 @@ void Bell
   left: 0;
   right: 0;
   height: 2px;
-  background: linear-gradient(90deg, transparent, #2f6f4f, transparent);
+  background: linear-gradient(90deg, transparent, var(--green-bg), transparent);
   animation: scan 3.2s linear infinite;
 }
 @keyframes scan {
@@ -650,9 +653,9 @@ void Bell
   justify-content: space-between;
   align-items: center;
   padding: 4px 6px;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  background: linear-gradient(transparent, var(--mask));
   font-size: 11px;
-  color: #cfe;
+  color: var(--txt-strong);
 }
 .pv-name {
   font-weight: 600;
@@ -661,10 +664,10 @@ void Bell
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  color: #9fb;
+  color: var(--green);
 }
 .pv-bit {
-  color: #7a8;
+  color: var(--txt2);
 }
 .dot {
   width: 7px;
@@ -673,18 +676,18 @@ void Bell
   display: inline-block;
 }
 .dot.online {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .dot.offline {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .pv-alarm {
   position: absolute;
   top: 6px;
   left: 6px;
   z-index: 3;
-  background: #b4451f;
-  color: #fff;
+  background: var(--amber-bg);
+  color: var(--txt-strong);
   font-size: 10px;
   padding: 1px 5px;
   border-radius: 3px;
@@ -694,12 +697,12 @@ void Bell
   top: 6px;
   right: 6px;
   z-index: 3;
-  color: #456;
+  color: var(--txt3);
   font-size: 10px;
 }
 .pv-empty {
   margin: auto;
-  color: #345;
+  color: var(--txt3);
 }
 .patrol-bar {
   margin-top: 10px;
@@ -707,13 +710,13 @@ void Bell
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .rec-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #d23;
+  background: var(--red-bg);
   animation: blink 1s steps(2) infinite;
 }
 @keyframes blink {
@@ -732,9 +735,9 @@ void Bell
   gap: 6px;
 }
 .sel {
-  background: var(--bg-2);
-  border: 1px solid var(--border);
-  color: var(--text-1);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--txt);
   border-radius: 5px;
   padding: 3px 6px;
   font-size: 12px;
@@ -757,11 +760,11 @@ void Bell
   font-size: 12px;
 }
 .cam-row:hover {
-  background: var(--bg-2);
+  background: var(--bg2);
 }
 .cam-row.sel {
-  background: var(--brand-weak);
-  outline: 1px solid var(--brand);
+  background: var(--cyan-bg);
+  outline: 1px solid var(--cyan);
 }
 .cam-row.off {
   opacity: 0.6;
@@ -772,10 +775,10 @@ void Bell
   border-radius: 50%;
 }
 .c-dot.online {
-  background: #2fae6b;
+  background: var(--green-bg);
 }
 .c-dot.offline {
-  background: #d06a3a;
+  background: var(--amber-bg);
 }
 .c-name {
   font-weight: 600;
@@ -783,16 +786,16 @@ void Bell
 .c-zone,
 .c-ip,
 .c-bit {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .c-st {
   font-size: 11px;
 }
 .c-st.online {
-  color: #2fae6b;
+  color: var(--green);
 }
 .c-st.offline {
-  color: #d06a3a;
+  color: var(--amber);
 }
 
 /* 分区覆盖 */
@@ -809,12 +812,12 @@ void Bell
   font-size: 12px;
 }
 .z-name {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .z-track {
   position: relative;
   height: 14px;
-  background: var(--bg-2);
+  background: var(--bg2);
   border-radius: 7px;
   overflow: hidden;
 }
@@ -823,7 +826,7 @@ void Bell
   left: 0;
   top: 0;
   bottom: 0;
-  background: linear-gradient(90deg, #2f6f9f, #3f8fbf);
+  background: linear-gradient(90deg, var(--blue-bg), var(--blue-bg));
   border-radius: 7px;
 }
 .z-off {
@@ -831,14 +834,14 @@ void Bell
   left: 0;
   top: 0;
   bottom: 0;
-  background: #d06a3a;
+  background: var(--amber-bg);
   opacity: 0.9;
 }
 .z-num {
   text-align: right;
 }
 .z-off-n {
-  color: #d06a3a;
+  color: var(--amber);
   font-style: normal;
 }
 
@@ -856,19 +859,19 @@ void Bell
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--text-1);
+  color: var(--txt);
 }
 .nvr-box {
   display: flex;
   flex-direction: column;
   gap: 3px;
   font-size: 12px;
-  color: var(--text-2);
-  border-top: 1px dashed var(--border);
+  color: var(--txt2);
+  border-top: 1px dashed var(--line);
   padding-top: 8px;
 }
 .nvr-t {
-  color: var(--text-1);
+  color: var(--txt);
   font-weight: 600;
 }
 
@@ -888,18 +891,18 @@ void Bell
   font-size: 12px;
 }
 .e-ts {
-  color: var(--text-2);
+  color: var(--txt2);
 }
 .e-zone {
-  color: var(--brand);
+  color: var(--cyan);
 }
 .e-desc {
-  color: var(--text-1);
+  color: var(--txt);
 }
 
 .mock-flag {
   font-size: 12px;
-  color: #d06a3a;
+  color: var(--amber);
   margin: 0;
 }
 @media (max-width: 1100px) {

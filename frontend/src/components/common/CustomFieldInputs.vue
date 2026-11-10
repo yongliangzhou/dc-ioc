@@ -3,7 +3,7 @@
     <div v-for="f in fields" :key="f.key" class="cf-item">
       <label class="p3-label">
         {{ labelOf(f) }}
-        <span v-if="f.required" style="color: #f87171">*</span>
+        <span v-if="f.required" style="color: var(--red)">*</span>
       </label>
       <select
         v-if="f.type === 'select'"

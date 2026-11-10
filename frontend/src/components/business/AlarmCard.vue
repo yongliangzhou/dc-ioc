@@ -1,11 +1,11 @@
 <template>
   <div class="card">
-<div class="card-head">
-    <span class="lv" :class="it.alarm.level">{{ lvText }}</span>
-    <div class="title">
-      <div class="sys">{{ it.alarm.system }}</div>
-      <div class="desc">{{ it.alarm.message }}</div>
-    </div>
+    <div class="card-head">
+      <span class="lv" :class="it.alarm.level">{{ lvText }}</span>
+      <div class="title">
+        <div class="sys">{{ it.alarm.system }}</div>
+        <div class="desc">{{ it.alarm.message }}</div>
+      </div>
       <div class="time">{{ timeText }}</div>
       <button class="close" @click="$emit('close')">×</button>
     </div>
@@ -67,7 +67,7 @@ function gotoKb() {
   background: linear-gradient(180deg, var(--panel), var(--bg2));
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 18px 50px var(--accent-50);
   overflow: hidden;
 }
 .card-head {
@@ -85,19 +85,19 @@ function gotoKb() {
   font-weight: 800;
 }
 .lv.crit {
-  background: rgba(242, 63, 63, 0.18);
+  background: color-mix(in srgb, var(--red) 18%, transparent);
   color: var(--red);
-  border: 1px solid rgba(242, 63, 63, 0.5);
+  border: 1px solid color-mix(in srgb, var(--red) 50%, transparent);
 }
 .lv.warn {
-  background: rgba(255, 176, 32, 0.16);
+  background: color-mix(in srgb, var(--amber) 16%, transparent);
   color: var(--amber);
-  border: 1px solid rgba(255, 176, 32, 0.5);
+  border: 1px solid color-mix(in srgb, var(--amber) 50%, transparent);
 }
 .lv.info {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
   color: var(--cyan);
-  border: 1px solid rgba(34, 211, 238, 0.5);
+  border: 1px solid color-mix(in srgb, var(--cyan) 50%, transparent);
 }
 .title {
   flex: 1;
@@ -148,9 +148,9 @@ function gotoKb() {
   color: var(--txt2);
 }
 .scn-tabs button.on {
-  background: rgba(34, 211, 238, 0.14);
+  background: color-mix(in srgb, var(--cyan) 14%, transparent);
   color: var(--cyan);
-  border-color: rgba(34, 211, 238, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
 }
 .scn-body {
   font-size: 12px;
@@ -190,11 +190,11 @@ function gotoKb() {
 }
 .kb {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
 }
 .fb:hover {
   color: var(--cyan);
-  border-color: rgba(34, 211, 238, 0.5);
+  border-color: color-mix(in srgb, var(--cyan) 50%, transparent);
 }
 </style>

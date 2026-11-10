@@ -137,7 +137,7 @@ function onTempChange(e: Event) {
   color: var(--cyan);
 }
 .qc-btn.on {
-  background: rgba(239, 68, 68, 0.12);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
   border-color: var(--red);
   color: var(--red);
 }

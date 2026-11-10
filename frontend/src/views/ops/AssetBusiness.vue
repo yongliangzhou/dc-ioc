@@ -4,7 +4,8 @@
       <h1>{{ t('assetBusiness.title') }}</h1>
       <span class="sub">{{ t('assetBusiness.subtitle') }}</span>
     </div>
-    <p v-if="notice" class="p3-notice">{{ notice }}</p>
+    <MockDataBanner :level="notice ? 'full' : 'none'" :note="notice" />
+    <AsyncSection :loading="loading" :empty="false" @retry="reload" />
 
     <div class="p3-tabs">
       <button :class="{ active: tab === 'Orders' }" @click="tab = 'Orders'">
@@ -115,7 +116,7 @@
               </tr>
             </tbody>
           </table>
-          <p v-if="currentTask" class="p3-mono" style="font-size: 11px; color: #8892b0">
+          <p v-if="currentTask" class="p3-mono" style="font-size: 11px; color: var(--txt2)">
             selected: #{{ currentTask }}
           </p>
         </div>
@@ -128,6 +129,8 @@
 </template>
 
 <script setup lang="ts">
+import MockDataBanner from '@/components/common/MockDataBanner.vue'
+import AsyncSection from '@/components/common/AsyncSection.vue'
 import { onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { p3Api, type P3Row } from '@/api/p3'
@@ -141,6 +144,7 @@ const report = ref<Record<string, unknown> | null>(null)
 const currentTask = ref<number | null>(null)
 const notice = ref('')
 const error = ref('')
+const loading = ref(false)
 const order = reactive({
   order_no: '',
   vendor: '',
@@ -170,6 +174,7 @@ function fallback(err: unknown) {
 }
 
 async function reload() {
+  loading.value = true
   try {
     ;[orders.value, tasks.value, expiring.value] = await Promise.all([
       p3Api.orders(),
@@ -180,6 +185,8 @@ async function reload() {
     if (!currentTask.value && tasks.value.length) currentTask.value = Number(tasks.value[0].id)
   } catch (err) {
     fallback(err)
+  } finally {
+    loading.value = false
   }
 }
 

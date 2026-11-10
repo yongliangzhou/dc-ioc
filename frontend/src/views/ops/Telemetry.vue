@@ -66,13 +66,13 @@
     </AsyncSection>
 
     <!-- 分页 -->
-    <div v-if="totalPages > 1" class="flex center gap8" style="margin: 10px 0">
-      <button class="btn-sm" :disabled="page <= 1" @click="page--">{{ tl('上一页') }}</button>
-      <span class="muted" style="font-size: 11px">{{ page }} / {{ totalPages }}</span>
-      <button class="btn-sm" :disabled="page >= totalPages" @click="page++">
-        {{ tl('下一页') }}
-      </button>
-    </div>
+    <Pagination
+      :total="filtered.length"
+      :page="page"
+      :size="pageSize"
+      @change="onPageChange"
+      @size-change="onSizeChange"
+    />
 
     <!-- DeviceMonitor -->
     <div v-if="selected && deviceThingModels.length" style="margin-top: 14px">
@@ -97,6 +97,8 @@
 </template>
 
 <script setup lang="ts">
+import { useFilterQuery } from '@/composables/useFilterQuery'
+import Pagination from '@/components/Pagination.vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
 
@@ -115,7 +117,7 @@ const search = ref('')
 const filterCategory = ref('')
 const filterProtocol = ref('')
 const page = ref(1)
-const pageSize = 12
+const pageSize = ref(20)
 
 const filtered = computed(() => {
   if (!list.value) return []
@@ -138,10 +140,9 @@ const filtered = computed(() => {
   return items
 })
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
 const paginatedDevices = computed(() => {
-  const start = (page.value - 1) * pageSize
-  return filtered.value.slice(start, start + pageSize)
+  const start = (page.value - 1) * pageSize.value
+  return filtered.value.slice(start, start + pageSize.value)
 })
 
 const onlineCount = computed(() => list.value?.online ?? 0)
@@ -277,6 +278,17 @@ onMounted(() => {
   timer = window.setInterval(poll, Number(import.meta.env.VITE_REFRESH_INTERVAL ?? 5000))
 })
 onBeforeUnmount(() => clearInterval(timer))
+
+function onPageChange(p: number) {
+  page.value = p
+}
+function onSizeChange(s: number) {
+  pageSize.value = s
+  page.value = 1
+}
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useFilterQuery({ search, filterCategory, filterProtocol, page, pageSize })
 </script>
 
 <style scoped>
@@ -320,14 +332,18 @@ select.ipt {
   gap: 6px;
 }
 .dev-card:hover {
-  border-color: rgba(34, 227, 255, 0.35);
+  border-color: var(--accent-35);
   box-shadow: var(--glow);
   transform: translateY(-1px);
 }
 .dev-card.active {
   border-color: var(--cyan);
-  background: linear-gradient(180deg, rgba(34, 227, 255, 0.1), var(--panel));
-  box-shadow: 0 0 16px rgba(34, 227, 255, 0.15);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--cyan) 10%, transparent),
+    var(--panel)
+  );
+  box-shadow: 0 0 16px color-mix(in srgb, var(--cyan) 15%, transparent);
 }
 .dc-head {
   display: flex;

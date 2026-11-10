@@ -3,7 +3,7 @@
     <!-- ========== Header ========== -->
     <div class="page-head">
       <div class="ph-left">
-        <h2 class="page-title">驾驶舱总览</h2>
+        <h1 class="page-title">驾驶舱总览</h1>
         <span class="ph-meta">
           {{ lastRefresh ? `最近刷新 ${lastRefresh} · 每 30 秒自动刷新` : '正在加载…' }}
         </span>
@@ -336,7 +336,14 @@
             <div class="domain-card-inner">
               <div class="domain-ring">
                 <svg viewBox="0 0 100 100" class="ring-svg">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="#1e293b" stroke-width="8" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke="var(--txt3)"
+                    stroke-width="8"
+                  />
                   <circle
                     cx="50"
                     cy="50"
@@ -353,7 +360,7 @@
                     x="50"
                     y="52"
                     text-anchor="middle"
-                    fill="#c8d6e5"
+                    fill="var(--txt)"
                     font-size="16"
                     font-weight="700"
                   >
@@ -473,6 +480,7 @@
 </template>
 
 <script setup lang="ts">
+import { cssToken } from '@/assets/echarts-theme'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { RefreshCw } from 'lucide-vue-next'
@@ -710,13 +718,31 @@ const domainCards = computed(() => {
   }
 
   return [
-    mk('hvac', '暖通系统', '#05b896', or, '在线率直接取全局综合在线率，非暖通设备单独采集'),
-    mk('power', '电力系统', '#f39c12', or - 1, '在线率 = 全局综合在线率 − 1，为派生估算值'),
-    mk('security', '安防消防', '#3498db', or + 1, '在线率 = 全局综合在线率 + 1，为派生估算值'),
+    mk(
+      'hvac',
+      '暖通系统',
+      cssToken('--cyan'),
+      or,
+      '在线率直接取全局综合在线率，非暖通设备单独采集',
+    ),
+    mk(
+      'power',
+      '电力系统',
+      cssToken('--amber'),
+      or - 1,
+      '在线率 = 全局综合在线率 − 1，为派生估算值',
+    ),
+    mk(
+      'security',
+      '安防消防',
+      cssToken('--blue'),
+      or + 1,
+      '在线率 = 全局综合在线率 + 1，为派生估算值',
+    ),
     {
       key: 'smartops',
       title: '数智运维',
-      ringColor: '#9b59b6',
+      ringColor: cssToken('--purple'),
       onlineRate: 100,
       ringRate: 100,
       healthStatus: level(100),
@@ -769,9 +795,9 @@ const pueSpark = computed(() => {
         name: 'PUE',
         type: 'line' as const,
         data: trendsPoints.value.slice(-30).map((p) => p.pue ?? 0),
-        color: '#05b896',
+        color: cssToken('--cyan'),
         smooth: true,
-        areaStyle: { color: 'rgba(5,184,150,0.12)' },
+        areaStyle: { color: cssToken('--accent-12') },
         symbol: 'none' as const,
         symbolSize: 0,
       },
@@ -782,9 +808,9 @@ const pueSpark = computed(() => {
       name: 'PUE',
       type: 'line' as const,
       data: genSeries(base, 0.12, 30, base),
-      color: '#05b896',
+      color: cssToken('--cyan'),
       smooth: true,
-      areaStyle: { color: 'rgba(5,184,150,0.12)' },
+      areaStyle: { color: cssToken('--accent-12') },
       symbol: 'none' as const,
       symbolSize: 0,
     },
@@ -820,7 +846,7 @@ const trendDatasets = computed(() => {
           name: 'PUE',
           type: 'line' as const,
           data: pts.map((p) => p.pue ?? 0),
-          color: '#05b896',
+          color: cssToken('--cyan'),
           smooth: true,
           yAxisIndex: 0,
         },
@@ -828,7 +854,7 @@ const trendDatasets = computed(() => {
           name: 'WUE',
           type: 'line' as const,
           data: pts.map((p) => p.wue ?? 0),
-          color: '#3498db',
+          color: cssToken('--blue'),
           smooth: true,
           yAxisIndex: 1,
         },
@@ -838,21 +864,21 @@ const trendDatasets = computed(() => {
           name: 'IT负荷',
           type: 'line' as const,
           data: pts.map((p) => p.it_load_mw ?? 0),
-          color: '#05b896',
+          color: cssToken('--cyan'),
           smooth: true,
         },
         {
           name: '总负荷',
           type: 'line' as const,
           data: pts.map((p) => p.total_load_mw ?? 0),
-          color: '#f39c12',
+          color: cssToken('--amber'),
           smooth: true,
         },
         {
           name: '制冷负荷',
           type: 'line' as const,
           data: pts.map((p) => p.cool_load_mw ?? 0),
-          color: '#3498db',
+          color: cssToken('--blue'),
           smooth: true,
         },
       ],
@@ -861,7 +887,7 @@ const trendDatasets = computed(() => {
           name: '在线率',
           type: 'line' as const,
           data: pts.map((p) => p.online_rate ?? 0),
-          color: '#05b896',
+          color: cssToken('--cyan'),
           smooth: true,
           yAxisIndex: 0,
         },
@@ -869,7 +895,7 @@ const trendDatasets = computed(() => {
           name: '可用性',
           type: 'line' as const,
           data: pts.map((p) => p.availability ?? 0),
-          color: '#9b59b6',
+          color: cssToken('--purple'),
           smooth: true,
           yAxisIndex: 1,
         },
@@ -883,7 +909,7 @@ const trendDatasets = computed(() => {
         name: 'PUE',
         type: 'line' as const,
         data: genSeries(pueBase, 0.12, 48, pueBase * 100),
-        color: '#05b896',
+        color: cssToken('--cyan'),
         smooth: true,
         yAxisIndex: 0,
       },
@@ -891,7 +917,7 @@ const trendDatasets = computed(() => {
         name: 'WUE',
         type: 'line' as const,
         data: genSeries(wueBase, 0.2, 48, wueBase * 100 + 1),
-        color: '#3498db',
+        color: cssToken('--blue'),
         smooth: true,
         yAxisIndex: 1,
       },
@@ -901,21 +927,21 @@ const trendDatasets = computed(() => {
         name: 'IT负荷',
         type: 'line' as const,
         data: genSeries(itBase, 0.4, 48, itBase * 100 + 2),
-        color: '#05b896',
+        color: cssToken('--cyan'),
         smooth: true,
       },
       {
         name: '总负荷',
         type: 'line' as const,
         data: genSeries(totalBase, 0.5, 48, totalBase * 100 + 3),
-        color: '#f39c12',
+        color: cssToken('--amber'),
         smooth: true,
       },
       {
         name: '制冷负荷',
         type: 'line' as const,
         data: genSeries(coolBase, 0.3, 48, coolBase * 100 + 4),
-        color: '#3498db',
+        color: cssToken('--blue'),
         smooth: true,
       },
     ],
@@ -924,7 +950,7 @@ const trendDatasets = computed(() => {
         name: '在线率',
         type: 'line' as const,
         data: genSeries(onRateBase, 2, 48, onRateBase * 10 + 5),
-        color: '#05b896',
+        color: cssToken('--cyan'),
         smooth: true,
         yAxisIndex: 0,
       },
@@ -932,7 +958,7 @@ const trendDatasets = computed(() => {
         name: '可用性',
         type: 'line' as const,
         data: genSeries(availBase, 0.02, 48, availBase * 10 + 6),
-        color: '#9b59b6',
+        color: cssToken('--purple'),
         smooth: true,
         yAxisIndex: 1,
       },
@@ -1057,7 +1083,7 @@ onUnmounted(() => {
   padding: 16px 20px 28px;
   max-width: 1560px;
   margin: 0 auto;
-  color: #c8d6e5;
+  color: var(--txt);
   font-size: 13px;
 }
 /* 阶段四: 仅「已自定义布局」时才启用 flex 排序, 默认渲染与原版一致 */
@@ -1075,8 +1101,8 @@ onUnmounted(() => {
   gap: 8px;
   padding: 10px 12px;
   margin-bottom: 12px;
-  border: 1px solid rgba(34, 227, 255, 0.25);
-  background: rgba(34, 227, 255, 0.05);
+  border: 1px solid color-mix(in srgb, var(--cyan) 25%, transparent);
+  background: var(--grid-line);
   border-radius: 8px;
 }
 .layout-chip {
@@ -1084,15 +1110,15 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   padding: 4px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--accent-12);
   border-radius: 6px;
   font-size: 12px;
 }
 .layout-chip button,
 .layout-save {
-  background: rgba(34, 227, 255, 0.12);
-  border: 1px solid rgba(34, 227, 255, 0.3);
-  color: #8ff0ff;
+  background: var(--accent-12);
+  border: 1px solid color-mix(in srgb, var(--cyan) 30%, transparent);
+  color: var(--cyan);
   border-radius: 4px;
   padding: 2px 7px;
   cursor: pointer;
@@ -1107,7 +1133,7 @@ onUnmounted(() => {
 }
 .layout-source {
   font-size: 11px;
-  color: #facc15;
+  color: var(--amber);
 }
 
 /* ===== Header ===== */
@@ -1127,12 +1153,12 @@ onUnmounted(() => {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
-  color: #e8edf2;
+  color: var(--txt-strong);
   letter-spacing: 0.3px;
 }
 .ph-meta {
   font-size: 11px;
-  color: #5a6a82;
+  color: var(--txt2);
 }
 .ph-refresh {
   display: inline-flex;
@@ -1142,15 +1168,15 @@ onUnmounted(() => {
   border-radius: 8px;
   font-size: 12px;
   cursor: pointer;
-  color: #8892b0;
+  color: var(--txt2);
   background: transparent;
-  border: 1px solid #1e293b;
+  border: 1px solid var(--line);
   transition: all 0.18s;
   flex-shrink: 0;
 }
 .ph-refresh:hover:not(:disabled) {
-  color: #e6edf3;
-  border-color: #2a4a6a;
+  color: var(--txt-strong);
+  border-color: var(--blue-line);
 }
 .ph-refresh:disabled {
   opacity: 0.55;
@@ -1173,13 +1199,13 @@ onUnmounted(() => {
   gap: 10px;
   margin: 18px 0 10px;
   padding-bottom: 6px;
-  border-bottom: 1px solid #1e293b;
+  border-bottom: 1px solid var(--line);
 }
 .section-title {
   margin: 0;
   font-size: 15px;
   font-weight: 600;
-  color: #e8edf2;
+  color: var(--txt-strong);
   white-space: nowrap;
 }
 .sb-actions {
@@ -1197,13 +1223,13 @@ onUnmounted(() => {
   border-radius: 999px;
   font-size: 11px;
   cursor: pointer;
-  color: #42a5f5;
-  background: rgba(66, 165, 245, 0.12);
-  border: 1px solid rgba(66, 165, 245, 0.4);
+  color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--blue) 40%, transparent);
   transition: all 0.18s;
 }
 .filter-chip:hover {
-  background: rgba(66, 165, 245, 0.22);
+  background: color-mix(in srgb, var(--blue) 22%, transparent);
 }
 .fc-x {
   font-size: 13px;
@@ -1214,13 +1240,13 @@ onUnmounted(() => {
   border: none;
   padding: 0;
   font-size: 12px;
-  color: #42a5f5;
+  color: var(--blue);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-/* ===== KPI: 1 主 + 5 次 (7 列栅格) ===== */
+/* ===== KPI:1 主 + 5 次 (7 列栅格) ===== */
 .kpi-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -1231,8 +1257,8 @@ onUnmounted(() => {
   grid-column: span 2;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #16273a, #0f1923);
-  border: 1px solid #24405a;
+  background: linear-gradient(180deg, var(--bg2), var(--bg));
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px 10px;
   position: relative;
@@ -1243,7 +1269,12 @@ onUnmounted(() => {
   position: absolute;
   inset: 0 0 auto 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(5, 184, 150, 0.6), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--cyan) 60%, transparent),
+    transparent
+  );
 }
 .kp-head {
   display: flex;
@@ -1253,14 +1284,14 @@ onUnmounted(() => {
 }
 .kp-label {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--txt2);
   letter-spacing: 0.5px;
 }
 .kp-value {
   font-size: 40px;
   font-weight: 800;
   line-height: 1;
-  color: #05b896;
+  color: var(--cyan);
   font-variant-numeric: tabular-nums;
 }
 .kp-foot {
@@ -1274,22 +1305,22 @@ onUnmounted(() => {
   font-weight: 600;
 }
 .kp-trend.up {
-  color: #ef4444;
+  color: var(--red);
 }
 .kp-trend.down {
-  color: #22c55e;
+  color: var(--green);
 }
 .kp-sub {
   font-size: 11px;
-  color: #64748b;
+  color: var(--txt2);
 }
 .kp-spark {
   margin-top: auto;
   padding-top: 6px;
 }
 .kpi-cell {
-  background: #0f1923;
-  border: 1px solid #1a2a3a;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px 12px;
   display: flex;
@@ -1302,7 +1333,7 @@ onUnmounted(() => {
   transition: border-color 0.15s;
 }
 .alarm-cell:hover {
-  border-color: #e74c3c;
+  border-color: var(--red-line);
 }
 .alarm-kpi-top {
   display: flex;
@@ -1311,17 +1342,17 @@ onUnmounted(() => {
 }
 .alarm-kpi-label {
   font-size: 11px;
-  color: #5a6a82;
+  color: var(--txt3);
 }
 .alarm-kpi-val {
   font-size: 26px;
   font-weight: 700;
-  color: #e74c3c;
+  color: var(--red);
   margin-left: auto;
 }
 .alarm-kpi-unit {
   font-size: 12px;
-  color: #5a6a82;
+  color: var(--txt3);
 }
 .alarm-kpi-badges {
   display: flex;
@@ -1336,16 +1367,16 @@ onUnmounted(() => {
   gap: 12px;
 }
 .trend-card {
-  background: #0f1923;
-  border: 1px solid #1a2a3a;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 8px 10px;
 }
 
 /* ===== 告警流 ===== */
 .alarm-feed {
-  background: #0f1923;
-  border: 1px solid #1a2a3a;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 0 14px;
   max-height: 280px;
@@ -1354,7 +1385,7 @@ onUnmounted(() => {
 .alarm-empty {
   padding: 16px 0;
   text-align: center;
-  color: #3a5068;
+  color: var(--txt3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1365,7 +1396,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 0;
-  border-bottom: 1px solid #15202b;
+  border-bottom: 1px solid var(--line);
   cursor: pointer;
   font-size: 12px;
   transition: background 0.15s;
@@ -1374,7 +1405,7 @@ onUnmounted(() => {
   border-bottom: none;
 }
 .alarm-row:hover {
-  background: #111d2a;
+  background: var(--bg2);
   margin: 0 -14px;
   padding-left: 14px;
   padding-right: 14px;
@@ -1387,14 +1418,14 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 .alarm-time {
-  color: #3a5068;
+  color: var(--txt3);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 .alarm-count-badge {
   font-size: 12px;
   font-weight: 400;
-  color: #e74c3c;
+  color: var(--red);
   margin-left: 8px;
 }
 
@@ -1408,8 +1439,8 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: #0f1923;
-  border: 1px solid #1a2a3a;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 10px 12px;
   cursor: pointer;
@@ -1418,7 +1449,7 @@ onUnmounted(() => {
     box-shadow 0.15s;
 }
 .cooling-entry:hover {
-  border-color: #05b89666;
+  border-color: color-mix(in srgb, var(--cyan) 40%, transparent);
 }
 .entry-foot {
   display: flex;
@@ -1429,7 +1460,7 @@ onUnmounted(() => {
 }
 .entry-hint {
   font-size: 10px;
-  color: #3a5068;
+  color: var(--txt3);
   text-align: right;
   margin-left: auto;
 }
@@ -1441,8 +1472,8 @@ onUnmounted(() => {
   gap: 12px;
 }
 .domain-card {
-  background: #0f1923;
-  border: 1px solid #1a2a3a;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
 }
@@ -1484,16 +1515,16 @@ onUnmounted(() => {
   flex-wrap: wrap;
 }
 .ds-muted {
-  color: #5a6a82;
+  color: var(--txt3);
 }
 .section-note {
   margin: 10px 0 0;
   font-size: 11px;
   line-height: 1.7;
-  color: #5a6a82;
+  color: var(--txt3);
 }
 .section-note b {
-  color: #d9a441;
+  color: var(--amber);
   font-weight: 600;
 }
 
@@ -1504,8 +1535,8 @@ onUnmounted(() => {
   gap: 10px;
 }
 .campus-card {
-  background: #0f1923;
-  border: 1px solid #1a2a3a;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
   cursor: pointer;
@@ -1514,11 +1545,11 @@ onUnmounted(() => {
     background 0.15s;
 }
 .campus-card:hover {
-  border-color: #2a4a6a;
+  border-color: var(--blue-line);
 }
 .campus-card.is-active {
-  border-color: #42a5f5;
-  background: #101f2e;
+  border-color: var(--blue-line);
+  background: var(--bg2);
 }
 .campus-status {
   margin-bottom: 4px;
@@ -1537,16 +1568,16 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   font-size: 12px;
-  color: #5a6a82;
+  color: var(--txt3);
 }
 .campus-kpi .v {
-  color: #c8d6e5;
+  color: var(--txt);
   font-weight: 500;
 }
 .campus-detail {
   margin-top: 12px;
-  background: #0f1923;
-  border: 1px solid #24405a;
+  background: var(--bg);
+  border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px 14px;
 }
@@ -1559,7 +1590,7 @@ onUnmounted(() => {
 .cd-title {
   font-size: 13px;
   font-weight: 600;
-  color: #e6edf3;
+  color: var(--txt-strong);
 }
 .cd-grid {
   display: grid;
@@ -1573,12 +1604,12 @@ onUnmounted(() => {
 }
 .cd-k {
   font-size: 11px;
-  color: #5a6a82;
+  color: var(--txt3);
 }
 .cd-v {
   font-size: 16px;
   font-weight: 700;
-  color: #e6edf3;
+  color: var(--txt-strong);
   font-variant-numeric: tabular-nums;
 }
 

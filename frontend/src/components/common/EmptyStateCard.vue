@@ -45,14 +45,14 @@ const isComponent = computed(() => typeof props.icon !== 'string' && props.icon 
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2, 8px);
-  padding: 40px var(--space-5, 24px);
+  gap: var(--space-2);
+  padding: 40px var(--space-5);
   text-align: center;
   color: var(--txt2);
 }
 .es-icon {
   color: var(--txt3);
-  margin-bottom: var(--space-1, 4px);
+  margin-bottom: var(--space-1);
 }
 .es-title {
   font-size: 16px;
@@ -66,7 +66,7 @@ const isComponent = computed(() => typeof props.icon !== 'string' && props.icon 
   color: var(--txt2);
 }
 .es-actions {
-  margin-top: var(--space-3, 12px);
+  margin-top: var(--space-3);
   display: flex;
   gap: 10px;
 }

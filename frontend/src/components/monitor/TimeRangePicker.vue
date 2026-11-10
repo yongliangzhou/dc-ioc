@@ -79,7 +79,7 @@ function onChange(key: string) {
 }
 .trp-btn.active {
   background: var(--cyan);
-  color: #070d1a;
+  color: var(--bg);
   font-weight: 600;
 }
 </style>

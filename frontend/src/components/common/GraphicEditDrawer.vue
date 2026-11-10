@@ -396,7 +396,7 @@ watch(
 .ge-mask {
   position: fixed;
   inset: 0;
-  background: rgba(4, 10, 20, 0.55);
+  background: var(--accent-50);
   z-index: 1200;
   display: flex;
   justify-content: flex-end;
@@ -425,7 +425,7 @@ watch(
 }
 .ge-sub {
   font-size: 11px;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   margin-top: 3px;
 }
 .ge-x {
@@ -442,14 +442,14 @@ watch(
   margin-bottom: 10px;
 }
 .ge-banner.warn {
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  color: #fbbf24;
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+  color: var(--amber);
 }
 .ge-banner.err {
-  background: rgba(242, 63, 63, 0.12);
-  border: 1px solid rgba(242, 63, 63, 0.35);
-  color: #f87171;
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+  color: var(--red);
 }
 .ge-sec {
   margin-bottom: 16px;
@@ -497,7 +497,7 @@ watch(
 }
 .ge-tag {
   font-size: 10px;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -508,7 +508,7 @@ watch(
 }
 .ge-id {
   font-size: 10px;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
 }
 .ge-row-act {
   display: flex;
@@ -524,7 +524,7 @@ watch(
   padding: 0;
 }
 .ge-link.danger {
-  color: #f87171;
+  color: var(--red);
 }
 .ge-btn {
   background: var(--bg2);
@@ -537,7 +537,7 @@ watch(
 }
 .ge-btn.primary {
   background: linear-gradient(90deg, var(--cyan), var(--blue));
-  color: #04121f;
+  color: var(--txt3);
   border-color: transparent;
   font-weight: 700;
 }
@@ -552,16 +552,16 @@ watch(
 .ge-removed {
   margin-top: 8px;
   font-size: 11px;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
 }
 .ge-chip {
-  background: rgba(242, 63, 63, 0.12);
-  border: 1px solid rgba(242, 63, 63, 0.3);
-  color: #f87171;
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--red) 30%, transparent);
+  color: var(--red);
   border-radius: 999px;
   padding: 1px 8px;
   display: inline-flex;
@@ -614,7 +614,7 @@ watch(
 }
 .ge-empty {
   font-size: 11px;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   padding: 8px 0;
 }
 .ge-foot {
@@ -627,10 +627,10 @@ watch(
 }
 .ge-meta {
   font-size: 11px;
-  color: var(--txt3, #8595ad);
+  color: var(--txt3);
   margin-right: auto;
 }
 .ge-meta.warn {
-  color: #fbbf24;
+  color: var(--amber);
 }
 </style>

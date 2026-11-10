@@ -20,7 +20,7 @@
       @retry="page.reload"
     >
       <template #empty-actions>
-        <button class="btn-sm primary" v-bind="authState('write')" @click="openCreate">
+        <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openCreate">
           {{ tl('新建') }}
         </button>
       </template>
@@ -71,7 +71,9 @@
         <!-- 左: 风险矩阵 P × I -->
         <Panel class="mx-panel">
           <div class="panel-head">
-            <h5 class="section-title">{{ tl('风险矩阵') }}（{{ tl('可能性') }} × {{ tl('影响') }}）</h5>
+            <h5 class="section-title">
+              {{ tl('风险矩阵') }}（{{ tl('可能性') }} × {{ tl('影响') }}）
+            </h5>
           </div>
 
           <div class="mx-wrap">
@@ -101,16 +103,16 @@
             <span class="lg"><i class="dot lv-low"></i>{{ tl('低') }}</span>
             <span class="lg"><i class="dot lv-mid"></i>{{ tl('中') }}</span>
             <span class="lg"><i class="dot lv-high"></i>{{ tl('高') }}</span>
-            <span class="muted sm">{{ tl('格内为风险条数，点击格筛选右侧列表（空格不可点）') }}</span>
+            <span class="muted sm">{{
+              tl('格内为风险条数，点击格筛选右侧列表（空格不可点）')
+            }}</span>
           </div>
         </Panel>
 
         <!-- 右: 风险列表 -->
         <Panel>
           <div class="panel-head">
-            <h5 class="section-title">
-              {{ tl('风险评估列表') }} ({{ filtered.length }})
-            </h5>
+            <h5 class="section-title">{{ tl('风险评估列表') }} ({{ filtered.length }})</h5>
             <div class="panel-actions">
               <button class="btn-sm" :disabled="!filtered.length" @click="exportCsv">
                 {{ tl('导出 CSV') }}
@@ -118,7 +120,7 @@
               <button class="btn-sm" v-bind="authState('write')" @click="runAnalyze">
                 {{ analyzing ? tl('分析中…') : tl('自动分析') }}
               </button>
-              <button class="btn-sm primary" v-bind="authState('write')" @click="openCreate">
+              <button class="btn-sm btn-primary" v-bind="authState('write')" @click="openCreate">
                 {{ tl('新建') }}
               </button>
             </div>
@@ -191,14 +193,10 @@
               >
               <span class="col w-ctrl muted" :title="r.ctrl ?? ''">{{ r.ctrl || '—' }}</span>
               <span class="col w-op p-ops">
-                <button class="link" v-bind="authState('write')" @click="openEdit(r)">{{
-                  tl('编辑')
-                }}</button>
-                <button
-                  class="link danger"
-                  v-bind="authState('write')"
-                  @click="remove(r)"
-                >
+                <button class="link" v-bind="authState('write')" @click="openEdit(r)">
+                  {{ tl('编辑') }}
+                </button>
+                <button class="link danger" v-bind="authState('write')" @click="remove(r)">
                   {{ tl('删除') }}
                 </button>
               </span>
@@ -209,29 +207,26 @@
             <span class="muted">{{
               hasFilter ? tl('当前筛选条件下无匹配风险') : tl('暂无风险')
             }}</span>
-            <button v-if="hasFilter" class="link" @click="clearFilters">{{ tl('清空筛选') }}</button>
+            <button v-if="hasFilter" class="link" @click="clearFilters">
+              {{ tl('清空筛选') }}
+            </button>
           </div>
 
-          <div class="pager" v-if="filtered.length">
-            <span class="muted sm">{{ tl('共') }} {{ filtered.length }} {{ tl('条') }}</span>
-            <select v-model.number="pageSize" class="ipt pg-ipt">
-              <option v-for="s in PAGE_SIZES" :key="s" :value="s">{{ s }}/{{ tl('页') }}</option>
-            </select>
-            <button class="btn-sm pg-btn" :disabled="pageNo <= 1" @click="pageNo--">
-              {{ tl('上一页') }}
-            </button>
-            <span class="pg-info">{{ pageNo }} / {{ totalPages }}</span>
-            <button class="btn-sm pg-btn" :disabled="pageNo >= totalPages" @click="pageNo++">
-              {{ tl('下一页') }}
-            </button>
-          </div>
+          <!-- 分页 -->
+          <Pagination
+            :total="filtered.length"
+            :page="pageNo"
+            :size="pageSize"
+            @change="onPageChange"
+            @size-change="onSizeChange"
+          />
         </Panel>
       </div>
     </AsyncSection>
 
     <!-- 风险抽屉 -->
-    <div class="drawer-mask" v-if="drawer" @click.self="drawer = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="drawer" @click.self="drawer = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ form.id ? tl('编辑风险') : tl('新建风险') }}</span>
           <button class="x" @click="drawer = false">✕</button>
@@ -266,9 +261,10 @@
             </label>
           </div>
           <div class="lv-preview">
-            {{ tl('风险等级') }}：<b :class="levelClass(riskLevelOf(form.prob ?? 2, form.impact ?? 2))">{{
-              riskLevelOf(form.prob ?? 2, form.impact ?? 2)
-            }}</b>
+            {{ tl('风险等级') }}：<b
+              :class="levelClass(riskLevelOf(form.prob ?? 2, form.impact ?? 2))"
+              >{{ riskLevelOf(form.prob ?? 2, form.impact ?? 2) }}</b
+            >
             <span class="muted sm"
               >（{{ tl('可能性') }} {{ form.prob }} × {{ tl('影响') }} {{ form.impact }} =
               {{ (form.prob ?? 2) * (form.impact ?? 2) }}）</span
@@ -285,7 +281,7 @@
           <div v-if="err" class="err">{{ err }}</div>
           <div class="drawer-foot">
             <button class="btn-sm" @click="drawer = false">{{ tl('取消') }}</button>
-            <button class="btn-sm primary" :disabled="saving" @click="save">
+            <button class="btn-sm btn-primary" :disabled="saving" @click="save">
               {{ saving ? tl('保存中…') : tl('保存') }}
             </button>
           </div>
@@ -294,8 +290,8 @@
     </div>
 
     <!-- 自动分析结果 -->
-    <div class="drawer-mask" v-if="analyzeDrawer" @click.self="analyzeDrawer = false">
-      <div class="drawer">
+    <div class="modal-mask" v-if="analyzeDrawer" @click.self="analyzeDrawer = false">
+      <div class="modal as-drawer">
         <div class="drawer-head">
           <span>{{ tl('自动分析建议') }}</span>
           <button class="x" @click="analyzeDrawer = false">✕</button>
@@ -312,7 +308,7 @@
               <span class="sug-title">{{ s.risk }}</span>
             </div>
             <div class="sug-meta muted">P{{ s.prob }} × I{{ s.impact }} · {{ s.ctrl }}</div>
-            <button class="btn-sm primary sm" @click="acceptSuggestion(s)">
+            <button class="btn-sm btn-primary sm" @click="acceptSuggestion(s)">
               {{ tl('采纳入库') }}
             </button>
           </div>
@@ -323,6 +319,8 @@
 </template>
 
 <script setup lang="ts">
+import { useFilterQuery } from '@/composables/useFilterQuery'
+import Pagination from '@/components/Pagination.vue'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t: tl } = useI18n()
@@ -522,8 +520,7 @@ const filtered = computed(() => {
 /* ------------------------------------------------------------------ */
 /* 分页                                                                */
 /* ------------------------------------------------------------------ */
-const PAGE_SIZES = [10, 20, 50]
-const pageSize = ref(10)
+const pageSize = ref(20)
 const pageNo = ref(1)
 
 /** 任一筛选项变化 → 回到第 1 页，避免停留在已无数据的页码 */
@@ -531,9 +528,7 @@ watch([selCell, fCat, fLevel, fStatus, kw], () => {
   pageNo.value = 1
 })
 
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filtered.value.length / pageSize.value)),
-)
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize.value)))
 const paged = computed(() => {
   const start = (pageNo.value - 1) * pageSize.value
   return filtered.value.slice(start, start + pageSize.value)
@@ -658,7 +653,15 @@ async function remove(r: RiskView) {
 const analyzeDrawer = ref(false)
 const analyzing = ref(false)
 const suggestions = ref<
-  { risk: string; cat: string; prob: number; impact: number; level: string; ctrl: string; owner: string }[]
+  {
+    risk: string
+    cat: string
+    prob: number
+    impact: number
+    level: string
+    ctrl: string
+    owner: string
+  }[]
 >([])
 
 async function runAnalyze() {
@@ -691,6 +694,17 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
     toast.error(`${tl('入库失败')}：${toErrorMessage(ex)}`)
   }
 }
+
+function onPageChange(p: number) {
+  pageNo.value = p
+}
+function onSizeChange(s: number) {
+  pageSize.value = s
+  pageNo.value = 1
+}
+
+// 04 §6.2: 筛选条件（与分页）写入 URL query
+useFilterQuery({ fCat, fLevel, fStatus, kw, pageNo, pageSize })
 </script>
 
 <style scoped>
@@ -729,14 +743,14 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 .mx-axis-y {
   writing-mode: vertical-rl;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   text-align: center;
   padding: 2px 0;
   letter-spacing: 2px;
 }
 .mx-axis-x {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--txt2);
   text-align: center;
   letter-spacing: 2px;
   margin-top: 4px;
@@ -750,7 +764,7 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 }
 .mx-head {
   font-size: 10.5px;
-  color: var(--muted);
+  color: var(--txt2);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -764,9 +778,9 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   aspect-ratio: 1 / 1;
   min-height: 40px;
   border-radius: 6px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--bg2);
-  color: var(--text);
+  color: var(--txt);
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
@@ -778,7 +792,7 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 }
 .mx-cell:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 12px var(--accent-35);
 }
 .mx-cell.is-sel {
   outline: 2px solid var(--blue);
@@ -788,25 +802,25 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 .mx-cell.is-empty {
   background: transparent;
   border-style: dashed;
-  color: var(--muted);
+  color: var(--txt2);
   font-weight: 400;
   cursor: default;
   opacity: 0.5;
 }
 .lv-low {
-  background: rgba(82, 196, 26, 0.14);
+  background: color-mix(in srgb, var(--green) 14%, transparent);
   color: var(--green);
-  border-color: rgba(82, 196, 26, 0.3);
+  border-color: color-mix(in srgb, var(--green) 30%, transparent);
 }
 .lv-mid {
-  background: rgba(250, 173, 20, 0.14);
+  background: color-mix(in srgb, var(--amber) 14%, transparent);
   color: var(--amber);
-  border-color: rgba(250, 173, 20, 0.3);
+  border-color: color-mix(in srgb, var(--amber) 30%, transparent);
 }
 .lv-high {
-  background: rgba(255, 77, 79, 0.16);
+  background: color-mix(in srgb, var(--red) 16%, transparent);
   color: var(--red);
-  border-color: rgba(255, 77, 79, 0.35);
+  border-color: color-mix(in srgb, var(--red) 35%, transparent);
 }
 .mx-legend {
   display: flex;
@@ -820,13 +834,13 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   align-items: center;
   gap: 5px;
   font-size: 11px;
-  color: var(--text2);
+  color: var(--txt2);
 }
 .dot {
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
 }
 
 /* ===== 列表 ===== */
@@ -872,15 +886,15 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 }
 .tbl-head {
   font-weight: 600;
-  color: var(--muted);
-  border-bottom: 2px solid var(--border);
+  color: var(--txt2);
+  border-bottom: 2px solid var(--line);
   font-size: 12px;
 }
 .tbl-row {
-  border-bottom: 1px solid var(--border-light, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--line);
 }
 .tbl-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--accent-02);
 }
 .col {
   flex-shrink: 0;
@@ -950,16 +964,16 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 .btn-sm {
   padding: 5px 12px;
   border-radius: 7px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--bg2);
-  color: var(--text2);
+  color: var(--txt2);
   cursor: pointer;
   font-size: 12px;
   white-space: nowrap;
 }
 .btn-sm.primary {
   background: var(--blue);
-  color: #fff;
+  color: var(--txt-strong);
   border-color: var(--blue);
   font-weight: 600;
 }
@@ -990,7 +1004,7 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   font-weight: 500;
 }
 .muted {
-  color: var(--muted);
+  color: var(--txt2);
 }
 .sm {
   font-size: 11px;
@@ -1003,21 +1017,21 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   white-space: nowrap;
 }
 .pill-tag.g {
-  background: rgba(82, 196, 26, 0.12);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
   color: var(--green);
 }
 .pill-tag.a {
-  background: rgba(250, 173, 20, 0.12);
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
   color: var(--amber);
 }
 .pill-tag.r {
-  background: rgba(255, 77, 79, 0.12);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
   color: var(--red);
 }
 .empty {
   text-align: center;
   padding: 32px;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 13px;
   display: flex;
   align-items: center;
@@ -1033,7 +1047,7 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   flex-wrap: wrap;
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid var(--border-light, rgba(255, 255, 255, 0.04));
+  border-top: 1px solid var(--line);
 }
 .pg-ipt {
   min-width: 84px;
@@ -1045,17 +1059,17 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 }
 .pg-info {
   font-size: 12px;
-  color: var(--text2);
+  color: var(--txt2);
   font-variant-numeric: tabular-nums;
   min-width: 48px;
   text-align: center;
 }
 
 /* ===== 抽屉 ===== */
-.drawer-mask {
+.modal-mask {
   position: fixed;
   inset: 0;
-  background: rgba(6, 11, 20, 0.6);
+  background: var(--accent-50);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -1063,14 +1077,14 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   padding: 6vh 16px;
   z-index: 40;
 }
-.drawer {
+.as-drawer {
   width: 420px;
   max-width: 92vw;
-  background: var(--card-bg);
+  background: var(--panel);
   height: 100%;
   padding: 18px;
   overflow: auto;
-  box-shadow: -8px 0 24px rgba(0, 0, 0, 0.3);
+  box-shadow: -8px 0 24px var(--accent-35);
 }
 .drawer-head {
   display: flex;
@@ -1083,7 +1097,7 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 .x {
   background: none;
   border: none;
-  color: var(--muted);
+  color: var(--txt2);
   font-size: 16px;
   cursor: pointer;
 }
@@ -1097,7 +1111,7 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   flex-direction: column;
   gap: 4px;
   font-size: 12px;
-  color: var(--text2);
+  color: var(--txt2);
 }
 .row {
   display: flex;
@@ -1108,19 +1122,19 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
 }
 .ipt {
   background: var(--bg2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 7px;
   padding: 7px 9px;
-  color: var(--text);
+  color: var(--txt);
   font-size: 13px;
   font-family: inherit;
 }
 .lv-preview {
   font-size: 12px;
-  color: var(--text2);
+  color: var(--txt2);
   padding: 7px 10px;
   border-radius: 7px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   background: var(--bg2);
   display: flex;
   align-items: center;
@@ -1143,7 +1157,7 @@ async function acceptSuggestion(s: (typeof suggestions.value)[number]) {
   gap: 10px;
 }
 .sug {
-  border: 1px solid var(--border);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
   display: flex;
